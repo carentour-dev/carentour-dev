@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Globe } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-medical-facility.jpg";
 
 const Hero = () => {
@@ -39,8 +40,8 @@ const Hero = () => {
               Get Free Consultation
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-background/30 text-background hover:bg-background/10">
-              View Treatments
+            <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-background/30 text-background hover:bg-background/10" asChild>
+              <Link to="/treatments">View Treatments</Link>
             </Button>
           </div>
 
