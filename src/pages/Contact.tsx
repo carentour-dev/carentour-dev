@@ -18,7 +18,7 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email Us",
-      content: "info@medtourism.com",
+      content: "info@carentour.com",
       description: "Response within 2 hours"
     },
     {

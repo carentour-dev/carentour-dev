@@ -11,7 +11,7 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <h3 className="text-2xl font-bold mb-4 bg-gradient-accent bg-clip-text text-transparent">
-              MedTourism Egypt
+              Care N Tour
             </h3>
             <p className="text-background/80 mb-6">
               Your trusted partner for world-class medical treatments in Egypt. 
@@ -47,7 +47,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-accent" />
-                <span className="text-background/80">info@medtourism.com</span>
+                <span className="text-background/80">info@carentour.com</span>
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="h-5 w-5 text-accent" />
@@ -74,7 +74,7 @@ const Footer = () => {
 
         <div className="border-t border-background/20 mt-12 pt-8 text-center">
           <p className="text-background/60">
-            © 2024 MedTourism Egypt. All rights reserved.
+            © 2024 Care N Tour. All rights reserved.
           </p>
         </div>
       </div>

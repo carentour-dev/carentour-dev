@@ -28,7 +28,7 @@ const Header = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Mail className="h-4 w-4 text-primary" />
-              <span className="text-muted-foreground">info@medtourism.com</span>
+              <span className="text-muted-foreground">info@carentour.com</span>
             </div>
           </div>
           <Button variant="accent" size="sm">
@@ -40,7 +40,7 @@ const Header = () => {
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
             <Link to="/" className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-              MedTourism Egypt
+              Care N Tour
             </Link>
           </div>
 

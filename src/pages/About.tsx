@@ -41,7 +41,7 @@ const About = () => {
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">About MedTourism Egypt</Badge>
+              <Badge variant="outline" className="mb-6">About Care N Tour</Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Transforming Lives Through 
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -86,7 +86,7 @@ const About = () => {
                 </h2>
                 <div className="prose prose-lg max-w-none">
                   <p className="text-muted-foreground leading-relaxed mb-6">
-                    Founded in 2014, MedTourism Egypt emerged from a simple vision: to make world-class medical care 
+                    Founded in 2014, Care N Tour emerged from a simple vision: to make world-class medical care 
                     accessible to everyone, regardless of geographical boundaries. What started as a small initiative 
                     has grown into Egypt's premier medical tourism facilitator.
                   </p>
