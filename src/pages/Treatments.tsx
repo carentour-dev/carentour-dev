@@ -141,7 +141,7 @@ const Treatments = () => {
               <Button size="lg" variant="accent">
                 Get Free Quote
               </Button>
-              <Button size="lg" variant="outline" className="border-background/30 text-background hover:bg-background/10">
+              <Button size="lg" variant="hero">
                 Schedule Consultation
               </Button>
             </div>
