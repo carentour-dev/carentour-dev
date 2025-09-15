@@ -215,7 +215,7 @@ const PatientStories = () => {
               <Button size="lg" variant="accent">
                 Start Your Journey
               </Button>
-              <Button size="lg" variant="outline" className="border-background/30 text-background hover:bg-background/10">
+              <Button size="lg" variant="hero">
                 Get Free Consultation
               </Button>
             </div>
