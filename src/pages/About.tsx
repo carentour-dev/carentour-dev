@@ -164,7 +164,7 @@ const About = () => {
               <Button size="lg" variant="accent">
                 Get Free Consultation
               </Button>
-              <Button size="lg" variant="outline" className="border-background/30 text-background hover:bg-background/10">
+              <Button size="lg" variant="hero">
                 Contact Us Today
               </Button>
             </div>
