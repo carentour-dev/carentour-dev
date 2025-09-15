@@ -250,7 +250,7 @@ const PlanTrip = () => {
                   Our medical coordinators are available around the clock for any urgent needs during your stay
                 </p>
                 <p className="text-accent font-semibold text-xl">
-                  Emergency Hotline: +20 100 000 0000
+                  Emergency Hotline: +20 100 1741666
                 </p>
               </CardContent>
             </Card>

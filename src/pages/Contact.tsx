@@ -12,7 +12,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Phone Support",
-      content: "+20 123 456 789",
+      content: "+20 100 1741666",
       description: "Available 24/7 for emergencies"
     },
     {
@@ -190,7 +190,7 @@ const Contact = () => {
                           For urgent medical questions or emergencies during your treatment
                         </p>
                         <p className="text-accent font-semibold">
-                          Emergency Hotline: +20 100 000 0000
+                          Emergency Hotline: +20 100 1741666
                         </p>
                       </div>
                     </div>
