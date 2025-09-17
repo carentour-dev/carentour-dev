@@ -32,9 +32,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send confirmation email to the user
     const userEmailResponse = await resend.emails.send({
-      from: "CarenTour Medical Tourism <onboarding@resend.dev>",
+      from: "Care N Tour <onboarding@resend.dev>",
       to: ["me@myassin.net"], // Using verified email for testing
-      subject: "Thank you for contacting CarenTour",
+      subject: "Thank you for contacting Care N Tour",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #2563eb; margin-bottom: 20px;">Thank you for contacting us!</h1>
@@ -56,8 +56,8 @@ const handler = async (req: Request): Promise<Response> => {
           
           <p style="margin-top: 30px;">
             Best regards,<br>
-            <strong>The CarenTour Team</strong><br>
-            <span style="color: #64748b;">Your trusted partner in medical tourism</span>
+            <strong>The Care N Tour Team</strong><br>
+            <span style="color: #64748b;">Your Trusted Partner in Medical Tourism</span>
           </p>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b;">
