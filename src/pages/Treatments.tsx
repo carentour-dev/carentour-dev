@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Stethoscope, Eye, Smile, Scissors, Activity } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Treatments = () => {
+  const navigate = useNavigate();
   const treatmentCategories = [
     {
+      id: "cardiac-surgery",
       icon: Heart,
       title: "Cardiac Surgery",
       description: "Advanced heart procedures with world-class specialists",
@@ -15,6 +18,7 @@ const Treatments = () => {
       startingPrice: "$8,500"
     },
     {
+      id: "eye-surgery",
       icon: Eye,
       title: "Eye Surgery",
       description: "LASIK and comprehensive eye treatments",
@@ -22,6 +26,7 @@ const Treatments = () => {
       startingPrice: "$1,200"
     },
     {
+      id: "dental-care",
       icon: Smile,
       title: "Dental Care",
       description: "Complete dental treatments and cosmetic procedures",
@@ -29,6 +34,7 @@ const Treatments = () => {
       startingPrice: "$300"
     },
     {
+      id: "cosmetic-surgery",
       icon: Scissors,
       title: "Cosmetic Surgery",
       description: "Aesthetic procedures with natural-looking results",
@@ -36,6 +42,7 @@ const Treatments = () => {
       startingPrice: "$2,800"
     },
     {
+      id: "general-surgery",
       icon: Stethoscope,
       title: "General Surgery",
       description: "Wide range of surgical procedures",
@@ -43,6 +50,7 @@ const Treatments = () => {
       startingPrice: "$1,500"
     },
     {
+      id: "orthopedic-surgery",
       icon: Activity,
       title: "Orthopedic Surgery",
       description: "Joint replacement and bone treatments",
@@ -116,7 +124,11 @@ const Treatments = () => {
                           <span className="text-sm text-muted-foreground">Starting from</span>
                           <span className="text-lg font-bold text-primary">{category.startingPrice}</span>
                         </div>
-                        <Button className="w-full" variant="outline">
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => navigate(`/treatments/${category.id}`)}
+                        >
                           Learn More
                         </Button>
                       </div>
