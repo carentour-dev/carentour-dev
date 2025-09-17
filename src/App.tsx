@@ -12,6 +12,7 @@ import TreatmentDetails from "./pages/TreatmentDetails";
 import PatientStories from "./pages/PatientStories";
 import PlanTrip from "./pages/PlanTrip";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/stories" element={<PatientStories />} />
             <Route path="/plan" element={<PlanTrip />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

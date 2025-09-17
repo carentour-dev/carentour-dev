@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, ArrowRight, Heart, Stethoscope, Plane } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import medicalTourismImg from "@/assets/blog-medical-tourism.jpg";
 import lasikSurgeryImg from "@/assets/blog-lasik-surgery.jpg";
 import cardiacSurgeryImg from "@/assets/blog-cardiac-surgery.jpg";
@@ -12,6 +13,7 @@ import wellnessRecoveryImg from "@/assets/blog-wellness-recovery.jpg";
 import medicalInsuranceImg from "@/assets/blog-medical-insurance.jpg";
 
 const Blog = () => {
+  const navigate = useNavigate();
   const blogPosts = [
     {
       id: 1,
@@ -181,7 +183,10 @@ const Blog = () => {
                         </div>
                         <span className="text-sm text-muted-foreground">{featuredPost.date}</span>
                       </div>
-                      <Button className="w-fit">
+                      <Button 
+                        className="w-fit"
+                        onClick={() => navigate(`/blog/${featuredPost.id}`)}
+                      >
                         Read Full Article
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -240,7 +245,12 @@ const Blog = () => {
                       </div>
                       <span>{post.date}</span>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => navigate(`/blog/${post.id}`)}
+                    >
                       Read More
                     </Button>
                   </CardContent>
