@@ -4,6 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, ArrowRight, Heart, Stethoscope, Plane } from "lucide-react";
+import medicalTourismImg from "@/assets/blog-medical-tourism.jpg";
+import lasikSurgeryImg from "@/assets/blog-lasik-surgery.jpg";
+import cardiacSurgeryImg from "@/assets/blog-cardiac-surgery.jpg";
+import dentalCareImg from "@/assets/blog-dental-care.jpg";
+import wellnessRecoveryImg from "@/assets/blog-wellness-recovery.jpg";
+import medicalInsuranceImg from "@/assets/blog-medical-insurance.jpg";
 
 const Blog = () => {
   const blogPosts = [
@@ -15,7 +21,7 @@ const Blog = () => {
       author: "Dr. Sarah Ahmed",
       readTime: "8 min read",
       date: "March 15, 2024",
-      image: "/api/placeholder/600/400",
+      image: medicalTourismImg,
       featured: true
     },
     {
@@ -26,7 +32,7 @@ const Blog = () => {
       author: "Dr. Mohamed Hassan",
       readTime: "6 min read", 
       date: "March 12, 2024",
-      image: "/api/placeholder/600/400"
+      image: lasikSurgeryImg
     },
     {
       id: 3,
@@ -36,7 +42,7 @@ const Blog = () => {
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
       date: "March 10, 2024",
-      image: "/api/placeholder/600/400"
+      image: cardiacSurgeryImg
     },
     {
       id: 4,
@@ -46,7 +52,7 @@ const Blog = () => {
       author: "Dr. Ahmed Mahmoud",
       readTime: "7 min read",
       date: "March 8, 2024",
-      image: "/api/placeholder/600/400"
+      image: dentalCareImg
     },
     {
       id: 5,
@@ -56,7 +62,7 @@ const Blog = () => {
       author: "Fatima El-Sayed",
       readTime: "5 min read",
       date: "March 5, 2024",
-      image: "/api/placeholder/600/400"
+      image: wellnessRecoveryImg
     },
     {
       id: 6,
@@ -66,7 +72,7 @@ const Blog = () => {
       author: "Omar Rashid",
       readTime: "9 min read",
       date: "March 3, 2024",
-      image: "/api/placeholder/600/400"
+      image: medicalInsuranceImg
     }
   ];
 
@@ -145,7 +151,13 @@ const Blog = () => {
                 
                 <Card className="border-border/50 overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-2">
-                    <div className="aspect-video lg:aspect-square bg-muted"></div>
+                    <div className="aspect-video lg:aspect-square bg-muted overflow-hidden">
+                      <img 
+                        src={featuredPost.image} 
+                        alt={featuredPost.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <CardContent className="p-8 flex flex-col justify-center">
                       <Badge variant="outline" className="w-fit mb-4">
                         {featuredPost.category}
@@ -196,7 +208,13 @@ const Blog = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {regularPosts.map((post) => (
                 <Card key={post.id} className="border-border/50 hover:shadow-card-hover transition-spring overflow-hidden">
-                  <div className="aspect-video bg-muted"></div>
+                  <div className="aspect-video bg-muted overflow-hidden">
+                    <img 
+                      src={post.image} 
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <Badge variant="outline" className="w-fit mb-2">
                       {post.category}
