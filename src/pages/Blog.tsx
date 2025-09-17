@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, ArrowRight, Heart, Stethoscope, Plane } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import medicalTourismImg from "@/assets/blog-medical-tourism.jpg";
 import lasikSurgeryImg from "@/assets/blog-lasik-surgery.jpg";
 import cardiacSurgeryImg from "@/assets/blog-cardiac-surgery.jpg";
@@ -14,6 +15,7 @@ import medicalInsuranceImg from "@/assets/blog-medical-insurance.jpg";
 
 const Blog = () => {
   const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const blogPosts = [
     {
       id: 1,
@@ -79,15 +81,28 @@ const Blog = () => {
   ];
 
   const categories = [
-    { name: "All", icon: Stethoscope, count: 24 },
-    { name: "Medical Tourism", icon: Plane, count: 8 },
-    { name: "Cardiac Surgery", icon: Heart, count: 6 },
-    { name: "Eye Surgery", icon: "👁️", count: 4 },
-    { name: "Dental Care", icon: "🦷", count: 6 }
+    { name: "All", icon: Stethoscope },
+    { name: "Medical Tourism", icon: Plane },
+    { name: "Cardiac Surgery", icon: Heart },
+    { name: "Eye Surgery", icon: "👁️" },
+    { name: "Dental Care", icon: "🦷" },
+    { name: "Wellness", icon: "🧘" },
+    { name: "Insurance", icon: "📋" }
   ];
 
   const featuredPost = blogPosts.find(post => post.featured);
-  const regularPosts = blogPosts.filter(post => !post.featured);
+  const allPosts = blogPosts.filter(post => !post.featured);
+  
+  // Filter posts based on selected category
+  const filteredPosts = selectedCategory === "All" 
+    ? allPosts 
+    : allPosts.filter(post => post.category === selectedCategory);
+
+  // Update category counts based on actual posts
+  const getCategoryCount = (categoryName: string) => {
+    if (categoryName === "All") return blogPosts.length;
+    return blogPosts.filter(post => post.category === categoryName).length;
+  };
 
   return (
     <div className="min-h-screen">
@@ -119,11 +134,15 @@ const Blog = () => {
             <div className="flex flex-wrap justify-center gap-4">
               {categories.map((category, index) => {
                 const Icon = category.icon;
+                const isActive = selectedCategory === category.name;
+                const count = getCategoryCount(category.name);
+                
                 return (
                   <Button
                     key={index}
-                    variant={index === 0 ? "default" : "outline"}
+                    variant={isActive ? "default" : "outline"}
                     className="flex items-center space-x-2"
+                    onClick={() => setSelectedCategory(category.name)}
                   >
                     {typeof Icon === "string" ? (
                       <span className="text-lg">{Icon}</span>
@@ -132,7 +151,7 @@ const Blog = () => {
                     )}
                     <span>{category.name}</span>
                     <Badge variant="secondary" className="ml-2">
-                      {category.count}
+                      {count}
                     </Badge>
                   </Button>
                 );
@@ -203,7 +222,7 @@ const Blog = () => {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-foreground mb-4">
-                Latest Articles
+                {selectedCategory === "All" ? "Latest Articles" : `${selectedCategory} Articles`}
               </h2>
               <p className="text-xl text-muted-foreground">
                 Stay informed with our latest insights and guides
@@ -211,7 +230,8 @@ const Blog = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {regularPosts.map((post) => (
+              {filteredPosts.length > 0 ? (
+                filteredPosts.map((post) => (
                 <Card key={post.id} className="border-border/50 hover:shadow-card-hover transition-spring overflow-hidden">
                   <div className="aspect-video bg-muted overflow-hidden">
                     <img 
@@ -255,14 +275,30 @@ const Blog = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground text-lg">
+                  No articles found in the {selectedCategory} category.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setSelectedCategory("All")}
+                >
+                  View All Articles
+                </Button>
+              </div>
+            )}
             </div>
 
-            <div className="text-center mt-12">
-              <Button size="lg" variant="outline">
-                Load More Articles
-              </Button>
-            </div>
+            {filteredPosts.length > 0 && (
+              <div className="text-center mt-12">
+                <Button size="lg" variant="outline">
+                  Load More Articles
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
