@@ -70,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send notification email to the business
     const businessEmailResponse = await resend.emails.send({
-      from: "CarenTour Contact Form <onboarding@resend.dev>",
+      from: "Care N Tour Contact Form <onboarding@resend.dev>",
       to: ["info@carentour.com"], // Replace with actual business email
       subject: `New Contact Form Submission - ${firstName} ${lastName}`,
       html: `
