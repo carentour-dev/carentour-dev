@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to the user
     const userEmailResponse = await resend.emails.send({
       from: "CarenTour Medical Tourism <onboarding@resend.dev>",
-      to: [email],
+      to: ["me@myassin.net"], // Using verified email for testing
       subject: "Thank you for contacting CarenTour",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
