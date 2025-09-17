@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Eye, Smile, Scissors, ArrowRight } from "lucide-react";
-import consultationImage from "@/assets/consultation.jpg";
-import surgeryImage from "@/assets/surgery-suite.jpg";
+import consultationImage from "@/assets/consultation.webp";
+import surgeryImage from "@/assets/surgery-suite.webp";
 
 const FeaturedTreatments = () => {
   const treatments = [

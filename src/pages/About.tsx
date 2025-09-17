@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Award, Users, Globe, Shield, Clock } from "lucide-react";
-import consultationImage from "@/assets/consultation.jpg";
+import consultationImage from "@/assets/consultation.webp";
 
 const About = () => {
   const stats = [
