@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PasswordStrength, isPasswordStrong } from '@/components/ui/password-strength';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -13,6 +14,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
@@ -50,6 +52,28 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Validate password strength
+    if (!isPasswordStrong(password)) {
+      toast({
+        title: 'Password too weak',
+        description: 'Please meet all password requirements',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'Please make sure both passwords are identical',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signUp(email, password, username);
 
@@ -150,6 +174,21 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                     />
+                    <PasswordStrength password={password} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="text-sm text-destructive">Passwords do not match</p>
+                    )}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
