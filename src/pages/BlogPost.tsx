@@ -709,8 +709,14 @@ const BlogPost = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              <div 
-                className="prose prose-lg max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-a:text-primary hover:prose-a:text-primary/80"
+              <article 
+                className="prose prose-lg max-w-none
+                [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:text-foreground [&>h2]:mt-8 [&>h2]:mb-4
+                [&>h3]:text-xl [&>h3]:font-semibold [&>h3]:text-foreground [&>h3]:mt-6 [&>h3]:mb-3
+                [&>p]:text-muted-foreground [&>p]:leading-relaxed [&>p]:mb-4 [&>p]:text-base
+                [&>ul]:my-4 [&>ul]:space-y-2 [&>li]:text-muted-foreground [&>li]:text-base
+                [&>strong]:text-foreground [&>strong]:font-semibold
+                [&>a]:text-primary [&>a]:no-underline hover:[&>a]:underline hover:[&>a]:text-primary/80"
                 dangerouslySetInnerHTML={{ __html: post.content }}
               />
             </div>
