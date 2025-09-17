@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail } from "lucide-react";
+import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -31,9 +33,29 @@ const Header = () => {
               <span className="text-muted-foreground">info@carentour.com</span>
             </div>
           </div>
-          <Button variant="accent" size="sm">
-            Get Free Quote
-          </Button>
+          <div className="flex items-center space-x-2">
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  Welcome, {user.email}
+                </span>
+                <Button variant="ghost" size="sm" onClick={signOut}>
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="sm">
+                  <User className="h-4 w-4 mr-1" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+            <Button variant="accent" size="sm">
+              Get Free Quote
+            </Button>
+          </div>
         </div>
 
         {/* Main navigation */}
@@ -85,7 +107,20 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-              <Button variant="accent" className="mt-4">
+              {user ? (
+                <Button variant="ghost" onClick={signOut} className="mt-4">
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Sign Out
+                </Button>
+              ) : (
+                <Link to="/auth">
+                  <Button variant="ghost" className="mt-4">
+                    <User className="h-4 w-4 mr-1" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+              <Button variant="accent" className="mt-2">
                 Get Free Quote
               </Button>
             </div>
