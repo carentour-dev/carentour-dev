@@ -5,9 +5,60 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const formSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().optional(),
+  country: z.string().optional(),
+  treatment: z.string().optional(),
+  message: z.string().min(10, "Message must be at least 10 characters long"),
+});
 
 const Contact = () => {
+  const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      country: "",
+      treatment: "",
+      message: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      // Simulate form submission
+      console.log("Form submitted with values:", values);
+      
+      toast({
+        title: "Message Sent Successfully!",
+        description: "Thank you for contacting us. We'll get back to you within 2 hours.",
+      });
+      
+      // Reset form after successful submission
+      form.reset();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const contactInfo = [
     {
       icon: Phone,
@@ -72,63 +123,117 @@ const Contact = () => {
                       Fill out the form below and we'll get back to you within 2 hours
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-2 block">
-                          First Name *
-                        </label>
-                        <Input placeholder="John" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-2 block">
-                          Last Name *
-                        </label>
-                        <Input placeholder="Doe" />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Email Address *
-                      </label>
-                      <Input type="email" placeholder="john@example.com" />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Phone Number
-                      </label>
-                      <Input placeholder="+1 (555) 123-4567" />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Country
-                      </label>
-                      <Input placeholder="United States" />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Treatment of Interest
-                      </label>
-                      <Input placeholder="e.g., Cardiac Surgery, LASIK, Dental Implants" />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Message *
-                      </label>
-                      <Textarea 
-                        placeholder="Please describe your medical needs and any questions you have..."
-                        className="min-h-[120px]"
-                      />
-                    </div>
-                    
-                    <Button size="lg" className="w-full">
-                      Send Message
-                    </Button>
+                  <CardContent>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>First Name *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="John" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Last Name *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Doe" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address *</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="john@example.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <Input placeholder="+1 (555) 123-4567" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country</FormLabel>
+                              <FormControl>
+                                <Input placeholder="United States" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="treatment"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Treatment of Interest</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Cardiac Surgery, LASIK, Dental Implants" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Message *</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Please describe your medical needs and any questions you have..."
+                                  className="min-h-[120px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button type="submit" size="lg" className="w-full">
+                          Send Message
+                        </Button>
+                      </form>
+                    </Form>
                     
                     <p className="text-sm text-muted-foreground text-center">
                       By submitting this form, you agree to our privacy policy and terms of service.
