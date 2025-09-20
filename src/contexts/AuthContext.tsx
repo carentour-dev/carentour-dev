@@ -118,30 +118,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Log signup attempt
+    // Enhanced error handling for existing email
+    if (error) {
+      let errorToReturn = error;
+      
+      // Check for existing user error and provide clear message
+      if (error.message?.includes('User already registered') || 
+          error.message?.includes('already been registered') ||
+          error.message?.includes('email address is already registered') ||
+          error.status === 422) {
+        errorToReturn = {
+          message: 'An account with this email address already exists. Please sign in instead or use a different email address.'
+        } as any;
+      }
+      
+      // Log signup attempt
+      await logSecurityEvent({
+        event_type: 'failed_signup',
+        event_data: { 
+          email,
+          username,
+          error_message: error.message,
+          error_type: errorToReturn.message !== error.message ? 'existing_email' : 'other'
+        },
+        risk_level: 'medium'
+      });
+
+      return { error: errorToReturn };
+    }
+
+    // Log successful signup attempt
     await logSecurityEvent({
-      event_type: error ? 'failed_signup' : 'successful_signup',
+      event_type: 'successful_signup',
       event_data: { 
         email,
-        username,
-        error_message: error?.message
+        username
       },
-      risk_level: error ? 'medium' : 'low'
+      risk_level: 'low'
     });
 
     // Send welcome email after successful signup
-    if (!error) {
-      try {
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { 
-            email, 
-            username: username || email.split('@')[0] 
-          }
-        });
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        // Don't fail the signup if email fails
-      }
+    try {
+      await supabase.functions.invoke('send-welcome-email', {
+        body: { 
+          email, 
+          username: username || email.split('@')[0] 
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail the signup if email fails
     }
 
     return { error };
