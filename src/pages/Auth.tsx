@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,15 +18,21 @@ const Auth = () => {
   const [username, setUsername] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const { signIn, signUp, resetPassword, user } = useAuth();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const { signIn, signUp, resetPassword, updatePassword, user, session } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Check if we're in password reset mode
+  const isPasswordResetMode = searchParams.get('reset') === 'true' && session;
 
   useEffect(() => {
-    if (user) {
+    if (user && !isPasswordResetMode) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isPasswordResetMode]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +124,103 @@ const Auth = () => {
 
     setIsLoading(false);
   };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Validate password strength
+    if (!isPasswordStrong(newPassword)) {
+      toast({
+        title: 'Password too weak',
+        description: 'Please meet all password requirements',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password confirmation
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'Please make sure both passwords are identical',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await updatePassword(newPassword);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Password Updated Successfully',
+        description: 'Your password has been changed. You can now sign in with your new password.',
+      });
+      navigate('/dashboard');
+    }
+
+    setIsLoading(false);
+  };
+
+  // Show password reset form if user clicked email link
+  if (isPasswordResetMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
+              <CardDescription>
+                Enter your new password below
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Enter your new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                  <PasswordStrength password={newPassword} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-new-password"
+                    type="password"
+                    placeholder="Confirm your new password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    required
+                  />
+                  {confirmNewPassword && newPassword !== confirmNewPassword && (
+                    <p className="text-sm text-destructive">Passwords do not match</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update Password
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
