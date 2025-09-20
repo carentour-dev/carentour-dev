@@ -92,10 +92,10 @@
     --secondary-foreground: 0 0% 100%;
     --secondary-light: 175 45% 20%;
 
-    /* Luxury Gold - Dark mode adaptation */
-    --accent: 35 75% 55%;
+    /* Accessible Cyan - Better contrast for dark mode */
+    --accent: 195 100% 70%;
     --accent-foreground: 222 20% 8%;
-    --accent-light: 35 60% 15%;
+    --accent-light: 195 80% 25%;
 
     --muted: 222 15% 15%;
     --muted-foreground: 210 20% 65%;
