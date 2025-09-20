@@ -75,25 +75,6 @@ const ProcessSection = () => {
           })}
         </div>
 
-        {/* CTA Section */}
-        <div className="mt-16 text-center">
-          <div className="bg-gradient-card p-8 rounded-lg border border-border/50">
-            <h3 className="text-2xl font-bold text-foreground mb-4">
-              Ready to Start Your Journey?
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Our medical coordinators are available 24/7 to answer your questions and help you plan your treatment.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-gradient-hero text-background px-8 py-3 rounded-md font-semibold hover:shadow-elegant transition-spring">
-                Get Free Quote
-              </button>
-              <button className="border border-primary text-primary px-8 py-3 rounded-md font-semibold hover:bg-primary hover:text-primary-foreground transition-smooth">
-                Schedule Consultation
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
