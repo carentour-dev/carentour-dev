@@ -4,92 +4,71 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, Hotel, Car, Globe, Shield, Clock, Users, Phone } from "lucide-react";
-
 const PlanTrip = () => {
-  const services = [
-    {
-      icon: Plane,
-      title: "Airport Transfers",
-      description: "Complimentary pickup and drop-off services",
-      features: ["Private luxury vehicles", "English-speaking drivers", "24/7 availability"]
-    },
-    {
-      icon: Hotel,
-      title: "Accommodation",
-      description: "Carefully selected hotels near medical facilities",
-      features: ["4-5 star hotels", "Special medical rates", "Recovery-friendly rooms"]
-    },
-    {
-      icon: Car,
-      title: "Transportation",
-      description: "Reliable transport for all medical appointments",
-      features: ["Doctor visits", "Pharmacy trips", "Sightseeing tours"]
-    },
-    {
-      icon: Users,
-      title: "Translation Services",
-      description: "Professional medical interpreters",
-      features: ["Medical terminology experts", "Available during procedures", "Cultural guidance"]
-    }
-  ];
-
-  const steps = [
-    {
-      step: "1",
-      title: "Initial Consultation",
-      description: "Free consultation with our medical coordinator to understand your needs and provide preliminary cost estimates."
-    },
-    {
-      step: "2",
-      title: "Medical Evaluation",
-      description: "Virtual consultation with Egyptian specialists and review of your medical records to create a treatment plan."
-    },
-    {
-      step: "3",
-      title: "Travel Planning",
-      description: "We handle visa assistance, flight booking, accommodation, and all logistics for your medical journey."
-    },
-    {
-      step: "4",
-      title: "Arrival & Treatment",
-      description: "Meet your dedicated coordinator, settle into accommodation, and begin your treatment with full support."
-    },
-    {
-      step: "5",
-      title: "Recovery & Follow-up",
-      description: "Comfortable recovery period with continued care and follow-up consultations even after returning home."
-    }
-  ];
-
-  const visaInfo = [
-    {
-      country: "United States",
-      requirement: "Visa on Arrival",
-      duration: "30 days",
-      cost: "$25 USD"
-    },
-    {
-      country: "European Union",
-      requirement: "Visa on Arrival",
-      duration: "30 days", 
-      cost: "$25 USD"
-    },
-    {
-      country: "Canada",
-      requirement: "Visa on Arrival",
-      duration: "30 days",
-      cost: "$25 USD"
-    },
-    {
-      country: "Australia",
-      requirement: "Visa on Arrival",
-      duration: "30 days",
-      cost: "$25 USD"
-    }
-  ];
-
-  return (
-    <div className="min-h-screen">
+  const services = [{
+    icon: Plane,
+    title: "Airport Transfers",
+    description: "Complimentary pickup and drop-off services",
+    features: ["Private luxury vehicles", "English-speaking drivers", "24/7 availability"]
+  }, {
+    icon: Hotel,
+    title: "Accommodation",
+    description: "Carefully selected hotels near medical facilities",
+    features: ["4-5 star hotels", "Special medical rates", "Recovery-friendly rooms"]
+  }, {
+    icon: Car,
+    title: "Transportation",
+    description: "Reliable transport for all medical appointments",
+    features: ["Doctor visits", "Pharmacy trips", "Sightseeing tours"]
+  }, {
+    icon: Users,
+    title: "Translation Services",
+    description: "Professional medical interpreters",
+    features: ["Medical terminology experts", "Available during procedures", "Cultural guidance"]
+  }];
+  const steps = [{
+    step: "1",
+    title: "Initial Consultation",
+    description: "Free consultation with our medical coordinator to understand your needs and provide preliminary cost estimates."
+  }, {
+    step: "2",
+    title: "Medical Evaluation",
+    description: "Virtual consultation with Egyptian specialists and review of your medical records to create a treatment plan."
+  }, {
+    step: "3",
+    title: "Travel Planning",
+    description: "We handle visa assistance, flight booking, accommodation, and all logistics for your medical journey."
+  }, {
+    step: "4",
+    title: "Arrival & Treatment",
+    description: "Meet your dedicated coordinator, settle into accommodation, and begin your treatment with full support."
+  }, {
+    step: "5",
+    title: "Recovery & Follow-up",
+    description: "Comfortable recovery period with continued care and follow-up consultations even after returning home."
+  }];
+  const visaInfo = [{
+    country: "United States",
+    requirement: "Visa on Arrival",
+    duration: "30 days",
+    cost: "$25 USD"
+  }, {
+    country: "European Union",
+    requirement: "Visa on Arrival",
+    duration: "30 days",
+    cost: "$25 USD"
+  }, {
+    country: "Canada",
+    requirement: "Visa on Arrival",
+    duration: "30 days",
+    cost: "$25 USD"
+  }, {
+    country: "Australia",
+    requirement: "Visa on Arrival",
+    duration: "30 days",
+    cost: "$25 USD"
+  }];
+  return <div className="min-h-screen">
       <Header />
       
       <main>
@@ -125,8 +104,7 @@ const PlanTrip = () => {
             </div>
 
             <div className="max-w-4xl mx-auto">
-              {steps.map((step, index) => (
-                <div key={index} className="flex items-start space-x-6 mb-12">
+              {steps.map((step, index) => <div key={index} className="flex items-start space-x-6 mb-12">
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-background font-bold text-lg">
                       {step.step}
@@ -140,8 +118,7 @@ const PlanTrip = () => {
                       {step.description}
                     </p>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
         </section>
@@ -160,9 +137,8 @@ const PlanTrip = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {services.map((service, index) => {
-                const Icon = service.icon;
-                return (
-                  <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring text-center">
+              const Icon = service.icon;
+              return <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring text-center">
                     <CardHeader>
                       <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary-light rounded-full mb-4 mx-auto">
                         <Icon className="h-8 w-8 text-secondary" />
@@ -172,17 +148,14 @@ const PlanTrip = () => {
                     </CardHeader>
                     <CardContent>
                       <ul className="text-sm text-muted-foreground space-y-2">
-                        {service.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-center justify-center">
+                        {service.features.map((feature, idx) => <li key={idx} className="flex items-center justify-center">
                             <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
                             {feature}
-                          </li>
-                        ))}
+                          </li>)}
                       </ul>
                     </CardContent>
-                  </Card>
-                );
-              })}
+                  </Card>;
+            })}
             </div>
           </div>
         </section>
@@ -201,8 +174,7 @@ const PlanTrip = () => {
 
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visaInfo.map((visa, index) => (
-                  <Card key={index} className="border-border/50">
+                {visaInfo.map((visa, index) => <Card key={index} className="border-border/50">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-foreground">{visa.country}</h3>
@@ -219,14 +191,13 @@ const PlanTrip = () => {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
               
               <div className="mt-8 text-center">
-                <Card className="bg-primary/5 border-primary/20">
+                <Card className="bg-accent-light border-accent/20">
                   <CardContent className="p-6">
-                    <Globe className="h-8 w-8 text-primary mx-auto mb-4" />
+                    <Globe className="h-8 w-8 text-accent mx-auto mb-4" />
                     <h3 className="font-semibold text-foreground mb-2">Need Visa Assistance?</h3>
                     <p className="text-muted-foreground mb-4">
                       Our team will help you with the visa application process and provide all necessary documentation.
@@ -249,7 +220,7 @@ const PlanTrip = () => {
                 <p className="text-background/90 mb-4">
                   Our medical coordinators are available around the clock for any urgent needs during your stay
                 </p>
-                <p className="text-accent font-semibold text-xl">
+                <p className="font-semibold text-xl text-slate-50">
                   Emergency Hotline: +20 100 1741666
                 </p>
               </CardContent>
@@ -279,8 +250,6 @@ const PlanTrip = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default PlanTrip;
