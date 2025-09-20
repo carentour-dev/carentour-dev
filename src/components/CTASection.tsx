@@ -1,0 +1,28 @@
+import { Button } from "@/components/ui/button";
+
+const CTASection = () => {
+  return (
+    <section className="py-20 bg-gradient-card">
+      <div className="container mx-auto px-4 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+            Ready to Start Your <span className="bg-gradient-hero bg-clip-text text-transparent">Health Journey</span>?
+          </h2>
+          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+            Our medical coordinators are available 24/7 to answer your questions and help you plan your treatment. Get personalized care and support every step of the way.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button className="bg-gradient-hero text-background px-8 py-4 text-lg font-semibold hover:shadow-elegant transition-spring">
+              Get Free Quote
+            </Button>
+            <Button variant="outline" className="border-primary text-primary px-8 py-4 text-lg font-semibold hover:bg-primary hover:text-primary-foreground transition-smooth">
+              Schedule Consultation
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default CTASection;
