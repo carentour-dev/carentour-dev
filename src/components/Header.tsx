@@ -21,6 +21,16 @@ const Header = () => {
     { name: "Contact", href: "/contact" },
   ];
 
+  const authenticatedNavigation = [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Treatments", href: "/treatments" },
+    { name: "Our Doctors", href: "/doctors" },
+    { name: "Travel Info", href: "/travel-info" },
+    { name: "Contact", href: "/contact" },
+  ];
+
+  const currentNavigation = user ? authenticatedNavigation : navigation;
+
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -71,7 +81,7 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
+            {currentNavigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
@@ -100,7 +110,7 @@ const Header = () => {
         {isMenuOpen && (
           <nav className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-              {navigation.map((item) => (
+            {currentNavigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}

@@ -16,6 +16,7 @@ import ConciergeServices from "./pages/ConciergeServices";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 import Doctors from "./pages/Doctors";
 import DoctorDetail from "./pages/DoctorDetail";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/treatments" element={<Treatments />} />
             <Route path="/treatments/:category" element={<TreatmentDetails />} />
             <Route path="/doctors" element={<Doctors />} />

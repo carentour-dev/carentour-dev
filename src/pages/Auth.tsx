@@ -22,7 +22,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -43,7 +43,7 @@ const Auth = () => {
         title: 'Success',
         description: 'Signed in successfully!',
       });
-      navigate('/');
+      navigate('/dashboard');
     }
 
     setIsLoading(false);
