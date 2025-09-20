@@ -88,7 +88,7 @@ const PartnerHospitals = () => {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 left-4">
-                  <Badge variant="secondary" className="bg-background/90 text-foreground">
+                  <Badge variant="secondary" className="bg-background/90 text-foreground text-center">
                     {hospital.type}
                   </Badge>
                 </div>
@@ -114,7 +114,7 @@ const PartnerHospitals = () => {
                   <h4 className="font-semibold mb-2">Accreditations</h4>
                   <div className="flex flex-wrap gap-2">
                     {hospital.accreditations.map((acc, accIndex) => (
-                      <Badge key={accIndex} variant="outline" className="text-xs">
+                      <Badge key={accIndex} variant="outline" className="text-xs text-center">
                         <Award className="h-3 w-3 mr-1" />
                         {acc}
                       </Badge>
@@ -126,7 +126,7 @@ const PartnerHospitals = () => {
                   <h4 className="font-semibold mb-2">Specialties</h4>
                   <div className="flex flex-wrap gap-2">
                     {hospital.specialties.map((specialty, specIndex) => (
-                      <Badge key={specIndex} variant="secondary" className="text-xs">
+                      <Badge key={specIndex} variant="secondary" className="text-xs text-center">
                         {specialty}
                       </Badge>
                     ))}
@@ -161,7 +161,7 @@ const PartnerHospitals = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                 <div>
                   <h3 className="text-xl font-bold mb-2">{hospitals[2].name}</h3>
-                  <Badge variant="outline" className="mb-2">{hospitals[2].type}</Badge>
+                  <Badge variant="outline" className="mb-2 text-center">{hospitals[2].type}</Badge>
                   <p className="text-muted-foreground text-sm">{hospitals[2].description}</p>
                   <div className="flex items-center mt-2">
                     <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
@@ -173,7 +173,7 @@ const PartnerHospitals = () => {
                   <h4 className="font-semibold mb-2">Specialties</h4>
                   <div className="flex flex-wrap gap-1">
                     {hospitals[2].specialties.map((specialty, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                      <Badge key={index} variant="secondary" className="text-xs text-center">
                         {specialty}
                       </Badge>
                     ))}

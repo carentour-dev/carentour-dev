@@ -69,7 +69,7 @@ const TeamSection = () => {
                   </Avatar>
                 </div>
                 <CardTitle className="text-xl mb-2">{member.name}</CardTitle>
-                <Badge variant="outline" className="mb-2">{member.role}</Badge>
+                <Badge variant="outline" className="mb-2 text-center">{member.role}</Badge>
                 <p className="text-primary font-medium">{member.specialization}</p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -93,7 +93,7 @@ const TeamSection = () => {
                   <p className="text-xs text-muted-foreground mb-2">Languages:</p>
                   <div className="flex flex-wrap justify-center gap-1">
                     {member.languages.map((language, langIndex) => (
-                      <Badge key={langIndex} variant="secondary" className="text-xs">
+                      <Badge key={langIndex} variant="secondary" className="text-xs text-center">
                         {language}
                       </Badge>
                     ))}

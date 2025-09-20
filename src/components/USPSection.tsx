@@ -92,7 +92,7 @@ const USPSection = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
-          <Badge variant="outline" className="mb-6">Why Choose Care N Tour</Badge>
+          <Badge variant="outline" className="mb-6 text-center">Why Choose Care N Tour</Badge>
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             What Makes Us <span className="bg-gradient-hero bg-clip-text text-transparent">Different</span>
           </h2>

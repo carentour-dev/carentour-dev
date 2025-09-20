@@ -22,7 +22,7 @@ const DoctorsSection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <Badge variant="outline" className="mb-4">Our Medical Team</Badge>
+          <Badge variant="outline" className="mb-4 text-center">Our Medical Team</Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Meet Our 
             <span className="bg-gradient-hero bg-clip-text text-transparent"> Top Specialists</span>
@@ -44,7 +44,7 @@ const DoctorsSection = () => {
                 </Avatar>
                 <CardTitle className="text-xl">{doctor.name}</CardTitle>
                 <p className="text-muted-foreground">{doctor.title}</p>
-                <Badge variant="secondary" className="mt-2">{doctor.specialization}</Badge>
+                <Badge variant="secondary" className="mt-2 text-center">{doctor.specialization}</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-center gap-4 text-sm">
@@ -65,7 +65,7 @@ const DoctorsSection = () => {
                 {doctor.languages && doctor.languages.length > 0 && (
                   <div className="flex flex-wrap gap-1 justify-center">
                     {doctor.languages.slice(0, 3).map((language, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
+                      <Badge key={index} variant="outline" className="text-xs text-center">
                         {language}
                       </Badge>
                     ))}

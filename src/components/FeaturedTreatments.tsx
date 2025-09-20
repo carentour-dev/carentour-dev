@@ -74,7 +74,7 @@ const FeaturedTreatments = () => {
               >
                 {treatment.popular && (
                   <div className="absolute top-4 right-4 z-10">
-                    <Badge variant="secondary" className="bg-accent text-accent-foreground">
+                    <Badge variant="secondary" className="bg-accent text-accent-foreground text-center">
                       Popular
                     </Badge>
                   </div>
