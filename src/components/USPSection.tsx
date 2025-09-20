@@ -171,10 +171,10 @@ const USPSection = () => {
             Get your free consultation and personalized treatment plan today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button className="bg-gradient-hero text-background px-8 py-4 text-lg font-semibold hover:shadow-elegant transition-spring">
+            <Button size="lg">
               Get Free Consultation
             </Button>
-            <Button variant="outline" className="px-8 py-4 text-lg font-semibold">
+            <Button variant="outline" size="lg">
               Download Brochure
             </Button>
           </div>
