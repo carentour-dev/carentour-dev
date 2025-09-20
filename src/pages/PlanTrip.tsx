@@ -224,9 +224,9 @@ const PlanTrip = () => {
               </div>
               
               <div className="mt-8 text-center">
-                <Card className="bg-accent-light border-accent/20">
+                <Card className="bg-primary/5 border-primary/20">
                   <CardContent className="p-6">
-                    <Globe className="h-8 w-8 text-accent mx-auto mb-4" />
+                    <Globe className="h-8 w-8 text-primary mx-auto mb-4" />
                     <h3 className="font-semibold text-foreground mb-2">Need Visa Assistance?</h3>
                     <p className="text-muted-foreground mb-4">
                       Our team will help you with the visa application process and provide all necessary documentation.
