@@ -1,8 +1,6 @@
-import React from 'npm:react@18.3.1'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
-import { Resend } from 'npm:resend@4.0.0'
-import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { ConfirmationEmail } from './_templates/confirmation-email.tsx'
+import { Resend } from 'npm:resend@2.0.0'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string
@@ -12,7 +10,81 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+// HTML template function
+function createConfirmationEmailHTML(params: {
+  token: string;
+  supabase_url: string;
+  email_action_type: string;
+  redirect_to: string;
+  token_hash: string;
+  user_email: string;
+}) {
+  const confirmationUrl = `${params.supabase_url}/auth/v1/verify?token=${params.token_hash}&type=${params.email_action_type}&redirect_to=${params.redirect_to}`;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirm your Care N Tour account</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; background-color: #ffffff;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #1e40af; font-size: 24px; font-weight: bold; margin: 40px 0 20px 0; text-align: center;">
+            Welcome to Care N Tour!
+          </h1>
+          
+          <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 16px 0;">
+            Thank you for signing up for Care N Tour, your trusted partner in medical tourism. 
+            To complete your registration, please confirm your email address.
+          </p>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${confirmationUrl}" 
+               style="background-color: #1e40af; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Confirm Your Email Address
+            </a>
+          </div>
+          
+          <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 16px 0;">
+            Or, copy and paste this confirmation code:
+          </p>
+          
+          <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px 24px; text-align: center; margin: 16px 0;">
+            <code style="color: #374151; font-size: 18px; font-weight: bold; letter-spacing: 2px; font-family: monospace;">
+              ${params.token}
+            </code>
+          </div>
+          
+          <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 16px 0;">
+            Once confirmed, you'll be able to:
+          </p>
+          
+          <ul style="color: #333333; font-size: 16px; line-height: 24px; margin: 16px 0; padding-left: 20px;">
+            <li style="margin-bottom: 8px;">Access your personalized dashboard</li>
+            <li style="margin-bottom: 8px;">Schedule consultations with top medical experts</li>
+            <li style="margin-bottom: 8px;">Plan your medical journey to Egypt</li>
+            <li style="margin-bottom: 8px;">Connect with our 24/7 support team</li>
+          </ul>
+          
+          <p style="color: #64748b; font-size: 16px; line-height: 24px; margin: 24px 0 16px 0;">
+            If you didn't create an account with Care N Tour, you can safely ignore this email.
+          </p>
+          
+          <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #64748b; font-size: 14px; line-height: 20px;">
+            <strong>Care N Tour Team</strong><br>
+            <span>Your Trusted Partner in Medical Tourism</span><br>
+            24/7 Emergency Hotline: +20 100 1741666<br>
+            Email: info@carentour.com
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -63,17 +135,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Render the React email template
-    const html = await renderAsync(
-      React.createElement(ConfirmationEmail, {
-        supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
-        token,
-        token_hash,
-        redirect_to,
-        email_action_type,
-        user_email: user.email,
-      })
-    )
+    // Generate the HTML email
+    const html = createConfirmationEmailHTML({
+      supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+      token,
+      token_hash,
+      redirect_to,
+      email_action_type,
+      user_email: user.email,
+    })
 
     console.log('Sending confirmation email to:', user.email)
 
@@ -113,4 +183,6 @@ Deno.serve(async (req) => {
       }
     )
   }
-})
+}
+
+serve(handler)
