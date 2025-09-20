@@ -12,10 +12,10 @@ const CTASection = () => {
             Our medical coordinators are available 24/7 to answer your questions and help you plan your treatment. Get personalized care and support every step of the way.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button className="bg-gradient-hero text-background px-8 py-4 text-lg font-semibold hover:shadow-elegant transition-spring">
+            <Button size="lg">
               Get Free Quote
             </Button>
-            <Button variant="outline" className="border-primary text-primary px-8 py-4 text-lg font-semibold hover:bg-primary hover:text-primary-foreground transition-smooth">
+            <Button variant="outline" size="lg">
               Schedule Consultation
             </Button>
           </div>
