@@ -4,6 +4,7 @@ import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -54,6 +55,7 @@ const Header = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link 
