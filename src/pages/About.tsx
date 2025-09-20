@@ -1,5 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import TeamSection from "@/components/TeamSection";
+import PartnerHospitals from "@/components/PartnerHospitals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -150,6 +152,12 @@ const About = () => {
             </div>
           </div>
         </section>
+
+        {/* Team Section */}
+        <TeamSection />
+
+        {/* Partner Hospitals Section */}
+        <PartnerHospitals />
 
         {/* CTA Section */}
         <section className="py-20 bg-gradient-hero">
