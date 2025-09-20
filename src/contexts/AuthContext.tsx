@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useSecurity } from '@/hooks/useSecurity';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { checkRateLimit, recordLoginAttempt, logSecurityEvent } = useSecurity();
 
   useEffect(() => {
     // Set up auth state listener
@@ -52,10 +54,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Check rate limit before attempting login
+    const rateLimitResult = await checkRateLimit(email);
+    
+    if (!rateLimitResult.allowed) {
+      await logSecurityEvent({
+        event_type: 'login_blocked_rate_limit',
+        event_data: { 
+          email,
+          reason: rateLimitResult.reason,
+          ip_attempts: rateLimitResult.ip_attempts,
+          email_attempts: rateLimitResult.email_attempts
+        },
+        risk_level: 'high'
+      });
+      
+      return { 
+        error: { 
+          message: 'Too many failed login attempts. Please try again in 15 minutes.',
+          status: 429
+        } 
+      };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Record the login attempt
+    await recordLoginAttempt(email, !error);
+
+    // Log additional security events
+    if (!error) {
+      await logSecurityEvent({
+        event_type: 'successful_login',
+        event_data: { email },
+        risk_level: 'low'
+      });
+    } else {
+      await logSecurityEvent({
+        event_type: 'failed_login',
+        event_data: { 
+          email,
+          error_message: error.message
+        },
+        risk_level: 'medium'
+      });
+    }
+
     return { error };
   };
 
@@ -69,6 +116,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         emailRedirectTo: redirectUrl,
         data: username ? { username } : undefined,
       }
+    });
+
+    // Log signup attempt
+    await logSecurityEvent({
+      event_type: error ? 'failed_signup' : 'successful_signup',
+      event_data: { 
+        email,
+        username,
+        error_message: error?.message
+      },
+      risk_level: error ? 'medium' : 'low'
     });
 
     // Send welcome email after successful signup
@@ -90,6 +148,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Log signout event
+    if (user) {
+      await logSecurityEvent({
+        event_type: 'user_signout',
+        user_id: user.id,
+        event_data: {},
+        risk_level: 'low'
+      });
+    }
+    
     await supabase.auth.signOut();
   };
 

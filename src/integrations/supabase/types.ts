@@ -180,6 +180,30 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          ip_address: unknown
+          success: boolean
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ip_address: unknown
+          success?: boolean
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ip_address?: unknown
+          success?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -240,14 +264,70 @@ export type Database = {
         }
         Relationships: []
       }
+      security_events: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          risk_level: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          risk_level?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          risk_level?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_login_rate_limit: {
+        Args: { p_email?: string; p_ip_address: unknown }
+        Returns: Json
+      }
+      cleanup_old_login_attempts: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_user_display_name: {
         Args: { user_id: string }
         Returns: string
+      }
+      log_security_event: {
+        Args: {
+          p_event_data?: Json
+          p_event_type: string
+          p_ip_address?: unknown
+          p_risk_level?: string
+          p_user_agent?: string
+          p_user_id?: string
+        }
+        Returns: string
+      }
+      record_login_attempt: {
+        Args: { p_email: string; p_ip_address: unknown; p_success: boolean }
+        Returns: undefined
       }
     }
     Enums: {
