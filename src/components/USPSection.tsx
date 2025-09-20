@@ -118,7 +118,7 @@ const USPSection = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-semibold text-foreground">{usp.title}</h3>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs text-center">
                           {usp.highlight}
                         </Badge>
                       </div>
