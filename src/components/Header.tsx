@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { profile } = useUserProfile();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -58,7 +60,7 @@ const Header = () => {
                   to="/dashboard" 
                   className="text-sm text-muted-foreground hidden sm:inline hover:text-primary transition-smooth"
                 >
-                  Welcome, {user.user_metadata?.username || user.email?.split('@')[0] || 'User'}
+                  Welcome, {profile?.displayName || 'User'}
                 </Link>
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" />

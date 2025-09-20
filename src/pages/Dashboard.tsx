@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { useEffect } from "react";
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
+  const { profile } = useUserProfile();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -118,9 +120,9 @@ const Dashboard = () => {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
             <Avatar className="w-16 h-16">
-              <AvatarImage src="" alt={user.email} />
+              <AvatarImage src={profile?.avatar_url || ""} alt="User Avatar" />
               <AvatarFallback className="text-lg bg-primary/10">
-                {user.email?.charAt(0).toUpperCase()}
+                {profile?.initials || 'U'}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -128,7 +130,7 @@ const Dashboard = () => {
                 Welcome back!
               </h1>
               <p className="text-muted-foreground">
-                {user.email}
+                {profile?.displayName || 'User'}
               </p>
               <Badge variant="outline" className="mt-1">
                 Patient Portal
