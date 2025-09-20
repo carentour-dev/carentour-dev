@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Award, 
   Shield, 
@@ -170,12 +171,12 @@ const USPSection = () => {
             Get your free consultation and personalized treatment plan today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-gradient-hero text-background px-8 py-3 rounded-lg font-semibold hover:shadow-elegant transition-spring">
+            <Button className="bg-gradient-hero text-background px-8 py-4 text-lg font-semibold hover:shadow-elegant transition-spring">
               Get Free Consultation
-            </button>
-            <button className="border border-border text-foreground px-8 py-3 rounded-lg font-semibold hover:bg-muted transition-spring">
+            </Button>
+            <Button variant="outline" className="px-8 py-4 text-lg font-semibold">
               Download Brochure
-            </button>
+            </Button>
           </div>
         </div>
       </div>
