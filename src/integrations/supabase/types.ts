@@ -302,6 +302,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_email_exists: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       check_login_rate_limit: {
         Args: { p_email?: string; p_ip_address: unknown }
         Returns: Json

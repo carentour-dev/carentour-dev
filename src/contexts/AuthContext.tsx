@@ -107,6 +107,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, username?: string) => {
+    // Pre-signup validation: Check if email already exists
+    try {
+      const { data: emailExists, error: checkError } = await supabase.rpc('check_email_exists', {
+        p_email: email
+      });
+
+      if (checkError) {
+        console.error('Error checking email existence:', checkError);
+        // Continue with signup if check fails (fallback behavior)
+      } else if (emailExists) {
+        // Email already exists, return clear error message
+        await logSecurityEvent({
+          event_type: 'blocked_duplicate_signup',
+          event_data: { 
+            email,
+            username,
+            reason: 'email_already_exists'
+          },
+          risk_level: 'medium'
+        });
+
+        return { 
+          error: { 
+            message: 'An account with this email address already exists. Please sign in instead or use the "Forgot Password" option if you need to reset your password.'
+          } as any
+        };
+      }
+    } catch (preCheckError) {
+      console.error('Pre-signup check failed:', preCheckError);
+      // Continue with signup if pre-check fails (fallback behavior)
+    }
+
     const redirectUrl = `${window.location.origin}/dashboard`;
     
     const { error } = await supabase.auth.signUp({
@@ -118,9 +150,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Enhanced error handling for existing email
+    // Enhanced error handling for existing email and other signup issues
     if (error) {
       let errorToReturn = error;
+      let errorType = 'other';
       
       // Check for existing user error and provide clear message
       if (error.message?.includes('User already registered') || 
@@ -128,8 +161,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error.message?.includes('email address is already registered') ||
           error.status === 422) {
         errorToReturn = {
-          message: 'An account with this email address already exists. Please sign in instead or use a different email address.'
+          message: 'An account with this email address already exists. Please sign in instead or use the "Forgot Password" option if you need to reset your password.'
         } as any;
+        errorType = 'existing_email';
+      }
+      
+      // Check for rate limiting
+      else if (error.message?.includes('rate') || error.message?.includes('too many')) {
+        errorToReturn = {
+          message: 'Too many signup attempts. Please wait a few minutes before trying again.'
+        } as any;
+        errorType = 'rate_limited';
+      }
+      
+      // Check for weak password
+      else if (error.message?.includes('password') && error.message?.includes('weak')) {
+        errorToReturn = {
+          message: 'Password is too weak. Please choose a stronger password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.'
+        } as any;
+        errorType = 'weak_password';
       }
       
       // Log signup attempt
@@ -139,9 +189,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           username,
           error_message: error.message,
-          error_type: errorToReturn.message !== error.message ? 'existing_email' : 'other'
+          error_type: errorType
         },
-        risk_level: 'medium'
+        risk_level: errorType === 'existing_email' ? 'high' : 'medium'
       });
 
       return { error: errorToReturn };
