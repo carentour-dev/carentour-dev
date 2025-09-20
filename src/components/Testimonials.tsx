@@ -74,28 +74,6 @@ const Testimonials = () => {
             </Card>
           ))}
         </div>
-
-        {/* Stats Bar */}
-        <div className="mt-16 bg-gradient-hero rounded-xl p-8 text-center">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-background">
-            <div>
-              <p className="text-3xl md:text-4xl font-bold mb-2">5000+</p>
-              <p className="opacity-90">Happy Patients</p>
-            </div>
-            <div>
-              <p className="text-3xl md:text-4xl font-bold mb-2">98%</p>
-              <p className="opacity-90">Success Rate</p>
-            </div>
-            <div>
-              <p className="text-3xl md:text-4xl font-bold mb-2">50+</p>
-              <p className="opacity-90">Countries</p>
-            </div>
-            <div>
-              <p className="text-3xl md:text-4xl font-bold mb-2">10+</p>
-              <p className="opacity-90">Years Experience</p>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
