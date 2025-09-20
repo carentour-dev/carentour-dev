@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# Welcome to Care N Tour project
 
 ## Project info
 
