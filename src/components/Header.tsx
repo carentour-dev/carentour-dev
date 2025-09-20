@@ -22,7 +22,6 @@ const Header = () => {
   ];
 
   const authenticatedNavigation = [
-    { name: "Dashboard", href: "/dashboard" },
     { name: "Home", href: "/" },
     { name: "About Us", href: "/about" },
     { name: "Treatments", href: "/treatments" },
@@ -33,6 +32,7 @@ const Header = () => {
     { name: "Concierge", href: "/concierge" },
     { name: "Blog", href: "/blog" },
     { name: "Contact", href: "/contact" },
+    { name: "Dashboard", href: "/dashboard" },
   ];
 
   const currentNavigation = user ? authenticatedNavigation : navigation;
