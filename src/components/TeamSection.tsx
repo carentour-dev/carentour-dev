@@ -69,7 +69,9 @@ const TeamSection = () => {
                   </Avatar>
                 </div>
                 <CardTitle className="text-xl mb-2">{member.name}</CardTitle>
-                <Badge variant="outline" className="mb-2 text-center">{member.role}</Badge>
+                <div className="flex justify-center">
+                  <Badge variant="outline" className="mb-2 text-center">{member.role}</Badge>
+                </div>
                 <p className="text-primary font-medium">{member.specialization}</p>
               </CardHeader>
               <CardContent className="space-y-4">
