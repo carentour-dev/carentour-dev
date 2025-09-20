@@ -86,7 +86,7 @@ const Auth = () => {
     } else {
       toast({
         title: 'Success',
-        description: 'Account created successfully! Check your email for a welcome message.',
+        description: 'Account created! Please check your email for a confirmation link to verify your account, plus a welcome message.',
       });
     }
 
