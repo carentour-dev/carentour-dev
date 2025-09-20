@@ -9,6 +9,9 @@ import { ArrowLeft, Clock, DollarSign, Star, Check, Users, Heart, Award, Quote, 
 import drAhmedMansour from "@/assets/doctor-ahmed-mansour.jpg";
 import drLaylaKhalil from "@/assets/doctor-layla-khalil.jpg";
 import drOmarFarouk from "@/assets/doctor-omar-farouk.jpg";
+import drKhaledRashed from "@/assets/doctor-khaled-rashed.jpg";
+import drNadiaSalim from "@/assets/doctor-nadia-salim.jpg";
+import drYoussefElshamy from "@/assets/doctor-youssef-elshamy.jpg";
 
 const TreatmentDetails = () => {
   const { category } = useParams();
@@ -255,43 +258,268 @@ const TreatmentDetails = () => {
     // ... keeping other treatments with similar comprehensive data structure
     "dental-care": {
       title: "Dental Care",
-      description: "Complete dental treatments and cosmetic procedures with modern techniques",
+      description: "Complete dental treatments and cosmetic procedures with modern techniques and advanced materials",
+      overview: "Our dental department offers comprehensive oral healthcare services using the latest technology and materials. From routine treatments to complex cosmetic procedures, we ensure optimal oral health and beautiful smiles with internationally trained specialists.",
+      idealCandidates: [
+        "Patients seeking dental implants or tooth replacement",
+        "Individuals wanting cosmetic smile enhancement",
+        "Those requiring complex dental treatments",
+        "Patients needing endodontic procedures",
+        "Cases requiring oral surgery or periodontal treatment"
+      ],
+      doctors: [
+        {
+          name: "Dr. Nadia Salim",
+          title: "Chief Dental Officer",
+          specialization: "Cosmetic & Implant Dentistry",
+          experience: "14+ years",
+          education: "Cairo University, UCLA Advanced Implantology",
+          languages: ["English", "Arabic", "Portuguese"],
+          image: drNadiaSalim,
+          achievements: ["3,000+ dental implants placed", "Expert in All-on-4 technique", "International cosmetic dentistry certification"]
+        }
+      ],
+      testimonials: [
+        {
+          name: "Michael Thompson",
+          country: "Canada",
+          procedure: "Full Mouth Dental Implants",
+          rating: 5,
+          text: "Dr. Salim completely transformed my smile with All-on-4 implants. The quality is exceptional and the cost was 70% less than in Canada. I can eat everything again!",
+          recoveryTime: "3 months"
+        },
+        {
+          name: "Isabella Costa",
+          country: "Brazil",
+          procedure: "Porcelain Veneers",
+          rating: 5,
+          text: "Perfect Hollywood smile! Dr. Salim speaks Portuguese which made me comfortable. The veneers look completely natural and the dental clinic is very modern.",
+          recoveryTime: "1 week"
+        }
+      ],
       procedures: [
         {
           name: "Dental Implants",
-          description: "Permanent tooth replacement using titanium implants and ceramic crowns.",
+          description: "Permanent tooth replacement using titanium implants and ceramic crowns for natural-looking, long-lasting results.",
           duration: "2-3 sessions over 3-6 months",
           recovery: "3-6 months",
           price: "$800 - $1,500 per implant",
-          success_rate: "95%"
+          success_rate: "95%",
+          candidateRequirements: ["Adequate bone density", "Good oral hygiene", "Non-smoker preferred", "Healthy gums"],
+          recoveryStages: [
+            { stage: "Day 1-3", description: "Initial healing, soft diet required" },
+            { stage: "Weeks 1-2", description: "Swelling subsides, suture removal" },
+            { stage: "Months 1-3", description: "Osseointegration period" },
+            { stage: "Months 3-6", description: "Crown placement and final restoration" }
+          ]
+        },
+        {
+          name: "Porcelain Veneers",
+          description: "Thin ceramic shells bonded to front teeth for cosmetic enhancement, creating a perfect smile transformation.",
+          duration: "2-3 visits over 2 weeks",
+          recovery: "1 week",
+          price: "$300 - $600 per tooth",
+          success_rate: "98%",
+          candidateRequirements: ["Healthy tooth structure", "Good oral hygiene", "Realistic expectations", "Adequate enamel"],
+          recoveryStages: [
+            { stage: "Day 1", description: "Temporary veneers placed" },
+            { stage: "Days 2-7", description: "Adjustment period, avoid hard foods" },
+            { stage: "Week 2", description: "Final veneers bonded" },
+            { stage: "Month 1", description: "Complete adaptation achieved" }
+          ]
+        },
+        {
+          name: "Root Canal Treatment",
+          description: "Removal of infected tooth pulp and sealing to save the natural tooth, preventing extraction.",
+          duration: "1-2 hours per session",
+          recovery: "3-5 days",
+          price: "$200 - $400",
+          success_rate: "90%",
+          candidateRequirements: ["Infected or damaged pulp", "Salvageable tooth structure", "No severe periodontal disease"],
+          recoveryStages: [
+            { stage: "Day 1", description: "Procedure completed, temporary filling" },
+            { stage: "Days 2-3", description: "Mild discomfort, pain medication" },
+            { stage: "Days 4-5", description: "Return to normal function" },
+            { stage: "Weeks 2-4", description: "Permanent crown placement" }
+          ]
         }
       ]
     },
     "general-surgery": {
       title: "General Surgery", 
-      description: "Wide range of surgical procedures using minimally invasive techniques",
+      description: "Wide range of surgical procedures using minimally invasive techniques for faster recovery",
+      overview: "Our general surgery department specializes in minimally invasive laparoscopic procedures that reduce pain, scarring, and recovery time. Our experienced surgeons use advanced techniques to treat a variety of conditions with excellent outcomes.",
+      idealCandidates: [
+        "Patients requiring gallbladder removal",
+        "Individuals with hernia conditions",
+        "Those needing appendix removal",
+        "Patients with gastrointestinal conditions",
+        "Cases requiring abdominal surgery"
+      ],
+      doctors: [
+        {
+          name: "Dr. Youssef El-Shamy",
+          title: "Chief General Surgeon",
+          specialization: "Laparoscopic & Minimally Invasive Surgery",
+          experience: "17+ years",
+          education: "Ain Shams University, Mayo Clinic Fellowship",
+          languages: ["English", "Arabic", "German"],
+          image: drYoussefElshamy,
+          achievements: ["4,000+ laparoscopic procedures", "Expert in robotic surgery", "Minimally invasive surgery pioneer in Egypt"]
+        }
+      ],
+      testimonials: [
+        {
+          name: "Hans Mueller",
+          country: "Germany",
+          procedure: "Laparoscopic Gallbladder Surgery",
+          rating: 5,
+          text: "Excellent experience with Dr. El-Shamy. The laparoscopic technique meant tiny scars and quick recovery. I was back to work in just one week!",
+          recoveryTime: "1 week"
+        },
+        {
+          name: "Patricia Wilson",
+          country: "Australia",
+          procedure: "Hernia Repair",
+          rating: 5,
+          text: "Professional team and modern techniques. The mesh repair was done perfectly and I had no complications. Great value for money compared to Australia.",
+          recoveryTime: "2 weeks"
+        }
+      ],
       procedures: [
         {
           name: "Laparoscopic Gallbladder Surgery",
-          description: "Minimally invasive removal of gallbladder through small incisions.",
+          description: "Minimally invasive removal of gallbladder through small incisions using advanced laparoscopic technology.",
           duration: "1-2 hours",
           recovery: "1-2 weeks", 
           price: "$1,500 - $2,500",
-          success_rate: "98%"
+          success_rate: "98%",
+          candidateRequirements: ["Symptomatic gallstones", "No severe inflammation", "Good anesthesia candidate"],
+          recoveryStages: [
+            { stage: "Day 1", description: "Same day discharge or overnight stay" },
+            { stage: "Days 2-7", description: "Gradual activity increase, light diet" },
+            { stage: "Week 2", description: "Return to normal activities" },
+            { stage: "Month 1", description: "Full recovery achieved" }
+          ]
+        },
+        {
+          name: "Hernia Repair",
+          description: "Surgical correction of hernias using mesh reinforcement technique for long-lasting results.",
+          duration: "1-2 hours",
+          recovery: "2-4 weeks",
+          price: "$1,200 - $2,000",
+          success_rate: "95%",
+          candidateRequirements: ["Confirmed hernia diagnosis", "No active infection", "Suitable for surgery"],
+          recoveryStages: [
+            { stage: "Days 1-3", description: "Rest, avoid lifting" },
+            { stage: "Week 1", description: "Light activities only" },
+            { stage: "Weeks 2-4", description: "Gradual return to normal" },
+            { stage: "Month 2", description: "Full activity clearance" }
+          ]
+        },
+        {
+          name: "Appendectomy",
+          description: "Surgical removal of appendix through laparoscopic approach for faster recovery and minimal scarring.",
+          duration: "30-60 minutes",
+          recovery: "1-3 weeks",
+          price: "$1,800 - $2,800",
+          success_rate: "99%",
+          candidateRequirements: ["Acute appendicitis", "No rupture complications", "Emergency surgery candidate"],
+          recoveryStages: [
+            { stage: "Day 1-2", description: "Hospital observation" },
+            { stage: "Days 3-7", description: "Home recovery, light activities" },
+            { stage: "Weeks 2-3", description: "Return to normal activities" },
+            { stage: "Month 1", description: "Complete healing" }
+          ]
         }
       ]
     },
     "orthopedic-surgery": {
       title: "Orthopedic Surgery",
-      description: "Joint replacement and bone treatments by experienced orthopedic specialists", 
+      description: "Joint replacement and bone treatments by experienced orthopedic specialists using advanced prosthetics",
+      overview: "Our orthopedic surgery department offers comprehensive bone and joint treatments using the latest prosthetic materials and surgical techniques. We specialize in joint replacement, sports medicine, and spine surgery with excellent mobility restoration outcomes.",
+      idealCandidates: [
+        "Patients with severe arthritis or joint damage",
+        "Individuals requiring joint replacement",
+        "Those with spine conditions",
+        "Patients with sports-related injuries",
+        "Cases needing complex bone reconstruction"
+      ],
+      doctors: [
+        {
+          name: "Dr. Khaled Rashed",
+          title: "Chief Orthopedic Surgeon",
+          specialization: "Joint Replacement & Spine Surgery",
+          experience: "19+ years",
+          education: "Cairo University, Hospital for Special Surgery NYC Fellowship",
+          languages: ["English", "Arabic", "Russian"],
+          image: drKhaledRashed,
+          achievements: ["2,500+ joint replacements", "Spine surgery specialist", "Advanced prosthetics expert"]
+        }
+      ],
+      testimonials: [
+        {
+          name: "Vladimir Petrov",
+          country: "Russia",
+          procedure: "Total Hip Replacement",
+          rating: 5,
+          text: "Dr. Rashed is an exceptional surgeon. My hip replacement was perfect and I'm walking pain-free for the first time in years. The Russian-speaking coordinator was very helpful.",
+          recoveryTime: "8 weeks"
+        },
+        {
+          name: "Emma Clarke",
+          country: "United Kingdom",
+          procedure: "Knee Replacement Surgery",
+          rating: 5,
+          text: "Outstanding results! The titanium knee joint feels natural and the recovery was faster than expected. Dr. Rashed explained everything clearly throughout the process.",
+          recoveryTime: "10 weeks"
+        }
+      ],
       procedures: [
         {
           name: "Hip Replacement Surgery",
-          description: "Total or partial hip joint replacement with titanium and ceramic prosthetics.",
+          description: "Total or partial hip joint replacement with titanium and ceramic prosthetics for pain relief and mobility restoration.",
           duration: "1-2 hours",
           recovery: "6-12 weeks",
           price: "$4,200 - $6,500", 
-          success_rate: "95%"
+          success_rate: "95%",
+          candidateRequirements: ["Severe hip arthritis", "Failed conservative treatment", "Good bone quality", "Realistic expectations"],
+          recoveryStages: [
+            { stage: "Days 1-3", description: "Hospital stay, physical therapy begins" },
+            { stage: "Weeks 1-2", description: "Home recovery, walker assistance" },
+            { stage: "Weeks 3-6", description: "Gradual weight bearing, cane use" },
+            { stage: "Weeks 6-12", description: "Full weight bearing, return to activities" }
+          ]
+        },
+        {
+          name: "Knee Replacement Surgery",
+          description: "Replacement of damaged knee joint with artificial joint components for pain-free mobility.",
+          duration: "1-2 hours",
+          recovery: "8-12 weeks",
+          price: "$4,500 - $7,000",
+          success_rate: "93%",
+          candidateRequirements: ["Severe knee arthritis", "Significant pain and stiffness", "Failed non-surgical treatments"],
+          recoveryStages: [
+            { stage: "Days 1-4", description: "Hospital stay, immediate mobility" },
+            { stage: "Weeks 1-3", description: "Home therapy, walker support" },
+            { stage: "Weeks 4-8", description: "Increased activity, cane use" },
+            { stage: "Weeks 8-12", description: "Full recovery, normal activities" }
+          ]
+        },
+        {
+          name: "Spine Surgery",
+          description: "Surgical treatment for herniated discs, spinal fusion, and decompression using advanced microsurgical techniques.",
+          duration: "2-4 hours",
+          recovery: "6-16 weeks",
+          price: "$5,500 - $12,000",
+          success_rate: "88%",
+          candidateRequirements: ["Failed conservative treatment", "Neurological symptoms", "Confirmed disc pathology"],
+          recoveryStages: [
+            { stage: "Days 1-5", description: "Hospital stay, pain management" },
+            { stage: "Weeks 1-4", description: "Limited activity, brace wearing" },
+            { stage: "Weeks 4-8", description: "Gradual activity increase" },
+            { stage: "Weeks 8-16", description: "Physical therapy, return to work" }
+          ]
         }
       ]
     }
