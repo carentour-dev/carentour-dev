@@ -69,7 +69,7 @@ export function ThemeToggle() {
       >
         <DropdownMenuItem 
           onClick={() => handleThemeChange("light")}
-          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 focus:bg-muted/50 ${
+          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
             theme === "light" ? "bg-muted text-primary font-medium" : ""
           }`}
           role="menuitem"
@@ -81,7 +81,7 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("dark")}
-          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 focus:bg-muted/50 ${
+          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
             theme === "dark" ? "bg-muted text-primary font-medium" : ""
           }`}
           role="menuitem"
@@ -93,7 +93,7 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("system")}
-          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 focus:bg-muted/50 ${
+          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
             theme === "system" ? "bg-muted text-primary font-medium" : ""
           }`}
           role="menuitem"
