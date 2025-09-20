@@ -12,8 +12,8 @@ import { useState } from "react";
 const Doctors = () => {
   const { doctors, loading, error } = useDoctors();
   const [searchTerm, setSearchTerm] = useState("");
-  const [specialtyFilter, setSpecialtyFilter] = useState("");
-  const [languageFilter, setLanguageFilter] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState("all");
 
   // Get unique specializations and languages for filters
   const specializations = [...new Set(doctors.map(doctor => doctor.specialization))];
@@ -23,8 +23,8 @@ const Doctors = () => {
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = !specialtyFilter || doctor.specialization === specialtyFilter;
-    const matchesLanguage = !languageFilter || doctor.languages?.includes(languageFilter);
+    const matchesSpecialty = specialtyFilter === "all" || doctor.specialization === specialtyFilter;
+    const matchesLanguage = languageFilter === "all" || doctor.languages?.includes(languageFilter);
     
     return matchesSearch && matchesSpecialty && matchesLanguage;
   });
@@ -104,7 +104,7 @@ const Doctors = () => {
                       <SelectValue placeholder="Filter by specialty" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Specialties</SelectItem>
+                      <SelectItem value="all">All Specialties</SelectItem>
                       {specializations.map(specialty => (
                         <SelectItem key={specialty} value={specialty}>{specialty}</SelectItem>
                       ))}
@@ -115,7 +115,7 @@ const Doctors = () => {
                       <SelectValue placeholder="Filter by language" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Languages</SelectItem>
+                      <SelectItem value="all">All Languages</SelectItem>
                       {languages.map(language => (
                         <SelectItem key={language} value={language}>{language}</SelectItem>
                       ))}
@@ -140,8 +140,8 @@ const Doctors = () => {
                   variant="outline" 
                   onClick={() => {
                     setSearchTerm("");
-                    setSpecialtyFilter("");
-                    setLanguageFilter("");
+                    setSpecialtyFilter("all");
+                    setLanguageFilter("all");
                   }}
                   className="mt-4"
                 >
