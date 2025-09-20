@@ -85,8 +85,8 @@ const Auth = () => {
       });
     } else {
       toast({
-        title: 'Success',
-        description: 'Account created! Please check your email for a confirmation link to verify your account.',
+        title: 'Account Created Successfully!',
+        description: 'Please check your email for a confirmation link. Click the link to verify your account and you\'ll be automatically redirected to your dashboard.',
       });
     }
 

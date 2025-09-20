@@ -22,14 +22,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   if (!user) {
     return null;
