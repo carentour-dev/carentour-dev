@@ -174,7 +174,7 @@ const USPSection = () => {
             <Button size="lg">
               Get Free Consultation
             </Button>
-            <Button variant="outline" size="lg">
+            <Button variant="outline-orange" size="lg">
               Download Brochure
             </Button>
           </div>
