@@ -44,7 +44,9 @@ const DoctorsSection = () => {
                 </Avatar>
                 <CardTitle className="text-xl">{doctor.name}</CardTitle>
                 <p className="text-muted-foreground">{doctor.title}</p>
-                <Badge variant="secondary" className="mt-2 text-center">{doctor.specialization}</Badge>
+                <div className="flex justify-center">
+                  <Badge variant="secondary" className="mt-2 text-center">{doctor.specialization}</Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-center gap-4 text-sm">
