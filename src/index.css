@@ -92,10 +92,10 @@
     --secondary-foreground: 0 0% 100%;
     --secondary-light: 175 45% 20%;
 
-    /* Accessible Cyan - Better contrast for dark mode */
-    --accent: 195 100% 70%;
+    /* Accessible Teal - Better contrast and visual appeal for dark mode */
+    --accent: 180 85% 65%;
     --accent-foreground: 222 20% 8%;
-    --accent-light: 195 80% 25%;
+    --accent-light: 180 70% 25%;
 
     --muted: 222 15% 15%;
     --muted-foreground: 210 20% 65%;
