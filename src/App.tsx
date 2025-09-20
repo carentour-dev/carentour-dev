@@ -11,6 +11,8 @@ import Treatments from "./pages/Treatments";
 import TreatmentDetails from "./pages/TreatmentDetails";
 import PatientStories from "./pages/PatientStories";
 import PlanTrip from "./pages/PlanTrip";
+import TravelInfo from "./pages/TravelInfo";
+import ConciergeServices from "./pages/ConciergeServices";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/treatments/:category" element={<TreatmentDetails />} />
             <Route path="/stories" element={<PatientStories />} />
             <Route path="/plan" element={<PlanTrip />} />
+            <Route path="/travel-info" element={<TravelInfo />} />
+            <Route path="/concierge" element={<ConciergeServices />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/contact" element={<Contact />} />
