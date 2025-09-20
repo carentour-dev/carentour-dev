@@ -49,9 +49,12 @@ const Header = () => {
           <div className="flex items-center space-x-2">
             {user ? (
               <>
-                <span className="text-sm text-muted-foreground hidden sm:inline">
-                  Welcome, {user.email}
-                </span>
+                <Link 
+                  to="/dashboard" 
+                  className="text-sm text-muted-foreground hidden sm:inline hover:text-primary transition-smooth"
+                >
+                  Welcome, {user.user_metadata?.username || user.email?.split('@')[0] || 'User'}
+                </Link>
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" />
                   Sign Out
