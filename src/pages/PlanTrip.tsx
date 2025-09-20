@@ -244,12 +244,12 @@ const PlanTrip = () => {
           <div className="container mx-auto px-4">
             <Card className="max-w-3xl mx-auto bg-background/10 backdrop-blur-sm border-background/20">
               <CardContent className="p-8 text-center">
-                <Phone className="h-12 w-12 text-background mx-auto mb-4" />
+                <Phone className="h-12 w-12 text-accent mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-background mb-2">24/7 Emergency Support</h3>
                 <p className="text-background/90 mb-4">
                   Our medical coordinators are available around the clock for any urgent needs during your stay
                 </p>
-                <p className="text-background font-semibold text-xl">
+                <p className="text-accent font-semibold text-xl">
                   Emergency Hotline: +20 100 1741666
                 </p>
               </CardContent>
