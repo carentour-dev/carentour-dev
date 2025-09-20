@@ -310,6 +310,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      generate_anonymized_patient_name: {
+        Args: { review_id: string }
+        Returns: string
+      }
       get_user_display_name: {
         Args: { user_id: string }
         Returns: string
