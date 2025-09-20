@@ -5,6 +5,7 @@ import FeaturedTreatments from "@/components/FeaturedTreatments";
 import ProcessSection from "@/components/ProcessSection";
 import USPSection from "@/components/USPSection";
 import Testimonials from "@/components/Testimonials";
+import DoctorsSection from "@/components/DoctorsSection";
 import CTASection from "@/components/CTASection";
 
 const Index = () => {
@@ -16,6 +17,7 @@ const Index = () => {
         <FeaturedTreatments />
         <ProcessSection />
         <USPSection />
+        <DoctorsSection />
         <Testimonials />
         <CTASection />
       </main>

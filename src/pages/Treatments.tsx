@@ -3,11 +3,13 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Stethoscope, Eye, Smile, Scissors, Activity } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Heart, Stethoscope, Eye, Smile, Scissors, Activity, Users } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { useDoctors } from "@/hooks/useDoctors";
 
 const Treatments = () => {
   const navigate = useNavigate();
+  const { doctors } = useDoctors();
   const treatmentCategories = [
     {
       id: "cardiac-surgery",
@@ -136,6 +138,32 @@ const Treatments = () => {
                   </Card>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Doctor Access */}
+        <section className="py-20 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Meet Our Specialists
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Connect with our experienced doctors who specialize in your treatment area
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-6 items-center justify-center">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-5 w-5" />
+                <span>{doctors.length} Specialist Doctors Available</span>
+              </div>
+              <Link to="/doctors">
+                <Button size="lg" variant="outline">
+                  Browse All Doctors
+                </Button>
+              </Link>
             </div>
           </div>
         </section>

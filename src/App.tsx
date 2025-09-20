@@ -16,6 +16,8 @@ import ConciergeServices from "./pages/ConciergeServices";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
+import Doctors from "./pages/Doctors";
+import DoctorDetail from "./pages/DoctorDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/treatments" element={<Treatments />} />
             <Route path="/treatments/:category" element={<TreatmentDetails />} />
+            <Route path="/doctors" element={<Doctors />} />
+            <Route path="/doctors/:doctorId" element={<DoctorDetail />} />
             <Route path="/stories" element={<PatientStories />} />
             <Route path="/plan" element={<PlanTrip />} />
             <Route path="/travel-info" element={<TravelInfo />} />
