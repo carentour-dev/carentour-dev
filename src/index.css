@@ -92,10 +92,10 @@
     --secondary-foreground: 0 0% 100%;
     --secondary-light: 175 45% 20%;
 
-    /* Black accent for dark mode */
-    --accent: 0 0% 0%;
-    --accent-foreground: 0 0% 100%;
-    --accent-light: 0 0% 10%;
+    /* Luxury Gold - Dark mode adaptation */
+    --accent: 35 75% 55%;
+    --accent-foreground: 222 20% 8%;
+    --accent-light: 35 60% 15%;
 
     --muted: 222 15% 15%;
     --muted-foreground: 210 20% 65%;
