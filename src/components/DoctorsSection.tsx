@@ -74,7 +74,7 @@ const DoctorsSection = () => {
                   </div>
                 )}
 
-                <Link to={`/doctors/${doctor.id}`}>
+                <Link to={`/doctors/${doctor.id}`} className="mt-6 block">
                   <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-background transition-smooth">
                     View Profile
                   </Button>
