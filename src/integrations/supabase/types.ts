@@ -14,6 +14,172 @@ export type Database = {
   }
   public: {
     Tables: {
+      doctor_reviews: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          id: string
+          is_verified: boolean | null
+          patient_country: string | null
+          patient_name: string
+          procedure_name: string | null
+          rating: number
+          recovery_time: string | null
+          review_text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          id?: string
+          is_verified?: boolean | null
+          patient_country?: string | null
+          patient_name: string
+          procedure_name?: string | null
+          rating: number
+          recovery_time?: string | null
+          review_text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          is_verified?: boolean | null
+          patient_country?: string | null
+          patient_name?: string
+          procedure_name?: string | null
+          rating?: number
+          recovery_time?: string | null
+          review_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_specialties: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      doctor_treatments: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          id: string
+          is_primary_specialist: boolean | null
+          treatment_category: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          id?: string
+          is_primary_specialist?: boolean | null
+          treatment_category: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          is_primary_specialist?: boolean | null
+          treatment_category?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_treatments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors: {
+        Row: {
+          achievements: string[] | null
+          avatar_url: string | null
+          bio: string | null
+          certifications: string[] | null
+          created_at: string
+          education: string
+          experience_years: number
+          id: string
+          is_active: boolean | null
+          languages: string[] | null
+          name: string
+          patient_rating: number | null
+          research_publications: number | null
+          specialization: string
+          successful_procedures: number | null
+          title: string
+          total_reviews: number | null
+          updated_at: string
+        }
+        Insert: {
+          achievements?: string[] | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          created_at?: string
+          education: string
+          experience_years: number
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          name: string
+          patient_rating?: number | null
+          research_publications?: number | null
+          specialization: string
+          successful_procedures?: number | null
+          title: string
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Update: {
+          achievements?: string[] | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          created_at?: string
+          education?: string
+          experience_years?: number
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          name?: string
+          patient_rating?: number | null
+          research_publications?: number | null
+          specialization?: string
+          successful_procedures?: number | null
+          title?: string
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

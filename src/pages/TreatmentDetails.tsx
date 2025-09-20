@@ -4,18 +4,15 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { DoctorProfile } from "@/components/DoctorProfile";
+import { DoctorReviews } from "@/components/DoctorReviews";
+import { useDoctors, useDoctorReviews } from "@/hooks/useDoctors";
 import { ArrowLeft, Clock, DollarSign, Star, Check, Users, Heart, Award, Quote, AlertTriangle, CheckCircle } from "lucide-react";
-import drAhmedMansour from "@/assets/doctor-ahmed-mansour.jpg";
-import drLaylaKhalil from "@/assets/doctor-layla-khalil.jpg";
-import drOmarFarouk from "@/assets/doctor-omar-farouk.jpg";
-import drKhaledRashed from "@/assets/doctor-khaled-rashed.jpg";
-import drNadiaSalim from "@/assets/doctor-nadia-salim.jpg";
-import drYoussefElshamy from "@/assets/doctor-youssef-elshamy.jpg";
 
 const TreatmentDetails = () => {
   const { category } = useParams();
   const navigate = useNavigate();
+  const { doctors, loading: doctorsLoading } = useDoctors(category);
 
   const treatmentData: Record<string, any> = {
     "cardiac-surgery": {
@@ -28,36 +25,6 @@ const TreatmentDetails = () => {
         "Individuals with congenital heart defects",
         "Patients with aortic aneurysms",
         "Cases requiring arrhythmia surgery"
-      ],
-      doctors: [
-        {
-          name: "Dr. Ahmed Mansour",
-          title: "Chief Cardiac Surgeon",
-          specialization: "Minimally Invasive Cardiac Surgery",
-          experience: "18+ years",
-          education: "Cairo University, Harvard Medical Fellowship",
-          languages: ["English", "Arabic", "French"],
-          image: drAhmedMansour,
-          achievements: ["1,500+ successful surgeries", "Published 40+ research papers", "International training in Germany"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Robert Johnson",
-          country: "United States",
-          procedure: "Coronary Bypass Surgery",
-          rating: 5,
-          text: "Dr. Mansour and his team saved my life. The quality of care was exceptional, and the cost was a fraction of what I would pay in the US. The hospital facilities were world-class.",
-          recoveryTime: "6 weeks"
-        },
-        {
-          name: "Maria Schmidt",
-          country: "Germany",
-          procedure: "Heart Valve Replacement",
-          rating: 5,
-          text: "Outstanding experience from consultation to recovery. The medical team was professional, and the coordinator spoke perfect German. I'm completely satisfied with my results.",
-          recoveryTime: "4 weeks"
-        }
       ],
       procedures: [
         {
@@ -89,21 +56,6 @@ const TreatmentDetails = () => {
             { stage: "Weeks 1-4", description: "Home recovery, medication adjustment" },
             { stage: "Weeks 4-6", description: "Gradual activity increase" }
           ]
-        },
-        {
-          name: "Angioplasty & Stenting",
-          description: "Minimally invasive procedure to open blocked coronary arteries using balloon inflation and stent placement to restore blood flow.",
-          duration: "1-2 hours",
-          recovery: "2-3 days",
-          price: "$8,500 - $12,000",
-          success_rate: "97%",
-          candidateRequirements: ["Single or double vessel disease", "Suitable lesion anatomy", "Good overall health"],
-          recoveryStages: [
-            { stage: "Day 1", description: "Observation, bed rest for 4-6 hours" },
-            { stage: "Day 2", description: "Discharge home, light activities" },
-            { stage: "Week 1", description: "Gradual return to normal activities" },
-            { stage: "Month 1", description: "Full activity clearance" }
-          ]
         }
       ]
     },
@@ -117,36 +69,6 @@ const TreatmentDetails = () => {
         "Those with retinal conditions",
         "Patients seeking vision correction surgery",
         "Cases requiring specialized eye treatments"
-      ],
-      doctors: [
-        {
-          name: "Dr. Layla Khalil",
-          title: "Chief Ophthalmologist",
-          specialization: "Refractive & Cataract Surgery",
-          experience: "15+ years",
-          education: "Alexandria University, Johns Hopkins Fellowship",
-          languages: ["English", "Arabic", "Italian"],
-          image: drLaylaKhalil,
-          achievements: ["5,000+ LASIK procedures", "Pioneer in Egypt for advanced IOLs", "International speaker at eye conferences"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Sarah Williams",
-          country: "United Kingdom",
-          procedure: "LASIK Surgery",
-          rating: 5,
-          text: "Perfect vision after 20 years of glasses! Dr. Khalil was incredibly thorough during the consultation. The procedure was quick and painless. Best decision I ever made.",
-          recoveryTime: "1 week"
-        },
-        {
-          name: "Giuseppe Romano",
-          country: "Italy",
-          procedure: "Cataract Surgery",
-          rating: 5,
-          text: "Excellent results with premium lens implants. Dr. Khalil speaks fluent Italian, which made me feel comfortable. My vision is better than it was 20 years ago!",
-          recoveryTime: "3 weeks"
-        }
       ],
       procedures: [
         {
@@ -163,36 +85,6 @@ const TreatmentDetails = () => {
             { stage: "Week 2", description: "Most activities resumed" },
             { stage: "Month 1", description: "Final vision assessment" }
           ]
-        },
-        {
-          name: "Cataract Surgery",
-          description: "Removal of clouded natural lens and replacement with advanced artificial intraocular lens for clear vision.",
-          duration: "20-30 minutes",
-          recovery: "4-6 weeks",
-          price: "$2,000 - $3,500",
-          success_rate: "98%",
-          candidateRequirements: ["Significant vision impairment from cataracts", "Healthy eye structure", "Realistic expectations"],
-          recoveryStages: [
-            { stage: "Day 1", description: "Eye shield, rest required" },
-            { stage: "Week 1", description: "Gradual vision clearing" },
-            { stage: "Weeks 2-4", description: "Vision stabilization" },
-            { stage: "Weeks 4-6", description: "Final prescription fitting" }
-          ]
-        },
-        {
-          name: "Retinal Surgery",
-          description: "Specialized surgical treatment for retinal detachment, macular holes, and diabetic retinopathy using microsurgical techniques.",
-          duration: "1-3 hours",
-          recovery: "2-6 weeks",
-          price: "$3,500 - $6,000",
-          success_rate: "85%",
-          candidateRequirements: ["Diagnosed retinal condition", "Suitable for surgery", "Commitment to post-op care"],
-          recoveryStages: [
-            { stage: "Days 1-3", description: "Strict positioning, eye drops" },
-            { stage: "Week 1", description: "Limited activities, monitoring" },
-            { stage: "Weeks 2-4", description: "Gradual improvement" },
-            { stage: "Weeks 4-6", description: "Activity clearance" }
-          ]
         }
       ]
     },
@@ -206,36 +98,6 @@ const TreatmentDetails = () => {
         "Those in good overall health",
         "People wanting to improve self-confidence",
         "Cases requiring reconstructive procedures"
-      ],
-      doctors: [
-        {
-          name: "Dr. Omar Farouk",
-          title: "Chief Plastic Surgeon",
-          specialization: "Aesthetic & Reconstructive Surgery",
-          experience: "16+ years",
-          education: "Cairo University, Beverly Hills Fellowship",
-          languages: ["English", "Arabic", "Spanish"],
-          image: drOmarFarouk,
-          achievements: ["2,000+ aesthetic procedures", "Celebrity surgeon", "International aesthetic surgery trainer"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Jennifer Lopez",
-          country: "United States",
-          procedure: "Rhinoplasty",
-          rating: 5,
-          text: "Dr. Farouk gave me the nose I always dreamed of. The results look completely natural, and the recovery was smoother than expected. Highly recommend!",
-          recoveryTime: "2 weeks"
-        },
-        {
-          name: "Ana Rodriguez",
-          country: "Spain",
-          procedure: "Breast Augmentation",
-          rating: 5,
-          text: "Fantastic results! Dr. Farouk understood exactly what I wanted. The Spanish-speaking coordinator made everything easy. I'm thrilled with my new look.",
-          recoveryTime: "4 weeks"
-        }
       ],
       procedures: [
         {
@@ -255,7 +117,6 @@ const TreatmentDetails = () => {
         }
       ]
     },
-    // ... keeping other treatments with similar comprehensive data structure
     "dental-care": {
       title: "Dental Care",
       description: "Complete dental treatments and cosmetic procedures with modern techniques and advanced materials",
@@ -266,36 +127,6 @@ const TreatmentDetails = () => {
         "Those requiring complex dental treatments",
         "Patients needing endodontic procedures",
         "Cases requiring oral surgery or periodontal treatment"
-      ],
-      doctors: [
-        {
-          name: "Dr. Nadia Salim",
-          title: "Chief Dental Officer",
-          specialization: "Cosmetic & Implant Dentistry",
-          experience: "14+ years",
-          education: "Cairo University, UCLA Advanced Implantology",
-          languages: ["English", "Arabic", "Portuguese"],
-          image: drNadiaSalim,
-          achievements: ["3,000+ dental implants placed", "Expert in All-on-4 technique", "International cosmetic dentistry certification"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Michael Thompson",
-          country: "Canada",
-          procedure: "Full Mouth Dental Implants",
-          rating: 5,
-          text: "Dr. Salim completely transformed my smile with All-on-4 implants. The quality is exceptional and the cost was 70% less than in Canada. I can eat everything again!",
-          recoveryTime: "3 months"
-        },
-        {
-          name: "Isabella Costa",
-          country: "Brazil",
-          procedure: "Porcelain Veneers",
-          rating: 5,
-          text: "Perfect Hollywood smile! Dr. Salim speaks Portuguese which made me comfortable. The veneers look completely natural and the dental clinic is very modern.",
-          recoveryTime: "1 week"
-        }
       ],
       procedures: [
         {
@@ -312,36 +143,6 @@ const TreatmentDetails = () => {
             { stage: "Months 1-3", description: "Osseointegration period" },
             { stage: "Months 3-6", description: "Crown placement and final restoration" }
           ]
-        },
-        {
-          name: "Porcelain Veneers",
-          description: "Thin ceramic shells bonded to front teeth for cosmetic enhancement, creating a perfect smile transformation.",
-          duration: "2-3 visits over 2 weeks",
-          recovery: "1 week",
-          price: "$300 - $600 per tooth",
-          success_rate: "98%",
-          candidateRequirements: ["Healthy tooth structure", "Good oral hygiene", "Realistic expectations", "Adequate enamel"],
-          recoveryStages: [
-            { stage: "Day 1", description: "Temporary veneers placed" },
-            { stage: "Days 2-7", description: "Adjustment period, avoid hard foods" },
-            { stage: "Week 2", description: "Final veneers bonded" },
-            { stage: "Month 1", description: "Complete adaptation achieved" }
-          ]
-        },
-        {
-          name: "Root Canal Treatment",
-          description: "Removal of infected tooth pulp and sealing to save the natural tooth, preventing extraction.",
-          duration: "1-2 hours per session",
-          recovery: "3-5 days",
-          price: "$200 - $400",
-          success_rate: "90%",
-          candidateRequirements: ["Infected or damaged pulp", "Salvageable tooth structure", "No severe periodontal disease"],
-          recoveryStages: [
-            { stage: "Day 1", description: "Procedure completed, temporary filling" },
-            { stage: "Days 2-3", description: "Mild discomfort, pain medication" },
-            { stage: "Days 4-5", description: "Return to normal function" },
-            { stage: "Weeks 2-4", description: "Permanent crown placement" }
-          ]
         }
       ]
     },
@@ -353,172 +154,52 @@ const TreatmentDetails = () => {
         "Patients requiring gallbladder removal",
         "Individuals with hernia conditions",
         "Those needing appendix removal",
-        "Patients with gastrointestinal conditions",
-        "Cases requiring abdominal surgery"
-      ],
-      doctors: [
-        {
-          name: "Dr. Youssef El-Shamy",
-          title: "Chief General Surgeon",
-          specialization: "Laparoscopic & Minimally Invasive Surgery",
-          experience: "17+ years",
-          education: "Ain Shams University, Mayo Clinic Fellowship",
-          languages: ["English", "Arabic", "German"],
-          image: drYoussefElshamy,
-          achievements: ["4,000+ laparoscopic procedures", "Expert in robotic surgery", "Minimally invasive surgery pioneer in Egypt"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Hans Mueller",
-          country: "Germany",
-          procedure: "Laparoscopic Gallbladder Surgery",
-          rating: 5,
-          text: "Excellent experience with Dr. El-Shamy. The laparoscopic technique meant tiny scars and quick recovery. I was back to work in just one week!",
-          recoveryTime: "1 week"
-        },
-        {
-          name: "Patricia Wilson",
-          country: "Australia",
-          procedure: "Hernia Repair",
-          rating: 5,
-          text: "Professional team and modern techniques. The mesh repair was done perfectly and I had no complications. Great value for money compared to Australia.",
-          recoveryTime: "2 weeks"
-        }
+        "Patients with digestive system issues",
+        "Cases requiring minimally invasive procedures"
       ],
       procedures: [
         {
           name: "Laparoscopic Gallbladder Surgery",
-          description: "Minimally invasive removal of gallbladder through small incisions using advanced laparoscopic technology.",
+          description: "Minimally invasive removal of the gallbladder through small incisions using advanced laparoscopic techniques.",
           duration: "1-2 hours",
-          recovery: "1-2 weeks", 
-          price: "$1,500 - $2,500",
+          recovery: "1-2 weeks",
+          price: "$2,500 - $4,000",
           success_rate: "98%",
-          candidateRequirements: ["Symptomatic gallstones", "No severe inflammation", "Good anesthesia candidate"],
+          candidateRequirements: ["Gallstones or gallbladder inflammation", "Good overall health", "No severe adhesions"],
           recoveryStages: [
-            { stage: "Day 1", description: "Same day discharge or overnight stay" },
-            { stage: "Days 2-7", description: "Gradual activity increase, light diet" },
+            { stage: "Day 1", description: "Same-day or overnight stay" },
+            { stage: "Days 2-7", description: "Light activities, prescribed diet" },
             { stage: "Week 2", description: "Return to normal activities" },
             { stage: "Month 1", description: "Full recovery achieved" }
-          ]
-        },
-        {
-          name: "Hernia Repair",
-          description: "Surgical correction of hernias using mesh reinforcement technique for long-lasting results.",
-          duration: "1-2 hours",
-          recovery: "2-4 weeks",
-          price: "$1,200 - $2,000",
-          success_rate: "95%",
-          candidateRequirements: ["Confirmed hernia diagnosis", "No active infection", "Suitable for surgery"],
-          recoveryStages: [
-            { stage: "Days 1-3", description: "Rest, avoid lifting" },
-            { stage: "Week 1", description: "Light activities only" },
-            { stage: "Weeks 2-4", description: "Gradual return to normal" },
-            { stage: "Month 2", description: "Full activity clearance" }
-          ]
-        },
-        {
-          name: "Appendectomy",
-          description: "Surgical removal of appendix through laparoscopic approach for faster recovery and minimal scarring.",
-          duration: "30-60 minutes",
-          recovery: "1-3 weeks",
-          price: "$1,800 - $2,800",
-          success_rate: "99%",
-          candidateRequirements: ["Acute appendicitis", "No rupture complications", "Emergency surgery candidate"],
-          recoveryStages: [
-            { stage: "Day 1-2", description: "Hospital observation" },
-            { stage: "Days 3-7", description: "Home recovery, light activities" },
-            { stage: "Weeks 2-3", description: "Return to normal activities" },
-            { stage: "Month 1", description: "Complete healing" }
           ]
         }
       ]
     },
     "orthopedic-surgery": {
       title: "Orthopedic Surgery",
-      description: "Joint replacement and bone treatments by experienced orthopedic specialists using advanced prosthetics",
-      overview: "Our orthopedic surgery department offers comprehensive bone and joint treatments using the latest prosthetic materials and surgical techniques. We specialize in joint replacement, sports medicine, and spine surgery with excellent mobility restoration outcomes.",
+      description: "Joint replacement and bone treatments using advanced surgical techniques",
+      overview: "Our orthopedic surgery department uses the latest techniques in joint replacement, sports medicine, and bone treatments. We focus on restoring mobility and reducing pain with minimally invasive approaches when possible.",
       idealCandidates: [
-        "Patients with severe arthritis or joint damage",
-        "Individuals requiring joint replacement",
-        "Those with spine conditions",
-        "Patients with sports-related injuries",
-        "Cases needing complex bone reconstruction"
-      ],
-      doctors: [
-        {
-          name: "Dr. Khaled Rashed",
-          title: "Chief Orthopedic Surgeon",
-          specialization: "Joint Replacement & Spine Surgery",
-          experience: "19+ years",
-          education: "Cairo University, Hospital for Special Surgery NYC Fellowship",
-          languages: ["English", "Arabic", "Russian"],
-          image: drKhaledRashed,
-          achievements: ["2,500+ joint replacements", "Spine surgery specialist", "Advanced prosthetics expert"]
-        }
-      ],
-      testimonials: [
-        {
-          name: "Vladimir Petrov",
-          country: "Russia",
-          procedure: "Total Hip Replacement",
-          rating: 5,
-          text: "Dr. Rashed is an exceptional surgeon. My hip replacement was perfect and I'm walking pain-free for the first time in years. The Russian-speaking coordinator was very helpful.",
-          recoveryTime: "8 weeks"
-        },
-        {
-          name: "Emma Clarke",
-          country: "United Kingdom",
-          procedure: "Knee Replacement Surgery",
-          rating: 5,
-          text: "Outstanding results! The titanium knee joint feels natural and the recovery was faster than expected. Dr. Rashed explained everything clearly throughout the process.",
-          recoveryTime: "10 weeks"
-        }
+        "Patients with joint pain and limited mobility",
+        "Individuals with arthritis affecting daily life",
+        "Those with sports injuries",
+        "Patients requiring joint replacement",
+        "Cases involving bone fractures or deformities"
       ],
       procedures: [
         {
           name: "Hip Replacement Surgery",
-          description: "Total or partial hip joint replacement with titanium and ceramic prosthetics for pain relief and mobility restoration.",
-          duration: "1-2 hours",
+          description: "Complete or partial replacement of hip joint with artificial prosthetics to restore mobility and reduce pain.",
+          duration: "2-3 hours",
           recovery: "6-12 weeks",
-          price: "$4,200 - $6,500", 
+          price: "$8,000 - $12,000",
           success_rate: "95%",
-          candidateRequirements: ["Severe hip arthritis", "Failed conservative treatment", "Good bone quality", "Realistic expectations"],
+          candidateRequirements: ["Severe hip arthritis", "Failed conservative treatment", "Good overall health"],
           recoveryStages: [
-            { stage: "Days 1-3", description: "Hospital stay, physical therapy begins" },
-            { stage: "Weeks 1-2", description: "Home recovery, walker assistance" },
-            { stage: "Weeks 3-6", description: "Gradual weight bearing, cane use" },
-            { stage: "Weeks 6-12", description: "Full weight bearing, return to activities" }
-          ]
-        },
-        {
-          name: "Knee Replacement Surgery",
-          description: "Replacement of damaged knee joint with artificial joint components for pain-free mobility.",
-          duration: "1-2 hours",
-          recovery: "8-12 weeks",
-          price: "$4,500 - $7,000",
-          success_rate: "93%",
-          candidateRequirements: ["Severe knee arthritis", "Significant pain and stiffness", "Failed non-surgical treatments"],
-          recoveryStages: [
-            { stage: "Days 1-4", description: "Hospital stay, immediate mobility" },
-            { stage: "Weeks 1-3", description: "Home therapy, walker support" },
-            { stage: "Weeks 4-8", description: "Increased activity, cane use" },
-            { stage: "Weeks 8-12", description: "Full recovery, normal activities" }
-          ]
-        },
-        {
-          name: "Spine Surgery",
-          description: "Surgical treatment for herniated discs, spinal fusion, and decompression using advanced microsurgical techniques.",
-          duration: "2-4 hours",
-          recovery: "6-16 weeks",
-          price: "$5,500 - $12,000",
-          success_rate: "88%",
-          candidateRequirements: ["Failed conservative treatment", "Neurological symptoms", "Confirmed disc pathology"],
-          recoveryStages: [
-            { stage: "Days 1-5", description: "Hospital stay, pain management" },
-            { stage: "Weeks 1-4", description: "Limited activity, brace wearing" },
-            { stage: "Weeks 4-8", description: "Gradual activity increase" },
-            { stage: "Weeks 8-16", description: "Physical therapy, return to work" }
+            { stage: "Days 1-3", description: "Hospital stay, pain management" },
+            { stage: "Weeks 1-6", description: "Physical therapy, gradual mobility" },
+            { stage: "Weeks 6-12", description: "Increased activity, strengthening" },
+            { stage: "Months 3-6", description: "Full recovery and return to activities" }
           ]
         }
       ]
@@ -533,8 +214,10 @@ const TreatmentDetails = () => {
         <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-2xl font-bold mb-4">Treatment Not Found</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-4">Treatment Not Found</h1>
+            <p className="text-muted-foreground mb-8">The requested treatment category could not be found.</p>
             <Button onClick={() => navigate("/treatments")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Treatments
             </Button>
           </div>
@@ -549,20 +232,20 @@ const TreatmentDetails = () => {
       <Header />
       
       <main>
-        {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        {/* Breadcrumb Navigation */}
+        <section className="py-8 bg-muted/30">
           <div className="container mx-auto px-4">
-            <Button 
-              variant="outline" 
-              className="mb-6"
+            <button
               onClick={() => navigate("/treatments")}
+              className="flex items-center text-primary hover:text-primary/80 transition-colors mb-6"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Treatments
-            </Button>
-            <div className="max-w-4xl mx-auto">
-              <Badge variant="outline" className="mb-6">Medical Specialty</Badge>
-              <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to All Treatments
+            </button>
+            
+            <div className="max-w-4xl">
+              <Badge variant="outline" className="mb-4">{treatment.title}</Badge>
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
                 {treatment.title}
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
@@ -573,112 +256,102 @@ const TreatmentDetails = () => {
         </section>
 
         {/* Treatment Overview */}
-        {treatment.overview && (
-          <section className="py-16 bg-background">
-            <div className="container mx-auto px-4">
-              <div className="max-w-4xl mx-auto">
+        <section className="py-16 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-2">
                 <h2 className="text-3xl font-bold text-foreground mb-6">Treatment Overview</h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                   {treatment.overview}
                 </p>
                 
-                {treatment.idealCandidates && (
-                  <Card className="border-border/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="h-6 w-6 text-primary" />
-                        Ideal Candidates
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {treatment.idealCandidates.map((candidate: string, index: number) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="text-muted-foreground">{candidate}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+                <div className="bg-gradient-card rounded-lg p-6 border border-border/50">
+                  <h3 className="text-xl font-semibold text-foreground mb-4">Ideal Candidates</h3>
+                  <ul className="space-y-3">
+                    {treatment.idealCandidates.map((candidate: string, index: number) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{candidate}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              
+              <div>
+                <Card className="border-primary/20 bg-gradient-card">
+                  <CardHeader>
+                    <CardTitle className="text-xl text-foreground">Quick Facts</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-primary" />
+                      <div>
+                        <div className="font-medium text-foreground">Expert Surgeons</div>
+                        <div className="text-sm text-muted-foreground">Board-certified specialists</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Star className="h-5 w-5 text-primary" />
+                      <div>
+                        <div className="font-medium text-foreground">Success Rate</div>
+                        <div className="text-sm text-muted-foreground">95%+ patient satisfaction</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Heart className="h-5 w-5 text-primary" />
+                      <div>
+                        <div className="font-medium text-foreground">Aftercare</div>
+                        <div className="text-sm text-muted-foreground">Comprehensive recovery support</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {/* Specialist Doctors */}
-        {treatment.doctors && (
-          <section className="py-16 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-foreground mb-4">Our Specialist Doctors</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Meet our expert medical team with international training and extensive experience
-                </p>
-              </div>
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-foreground mb-4">Our Specialist Doctors</h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Meet our internationally trained specialists who combine years of experience with 
+                cutting-edge techniques to deliver exceptional results.
+              </p>
+            </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {treatment.doctors.map((doctor: any, index: number) => (
-                  <Card key={index} className="border-border/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="w-24 h-24">
-                          <AvatarImage src={doctor.image} alt={doctor.name} />
-                          <AvatarFallback className="text-lg font-semibold">
-                            {doctor.name.split(' ').map((n: string) => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-foreground mb-1">{doctor.name}</h3>
-                          <Badge variant="outline" className="mb-2">{doctor.title}</Badge>
-                          <p className="text-primary font-medium mb-3">{doctor.specialization}</p>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Award className="h-4 w-4 text-primary" />
-                              <span className="text-muted-foreground">{doctor.experience} Experience</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-primary" />
-                              <span className="text-muted-foreground">{doctor.education}</span>
-                            </div>
-                          </div>
-
-                          <div className="mt-3">
-                            <p className="text-xs text-muted-foreground mb-2">Languages:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {doctor.languages.map((language: string, langIndex: number) => (
-                                <Badge key={langIndex} variant="secondary" className="text-xs">
-                                  {language}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-
-                          {doctor.achievements && (
-                            <div className="mt-4 pt-3 border-t border-border">
-                              <p className="text-xs font-semibold mb-2">Key Achievements:</p>
-                              <ul className="text-xs text-muted-foreground space-y-1">
-                                {doctor.achievements.map((achievement: string, achIndex: number) => (
-                                  <li key={achIndex} className="flex items-center gap-1">
-                                    <div className="w-1 h-1 bg-primary rounded-full"></div>
-                                    {achievement}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+            {doctorsLoading ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                {[1, 2].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="bg-muted rounded-lg h-64"></div>
+                  </div>
                 ))}
               </div>
-            </div>
-          </section>
-        )}
+            ) : doctors.length > 0 ? (
+              <div className="space-y-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                  {doctors.map((doctor, index) => (
+                    <DoctorProfile 
+                      key={doctor.id} 
+                      doctor={doctor} 
+                    />
+                  ))}
+                </div>
+                
+                {/* Doctor Reviews */}
+                {doctors.length > 0 && <DoctorReviewsSection doctors={doctors} />}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No specialists found for this treatment category.</p>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Procedures Section */}
         <section className="py-20 bg-background">
@@ -701,94 +374,59 @@ const TreatmentDetails = () => {
                   </CardHeader>
                   <CardContent>
                     {/* Basic Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-primary-light rounded-full">
-                          <Clock className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Duration</p>
-                          <p className="text-muted-foreground">{procedure.duration}</p>
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
+                        <div className="text-sm font-medium text-foreground">Duration</div>
+                        <div className="text-sm text-muted-foreground">{procedure.duration}</div>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-primary-light rounded-full">
-                          <Check className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Recovery</p>
-                          <p className="text-muted-foreground">{procedure.recovery}</p>
-                        </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <Heart className="h-6 w-6 text-primary mx-auto mb-2" />
+                        <div className="text-sm font-medium text-foreground">Recovery</div>
+                        <div className="text-sm text-muted-foreground">{procedure.recovery}</div>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-primary-light rounded-full">
-                          <DollarSign className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Cost</p>
-                          <p className="text-primary font-bold">{procedure.price}</p>
-                        </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-primary mx-auto mb-2" />
+                        <div className="text-sm font-medium text-foreground">Price</div>
+                        <div className="text-sm text-muted-foreground">{procedure.price}</div>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-primary-light rounded-full">
-                          <Star className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Success Rate</p>
-                          <p className="text-muted-foreground">{procedure.success_rate}</p>
-                        </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <Star className="h-6 w-6 text-primary mx-auto mb-2" />
+                        <div className="text-sm font-medium text-foreground">Success Rate</div>
+                        <div className="text-sm text-muted-foreground">{procedure.success_rate}</div>
                       </div>
                     </div>
 
-                    {/* Detailed Information */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      {/* Candidate Requirements */}
-                      {procedure.candidateRequirements && (
-                        <div>
-                          <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-primary" />
-                            Candidate Requirements
-                          </h4>
-                          <ul className="space-y-2">
-                            {procedure.candidateRequirements.map((requirement: string, reqIndex: number) => (
-                              <li key={reqIndex} className="flex items-start gap-2">
-                                <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                                <span className="text-muted-foreground text-sm">{requirement}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                    {/* Candidate Requirements */}
+                    <div className="mb-8">
+                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                        Candidate Requirements
+                      </h4>
+                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {procedure.candidateRequirements.map((req: string, reqIndex: number) => (
+                          <li key={reqIndex} className="flex items-start gap-2">
+                            <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                            <span className="text-muted-foreground">{req}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
-                      {/* Recovery Stages */}
-                      {procedure.recoveryStages && (
-                        <div>
-                          <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-primary" />
-                            Recovery Timeline
-                          </h4>
-                          <div className="space-y-3">
-                            {procedure.recoveryStages.map((stage: any, stageIndex: number) => (
-                              <div key={stageIndex} className="flex gap-3">
-                                <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                                <div>
-                                  <p className="font-medium text-foreground text-sm">{stage.stage}</p>
-                                  <p className="text-muted-foreground text-sm">{stage.description}</p>
-                                </div>
-                              </div>
-                            ))}
+                    {/* Recovery Timeline */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-primary" />
+                        Recovery Timeline
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {procedure.recoveryStages.map((stage: any, stageIndex: number) => (
+                          <div key={stageIndex} className="p-4 border border-border rounded-lg">
+                            <div className="text-sm font-medium text-primary mb-2">{stage.stage}</div>
+                            <div className="text-sm text-muted-foreground">{stage.description}</div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-8 pt-6 border-t border-border">
-                      <Button className="w-full sm:w-auto">
-                        Get Quote for {procedure.name}
-                      </Button>
+                        ))}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -797,108 +435,14 @@ const TreatmentDetails = () => {
           </div>
         </section>
 
-        {/* Patient Testimonials */}
-        {treatment.testimonials && (
-          <section className="py-16 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-foreground mb-4">Patient Success Stories</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Real experiences from patients who chose our medical tourism services
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {treatment.testimonials.map((testimonial: any, index: number) => (
-                  <Card key={index} className="border-border/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-1 mb-4">
-                        {[...Array(testimonial.rating)].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
-                        ))}
-                      </div>
-                      
-                      <div className="mb-4">
-                        <Quote className="h-6 w-6 text-primary mb-2" />
-                        <p className="text-muted-foreground italic leading-relaxed">
-                          "{testimonial.text}"
-                        </p>
-                      </div>
-
-                      <div className="border-t border-border pt-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-foreground">{testimonial.name}</p>
-                            <p className="text-sm text-muted-foreground">{testimonial.country}</p>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {testimonial.procedure}
-                            </Badge>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Recovery Time</p>
-                            <p className="font-medium text-primary">{testimonial.recoveryTime}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Why Choose Us Section */}
-        <section className="py-20 bg-gradient-card">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Why Choose Care N Tour for {treatment.title}?
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="text-center">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4 mx-auto">
-                    <Users className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">Expert Surgeons</h3>
-                  <p className="text-muted-foreground">Board-certified specialists with international training and experience</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="text-center">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4 mx-auto">
-                    <DollarSign className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">Cost Savings</h3>
-                  <p className="text-muted-foreground">Save 60-80% compared to US/EU prices without compromising quality</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="text-center">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4 mx-auto">
-                    <Star className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">Premium Care</h3>
-                  <p className="text-muted-foreground">State-of-the-art facilities with personalized patient care</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
         {/* CTA Section */}
         <section className="py-20 bg-gradient-hero">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
-              Ready to Get Started?
+              Ready to Start Your {treatment.title} Journey?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Get a personalized treatment plan and detailed cost estimate from our medical experts
+              Get a personalized treatment plan and cost estimate from our medical experts
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent">
@@ -913,6 +457,20 @@ const TreatmentDetails = () => {
       </main>
 
       <Footer />
+    </div>
+  );
+};
+
+// Component to handle doctor reviews section
+const DoctorReviewsSection = ({ doctors }: { doctors: any[] }) => {
+  // Get reviews for the first doctor as an example (in a real app, you might show all or let users select)
+  const { reviews } = useDoctorReviews(doctors[0]?.id || '');
+  
+  if (reviews.length === 0) return null;
+  
+  return (
+    <div className="max-w-6xl mx-auto">
+      <DoctorReviews reviews={reviews} />
     </div>
   );
 };
