@@ -145,7 +145,7 @@ const DoctorDetail = () => {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5" />
-                        About Dr. {doctor.name.split(' ')[0]}
+                        About Dr. {doctor.name.split(' ')[1] || doctor.name.split(' ')[0]}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -271,7 +271,7 @@ const DoctorDetail = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Book a consultation with Dr. {doctor.name.split(' ')[0]} to discuss your treatment options.
+                      Book a consultation with Dr. {doctor.name.split(' ')[1] || doctor.name.split(' ')[0]} to discuss your treatment options.
                     </p>
                     <Button className="w-full" size="lg">
                       Schedule Consultation
