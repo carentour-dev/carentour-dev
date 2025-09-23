@@ -114,7 +114,7 @@ const FeaturedTreatments = () => {
                       className="w-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate("/contact");
+                        navigate(`/start-journey?treatment=${treatment.id}`);
                       }}
                     >
                       Start Your Journey
