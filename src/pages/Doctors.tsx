@@ -172,8 +172,8 @@ const Doctors = () => {
               <Button size="lg" variant="accent" asChild>
                 <Link to="/contact">Get Free Consultation</Link>
               </Button>
-              <Button size="lg" variant="hero">
-                Schedule Consultation
+              <Button size="lg" variant="hero" asChild>
+                <Link to="/start-journey">Start Your Journey</Link>
               </Button>
             </div>
           </div>
