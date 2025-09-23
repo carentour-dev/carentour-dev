@@ -320,8 +320,8 @@ const Treatments = () => {
               Get a personalized treatment plan and cost estimate from our medical experts
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Get Free Quote
+              <Button size="lg" variant="accent" asChild>
+                <Link to="/contact">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
                 <Link to="/start-journey">Start Your Journey</Link>
