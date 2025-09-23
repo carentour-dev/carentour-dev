@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, MessageCircle, FileText, CreditCard, Hotel, HeartHandshake, ArrowRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -322,7 +322,7 @@ const Contact = () => {
           </div>
         </section>
 
-        {/* FAQ Quick Links */}
+        {/* FAQ Quick Access */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-2xl font-bold text-foreground mb-4">
@@ -331,12 +331,86 @@ const Contact = () => {
             <p className="text-muted-foreground mb-8">
               Find quick answers to common questions about medical tourism in Egypt
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button variant="outline" onClick={() => window.location.href = '/faq#visa'}>Visa Requirements</Button>
-              <Button variant="outline" onClick={() => window.location.href = '/faq#costs'}>Treatment Costs</Button>
-              <Button variant="outline" onClick={() => window.location.href = '/faq#accommodation'}>Accommodation</Button>
-              <Button variant="outline" onClick={() => window.location.href = '/faq#costs'}>Insurance Coverage</Button>
-              <Button variant="outline" onClick={() => window.location.href = '/faq#aftercare'}>Recovery Time</Button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+              {/* Visa Requirements Section */}
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Visa & Travel</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Do I need a visa to visit Egypt for medical treatment?</h4>
+                    <p className="text-xs text-muted-foreground">Most nationalities require a visa. We assist with medical visa applications with expedited processing.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">What documents do I need?</h4>
+                    <p className="text-xs text-muted-foreground">Valid passport, visa, medical records, and insurance documentation. We provide a comprehensive checklist.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Treatment Costs Section */}
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Costs & Payment</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">How much can I save compared to my home country?</h4>
+                    <p className="text-xs text-muted-foreground">Patients typically save 50-70% while receiving the same quality of care.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">What payment methods do you accept?</h4>
+                    <p className="text-xs text-muted-foreground">Bank transfers, credit cards, and cash payments. Payment plans available for complex treatments.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accommodation Section */}
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center gap-2 mb-4">
+                  <Hotel className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Stay & Transport</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">What accommodation options are available?</h4>
+                    <p className="text-xs text-muted-foreground">5-star hotels to comfortable apartments near hospitals, all carefully selected for comfort and proximity.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Can my family accompany me?</h4>
+                    <p className="text-xs text-muted-foreground">Yes, we arrange accommodation for companions and provide guidance on visa requirements.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recovery & Support Section */}
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center gap-2 mb-4">
+                  <HeartHandshake className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Recovery & Support</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">What follow-up care is provided?</h4>
+                    <p className="text-xs text-muted-foreground">Comprehensive aftercare including check-ups, medication management, and coordination with home physicians.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">What if complications arise after I return home?</h4>
+                    <p className="text-xs text-muted-foreground">Our doctors remain available for consultation and can provide guidance to your local physicians.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Button onClick={() => window.location.href = '/faq'} variant="outline">
+                View All FAQs
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </div>
         </section>
