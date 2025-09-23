@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import logoImage from "@/assets/care-n-tour-logo-dark.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -87,15 +86,8 @@ const Header = () => {
         {/* Main navigation */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
-              <img 
-                src={logoImage} 
-                alt="Care N Tour Medical Tourism" 
-                className="h-10 w-auto dark:hidden"
-              />
-              <span className="hidden dark:block text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-                Care N Tour
-              </span>
+            <Link to="/" className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+              Care N Tour
             </Link>
           </div>
 
