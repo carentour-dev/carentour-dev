@@ -47,13 +47,26 @@ const FAQ = () => {
       const mappedTab = fragmentToTab[fragment as keyof typeof fragmentToTab];
       if (mappedTab) {
         setActiveTab(mappedTab);
-        // Smooth scroll to the section after a short delay to ensure tab content is rendered
-        setTimeout(() => {
+        
+        // Retry mechanism to ensure tab content is rendered before scrolling
+        const scrollToElement = (attempt = 1) => {
           const element = document.getElementById(fragment);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (attempt < 3) {
+            // Retry up to 3 times with increasing delays
+            setTimeout(() => scrollToElement(attempt + 1), attempt * 200);
+          } else {
+            // Fallback: scroll to tabs container if element not found
+            const tabsContainer = document.querySelector('[data-state="active"]');
+            if (tabsContainer) {
+              tabsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
           }
-        }, 100);
+        };
+        
+        // Initial delay to allow tab content to render
+        setTimeout(() => scrollToElement(), 400);
       }
     }
   }, [location.hash]);
