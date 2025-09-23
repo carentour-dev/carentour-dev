@@ -248,10 +248,12 @@ const ConciergeServices = () => {
                     <div className="text-sm text-muted-foreground">Satisfaction Rate</div>
                   </div>
                 </div>
-                <Button size="lg">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Contact Concierge Team
-                </Button>
+                <div className="text-center">
+                  <Button size="lg">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Contact Concierge Team
+                  </Button>
+                </div>
               </div>
               <div>
                 <img 
