@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
 import { 
   Plane, 
   MapPin, 
@@ -557,9 +558,11 @@ const TravelInfo = () => {
                       From visa assistance to local arrangements, we've got you covered.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button size="lg">
-                        <Phone className="h-4 w-4 mr-2" />
-                        Contact Travel Team
+                      <Button size="lg" asChild>
+                        <Link to="/contact">
+                          <Phone className="h-4 w-4 mr-2" />
+                          Contact Travel Team
+                        </Link>
                       </Button>
                       <Button size="lg" variant="outline">
                         <FileText className="h-4 w-4 mr-2" />
