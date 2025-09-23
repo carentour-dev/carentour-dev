@@ -5,11 +5,15 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "next-themes";
+import logoLight from "@/assets/care-n-tour-logo-light.png";
+import logoDark from "@/assets/care-n-tour-logo-dark.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { theme } = useTheme();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -86,8 +90,12 @@ const Header = () => {
         {/* Main navigation */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-              Care N Tour
+            <Link to="/" className="flex items-center">
+              <img 
+                src={theme === 'dark' ? logoLight : logoDark}
+                alt="Care N Tour - Medical Tourism in Egypt"
+                className="h-10 w-auto"
+              />
             </Link>
           </div>
 
