@@ -66,7 +66,18 @@ async function handleSubscription(req: Request): Promise<Response> {
   }
 
   // Get client IP and user agent
-  const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  let clientIP = 'unknown';
+  
+  if (forwardedFor) {
+    // Handle comma-separated IP addresses (x-forwarded-for can contain multiple IPs)
+    const firstIP = forwardedFor.split(',')[0].trim();
+    // Basic IP validation (IPv4 or IPv6)
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(firstIP) || /^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}$/.test(firstIP)) {
+      clientIP = firstIP;
+    }
+  }
+  
   const userAgent = req.headers.get('user-agent') || '';
 
   // Check if email already exists
