@@ -126,7 +126,13 @@ async function handleSubscription(req: Request): Promise<Response> {
   }
 
   // Send confirmation email
-  await sendConfirmationEmail(email, source);
+  try {
+    await sendConfirmationEmail(email, source);
+    console.log(`Confirmation email sent successfully to: ${email}`);
+  } catch (emailError) {
+    console.error('Failed to send confirmation email:', emailError);
+    // Don't fail the subscription if email fails
+  }
 
   return new Response(
     JSON.stringify({ message: 'Subscription confirmation sent to your email' }),
@@ -197,7 +203,13 @@ async function handleConfirmation(req: Request): Promise<Response> {
   }
 
   // Send welcome email
-  await sendWelcomeEmail(data.email);
+  try {
+    await sendWelcomeEmail(data.email);
+    console.log(`Welcome email sent successfully to: ${data.email}`);
+  } catch (emailError) {
+    console.error('Failed to send welcome email:', emailError);
+    // Don't fail the confirmation if email fails
+  }
 
   return new Response(
     JSON.stringify({ message: 'Email confirmed successfully!', email: data.email }),
@@ -206,70 +218,107 @@ async function handleConfirmation(req: Request): Promise<Response> {
 }
 
 async function sendConfirmationEmail(email: string, source: string): Promise<void> {
+  console.log(`Sending confirmation email to: ${email} from source: ${source}`);
+  
   // Get the subscription token for confirmation link
-  const { data } = await supabase
+  const { data, error: dbError } = await supabase
     .from('newsletter_subscriptions')
     .select('unsubscribe_token')
     .eq('email', email.toLowerCase())
     .single();
 
-  if (!data) return;
+  if (dbError) {
+    console.error('Database error getting subscription token:', dbError);
+    throw new Error(`Failed to get subscription token: ${dbError.message}`);
+  }
+
+  if (!data) {
+    console.error('No subscription data found for email:', email);
+    throw new Error('Subscription not found');
+  }
 
   const confirmationUrl = `${supabaseUrl}/functions/v1/newsletter-subscription?action=confirm&token=${data.unsubscribe_token}`;
+  console.log(`Generated confirmation URL: ${confirmationUrl}`);
 
-  await resend.emails.send({
-    from: 'Care N Tour <newsletter@carentour.com>',
-    to: [email],
-    subject: 'Please confirm your newsletter subscription',
-    html: `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-        <h1 style="color: #2563eb; text-align: center;">Welcome to Care N Tour!</h1>
-        <p>Thank you for subscribing to our newsletter. To complete your subscription, please click the button below:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${confirmationUrl}" 
-             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            Confirm Subscription
-          </a>
+  try {
+    const { data: emailResult, error: emailError } = await resend.emails.send({
+      from: 'Care N Tour <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Please confirm your newsletter subscription',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+          <h1 style="color: #2563eb; text-align: center;">Welcome to Care N Tour!</h1>
+          <p>Thank you for subscribing to our newsletter. To complete your subscription, please click the button below:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${confirmationUrl}" 
+               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Confirm Subscription
+            </a>
+          </div>
+          <p>You'll receive updates about:</p>
+          <ul>
+            <li>Latest medical treatments and procedures</li>
+            <li>Travel tips for medical tourism</li>
+            <li>Success stories from our patients</li>
+            <li>Special offers and promotions</li>
+          </ul>
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            If you didn't request this subscription, you can safely ignore this email.
+          </p>
         </div>
-        <p>You'll receive updates about:</p>
-        <ul>
-          <li>Latest medical treatments and procedures</li>
-          <li>Travel tips for medical tourism</li>
-          <li>Success stories from our patients</li>
-          <li>Special offers and promotions</li>
-        </ul>
-        <p style="font-size: 14px; color: #666; margin-top: 30px;">
-          If you didn't request this subscription, you can safely ignore this email.
-        </p>
-      </div>
-    `,
-  });
+      `,
+    });
+
+    if (emailError) {
+      console.error('Resend API error:', emailError);
+      throw new Error(`Email sending failed: ${emailError.message}`);
+    }
+
+    console.log('Email sent successfully via Resend:', emailResult);
+  } catch (error) {
+    console.error('Error in sendConfirmationEmail:', error);
+    throw error;
+  }
 }
 
 async function sendWelcomeEmail(email: string): Promise<void> {
-  await resend.emails.send({
-    from: 'Care N Tour <newsletter@carentour.com>',
-    to: [email],
-    subject: 'Welcome to Care N Tour Newsletter!',
-    html: `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-        <h1 style="color: #2563eb; text-align: center;">Welcome to Care N Tour!</h1>
-        <p>Your subscription has been confirmed! We're excited to have you join our community.</p>
-        <p>You'll now receive our newsletter with:</p>
-        <ul>
-          <li>🏥 Expert insights on medical treatments</li>
-          <li>✈️ Travel guides for medical tourism</li>
-          <li>📖 Patient success stories</li>
-          <li>💰 Exclusive offers and promotions</li>
-        </ul>
-        <p>Stay tuned for our next newsletter!</p>
-        <p style="font-size: 14px; color: #666; margin-top: 30px;">
-          Best regards,<br>
-          The Care N Tour Team
-        </p>
-      </div>
-    `,
-  });
+  console.log(`Sending welcome email to: ${email}`);
+  
+  try {
+    const { data: emailResult, error: emailError } = await resend.emails.send({
+      from: 'Care N Tour <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Welcome to Care N Tour Newsletter!',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+          <h1 style="color: #2563eb; text-align: center;">Welcome to Care N Tour!</h1>
+          <p>Your subscription has been confirmed! We're excited to have you join our community.</p>
+          <p>You'll now receive our newsletter with:</p>
+          <ul>
+            <li>🏥 Expert insights on medical treatments</li>
+            <li>✈️ Travel guides for medical tourism</li>
+            <li>📖 Patient success stories</li>
+            <li>💰 Exclusive offers and promotions</li>
+          </ul>
+          <p>Stay tuned for our next newsletter!</p>
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Best regards,<br>
+            The Care N Tour Team
+          </p>
+        </div>
+      `,
+    });
+
+    if (emailError) {
+      console.error('Resend API error in welcome email:', emailError);
+      throw new Error(`Welcome email failed: ${emailError.message}`);
+    }
+
+    console.log('Welcome email sent successfully via Resend:', emailResult);
+  } catch (error) {
+    console.error('Error in sendWelcomeEmail:', error);
+    throw error;
+  }
 }
 
 serve(handler);
