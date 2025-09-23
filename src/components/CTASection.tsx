@@ -16,8 +16,8 @@ const CTASection = () => {
             <Button size="lg" asChild>
               <Link to="/contact">Get Free Consultation</Link>
             </Button>
-            <Button variant="outline" size="lg">
-              Schedule Consultation
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/start-journey">Start Your Journey</Link>
             </Button>
           </div>
         </div>
