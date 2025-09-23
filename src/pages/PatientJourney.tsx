@@ -402,7 +402,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="List all medications you're currently taking, including dosages..."
                       className="min-h-[80px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
