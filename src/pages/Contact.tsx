@@ -332,11 +332,11 @@ const Contact = () => {
               Find quick answers to common questions about medical tourism in Egypt
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button variant="outline">Visa Requirements</Button>
-              <Button variant="outline">Treatment Costs</Button>
-              <Button variant="outline">Accommodation</Button>
-              <Button variant="outline">Insurance Coverage</Button>
-              <Button variant="outline">Recovery Time</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/faq#visa'}>Visa Requirements</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/faq#costs'}>Treatment Costs</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/faq#accommodation'}>Accommodation</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/faq#costs'}>Insurance Coverage</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/faq#aftercare'}>Recovery Time</Button>
             </div>
           </div>
         </section>
