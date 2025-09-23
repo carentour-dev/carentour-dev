@@ -506,8 +506,12 @@ const TreatmentDetails = () => {
               Get a personalized treatment plan and cost estimate from our medical experts
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Get Free Quote
+              <Button 
+                size="lg" 
+                variant="accent"
+                onClick={() => navigate(`/start-journey?treatment=${category}`)}
+              >
+                Start Your Journey
               </Button>
               <Button size="lg" variant="hero">
                 Schedule Consultation
