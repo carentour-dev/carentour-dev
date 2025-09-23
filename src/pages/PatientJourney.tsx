@@ -957,13 +957,69 @@ export default function PatientJourney() {
                     <span className="text-sm opacity-80">Call back within 2 hours</span>
                   </Button>
                 </div>
-                {!consultationType && currentStep === 6 && (
-                  <p className="text-sm text-destructive">Please select a consultation type</p>
-                )}
-              </CardContent>
-            </Card>
+                 {!consultationType && currentStep === 6 && (
+                   <p className="text-sm text-destructive">Please select a consultation type</p>
+                 )}
+               </CardContent>
+             </Card>
 
-            <Card>
+             <Card>
+               <CardHeader>
+                 <CardTitle>Select Consultation Date</CardTitle>
+                 <CardDescription>
+                   Choose your preferred date for the consultation
+                 </CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <FormField
+                   control={form.control}
+                   name="consultationDate"
+                   render={({ field }) => (
+                     <FormItem className="flex flex-col">
+                       <FormLabel>Preferred Consultation Date</FormLabel>
+                       <Popover>
+                         <PopoverTrigger asChild>
+                           <FormControl>
+                             <Button
+                               variant={"outline"}
+                               className={cn(
+                                 "w-full pl-3 text-left font-normal",
+                                 !field.value && "text-muted-foreground"
+                               )}
+                             >
+                               {field.value && field.value instanceof Date ? (
+                                 format(field.value, "PPP")
+                               ) : (
+                                 <span>Pick a consultation date</span>
+                               )}
+                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                             </Button>
+                           </FormControl>
+                         </PopoverTrigger>
+                         <PopoverContent className="w-auto p-0" align="start">
+                           <Calendar
+                             mode="single"
+                             selected={field.value}
+                             onSelect={field.onChange}
+                             disabled={(date) =>
+                               date < new Date() || date < new Date(Date.now() + 24 * 60 * 60 * 1000)
+                             }
+                             initialFocus
+                             className={cn("p-3 pointer-events-auto")}
+                           />
+                         </PopoverContent>
+                       </Popover>
+                       <FormDescription>
+                         Select a date that's at least 24 hours from now.
+                       </FormDescription>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </CardContent>
+             </Card>
+
+             <Card>
               <CardHeader>
                 <CardTitle>What to Expect</CardTitle>
               </CardHeader>

@@ -54,6 +54,7 @@ export const documentsValidationSchema = documentsSchema.refine(
 // Step 6: Consultation Schema
 export const consultationSchema = z.object({
   consultationType: z.string().min(1, "Please select a consultation type"),
+  consultationDate: z.date({ required_error: "Please select a consultation date" }),
 });
 
 // Combined schema for final validation
