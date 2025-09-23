@@ -7,8 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { Plane, Hotel, Car, Globe, Shield, Clock, Users, Phone, Wand2 } from "lucide-react";
 import TripPlanningWizard from "@/components/TripPlanningWizard";
+import { useState } from "react";
 
 const PlanTrip = () => {
+  const [activeTab, setActiveTab] = useState("wizard");
+
+  const handleLearnProcess = () => {
+    setActiveTab("overview");
+    // Scroll to the trip planner section after changing tab
+    setTimeout(() => {
+      document.getElementById("trip-planner")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
   const services = [
     {
       icon: Plane,
@@ -120,8 +130,8 @@ const PlanTrip = () => {
                     Start Interactive Planner
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <a href="#process-overview">Learn About Our Process</a>
+                <Button size="lg" variant="outline" onClick={handleLearnProcess}>
+                  Learn About Our Process
                 </Button>
               </div>
             </div>
@@ -131,7 +141,7 @@ const PlanTrip = () => {
         {/* Trip Planning Section */}
         <section id="trip-planner" className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <Tabs defaultValue="wizard" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                   Plan Your Medical Journey
