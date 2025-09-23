@@ -25,6 +25,7 @@ const Header = () => {
     { name: "Travel Info", href: "/travel-info" },
     { name: "Concierge", href: "/concierge" },
     { name: "Blog", href: "/blog" },
+    { name: "FAQ", href: "/faq" },
     { name: "Contact", href: "/contact" },
   ];
 
@@ -38,6 +39,7 @@ const Header = () => {
     { name: "Travel Info", href: "/travel-info" },
     { name: "Concierge", href: "/concierge" },
     { name: "Blog", href: "/blog" },
+    { name: "FAQ", href: "/faq" },
     { name: "Contact", href: "/contact" },
   ];
 
