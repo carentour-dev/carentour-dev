@@ -144,8 +144,8 @@ export default function PatientJourney() {
     
     const isValid = await form.trigger();
     if (isValid) {
-      const formData = { ...form.getValues(), consultationType };
-      console.log('Form submitted:', formData);
+      const submissionData = { ...form.getValues(), consultationType };
+      console.log('Form submitted:', submissionData);
       navigate('/dashboard');
     } else {
       alert('Please complete all required fields before submitting.');
