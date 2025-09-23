@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, ArrowRight, Upload, Calendar as CalendarIcon, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, Calendar as CalendarIcon, DollarSign, User, FileText, Stethoscope, Plane, CheckCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ import {
   fullPatientJourneySchema,
   type FullPatientJourneyFormData 
 } from '@/schemas/patientJourneySchemas';
+import { toast } from 'sonner';
 
 const steps = [
   { id: 1, title: 'Basic Information', icon: User },
@@ -38,6 +39,13 @@ export default function PatientJourney() {
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [consultationType, setConsultationType] = useState<string>('');
+  
+  // State for uploaded files
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    passport?: File;
+    medical?: File[];
+    insurance?: File;
+  }>({});
 
   // Form setup with default values
   const form = useForm<FullPatientJourneyFormData>({
@@ -118,6 +126,39 @@ export default function PatientJourney() {
       form.setValue('treatmentType', mappedTreatment);
     }
   }, [searchParams, form]);
+
+  // Handle file uploads
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'passport' | 'medical' | 'insurance') => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (type === 'medical') {
+      // Handle multiple files for medical records
+      const fileArray = Array.from(files);
+      setUploadedFiles(prev => ({
+        ...prev,
+        medical: [...(prev.medical || []), ...fileArray]
+      }));
+      toast.success(`${fileArray.length} medical record(s) uploaded successfully`);
+    } else {
+      // Handle single file for passport and insurance
+      const file = files[0];
+      setUploadedFiles(prev => ({
+        ...prev,
+        [type]: file
+      }));
+      toast.success(`${type === 'passport' ? 'Passport' : 'Insurance'} document uploaded successfully`);
+    }
+
+    // Auto-check the corresponding checkbox when file is uploaded
+    if (type === 'passport') {
+      form.setValue('hasPassport', true);
+    } else if (type === 'medical') {
+      form.setValue('hasMedicalRecords', true);
+    } else if (type === 'insurance') {
+      form.setValue('hasInsurance', true);
+    }
+  };
 
   const validateCurrentStep = async () => {
     let isValid = false;
@@ -633,64 +674,153 @@ export default function PatientJourney() {
               <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">Document Upload</h3>
               <p className="text-muted-foreground">
-                Please prepare the following documents. You can upload them now or later through your patient dashboard.
+                Upload your documents or indicate that you have them ready. You can upload them now or later through your patient dashboard.
               </p>
             </div>
 
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="hasPassport"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Passport copy (for visa processing)</FormLabel>
+            <div className="space-y-6">
+              {/* Passport Upload */}
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="hasPassport"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Valid passport or travel document</FormLabel>
+                        <FormDescription>
+                          Required for international travel to Egypt
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <div className="ml-6">
+                  <input
+                    type="file"
+                    id="passport-upload"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'passport')}
+                  />
+                  <label
+                    htmlFor="passport-upload"
+                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Passport Copy
+                  </label>
+                  {uploadedFiles.passport && (
+                    <div className="mt-2 text-sm text-muted-foreground flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                      {uploadedFiles.passport.name}
                     </div>
-                  </FormItem>
-                )}
-              />
+                  )}
+                </div>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="hasMedicalRecords"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Medical records (X-rays, lab results, previous surgical reports)</FormLabel>
+              {/* Medical Records Upload */}
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="hasMedicalRecords"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Medical records and test results</FormLabel>
+                        <FormDescription>
+                          Recent medical history, lab results, and imaging studies
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <div className="ml-6">
+                  <input
+                    type="file"
+                    id="medical-upload"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'medical')}
+                  />
+                  <label
+                    htmlFor="medical-upload"
+                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Medical Records
+                  </label>
+                  {uploadedFiles.medical && uploadedFiles.medical.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {uploadedFiles.medical.map((file, index) => (
+                        <div key={index} className="text-sm text-muted-foreground flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                          {file.name}
+                        </div>
+                      ))}
                     </div>
-                  </FormItem>
-                )}
-              />
+                  )}
+                </div>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="hasInsurance"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Insurance information (if applicable)</FormLabel>
+              {/* Insurance Upload */}
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="hasInsurance"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Travel/medical insurance documentation</FormLabel>
+                        <FormDescription>
+                          Insurance coverage for international medical treatment
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <div className="ml-6">
+                  <input
+                    type="file"
+                    id="insurance-upload"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'insurance')}
+                  />
+                  <label
+                    htmlFor="insurance-upload"
+                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Insurance Documents
+                  </label>
+                  {uploadedFiles.insurance && (
+                    <div className="mt-2 text-sm text-muted-foreground flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                      {uploadedFiles.insurance.name}
                     </div>
-                  </FormItem>
-                )}
-              />
+                  )}
+                </div>
+              </div>
             </div>
 
             {form.formState.errors.hasPassport && (
