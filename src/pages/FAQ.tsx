@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,33 @@ import CTASection from "@/components/CTASection";
 const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("general");
+  const location = useLocation();
+
+  // Fragment to tab mapping for navigation from Contact page
+  const fragmentToTab = {
+    "visa-travel": "visa",
+    "costs-payment": "costs", 
+    "stay-transport": "accommodation",
+    "recovery-support": "aftercare"
+  };
+
+  useEffect(() => {
+    // Handle navigation from Contact page fragments
+    if (location.hash) {
+      const fragment = location.hash.substring(1);
+      const mappedTab = fragmentToTab[fragment as keyof typeof fragmentToTab];
+      if (mappedTab) {
+        setActiveTab(mappedTab);
+        // Smooth scroll to the section after a short delay to ensure tab content is rendered
+        setTimeout(() => {
+          const element = document.getElementById(fragment);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+    }
+  }, [location.hash]);
 
   const categories = [
     {
@@ -325,16 +353,28 @@ const FAQ = () => {
                   ))}
                 </TabsList>
 
-                {categories.map((category) => (
-                  <TabsContent key={category.id} value={category.id}>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <category.icon className="h-5 w-5" />
-                          {category.title}
-                        </CardTitle>
-                        <p className="text-muted-foreground">{category.description}</p>
-                      </CardHeader>
+                {categories.map((category) => {
+                  // Map category IDs to fragment names for anchor linking
+                  const getFragmentId = (categoryId: string) => {
+                    const tabToFragment = {
+                      "visa": "visa-travel",
+                      "costs": "costs-payment",
+                      "accommodation": "stay-transport", 
+                      "aftercare": "recovery-support"
+                    };
+                    return tabToFragment[categoryId as keyof typeof tabToFragment] || categoryId;
+                  };
+
+                  return (
+                    <TabsContent key={category.id} value={category.id} id={getFragmentId(category.id)}>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <category.icon className="h-5 w-5" />
+                            {category.title}
+                          </CardTitle>
+                          <p className="text-muted-foreground">{category.description}</p>
+                        </CardHeader>
                       <CardContent>
                         <Accordion type="single" collapsible className="space-y-4">
                           {faqData[category.id as keyof typeof faqData].map((faq, index) => (
@@ -354,8 +394,9 @@ const FAQ = () => {
                         </Accordion>
                       </CardContent>
                     </Card>
-                  </TabsContent>
-                ))}
+                    </TabsContent>
+                  );
+                })}
               </Tabs>
             </div>
           </section>
