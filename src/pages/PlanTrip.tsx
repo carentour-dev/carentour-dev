@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { Plane, Hotel, Car, Globe, Shield, Clock, Users, Phone } from "lucide-react";
 
 const PlanTrip = () => {
@@ -267,8 +268,8 @@ const PlanTrip = () => {
               Let our experienced team handle all the details while you focus on your recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg">
-                Start Planning Today
+              <Button size="lg" asChild>
+                <Link to="/start-journey">Start Planning Today</Link>
               </Button>
               <Button size="lg" variant="outline">
                 Download Travel Guide
