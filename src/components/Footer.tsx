@@ -15,7 +15,7 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <img 
-              src={theme === 'dark' ? logoLight : logoDark} 
+              src={theme === 'dark' ? logoDark : logoLight} 
               alt="Care N Tour" 
               className="h-12 mb-4"
             />
