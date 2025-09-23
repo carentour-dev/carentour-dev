@@ -204,6 +204,54 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_subscriptions: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: unknown | null
+          preferences: Json | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscribed_at: string
+          subscription_source: string | null
+          unsubscribe_token: string
+          unsubscribed_at: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: unknown | null
+          preferences?: Json | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          subscribed_at?: string
+          subscription_source?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: unknown | null
+          preferences?: Json | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          subscribed_at?: string
+          subscription_source?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -513,7 +561,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      subscription_status: "pending" | "active" | "unsubscribed" | "bounced"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -640,6 +688,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_status: ["pending", "active", "unsubscribed", "bounced"],
+    },
   },
 } as const

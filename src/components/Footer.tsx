@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,22 @@ import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "luc
 import { useTheme } from "next-themes";
 import logoLight from "@/assets/care-n-tour-logo-light.png";
 import logoDark from "@/assets/care-n-tour-logo-dark.png";
+import { useNewsletter } from "@/hooks/useNewsletter";
 
 const Footer = () => {
   const { theme } = useTheme();
+  const [email, setEmail] = useState('');
+  const { subscribe, loading } = useNewsletter();
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      const result = await subscribe(email, 'footer');
+      if (result.success) {
+        setEmail('');
+      }
+    }
+  };
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4 py-16">
@@ -68,13 +82,23 @@ const Footer = () => {
             <p className="text-background/80 mb-4">
               Subscribe to our newsletter for the latest medical tourism updates.
             </p>
-            <div className="flex space-x-2">
+            <form onSubmit={handleNewsletterSubmit} className="flex space-x-2">
               <Input 
+                type="email"
                 placeholder="Your email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-background/10 border-background/20 text-background placeholder:text-background/60"
+                required
               />
-              <Button variant="accent">Subscribe</Button>
-            </div>
+              <Button 
+                type="submit" 
+                variant="accent"
+                disabled={loading}
+              >
+                {loading ? 'Subscribing...' : 'Subscribe'}
+              </Button>
+            </form>
           </div>
         </div>
 
