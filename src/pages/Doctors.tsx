@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Link } from "react-router-dom";
 import { Search, Filter } from "lucide-react";
 import { useDoctors } from "@/hooks/useDoctors";
 import { useState } from "react";
@@ -168,8 +169,8 @@ const Doctors = () => {
               Ready to meet with one of our specialists? Book a consultation to discuss your treatment options.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Get Free Quote
+              <Button size="lg" variant="accent" asChild>
+                <Link to="/contact">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero">
                 Schedule Consultation
