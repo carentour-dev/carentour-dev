@@ -173,8 +173,8 @@ const About = () => {
               <Button size="lg" variant="accent" asChild>
                 <Link to="/contact">Get Free Consultation</Link>
               </Button>
-              <Button size="lg" variant="hero">
-                Contact Us Today
+              <Button size="lg" variant="hero" asChild>
+                <Link to="/start-journey">Start Your Journey</Link>
               </Button>
             </div>
           </div>
