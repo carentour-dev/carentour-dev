@@ -48,22 +48,23 @@ const FAQ = () => {
       if (mappedTab) {
         setActiveTab(mappedTab);
         
-        // Enhanced retry mechanism with longer delays
-        const scrollToElement = (attempt = 1, maxAttempts = 5) => {
-          console.log(`Scroll attempt ${attempt} for fragment: ${fragment}`);
+        // Wait for tab to become active and then scroll to the active tab content
+        const waitForActiveTab = () => {
+          // Look for the active tab content that contains our target element
+          const activeTabContent = document.querySelector(`[data-state="active"][data-orientation="horizontal"]`);
           
-          const element = document.getElementById(fragment);
-          if (element) {
-            console.log(`Found element for ${fragment}, scrolling...`);
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else if (attempt < maxAttempts) {
-            // Retry with exponentially increasing delays
-            const delay = attempt * 300; // 300ms, 600ms, 900ms, 1200ms
-            console.log(`Element not found, retrying in ${delay}ms...`);
-            setTimeout(() => scrollToElement(attempt + 1, maxAttempts), delay);
+          if (activeTabContent) {
+            // Found active tab content, now look for our target element within it
+            const targetElement = activeTabContent.querySelector(`#${fragment}`);
+            if (targetElement) {
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              return;
+            }
+            
+            // If specific element not found, scroll to the active tab content itself
+            activeTabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } else {
-            // Final fallback: scroll to the tabs section
-            console.log(`Failed to find ${fragment}, scrolling to tabs section`);
+            // Fallback: scroll to tabs section
             const tabsSection = document.querySelector('[role="tablist"]')?.parentElement;
             if (tabsSection) {
               tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -71,8 +72,30 @@ const FAQ = () => {
           }
         };
         
-        // Wait longer for tab content to render before starting scroll attempts
-        setTimeout(() => scrollToElement(), 800);
+        // Use MutationObserver to detect when tab content becomes active
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-state') {
+              const target = mutation.target as Element;
+              if (target.getAttribute('data-state') === 'active') {
+                observer.disconnect();
+                setTimeout(waitForActiveTab, 100); // Small delay for DOM updates
+              }
+            }
+          });
+        });
+        
+        // Start observing tab content elements
+        const tabContents = document.querySelectorAll('[data-orientation="horizontal"]');
+        tabContents.forEach(content => {
+          observer.observe(content, { attributes: true, attributeFilter: ['data-state'] });
+        });
+        
+        // Fallback timeout in case observer doesn't fire
+        setTimeout(() => {
+          observer.disconnect();
+          waitForActiveTab();
+        }, 2000);
       }
     }
   }, [location.hash]);
