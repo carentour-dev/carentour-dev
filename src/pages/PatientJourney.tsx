@@ -89,7 +89,7 @@ export default function PatientJourney() {
       allergies: '',
       doctorPreference: '',
       accessibilityNeeds: '',
-      preferredDates: new Date(),
+      preferredDates: undefined, // Don't set a default date
       accommodationType: '',
       companionTravelers: '',
       dietaryRequirements: '',
@@ -502,7 +502,7 @@ export default function PatientJourney() {
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          {field.value ? (
+                          {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
                             format(field.value, "PPP")
                           ) : (
                             <span>Pick your preferred travel date</span>
