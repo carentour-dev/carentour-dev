@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DoctorProfile } from "@/components/DoctorProfile";
 import { DoctorReviews } from "@/components/DoctorReviews";
+import PriceComparison from "@/components/PriceComparison";
 import { useDoctors, useDoctorReviews } from "@/hooks/useDoctors";
 import { ArrowLeft, Clock, DollarSign, Star, Check, Users, Heart, Award, Quote, AlertTriangle, CheckCircle } from "lucide-react";
 
@@ -33,6 +34,13 @@ const TreatmentDetails = () => {
           duration: "4-6 hours",
           recovery: "6-8 weeks",
           price: "$12,500 - $18,000",
+          egyptPrice: 15250,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 150000, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 35000, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 45000, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 65000, currency: "C$" }
+          ],
           success_rate: "95%",
           candidateRequirements: ["Severe coronary artery disease", "Failed angioplasty", "Multiple vessel blockages"],
           recoveryStages: [
@@ -48,6 +56,13 @@ const TreatmentDetails = () => {
           duration: "3-4 hours",
           recovery: "4-6 weeks",
           price: "$15,000 - $22,000",
+          egyptPrice: 18500,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 180000, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 42000, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 55000, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 75000, currency: "C$" }
+          ],
           success_rate: "92%",
           candidateRequirements: ["Severe valve stenosis", "Valve regurgitation", "Failed valve repair"],
           recoveryStages: [
@@ -77,6 +92,13 @@ const TreatmentDetails = () => {
           duration: "15-30 minutes per eye",
           recovery: "1-2 weeks",
           price: "$1,200 - $2,500",
+          egyptPrice: 1850,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 4500, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 3200, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 3800, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 5200, currency: "C$" }
+          ],
           success_rate: "96%",
           candidateRequirements: ["Stable prescription for 1+ year", "Adequate corneal thickness", "No severe dry eyes"],
           recoveryStages: [
@@ -106,6 +128,13 @@ const TreatmentDetails = () => {
           duration: "2-4 hours",
           recovery: "2-3 weeks",
           price: "$2,800 - $4,500",
+          egyptPrice: 3650,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 12000, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 8500, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 9200, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 11500, currency: "C$" }
+          ],
           success_rate: "92%",
           candidateRequirements: ["Mature facial features", "Realistic expectations", "Good nasal health"],
           recoveryStages: [
@@ -135,6 +164,13 @@ const TreatmentDetails = () => {
           duration: "2-3 sessions over 3-6 months",
           recovery: "3-6 months",
           price: "$800 - $1,500 per implant",
+          egyptPrice: 1150,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 5500, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 3800, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 4200, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 4800, currency: "C$" }
+          ],
           success_rate: "95%",
           candidateRequirements: ["Adequate bone density", "Good oral hygiene", "Non-smoker preferred", "Healthy gums"],
           recoveryStages: [
@@ -164,6 +200,13 @@ const TreatmentDetails = () => {
           duration: "1-2 hours",
           recovery: "1-2 weeks",
           price: "$2,500 - $4,000",
+          egyptPrice: 3250,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 18000, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 12500, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 14000, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 16000, currency: "C$" }
+          ],
           success_rate: "98%",
           candidateRequirements: ["Gallstones or gallbladder inflammation", "Good overall health", "No severe adhesions"],
           recoveryStages: [
@@ -193,6 +236,13 @@ const TreatmentDetails = () => {
           duration: "2-3 hours",
           recovery: "6-12 weeks",
           price: "$8,000 - $12,000",
+          egyptPrice: 10000,
+          internationalPrices: [
+            { country: "United States", flag: "🇺🇸", price: 65000, currency: "$" },
+            { country: "United Kingdom", flag: "🇬🇧", price: 28000, currency: "£" },
+            { country: "Germany", flag: "🇩🇪", price: 32000, currency: "€" },
+            { country: "Canada", flag: "🇨🇦", price: 45000, currency: "C$" }
+          ],
           success_rate: "95%",
           candidateRequirements: ["Severe hip arthritis", "Failed conservative treatment", "Good overall health"],
           recoveryStages: [
@@ -412,6 +462,17 @@ const TreatmentDetails = () => {
                         ))}
                       </ul>
                     </div>
+
+                    {/* Price Comparison */}
+                    {procedure.internationalPrices && (
+                      <div className="mb-8">
+                        <PriceComparison
+                          treatment={procedure.name}
+                          egyptPrice={procedure.egyptPrice}
+                          internationalPrices={procedure.internationalPrices}
+                        />
+                      </div>
+                    )}
 
                     {/* Recovery Timeline */}
                     <div>
