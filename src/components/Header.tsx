@@ -13,7 +13,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -92,7 +92,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img 
-                src={theme === 'dark' ? logoLight : logoDark} 
+                src={resolvedTheme === 'dark' ? logoLight : logoDark} 
                 alt="Care N Tour" 
                 className="h-14 w-auto"
               />
