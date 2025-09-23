@@ -7,6 +7,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import logoLight from "@/assets/care-n-tour-logo-light.png";
+import logoDark from "@/assets/care-n-tour-logo-dark.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -90,17 +91,11 @@ const Header = () => {
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              {theme === 'dark' ? (
-                <img 
-                  src={logoLight} 
-                  alt="Care N Tour" 
-                  className="h-14 w-auto"
-                />
-              ) : (
-                <div className="text-2xl font-bold text-primary">
-                  Care N Tour
-                </div>
-              )}
+              <img 
+                src={theme === 'dark' ? logoLight : logoDark} 
+                alt="Care N Tour" 
+                className="h-14 w-auto"
+              />
             </Link>
           </div>
 
