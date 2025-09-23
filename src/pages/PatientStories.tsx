@@ -213,8 +213,8 @@ const PatientStories = () => {
               Join thousands of satisfied patients who have chosen Egypt for their medical care
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Start Your Journey
+              <Button size="lg" variant="accent" asChild>
+                <Link to="/contact">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
                 <Link to="/start-journey">Start Your Journey</Link>
