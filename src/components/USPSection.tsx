@@ -176,7 +176,7 @@ const USPSection = () => {
               <Link to="/contact">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link to="/plan-trip">Start Your Journey</Link>
+              <Link to="/patient-journey">Start Your Journey</Link>
             </Button>
           </div>
         </div>
