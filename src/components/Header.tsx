@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
+import logoLight from "@/assets/care-n-tour-logo-light.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,9 +90,17 @@ const Header = () => {
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <div className="text-2xl font-bold text-primary">
-                Care N Tour
-              </div>
+              {theme === 'dark' ? (
+                <img 
+                  src={logoLight} 
+                  alt="Care N Tour" 
+                  className="h-14 w-auto"
+                />
+              ) : (
+                <div className="text-2xl font-bold text-primary">
+                  Care N Tour
+                </div>
+              )}
             </Link>
           </div>
 
