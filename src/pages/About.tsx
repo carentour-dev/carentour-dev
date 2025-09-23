@@ -5,6 +5,7 @@ import PartnerHospitals from "@/components/PartnerHospitals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { Heart, Award, Users, Globe, Shield, Clock } from "lucide-react";
 import consultationImage from "@/assets/consultation.webp";
 
@@ -169,8 +170,8 @@ const About = () => {
               Join thousands of satisfied patients who have trusted us with their healthcare journey
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Get Free Consultation
+              <Button size="lg" variant="accent" asChild>
+                <Link to="/contact">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero">
                 Contact Us Today
