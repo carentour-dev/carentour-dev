@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { useTheme } from "next-themes";
 import logoLight from "@/assets/care-n-tour-logo-light.png";
+import logoDark from "@/assets/care-n-tour-logo-dark.png";
 
 const Footer = () => {
+  const { theme } = useTheme();
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4 py-16">
@@ -12,7 +15,7 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <img 
-              src={logoLight} 
+              src={theme === 'dark' ? logoLight : logoDark} 
               alt="Care N Tour" 
               className="h-12 mb-4"
             />
