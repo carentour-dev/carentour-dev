@@ -3,13 +3,17 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Stethoscope, Eye, Smile, Scissors, Activity, Users } from "lucide-react";
+import { Heart, Stethoscope, Eye, Smile, Scissors, Activity, Users, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDoctors } from "@/hooks/useDoctors";
+import PriceComparison from "@/components/PriceComparison";
+import { useState } from "react";
 
 const Treatments = () => {
   const navigate = useNavigate();
   const { doctors } = useDoctors();
+  const [expandedComparison, setExpandedComparison] = useState<string | null>(null);
+  
   const treatmentCategories = [
     {
       id: "cardiac-surgery",
@@ -17,7 +21,15 @@ const Treatments = () => {
       title: "Cardiac Surgery",
       description: "Advanced heart procedures with world-class specialists",
       procedures: ["Bypass Surgery", "Valve Replacement", "Angioplasty"],
-      startingPrice: "$8,500"
+      startingPrice: "$8,500",
+      egyptPrice: 8500,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 45000, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 38000, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 35000, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 42000, currency: "C$" }
+      ],
+      averageSavings: 78
     },
     {
       id: "eye-surgery",
@@ -25,7 +37,15 @@ const Treatments = () => {
       title: "Eye Surgery",
       description: "LASIK and comprehensive eye treatments",
       procedures: ["LASIK", "Cataract Surgery", "Retinal Surgery"],
-      startingPrice: "$1,200"
+      startingPrice: "$1,200",
+      egyptPrice: 1200,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 4500, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 3800, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 3200, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 3900, currency: "C$" }
+      ],
+      averageSavings: 69
     },
     {
       id: "dental-care",
@@ -33,7 +53,15 @@ const Treatments = () => {
       title: "Dental Care",
       description: "Complete dental treatments and cosmetic procedures",
       procedures: ["Dental Implants", "Veneers", "Root Canal"],
-      startingPrice: "$300"
+      startingPrice: "$300",
+      egyptPrice: 300,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 2500, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 2200, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 1800, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 2100, currency: "C$" }
+      ],
+      averageSavings: 86
     },
     {
       id: "cosmetic-surgery",
@@ -41,7 +69,15 @@ const Treatments = () => {
       title: "Cosmetic Surgery",
       description: "Aesthetic procedures with natural-looking results",
       procedures: ["Rhinoplasty", "Liposuction", "Breast Surgery"],
-      startingPrice: "$2,800"
+      startingPrice: "$2,800",
+      egyptPrice: 2800,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 12000, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 10500, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 9800, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 11200, currency: "C$" }
+      ],
+      averageSavings: 74
     },
     {
       id: "general-surgery",
@@ -49,7 +85,15 @@ const Treatments = () => {
       title: "General Surgery",
       description: "Wide range of surgical procedures",
       procedures: ["Gallbladder", "Hernia Repair", "Appendectomy"],
-      startingPrice: "$1,500"
+      startingPrice: "$1,500",
+      egyptPrice: 1500,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 8500, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 7200, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 6800, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 7800, currency: "C$" }
+      ],
+      averageSavings: 80
     },
     {
       id: "orthopedic-surgery",
@@ -57,7 +101,15 @@ const Treatments = () => {
       title: "Orthopedic Surgery",
       description: "Joint replacement and bone treatments",
       procedures: ["Hip Replacement", "Knee Surgery", "Spine Surgery"],
-      startingPrice: "$4,200"
+      startingPrice: "$4,200",
+      egyptPrice: 4200,
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 22000, currency: "$" },
+        { country: "United Kingdom", flag: "🇬🇧", price: 18500, currency: "£" },
+        { country: "Germany", flag: "🇩🇪", price: 17200, currency: "€" },
+        { country: "Canada", flag: "🇨🇦", price: 19800, currency: "C$" }
+      ],
+      averageSavings: 78
     }
   ];
 
@@ -123,21 +175,104 @@ const Treatments = () => {
                           </ul>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-border">
-                          <span className="text-sm text-muted-foreground">Starting from</span>
-                          <span className="text-lg font-bold text-primary">{category.startingPrice}</span>
+                          <div>
+                            <span className="text-sm text-muted-foreground">Starting from</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-primary">{category.startingPrice}</span>
+                              <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                                Save {category.averageSavings}%
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                        <Button 
-                          className="w-full" 
-                          variant="outline"
-                          onClick={() => navigate(`/treatments/${category.id}`)}
-                        >
-                          Learn More
-                        </Button>
+                        
+                        <div className="space-y-2">
+                          <Button 
+                            className="w-full" 
+                            variant="outline"
+                            onClick={() => navigate(`/treatments/${category.id}`)}
+                          >
+                            Learn More
+                          </Button>
+                          
+                          <Button 
+                            className="w-full" 
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedComparison(
+                              expandedComparison === category.id ? null : category.id
+                            )}
+                          >
+                            {expandedComparison === category.id ? (
+                              <>Hide Price Comparison <ChevronUp className="ml-2 h-4 w-4" /></>
+                            ) : (
+                              <>View Savings <ChevronDown className="ml-2 h-4 w-4" /></>
+                            )}
+                          </Button>
+                        </div>
+                        
+                        {expandedComparison === category.id && (
+                          <div className="mt-4">
+                            <PriceComparison
+                              treatment={category.title}
+                              egyptPrice={category.egyptPrice}
+                              internationalPrices={category.internationalPrices}
+                            />
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* Price Comparison Overview */}
+        <section className="py-20 bg-primary/5">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Why Choose Egypt for Your Medical Treatment?
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Experience world-class healthcare at a fraction of international costs. Our patients save an average of 70-85% compared to Western countries.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              <PriceComparison
+                treatment="Heart Surgery"
+                egyptPrice={8500}
+                internationalPrices={treatmentCategories[0].internationalPrices}
+              />
+              <PriceComparison
+                treatment="Dental Implants"
+                egyptPrice={300}
+                internationalPrices={treatmentCategories[2].internationalPrices}
+              />
+            </div>
+            
+            <div className="text-center mt-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
+                  <div className="text-3xl font-bold text-primary mb-2">75%</div>
+                  <div className="text-foreground font-semibold mb-1">Average Savings</div>
+                  <div className="text-sm text-muted-foreground">Compared to US prices</div>
+                </div>
+                <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
+                  <div className="text-3xl font-bold text-primary mb-2">$15K+</div>
+                  <div className="text-foreground font-semibold mb-1">Money Saved</div>
+                  <div className="text-sm text-muted-foreground">Average per procedure</div>
+                </div>
+                <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
+                  <div className="text-3xl font-bold text-primary mb-2">5000+</div>
+                  <div className="text-foreground font-semibold mb-1">Happy Patients</div>
+                  <div className="text-sm text-muted-foreground">From around the world</div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
