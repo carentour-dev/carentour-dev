@@ -28,6 +28,7 @@ import CTASection from "@/components/CTASection";
 
 const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("general");
 
   const categories = [
     {
@@ -293,7 +294,7 @@ const FAQ = () => {
                 {categories.map((category) => {
                   const IconComponent = category.icon;
                   return (
-                    <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setActiveTab(category.id)}>
                       <CardHeader>
                         <div className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mb-4`}>
                           <IconComponent className="h-6 w-6" />
@@ -311,7 +312,7 @@ const FAQ = () => {
           {/* FAQ Tabs */}
           <section className="py-12">
             <div className="container mx-auto px-4">
-              <Tabs defaultValue="general" className="space-y-8">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
                 <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
                   {categories.map((category) => (
                     <TabsTrigger
