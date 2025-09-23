@@ -190,6 +190,13 @@ const Treatments = () => {
                         <div className="space-y-2">
                           <Button 
                             className="w-full" 
+                            onClick={() => navigate(`/start-journey?treatment=${category.id}`)}
+                          >
+                            Start Your Journey
+                          </Button>
+                          
+                          <Button 
+                            className="w-full" 
                             variant="outline"
                             onClick={() => navigate(`/treatments/${category.id}`)}
                           >

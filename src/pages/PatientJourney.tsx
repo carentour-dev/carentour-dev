@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, Upload, Calendar, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const steps = [
   { id: 1, title: 'Basic Information', icon: User },
@@ -21,6 +21,7 @@ const steps = [
 
 export default function PatientJourney() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Basic Information
@@ -56,6 +57,24 @@ export default function PatientJourney() {
     
     // Step 5 & 6 are informational/selection steps
   });
+
+  // Pre-populate treatment type from URL parameter
+  useEffect(() => {
+    const treatmentParam = searchParams.get('treatment');
+    if (treatmentParam) {
+      const treatmentMap: { [key: string]: string } = {
+        'cardiac-surgery': 'cardiac',
+        'eye-surgery': 'eye',
+        'dental-care': 'dental',
+        'cosmetic-surgery': 'cosmetic',
+        'general-surgery': 'other',
+        'orthopedic-surgery': 'orthopedic'
+      };
+      
+      const mappedTreatment = treatmentMap[treatmentParam] || 'other';
+      setFormData(prev => ({ ...prev, treatmentType: mappedTreatment }));
+    }
+  }, [searchParams]);
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -174,7 +193,7 @@ export default function PatientJourney() {
 
             <div>
               <Label htmlFor="treatmentType">Treatment of Interest</Label>
-              <Select onValueChange={(value) => updateFormData('treatmentType', value)}>
+              <Select value={formData.treatmentType} onValueChange={(value) => updateFormData('treatmentType', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="What treatment are you seeking?" />
                 </SelectTrigger>
