@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Doctors from "./pages/Doctors";
 import DoctorDetail from "./pages/DoctorDetail";
+import PatientJourney from "./pages/PatientJourney";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/start-journey" element={<PatientJourney />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
