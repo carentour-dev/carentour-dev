@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const CTASection = () => {
   return (
@@ -12,8 +13,8 @@ const CTASection = () => {
             Our medical coordinators are available 24/7 to answer your questions and help you plan your treatment. Get personalized care and support every step of the way.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg">
-              Get Free Quote
+            <Button size="lg" asChild>
+              <Link to="/contact">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg">
               Schedule Consultation
