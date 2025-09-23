@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Award, Star, MapPin, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 import hospitalCairoMedical from "@/assets/hospital-cairo-medical.jpg";
 import clinicAlexandriaPremier from "@/assets/clinic-alexandria-premier.jpg";
 
@@ -145,9 +146,11 @@ const PartnerHospitals = () => {
                   </div>
                 </div>
 
-                <Button className="w-full mt-4">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Contact Facility
+                <Button className="w-full mt-4" asChild>
+                  <Link to="/contact">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Contact Facility
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
