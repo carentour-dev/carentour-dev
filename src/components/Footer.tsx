@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import logoLight from "@/assets/care-n-tour-logo-light.png";
 
 const Footer = () => {
   return (
@@ -10,9 +11,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-2xl font-bold mb-4 bg-gradient-accent bg-clip-text text-transparent">
-              Care N Tour
-            </h3>
+            <img 
+              src={logoLight} 
+              alt="Care N Tour" 
+              className="h-12 mb-4"
+            />
             <p className="text-background/80 mb-6">
               Your trusted partner for world-class medical treatments in Egypt. 
               Combining excellence in healthcare with exceptional hospitality.
