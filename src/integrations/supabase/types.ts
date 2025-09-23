@@ -297,6 +297,180 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_plan_accommodations: {
+        Row: {
+          amenities: string[] | null
+          available_from: string | null
+          available_to: string | null
+          created_at: string
+          distance_to_hospital_km: number | null
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          location: Json | null
+          name: string
+          price_per_night: number
+          special_medical_features: string[] | null
+          star_rating: number | null
+          type: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          available_from?: string | null
+          available_to?: string | null
+          created_at?: string
+          distance_to_hospital_km?: number | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          location?: Json | null
+          name: string
+          price_per_night: number
+          special_medical_features?: string[] | null
+          star_rating?: number | null
+          type: string
+        }
+        Update: {
+          amenities?: string[] | null
+          available_from?: string | null
+          available_to?: string | null
+          created_at?: string
+          distance_to_hospital_km?: number | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          location?: Json | null
+          name?: string
+          price_per_night?: number
+          special_medical_features?: string[] | null
+          star_rating?: number | null
+          type?: string
+        }
+        Relationships: []
+      }
+      trip_plan_bookings: {
+        Row: {
+          accommodation_id: string | null
+          booking_reference: string | null
+          booking_status: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at: string
+          guest_count: number
+          id: string
+          special_requests: string | null
+          total_cost: number
+          trip_plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_id?: string | null
+          booking_reference?: string | null
+          booking_status?: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at?: string
+          guest_count: number
+          id?: string
+          special_requests?: string | null
+          total_cost: number
+          trip_plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_id?: string | null
+          booking_reference?: string | null
+          booking_status?: string | null
+          check_in_date?: string
+          check_out_date?: string
+          created_at?: string
+          guest_count?: number
+          id?: string
+          special_requests?: string | null
+          total_cost?: number
+          trip_plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_plan_bookings_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "trip_plan_accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_plan_bookings_trip_plan_id_fkey"
+            columns: ["trip_plan_id"]
+            isOneToOne: false
+            referencedRelation: "trip_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_plans: {
+        Row: {
+          accommodation_preferences: Json | null
+          budget_range: Json | null
+          companion_count: number | null
+          created_at: string
+          cultural_interests: string[] | null
+          current_step: number | null
+          id: string
+          preferred_travel_dates: Json | null
+          recovery_timeline: number | null
+          special_requirements: string[] | null
+          status: string | null
+          total_estimated_cost: number | null
+          transportation_preferences: Json | null
+          travel_insurance_needed: boolean | null
+          treatment_type: string
+          updated_at: string
+          user_id: string | null
+          visa_assistance_needed: boolean | null
+        }
+        Insert: {
+          accommodation_preferences?: Json | null
+          budget_range?: Json | null
+          companion_count?: number | null
+          created_at?: string
+          cultural_interests?: string[] | null
+          current_step?: number | null
+          id?: string
+          preferred_travel_dates?: Json | null
+          recovery_timeline?: number | null
+          special_requirements?: string[] | null
+          status?: string | null
+          total_estimated_cost?: number | null
+          transportation_preferences?: Json | null
+          travel_insurance_needed?: boolean | null
+          treatment_type: string
+          updated_at?: string
+          user_id?: string | null
+          visa_assistance_needed?: boolean | null
+        }
+        Update: {
+          accommodation_preferences?: Json | null
+          budget_range?: Json | null
+          companion_count?: number | null
+          created_at?: string
+          cultural_interests?: string[] | null
+          current_step?: number | null
+          id?: string
+          preferred_travel_dates?: Json | null
+          recovery_timeline?: number | null
+          special_requirements?: string[] | null
+          status?: string | null
+          total_estimated_cost?: number | null
+          transportation_preferences?: Json | null
+          travel_insurance_needed?: boolean | null
+          treatment_type?: string
+          updated_at?: string
+          user_id?: string | null
+          visa_assistance_needed?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
