@@ -83,8 +83,8 @@ const Header = () => {
                 </Button>
               </Link>
             )}
-            <Button variant="accent" size="sm">
-              Get Free Quote
+            <Button variant="accent" size="sm" asChild>
+              <Link to="/contact">Get Free Consultation</Link>
             </Button>
           </div>
         </div>
@@ -155,8 +155,8 @@ const Header = () => {
                   </Button>
                 </Link>
               )}
-              <Button variant="accent" className="mt-2">
-                Get Free Quote
+              <Button variant="accent" className="mt-2" asChild>
+                <Link to="/contact">Get Free Consultation</Link>
               </Button>
             </div>
           </nav>
