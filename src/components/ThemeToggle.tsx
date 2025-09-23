@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+  const handleThemeChange = (newTheme: "light" | "dark") => {
     setTheme(newTheme);
     
     // Announce theme change for screen readers
@@ -90,18 +90,6 @@ export function ThemeToggle() {
           <Moon className="h-4 w-4" />
           <span>Dark</span>
           {theme === "dark" && <span className="sr-only">(current)</span>}
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => handleThemeChange("system")}
-          className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
-            theme === "system" ? "bg-muted text-primary font-medium" : ""
-          }`}
-          role="menuitem"
-          aria-label="Use system theme preference"
-        >
-          <Monitor className="h-4 w-4" />
-          <span>System</span>
-          {theme === "system" && <span className="sr-only">(current)</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
