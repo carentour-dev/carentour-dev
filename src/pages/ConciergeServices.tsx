@@ -3,11 +3,12 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { 
   Phone, 
   Calendar, 
   Car, 
-  Utensils, 
+  Utensils,
   ShoppingBag, 
   MapPin, 
   Clock, 
@@ -433,9 +434,11 @@ const ConciergeServices = () => {
               Let our experienced concierge team take care of every detail while you focus on your health and recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                <Phone className="h-4 w-4 mr-2" />
-                Schedule Consultation
+              <Button size="lg" variant="accent" asChild>
+                <Link to="/contact">
+                  <Phone className="h-4 w-4 mr-2" />
+                  Get Free Consultation
+                </Link>
               </Button>
               <Button size="lg" variant="hero">
                 <FileText className="h-4 w-4 mr-2" />
