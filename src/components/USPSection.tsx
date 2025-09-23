@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   Award, 
   Shield, 
@@ -171,8 +172,8 @@ const USPSection = () => {
             Get your free consultation and personalized treatment plan today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg">
-              Get Free Consultation
+            <Button size="lg" asChild>
+              <Link to="/contact">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg">
               Download Brochure
