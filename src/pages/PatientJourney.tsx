@@ -352,7 +352,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="Please describe your current medical condition and symptoms in detail..."
                       className="min-h-[100px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -384,7 +385,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="List any previous treatments, surgeries, or procedures you've had..."
                       className="min-h-[80px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -421,7 +423,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="Do you have any specific doctor or hospital preferences? Any certifications or specializations you require?"
                       className="min-h-[80px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -439,7 +442,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="Do you have any mobility, vision, hearing, or other accessibility requirements?"
                       className="min-h-[80px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -581,7 +585,8 @@ export default function PatientJourney() {
                     <Textarea
                       placeholder="Any dietary restrictions, allergies, or special meal requirements..."
                       className="min-h-[80px]"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
