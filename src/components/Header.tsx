@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
-import logoDark from "@/assets/care-n-tour-logo-dark.png";
 import logoLight from "@/assets/care-n-tour-logo-light.png";
 
 const Header = () => {
@@ -92,7 +91,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img 
-                src={theme === 'dark' ? logoLight : logoDark} 
+                src={logoLight} 
                 alt="Care N Tour" 
                 className="h-14 w-auto"
               />
