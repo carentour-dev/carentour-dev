@@ -48,25 +48,31 @@ const FAQ = () => {
       if (mappedTab) {
         setActiveTab(mappedTab);
         
-        // Retry mechanism to ensure tab content is rendered before scrolling
-        const scrollToElement = (attempt = 1) => {
+        // Enhanced retry mechanism with longer delays
+        const scrollToElement = (attempt = 1, maxAttempts = 5) => {
+          console.log(`Scroll attempt ${attempt} for fragment: ${fragment}`);
+          
           const element = document.getElementById(fragment);
           if (element) {
+            console.log(`Found element for ${fragment}, scrolling...`);
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else if (attempt < 3) {
-            // Retry up to 3 times with increasing delays
-            setTimeout(() => scrollToElement(attempt + 1), attempt * 200);
+          } else if (attempt < maxAttempts) {
+            // Retry with exponentially increasing delays
+            const delay = attempt * 300; // 300ms, 600ms, 900ms, 1200ms
+            console.log(`Element not found, retrying in ${delay}ms...`);
+            setTimeout(() => scrollToElement(attempt + 1, maxAttempts), delay);
           } else {
-            // Fallback: scroll to tabs container if element not found
-            const tabsContainer = document.querySelector('[data-state="active"]');
-            if (tabsContainer) {
-              tabsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Final fallback: scroll to the tabs section
+            console.log(`Failed to find ${fragment}, scrolling to tabs section`);
+            const tabsSection = document.querySelector('[role="tablist"]')?.parentElement;
+            if (tabsSection) {
+              tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
           }
         };
         
-        // Initial delay to allow tab content to render
-        setTimeout(() => scrollToElement(), 400);
+        // Wait longer for tab content to render before starting scroll attempts
+        setTimeout(() => scrollToElement(), 800);
       }
     }
   }, [location.hash]);
