@@ -123,7 +123,7 @@ const FeaturedTreatments = () => {
                     
                     <Button 
                       variant="outline" 
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-smooth"
+                      className="w-full hover:bg-primary hover:text-primary-foreground transition-smooth"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/treatments/${treatment.id}`);
