@@ -278,7 +278,9 @@ const PlanTrip = () => {
                             <p className="text-muted-foreground mb-4">
                               Our team will help you with the visa application process and provide all necessary documentation.
                             </p>
-                            <Button>Get Visa Support</Button>
+                            <Button asChild>
+                              <Link to="/contact">Get Visa Support</Link>
+                            </Button>
                           </CardContent>
                         </Card>
                       </div>
