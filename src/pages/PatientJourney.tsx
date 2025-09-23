@@ -9,8 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ArrowRight, Upload, Calendar, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { ArrowLeft, ArrowRight, Upload, Calendar as CalendarIcon, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { 
   basicInfoSchema, 
   medicalHistorySchema, 
@@ -26,7 +30,7 @@ const steps = [
   { id: 3, title: 'Travel Preferences', icon: Plane },
   { id: 4, title: 'Documents', icon: FileText },
   { id: 5, title: 'Cost Estimation', icon: DollarSign },
-  { id: 6, title: 'Schedule Consultation', icon: Calendar },
+  { id: 6, title: 'Schedule Consultation', icon: CalendarIcon },
 ];
 
 export default function PatientJourney() {
@@ -54,7 +58,7 @@ export default function PatientJourney() {
       allergies: '',
       doctorPreference: '',
       accessibilityNeeds: '',
-      preferredDates: '',
+      preferredDates: new Date(),
       accommodationType: '',
       companionTravelers: '',
       dietaryRequirements: '',
@@ -451,11 +455,38 @@ export default function PatientJourney() {
               control={form.control}
               name="preferredDates"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Preferred Travel Dates *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., March 2024, or flexible" {...field} />
-                  </FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick your preferred travel date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}

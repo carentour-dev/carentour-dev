@@ -28,7 +28,7 @@ export const medicalHistorySchema = z.object({
 
 // Step 3: Travel Preferences Schema
 export const travelPreferencesSchema = z.object({
-  preferredDates: z.string().min(1, "Please specify your preferred travel dates"),
+  preferredDates: z.date({ required_error: "Please select your preferred travel dates" }),
   accommodationType: z.string().min(1, "Please select your accommodation preference"),
   companionTravelers: z.string().min(1, "Please specify number of companion travelers"),
   languagePreference: z.string().min(1, "Please select your language preference"),
