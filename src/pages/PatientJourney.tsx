@@ -7,8 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Upload, Calendar, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, Calendar, DollarSign, User, FileText, Stethoscope, Plane, Check, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const steps = [
   { id: 1, title: 'Basic Information', icon: User },
@@ -22,7 +23,13 @@ const steps = [
 export default function PatientJourney() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [uploadedFiles, setUploadedFiles] = useState({
+    passport: null as File | null,
+    medicalRecords: [] as File[],
+    insurance: null as File | null,
+  });
   const [formData, setFormData] = useState({
     // Step 1: Basic Information
     firstName: '',
@@ -78,6 +85,66 @@ export default function PatientJourney() {
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileUpload = (fileType: 'passport' | 'medicalRecords' | 'insurance', files: FileList | null) => {
+    if (!files) return;
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    const validFiles = Array.from(files).filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not supported. Please upload PDF, JPG, or PNG files.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is over 10MB. Please compress the file.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setUploadedFiles(prev => {
+        if (fileType === 'medicalRecords') {
+          return { ...prev, [fileType]: [...prev.medicalRecords, ...validFiles] };
+        } else {
+          return { ...prev, [fileType]: validFiles[0] };
+        }
+      });
+
+      // Auto-check the corresponding checkbox
+      updateFormData(`has${fileType.charAt(0).toUpperCase() + fileType.slice(1)}`, true);
+
+      toast({
+        title: "File uploaded successfully",
+        description: `${validFiles.length} file(s) uploaded for ${fileType.replace(/([A-Z])/g, ' $1').toLowerCase()}.`,
+      });
+    }
+  };
+
+  const removeFile = (fileType: 'passport' | 'medicalRecords' | 'insurance', index?: number) => {
+    setUploadedFiles(prev => {
+      if (fileType === 'medicalRecords' && typeof index === 'number') {
+        const newFiles = [...prev.medicalRecords];
+        newFiles.splice(index, 1);
+        const hasFiles = newFiles.length > 0;
+        updateFormData('hasMedicalRecords', hasFiles);
+        return { ...prev, medicalRecords: newFiles };
+      } else {
+        updateFormData(`has${fileType.charAt(0).toUpperCase() + fileType.slice(1)}`, false);
+        return { ...prev, [fileType]: null };
+      }
+    });
   };
 
   const nextStep = () => {
@@ -386,38 +453,151 @@ export default function PatientJourney() {
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="hasPassport"
-                  checked={formData.hasPassport}
-                  onCheckedChange={(checked) => updateFormData('hasPassport', checked)}
-                />
-                <Label htmlFor="hasPassport" className="text-sm">
-                  Passport copy (for visa processing)
-                </Label>
+            <div className="space-y-6">
+              {/* Passport Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasPassport"
+                      checked={formData.hasPassport}
+                      onCheckedChange={(checked) => updateFormData('hasPassport', checked)}
+                    />
+                    <Label htmlFor="hasPassport" className="text-sm font-medium">
+                      Passport copy (for visa processing)
+                    </Label>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('passport-upload')?.click()}
+                    className="flex items-center space-x-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload</span>
+                  </Button>
+                  <input
+                    id="passport-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload('passport', e.target.files)}
+                  />
+                </div>
+                {uploadedFiles.passport && (
+                  <div className="ml-6 p-3 bg-muted rounded-lg flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">{uploadedFiles.passport.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile('passport')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="hasMedicalRecords"
-                  checked={formData.hasMedicalRecords}
-                  onCheckedChange={(checked) => updateFormData('hasMedicalRecords', checked)}
-                />
-                <Label htmlFor="hasMedicalRecords" className="text-sm">
-                  Medical records (X-rays, lab results, previous surgical reports)
-                </Label>
+              {/* Medical Records Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasMedicalRecords"
+                      checked={formData.hasMedicalRecords}
+                      onCheckedChange={(checked) => updateFormData('hasMedicalRecords', checked)}
+                    />
+                    <Label htmlFor="hasMedicalRecords" className="text-sm font-medium">
+                      Medical records (X-rays, lab results, previous surgical reports)
+                    </Label>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('medical-upload')?.click()}
+                    className="flex items-center space-x-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload</span>
+                  </Button>
+                  <input
+                    id="medical-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleFileUpload('medicalRecords', e.target.files)}
+                  />
+                </div>
+                {uploadedFiles.medicalRecords.length > 0 && (
+                  <div className="ml-6 space-y-2">
+                    {uploadedFiles.medicalRecords.map((file, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <span className="text-sm">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile('medicalRecords', index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="hasInsurance"
-                  checked={formData.hasInsurance}
-                  onCheckedChange={(checked) => updateFormData('hasInsurance', checked)}
-                />
-                <Label htmlFor="hasInsurance" className="text-sm">
-                  Insurance information (if applicable)
-                </Label>
+              {/* Insurance Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasInsurance"
+                      checked={formData.hasInsurance}
+                      onCheckedChange={(checked) => updateFormData('hasInsurance', checked)}
+                    />
+                    <Label htmlFor="hasInsurance" className="text-sm font-medium">
+                      Insurance information (if applicable)
+                    </Label>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('insurance-upload')?.click()}
+                    className="flex items-center space-x-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload</span>
+                  </Button>
+                  <input
+                    id="insurance-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload('insurance', e.target.files)}
+                  />
+                </div>
+                {uploadedFiles.insurance && (
+                  <div className="ml-6 p-3 bg-muted rounded-lg flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">{uploadedFiles.insurance.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile('insurance')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
