@@ -91,7 +91,7 @@ const Header = () => {
               <img 
                 src={logoImage} 
                 alt="Care N Tour Medical Tourism" 
-                className="h-12 w-auto dark:hidden"
+                className="h-10 w-auto dark:hidden"
               />
               <span className="hidden dark:block text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
                 Care N Tour
