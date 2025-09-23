@@ -71,6 +71,36 @@ export default function PatientJourney() {
     mode: 'onChange',
   });
 
+  // Force clear form on component mount
+  useEffect(() => {
+    form.reset({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      age: '',
+      country: '',
+      treatmentType: '',
+      timeline: '',
+      budgetRange: '',
+      medicalCondition: '',
+      previousTreatments: '',
+      currentMedications: '',
+      allergies: '',
+      doctorPreference: '',
+      accessibilityNeeds: '',
+      preferredDates: new Date(),
+      accommodationType: '',
+      companionTravelers: '',
+      dietaryRequirements: '',
+      languagePreference: '',
+      hasInsurance: false,
+      hasPassport: false,
+      hasMedicalRecords: false,
+      consultationType: '',
+    });
+  }, [form]);
+
   // Pre-populate treatment type from URL parameter
   useEffect(() => {
     const treatmentParam = searchParams.get('treatment');
@@ -908,7 +938,7 @@ export default function PatientJourney() {
         </div>
 
         {/* Form Content */}
-        <Form {...form}>
+        <Form {...form} key="patient-journey-form">{/* Force remount */}
           <Card>
             <CardContent className="pt-6">
               {renderStep()}
