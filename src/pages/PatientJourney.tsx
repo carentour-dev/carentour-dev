@@ -1,29 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, ArrowRight, Upload, Calendar as CalendarIcon, DollarSign, User, FileText, Stethoscope, Plane, CheckCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, ArrowRight, Upload, Calendar, DollarSign, User, FileText, Stethoscope, Plane } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { 
-  basicInfoSchema, 
-  medicalHistorySchema, 
-  travelPreferencesSchema, 
-  documentsValidationSchema,
-  fullPatientJourneySchema,
-  type FullPatientJourneyFormData 
-} from '@/schemas/patientJourneySchemas';
-import { toast } from 'sonner';
 
 const steps = [
   { id: 1, title: 'Basic Information', icon: User },
@@ -31,83 +16,47 @@ const steps = [
   { id: 3, title: 'Travel Preferences', icon: Plane },
   { id: 4, title: 'Documents', icon: FileText },
   { id: 5, title: 'Cost Estimation', icon: DollarSign },
-  { id: 6, title: 'Schedule Consultation', icon: CalendarIcon },
+  { id: 6, title: 'Schedule Consultation', icon: Calendar },
 ];
 
 export default function PatientJourney() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
-  const [consultationType, setConsultationType] = useState<string>('');
-  
-  // State for uploaded files
-  const [uploadedFiles, setUploadedFiles] = useState<{
-    passport?: File;
-    medical?: File[];
-    insurance?: File;
-  }>({});
-
-  // Form setup with default values
-  const form = useForm<FullPatientJourneyFormData>({
-    resolver: zodResolver(fullPatientJourneySchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      age: '',
-      country: '',
-      treatmentType: '',
-      timeline: '',
-      budgetRange: '',
-      medicalCondition: '',
-      previousTreatments: '',
-      currentMedications: '',
-      allergies: '',
-      doctorPreference: '',
-      accessibilityNeeds: '',
-      preferredDates: new Date(),
-      accommodationType: '',
-      companionTravelers: '',
-      dietaryRequirements: '',
-      languagePreference: '',
-      hasInsurance: false,
-      hasPassport: false,
-      hasMedicalRecords: false,
-      consultationType: '',
-    },
-    mode: 'onChange',
+  const [formData, setFormData] = useState({
+    // Step 1: Basic Information
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    age: '',
+    country: '',
+    treatmentType: '',
+    timeline: '',
+    budgetRange: '',
+    
+    // Step 2: Medical History
+    medicalCondition: '',
+    previousTreatments: '',
+    currentMedications: '',
+    allergies: '',
+    doctorPreference: '',
+    accessibilityNeeds: '',
+    
+    // Step 3: Travel Preferences
+    preferredDates: '',
+    accommodationType: '',
+    companionTravelers: '',
+    dietaryRequirements: '',
+    languagePreference: '',
+    
+    // Step 4: Documents (file uploads would be handled separately)
+    hasInsurance: false,
+    hasPassport: false,
+    hasMedicalRecords: false,
+    
+    // Step 5 & 6 are informational/selection steps
   });
-
-  // Force clear form on component mount
-  useEffect(() => {
-    form.reset({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      age: '',
-      country: '',
-      treatmentType: '',
-      timeline: '',
-      budgetRange: '',
-      medicalCondition: '',
-      previousTreatments: '',
-      currentMedications: '',
-      allergies: '',
-      doctorPreference: '',
-      accessibilityNeeds: '',
-      preferredDates: undefined, // Don't set a default date
-      accommodationType: '',
-      companionTravelers: '',
-      dietaryRequirements: '',
-      languagePreference: '',
-      hasInsurance: false,
-      hasPassport: false,
-      hasMedicalRecords: false,
-      consultationType: '',
-    });
-  }, [form]);
 
   // Pre-populate treatment type from URL parameter
   useEffect(() => {
@@ -123,84 +72,16 @@ export default function PatientJourney() {
       };
       
       const mappedTreatment = treatmentMap[treatmentParam] || 'other';
-      form.setValue('treatmentType', mappedTreatment);
+      setFormData(prev => ({ ...prev, treatmentType: mappedTreatment }));
     }
-  }, [searchParams, form]);
+  }, [searchParams]);
 
-  // Handle file uploads
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'passport' | 'medical' | 'insurance') => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    if (type === 'medical') {
-      // Handle multiple files for medical records
-      const fileArray = Array.from(files);
-      setUploadedFiles(prev => ({
-        ...prev,
-        medical: [...(prev.medical || []), ...fileArray]
-      }));
-      toast.success(`${fileArray.length} medical record(s) uploaded successfully`);
-    } else {
-      // Handle single file for passport and insurance
-      const file = files[0];
-      setUploadedFiles(prev => ({
-        ...prev,
-        [type]: file
-      }));
-      toast.success(`${type === 'passport' ? 'Passport' : 'Insurance'} document uploaded successfully`);
-    }
-
-    // Auto-check the corresponding checkbox when file is uploaded
-    if (type === 'passport') {
-      form.setValue('hasPassport', true);
-    } else if (type === 'medical') {
-      form.setValue('hasMedicalRecords', true);
-    } else if (type === 'insurance') {
-      form.setValue('hasInsurance', true);
-    }
+  const updateFormData = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validateCurrentStep = async () => {
-    let isValid = false;
-    
-    switch (currentStep) {
-      case 1:
-        isValid = await form.trigger([
-          'firstName', 'lastName', 'email', 'phone', 'age', 
-          'country', 'treatmentType', 'timeline', 'budgetRange'
-        ]);
-        break;
-      case 2:
-        isValid = await form.trigger(['medicalCondition', 'allergies']);
-        break;
-      case 3:
-        isValid = await form.trigger([
-          'preferredDates', 'accommodationType', 'companionTravelers', 'languagePreference'
-        ]);
-        break;
-      case 4:
-        const { hasPassport, hasMedicalRecords, hasInsurance } = form.getValues();
-        isValid = hasPassport || hasMedicalRecords || hasInsurance;
-        if (!isValid) {
-          form.setError('hasPassport', { message: 'Please confirm you have at least one required document' });
-        }
-        break;
-      case 5:
-        isValid = true; // No validation needed for cost estimation step
-        break;
-      case 6:
-        isValid = !!consultationType;
-        break;
-      default:
-        isValid = true;
-    }
-    
-    return isValid;
-  };
-
-  const nextStep = async () => {
-    const isValid = await validateCurrentStep();
-    if (isValid && currentStep < steps.length) {
+  const nextStep = () => {
+    if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -211,20 +92,11 @@ export default function PatientJourney() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!consultationType) {
-      alert('Please select a consultation type before submitting.');
-      return;
-    }
-    
-    const isValid = await form.trigger();
-    if (isValid) {
-      const submissionData = { ...form.getValues(), consultationType };
-      console.log('Form submitted:', submissionData);
-      navigate('/dashboard');
-    } else {
-      alert('Please complete all required fields before submitting.');
-    }
+  const handleSubmit = () => {
+    // Here you would typically send the data to your backend
+    console.log('Form submitted:', formData);
+    // Navigate to dashboard or confirmation page
+    navigate('/dashboard');
   };
 
   const renderStep = () => {
@@ -233,437 +105,273 @@ export default function PatientJourney() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your first name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your last name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => updateFormData('firstName', e.target.value)}
+                  placeholder="Enter your first name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => updateFormData('lastName', e.target.value)}
+                  placeholder="Enter your last name"
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="your.email@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1 (555) 123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => updateFormData('email', e.target.value)}
+                  placeholder="your.email@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => updateFormData('phone', e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Age *</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Your age" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your country" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="us">United States</SelectItem>
-                        <SelectItem value="uk">United Kingdom</SelectItem>
-                        <SelectItem value="ca">Canada</SelectItem>
-                        <SelectItem value="au">Australia</SelectItem>
-                        <SelectItem value="de">Germany</SelectItem>
-                        <SelectItem value="fr">France</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="timeline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preferred Timeline *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="When do you want treatment?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="asap">As soon as possible</SelectItem>
-                        <SelectItem value="1-3months">1-3 months</SelectItem>
-                        <SelectItem value="3-6months">3-6 months</SelectItem>
-                        <SelectItem value="6months+">6+ months</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label htmlFor="age">Age</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => updateFormData('age', e.target.value)}
+                  placeholder="Your age"
+                />
+              </div>
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Select onValueChange={(value) => updateFormData('country', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="us">United States</SelectItem>
+                    <SelectItem value="uk">United Kingdom</SelectItem>
+                    <SelectItem value="ca">Canada</SelectItem>
+                    <SelectItem value="au">Australia</SelectItem>
+                    <SelectItem value="de">Germany</SelectItem>
+                    <SelectItem value="fr">France</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="timeline">Preferred Timeline</Label>
+                <Select onValueChange={(value) => updateFormData('timeline', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="When do you want treatment?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asap">As soon as possible</SelectItem>
+                    <SelectItem value="1-3months">1-3 months</SelectItem>
+                    <SelectItem value="3-6months">3-6 months</SelectItem>
+                    <SelectItem value="6months+">6+ months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="treatmentType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Treatment of Interest *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="What treatment are you seeking?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="cardiac">Cardiac Surgery</SelectItem>
-                      <SelectItem value="orthopedic">Orthopedic Surgery</SelectItem>
-                      <SelectItem value="cosmetic">Cosmetic Surgery</SelectItem>
-                      <SelectItem value="dental">Dental Care</SelectItem>
-                      <SelectItem value="eye">Eye Surgery (LASIK)</SelectItem>
-                      <SelectItem value="cancer">Cancer Treatment</SelectItem>
-                      <SelectItem value="fertility">Fertility Treatment</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="treatmentType">Treatment of Interest</Label>
+              <Select value={formData.treatmentType} onValueChange={(value) => updateFormData('treatmentType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="What treatment are you seeking?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cardiac">Cardiac Surgery</SelectItem>
+                  <SelectItem value="orthopedic">Orthopedic Surgery</SelectItem>
+                  <SelectItem value="cosmetic">Cosmetic Surgery</SelectItem>
+                  <SelectItem value="dental">Dental Care</SelectItem>
+                  <SelectItem value="eye">Eye Surgery (LASIK)</SelectItem>
+                  <SelectItem value="cancer">Cancer Treatment</SelectItem>
+                  <SelectItem value="fertility">Fertility Treatment</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <FormField
-              control={form.control}
-              name="budgetRange"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Budget Range (USD) *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your budget range" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="under5k">Under $5,000</SelectItem>
-                      <SelectItem value="5k-10k">$5,000 - $10,000</SelectItem>
-                      <SelectItem value="10k-25k">$10,000 - $25,000</SelectItem>
-                      <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
-                      <SelectItem value="50k+">$50,000+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="budgetRange">Budget Range (USD)</Label>
+              <Select onValueChange={(value) => updateFormData('budgetRange', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your budget range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="under5k">Under $5,000</SelectItem>
+                  <SelectItem value="5k-10k">$5,000 - $10,000</SelectItem>
+                  <SelectItem value="10k-25k">$10,000 - $25,000</SelectItem>
+                  <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
+                  <SelectItem value="50k+">$50,000+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         );
 
       case 2:
         return (
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="medicalCondition"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Medical Condition *</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Please describe your current medical condition and symptoms in detail..."
-                      className="min-h-[100px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="medicalCondition">Current Medical Condition</Label>
+              <Textarea
+                id="medicalCondition"
+                value={formData.medicalCondition}
+                onChange={(e) => updateFormData('medicalCondition', e.target.value)}
+                placeholder="Please describe your current medical condition and symptoms in detail..."
+                className="min-h-[100px]"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="allergies"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Allergies *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="List any known allergies (write 'None' if no allergies)" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="previousTreatments">Previous Treatments/Surgeries</Label>
+              <Textarea
+                id="previousTreatments"
+                value={formData.previousTreatments}
+                onChange={(e) => updateFormData('previousTreatments', e.target.value)}
+                placeholder="List any previous treatments, surgeries, or procedures you've had..."
+                className="min-h-[80px]"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="previousTreatments"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Previous Treatments/Surgeries</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="List any previous treatments, surgeries, or procedures you've had..."
-                      className="min-h-[80px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="currentMedications">Current Medications</Label>
+              <Textarea
+                id="currentMedications"
+                value={formData.currentMedications}
+                onChange={(e) => updateFormData('currentMedications', e.target.value)}
+                placeholder="List all medications you're currently taking, including dosages..."
+                className="min-h-[80px]"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="currentMedications"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Medications</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="List all medications you're currently taking, including dosages..."
-                      className="min-h-[80px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="allergies">Allergies</Label>
+              <Input
+                id="allergies"
+                value={formData.allergies}
+                onChange={(e) => updateFormData('allergies', e.target.value)}
+                placeholder="List any known allergies (medications, foods, materials, etc.)"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="doctorPreference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Doctor/Hospital Preferences</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Do you have any specific doctor or hospital preferences? Any certifications or specializations you require?"
-                      className="min-h-[80px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="doctorPreference">Doctor/Hospital Preferences</Label>
+              <Textarea
+                id="doctorPreference"
+                value={formData.doctorPreference}
+                onChange={(e) => updateFormData('doctorPreference', e.target.value)}
+                placeholder="Do you have any specific doctor or hospital preferences? Any certifications or specializations you require?"
+                className="min-h-[80px]"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="accessibilityNeeds"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Accessibility Needs</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Do you have any mobility, vision, hearing, or other accessibility requirements?"
-                      className="min-h-[80px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="accessibilityNeeds">Accessibility Needs</Label>
+              <Textarea
+                id="accessibilityNeeds"
+                value={formData.accessibilityNeeds}
+                onChange={(e) => updateFormData('accessibilityNeeds', e.target.value)}
+                placeholder="Do you have any mobility, vision, hearing, or other accessibility requirements?"
+                className="min-h-[80px]"
+              />
+            </div>
           </div>
         );
 
       case 3:
         return (
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="preferredDates"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Preferred Travel Dates *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick your preferred travel date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="preferredDates">Preferred Travel Dates</Label>
+              <Input
+                id="preferredDates"
+                value={formData.preferredDates}
+                onChange={(e) => updateFormData('preferredDates', e.target.value)}
+                placeholder="e.g., March 2024, or flexible"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="accommodationType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Accommodation Preference *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select accommodation type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="luxury">Luxury Hotel (5-star)</SelectItem>
-                      <SelectItem value="premium">Premium Hotel (4-star)</SelectItem>
-                      <SelectItem value="standard">Standard Hotel (3-star)</SelectItem>
-                      <SelectItem value="budget">Budget Accommodation</SelectItem>
-                      <SelectItem value="medical">Medical Facility Nearby</SelectItem>
-                      <SelectItem value="apartment">Service Apartment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="accommodationType">Accommodation Preference</Label>
+              <Select onValueChange={(value) => updateFormData('accommodationType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select accommodation type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="luxury">Luxury Hotel (5-star)</SelectItem>
+                  <SelectItem value="premium">Premium Hotel (4-star)</SelectItem>
+                  <SelectItem value="standard">Standard Hotel (3-star)</SelectItem>
+                  <SelectItem value="budget">Budget Accommodation</SelectItem>
+                  <SelectItem value="medical">Medical Facility Nearby</SelectItem>
+                  <SelectItem value="apartment">Service Apartment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <FormField
-              control={form.control}
-              name="companionTravelers"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Companion Travelers *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="How many people will accompany you?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="0">Traveling alone</SelectItem>
-                      <SelectItem value="1">1 companion</SelectItem>
-                      <SelectItem value="2">2 companions</SelectItem>
-                      <SelectItem value="3+">3+ companions</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="companionTravelers">Companion Travelers</Label>
+              <Select onValueChange={(value) => updateFormData('companionTravelers', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="How many people will accompany you?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Traveling alone</SelectItem>
+                  <SelectItem value="1">1 companion</SelectItem>
+                  <SelectItem value="2">2 companions</SelectItem>
+                  <SelectItem value="3+">3+ companions</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <FormField
-              control={form.control}
-              name="languagePreference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Language Preference for Medical Interpreter *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select preferred language" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="english">English (no interpreter needed)</SelectItem>
-                      <SelectItem value="spanish">Spanish</SelectItem>
-                      <SelectItem value="french">French</SelectItem>
-                      <SelectItem value="german">German</SelectItem>
-                      <SelectItem value="arabic">Arabic</SelectItem>
-                      <SelectItem value="chinese">Chinese</SelectItem>
-                      <SelectItem value="russian">Russian</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="dietaryRequirements">Dietary Requirements</Label>
+              <Textarea
+                id="dietaryRequirements"
+                value={formData.dietaryRequirements}
+                onChange={(e) => updateFormData('dietaryRequirements', e.target.value)}
+                placeholder="Any dietary restrictions, allergies, or special meal requirements..."
+                className="min-h-[80px]"
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="dietaryRequirements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Dietary Requirements</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Any dietary restrictions, allergies, or special meal requirements..."
-                      className="min-h-[80px]"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="languagePreference">Language Preference for Medical Interpreter</Label>
+              <Select onValueChange={(value) => updateFormData('languagePreference', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select preferred language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="english">English (no interpreter needed)</SelectItem>
+                  <SelectItem value="spanish">Spanish</SelectItem>
+                  <SelectItem value="french">French</SelectItem>
+                  <SelectItem value="german">German</SelectItem>
+                  <SelectItem value="arabic">Arabic</SelectItem>
+                  <SelectItem value="chinese">Chinese</SelectItem>
+                  <SelectItem value="russian">Russian</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         );
 
@@ -674,160 +382,44 @@ export default function PatientJourney() {
               <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">Document Upload</h3>
               <p className="text-muted-foreground">
-                Upload your documents or indicate that you have them ready. You can upload them now or later through your patient dashboard.
+                Please prepare the following documents. You can upload them now or later through your patient dashboard.
               </p>
             </div>
 
-            <div className="space-y-6">
-              {/* Passport Upload */}
-              <div className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="hasPassport"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Valid passport or travel document</FormLabel>
-                        <FormDescription>
-                          Required for international travel to Egypt
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="hasPassport"
+                  checked={formData.hasPassport}
+                  onCheckedChange={(checked) => updateFormData('hasPassport', checked)}
                 />
-                <div className="ml-6">
-                  <input
-                    type="file"
-                    id="passport-upload"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'passport')}
-                  />
-                  <label
-                    htmlFor="passport-upload"
-                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Passport Copy
-                  </label>
-                  {uploadedFiles.passport && (
-                    <div className="mt-2 text-sm text-muted-foreground flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
-                      {uploadedFiles.passport.name}
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="hasPassport" className="text-sm">
+                  Passport copy (for visa processing)
+                </Label>
               </div>
 
-              {/* Medical Records Upload */}
-              <div className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="hasMedicalRecords"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Medical records and test results</FormLabel>
-                        <FormDescription>
-                          Recent medical history, lab results, and imaging studies
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="hasMedicalRecords"
+                  checked={formData.hasMedicalRecords}
+                  onCheckedChange={(checked) => updateFormData('hasMedicalRecords', checked)}
                 />
-                <div className="ml-6">
-                  <input
-                    type="file"
-                    id="medical-upload"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'medical')}
-                  />
-                  <label
-                    htmlFor="medical-upload"
-                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Medical Records
-                  </label>
-                  {uploadedFiles.medical && uploadedFiles.medical.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {uploadedFiles.medical.map((file, index) => (
-                        <div key={index} className="text-sm text-muted-foreground flex items-center">
-                          <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
-                          {file.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="hasMedicalRecords" className="text-sm">
+                  Medical records (X-rays, lab results, previous surgical reports)
+                </Label>
               </div>
 
-              {/* Insurance Upload */}
-              <div className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="hasInsurance"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Travel/medical insurance documentation</FormLabel>
-                        <FormDescription>
-                          Insurance coverage for international medical treatment
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="hasInsurance"
+                  checked={formData.hasInsurance}
+                  onCheckedChange={(checked) => updateFormData('hasInsurance', checked)}
                 />
-                <div className="ml-6">
-                  <input
-                    type="file"
-                    id="insurance-upload"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'insurance')}
-                  />
-                  <label
-                    htmlFor="insurance-upload"
-                    className="inline-flex items-center px-4 py-2 border border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Insurance Documents
-                  </label>
-                  {uploadedFiles.insurance && (
-                    <div className="mt-2 text-sm text-muted-foreground flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
-                      {uploadedFiles.insurance.name}
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="hasInsurance" className="text-sm">
+                  Insurance information (if applicable)
+                </Label>
               </div>
             </div>
-
-            {form.formState.errors.hasPassport && (
-              <p className="text-sm text-destructive mt-2">
-                {form.formState.errors.hasPassport.message}
-              </p>
-            )}
 
             <Card>
               <CardContent className="pt-6">
@@ -844,7 +436,6 @@ export default function PatientJourney() {
         );
 
       case 5:
-        const treatmentType = form.getValues('treatmentType');
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
@@ -859,7 +450,7 @@ export default function PatientJourney() {
               <CardHeader>
                 <CardTitle>Estimated Treatment Package</CardTitle>
                 <CardDescription>
-                  {treatmentType && `For ${treatmentType} treatment`}
+                  {formData.treatmentType && `For ${formData.treatmentType} treatment`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -938,88 +529,19 @@ export default function PatientJourney() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button 
-                    type="button"
-                    variant={consultationType === 'video' ? 'default' : 'outline'}
-                    className="h-16 flex-col"
-                    onClick={() => setConsultationType('video')}
-                  >
+                  <Button className="h-16 flex-col">
                     <span className="font-semibold">Video Consultation</span>
                     <span className="text-sm opacity-80">Available 24/7</span>
                   </Button>
-                  <Button 
-                    type="button"
-                    variant={consultationType === 'phone' ? 'default' : 'outline'}
-                    className="h-16 flex-col"
-                    onClick={() => setConsultationType('phone')}
-                  >
+                  <Button variant="outline" className="h-16 flex-col">
                     <span className="font-semibold">Phone Consultation</span>
                     <span className="text-sm opacity-80">Call back within 2 hours</span>
                   </Button>
                 </div>
-                 {!consultationType && currentStep === 6 && (
-                   <p className="text-sm text-destructive">Please select a consultation type</p>
-                 )}
-               </CardContent>
-             </Card>
+              </CardContent>
+            </Card>
 
-             <Card>
-               <CardHeader>
-                 <CardTitle>Select Consultation Date</CardTitle>
-                 <CardDescription>
-                   Choose your preferred date for the consultation
-                 </CardDescription>
-               </CardHeader>
-               <CardContent>
-                 <FormField
-                   control={form.control}
-                   name="consultationDate"
-                   render={({ field }) => (
-                     <FormItem className="flex flex-col">
-                       <FormLabel>Preferred Consultation Date</FormLabel>
-                       <Popover>
-                         <PopoverTrigger asChild>
-                           <FormControl>
-                             <Button
-                               variant={"outline"}
-                               className={cn(
-                                 "w-full pl-3 text-left font-normal",
-                                 !field.value && "text-muted-foreground"
-                               )}
-                             >
-                               {field.value && field.value instanceof Date ? (
-                                 format(field.value, "PPP")
-                               ) : (
-                                 <span>Pick a consultation date</span>
-                               )}
-                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                             </Button>
-                           </FormControl>
-                         </PopoverTrigger>
-                         <PopoverContent className="w-auto p-0" align="start">
-                           <Calendar
-                             mode="single"
-                             selected={field.value}
-                             onSelect={field.onChange}
-                             disabled={(date) =>
-                               date < new Date() || date < new Date(Date.now() + 24 * 60 * 60 * 1000)
-                             }
-                             initialFocus
-                             className={cn("p-3 pointer-events-auto")}
-                           />
-                         </PopoverContent>
-                       </Popover>
-                       <FormDescription>
-                         Select a date that's at least 24 hours from now.
-                       </FormDescription>
-                       <FormMessage />
-                     </FormItem>
-                   )}
-                 />
-               </CardContent>
-             </Card>
-
-             <Card>
+            <Card>
               <CardHeader>
                 <CardTitle>What to Expect</CardTitle>
               </CardHeader>
@@ -1124,13 +646,11 @@ export default function PatientJourney() {
         </div>
 
         {/* Form Content */}
-        <Form {...form} key="patient-journey-form">{/* Force remount */}
-          <Card>
-            <CardContent className="pt-6">
-              {renderStep()}
-            </CardContent>
-          </Card>
-        </Form>
+        <Card>
+          <CardContent className="pt-6">
+            {renderStep()}
+          </CardContent>
+        </Card>
 
         {/* Navigation Buttons */}
         <div className="flex justify-between mt-8">
@@ -1149,7 +669,12 @@ export default function PatientJourney() {
               Next
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-          ) : null}
+          ) : (
+            <Button onClick={handleSubmit} className="flex items-center">
+              Complete Registration
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
