@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, Mail, MapPin, Clock, MessageCircle, FileText, CreditCard, Hotel, HeartHandshake, ArrowRight } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +28,7 @@ const formSchema = z.object({
 
 const Contact = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -334,76 +337,132 @@ const Contact = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
               {/* Visa Requirements Section */}
-              <div className="bg-card rounded-lg p-6 border">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Visa & Travel</h3>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">Do I need a visa to visit Egypt for medical treatment?</h4>
-                    <p className="text-xs text-muted-foreground">Most nationalities require a visa. We assist with medical visa applications with expedited processing.</p>
+              <Card className="hover:shadow-card-hover transition-spring">
+                <CardContent className="p-6">
+                  <div 
+                    className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate('/faq#visa-travel')}
+                  >
+                    <FileText className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Visa & Travel</h3>
+                    <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">What documents do I need?</h4>
-                    <p className="text-xs text-muted-foreground">Valid passport, visa, medical records, and insurance documentation. We provide a comprehensive checklist.</p>
-                  </div>
-                </div>
-              </div>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="visa-question-1" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        Do I need a visa to visit Egypt for medical treatment?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Most nationalities require a visa. We assist with medical visa applications with expedited processing.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="visa-question-2" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        What documents do I need?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Valid passport, visa, medical records, and insurance documentation. We provide a comprehensive checklist.
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
 
               {/* Treatment Costs Section */}
-              <div className="bg-card rounded-lg p-6 border">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Costs & Payment</h3>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">How much can I save compared to my home country?</h4>
-                    <p className="text-xs text-muted-foreground">Patients typically save 50-70% while receiving the same quality of care.</p>
+              <Card className="hover:shadow-card-hover transition-spring">
+                <CardContent className="p-6">
+                  <div 
+                    className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate('/faq#costs-payment')}
+                  >
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Costs & Payment</h3>
+                    <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">What payment methods do you accept?</h4>
-                    <p className="text-xs text-muted-foreground">Bank transfers, credit cards, and cash payments. Payment plans available for complex treatments.</p>
-                  </div>
-                </div>
-              </div>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="cost-question-1" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        How much can I save compared to my home country?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Patients typically save 50-70% while receiving the same quality of care.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="cost-question-2" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        What payment methods do you accept?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Bank transfers, credit cards, and cash payments. Payment plans available for complex treatments.
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
 
               {/* Accommodation Section */}
-              <div className="bg-card rounded-lg p-6 border">
-                <div className="flex items-center gap-2 mb-4">
-                  <Hotel className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Stay & Transport</h3>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">What accommodation options are available?</h4>
-                    <p className="text-xs text-muted-foreground">5-star hotels to comfortable apartments near hospitals, all carefully selected for comfort and proximity.</p>
+              <Card className="hover:shadow-card-hover transition-spring">
+                <CardContent className="p-6">
+                  <div 
+                    className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate('/faq#stay-transport')}
+                  >
+                    <Hotel className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Stay & Transport</h3>
+                    <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">Can my family accompany me?</h4>
-                    <p className="text-xs text-muted-foreground">Yes, we arrange accommodation for companions and provide guidance on visa requirements.</p>
-                  </div>
-                </div>
-              </div>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="accommodation-question-1" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        What accommodation options are available?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        5-star hotels to comfortable apartments near hospitals, all carefully selected for comfort and proximity.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="accommodation-question-2" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        Can my family accompany me?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Yes, we arrange accommodation for companions and provide guidance on visa requirements.
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
 
               {/* Recovery & Support Section */}
-              <div className="bg-card rounded-lg p-6 border">
-                <div className="flex items-center gap-2 mb-4">
-                  <HeartHandshake className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Recovery & Support</h3>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">What follow-up care is provided?</h4>
-                    <p className="text-xs text-muted-foreground">Comprehensive aftercare including check-ups, medication management, and coordination with home physicians.</p>
+              <Card className="hover:shadow-card-hover transition-spring">
+                <CardContent className="p-6">
+                  <div 
+                    className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate('/faq#recovery-support')}
+                  >
+                    <HeartHandshake className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Recovery & Support</h3>
+                    <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
-                  <div>
-                    <h4 className="font-medium text-sm mb-1">What if complications arise after I return home?</h4>
-                    <p className="text-xs text-muted-foreground">Our doctors remain available for consultation and can provide guidance to your local physicians.</p>
-                  </div>
-                </div>
-              </div>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="recovery-question-1" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        What follow-up care is provided?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Comprehensive aftercare including check-ups, medication management, and coordination with home physicians.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="recovery-question-2" className="border-none">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
+                        What if complications arise after I return home?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground pb-2">
+                        Our doctors remain available for consultation and can provide guidance to your local physicians.
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="mt-8">
