@@ -513,7 +513,11 @@ const TreatmentDetails = () => {
               >
                 Start Your Journey
               </Button>
-              <Button size="lg" variant="hero">
+              <Button 
+                size="lg" 
+                variant="hero"
+                onClick={() => navigate('/contact')}
+              >
                 Schedule Consultation
               </Button>
             </div>
