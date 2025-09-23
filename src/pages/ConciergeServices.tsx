@@ -435,7 +435,7 @@ const ConciergeServices = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
-                <Link to="/contact">
+                <Link to="/contact" className="text-center">
                   <Phone className="h-4 w-4 mr-2" />
                   Get Free Consultation
                 </Link>
