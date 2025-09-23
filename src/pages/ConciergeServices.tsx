@@ -250,9 +250,11 @@ const ConciergeServices = () => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <Button size="lg">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Contact Concierge Team
+                  <Button size="lg" asChild>
+                    <Link to="/contact">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Contact Concierge Team
+                    </Link>
                   </Button>
                 </div>
               </div>
