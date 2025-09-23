@@ -109,17 +109,29 @@ const FeaturedTreatments = () => {
                     </div>
                   </div>
                   
-                  <Button 
-                    variant="outline" 
-                    className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-smooth"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/treatments/${treatment.id}`);
-                    }}
-                  >
-                    Learn More
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="space-y-2">
+                    <Button 
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/contact");
+                      }}
+                    >
+                      Start Your Journey
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-smooth"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/treatments/${treatment.id}`);
+                      }}
+                    >
+                      Learn More
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
