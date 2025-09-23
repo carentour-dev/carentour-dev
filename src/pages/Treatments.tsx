@@ -323,8 +323,8 @@ const Treatments = () => {
               <Button size="lg" variant="accent">
                 Get Free Quote
               </Button>
-              <Button size="lg" variant="hero">
-                Schedule Consultation
+              <Button size="lg" variant="hero" asChild>
+                <Link to="/start-journey">Start Your Journey</Link>
               </Button>
             </div>
           </div>
