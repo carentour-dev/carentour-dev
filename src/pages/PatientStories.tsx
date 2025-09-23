@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { Star, Quote, MapPin, Calendar } from "lucide-react";
 
 const PatientStories = () => {
@@ -215,8 +216,8 @@ const PatientStories = () => {
               <Button size="lg" variant="accent">
                 Start Your Journey
               </Button>
-              <Button size="lg" variant="hero">
-                Get Free Consultation
+              <Button size="lg" variant="hero" asChild>
+                <Link to="/start-journey">Start Your Journey</Link>
               </Button>
             </div>
           </div>
