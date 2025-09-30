@@ -1,0 +1,10 @@
+project_id = "zfidusggwrarnjbsgkva"
+
+[functions.send-contact-email]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.newsletter-subscription]
+verify_jwt = false
