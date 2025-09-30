@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Heart, Award, Users, Globe, Shield, Clock } from "lucide-react";
+import Image from "next/image";
 
 export default function About() {
   const stats = [
@@ -53,7 +54,7 @@ export default function About() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                For over a decade, we've been connecting patients from around the world with Egypt's finest medical facilities,
+                For over a decade, we&apos;ve been connecting patients from around the world with Egypt&apos;s finest medical facilities,
                 delivering exceptional healthcare experiences that combine clinical excellence with warm hospitality.
               </p>
             </div>
@@ -92,11 +93,11 @@ export default function About() {
                   <p className="text-muted-foreground leading-relaxed mb-6">
                     Founded in 2014, Care N Tour emerged from a simple vision: to make world-class medical care
                     accessible to everyone, regardless of geographical boundaries. What started as a small initiative
-                    has grown into Egypt's premier medical tourism facilitator.
+                    has grown into Egypt&apos;s premier medical tourism facilitator.
                   </p>
                   <p className="text-muted-foreground leading-relaxed mb-6">
                     Our founders, having witnessed firsthand the challenges patients face when seeking quality healthcare
-                    abroad, were determined to create a seamless bridge between international patients and Egypt's
+                    abroad, were determined to create a seamless bridge between international patients and Egypt&apos;s
                     exceptional medical infrastructure.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
@@ -110,10 +111,13 @@ export default function About() {
                 </Button>
               </div>
               <div className="relative">
-                <img
+                <Image
                   src="/consultation.webp"
                   alt="Medical consultation"
-                  className="rounded-lg shadow-elegant w-full"
+                  width={720}
+                  height={480}
+                  className="rounded-lg shadow-elegant w-full object-cover"
+                  priority
                 />
               </div>
             </div>

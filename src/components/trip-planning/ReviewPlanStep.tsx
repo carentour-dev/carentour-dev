@@ -312,7 +312,7 @@ const ReviewPlanStep = ({ data, onUpdate }: ReviewPlanStepProps) => {
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="additionalNotes">
-              Any specific requests or additional information you'd like to share?
+              Any specific requests or additional information you&apos;d like to share?
             </Label>
             <Textarea
               id="additionalNotes"

@@ -221,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
-      // Don't fail the signup if email fails
+      // Don&apos;t fail the signup if email fails
     }
 
     return { error };

@@ -18,9 +18,9 @@ export default function PatientStories() {
       date: "March 2024",
       rating: 5,
       image: "/api/placeholder/400/300",
-      story: "I came to Egypt for LASIK surgery and couldn't be happier with the results. The medical team was incredibly professional, and the cost was 70% less than what I would have paid back home. The recovery was smooth, and I can now see perfectly without glasses.",
+      story: "I came to Egypt for LASIK surgery and couldn&apos;t be happier with the results. The medical team was incredibly professional, and the cost was 70% less than what I would have paid back home. The recovery was smooth, and I can now see perfectly without glasses.",
       savings: "$4,200",
-      quote: "The best decision I've made for my vision and my wallet!"
+      quote: "The best decision I&apos;ve made for my vision and my wallet!"
     },
     {
       name: "Ahmed Al-Rashid",
@@ -30,7 +30,7 @@ export default function PatientStories() {
       date: "January 2024",
       rating: 5,
       image: "/api/placeholder/400/300",
-      story: "After my heart surgery at one of Care N Tour's partner hospitals, I feel like I have a new lease on life. The cardiologist was world-class, and the follow-up care has been exceptional. My family and I felt supported throughout the entire process.",
+      story: "After my heart surgery at one of Care N Tour&apos;s partner hospitals, I feel like I have a new lease on life. The cardiologist was world-class, and the follow-up care has been exceptional. My family and I felt supported throughout the entire process.",
       savings: "$15,000",
       quote: "They saved my life and treated me like family."
     },
@@ -54,7 +54,7 @@ export default function PatientStories() {
       date: "December 2023",
       rating: 5,
       image: "/api/placeholder/400/300",
-      story: "My hip replacement surgery was performed flawlessly. The orthopedic surgeon explained everything clearly, and the rehabilitation program was comprehensive. I'm back to hiking and feeling better than I have in years.",
+      story: "My hip replacement surgery was performed flawlessly. The orthopedic surgeon explained everything clearly, and the rehabilitation program was comprehensive. I&apos;m back to hiking and feeling better than I have in years.",
       savings: "$12,000",
       quote: "Back to an active lifestyle thanks to expert care."
     },
@@ -78,7 +78,7 @@ export default function PatientStories() {
       date: "October 2023",
       rating: 5,
       image: "/api/placeholder/400/300",
-      story: "My weight loss surgery changed my life completely. The bariatric surgeon and nutritionist team provided ongoing support even after I returned home. I've lost 80 pounds and gained a new perspective on health.",
+      story: "My weight loss surgery changed my life completely. The bariatric surgeon and nutritionist team provided ongoing support even after I returned home. I&apos;ve lost 80 pounds and gained a new perspective on health.",
       savings: "$9,200",
       quote: "A life-changing journey with incredible support!"
     }
@@ -184,7 +184,7 @@ export default function PatientStories() {
 
                     <div className="bg-accent-light rounded-lg p-4">
                       <p className="font-semibold text-foreground italic">
-                        "{story.quote}"
+                        &ldquo;{story.quote}&rdquo;
                       </p>
                     </div>
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -98,10 +99,13 @@ const Header = () => {
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <img
+              <Image
                 src={mounted && resolvedTheme === 'dark' ? "/care-n-tour-logo-light.png" : "/care-n-tour-logo-dark.png"}
                 alt="Care N Tour"
+                width={160}
+                height={56}
                 className="h-14 w-auto"
+                priority
               />
             </Link>
           </div>

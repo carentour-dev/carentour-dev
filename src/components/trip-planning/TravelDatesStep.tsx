@@ -117,7 +117,7 @@ const TravelDatesStep = ({ data, onUpdate }: TravelDatesStepProps) => {
               checked={localDates.flexible}
               onCheckedChange={(checked) => handleDateChange("flexible", checked)}
             />
-            <Label htmlFor="flexible">I'm flexible with my dates (±7 days)</Label>
+            <Label htmlFor="flexible">I&apos;m flexible with my dates (±7 days)</Label>
           </div>
           
           {localDates.flexible && (

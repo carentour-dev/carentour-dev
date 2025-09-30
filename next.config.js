@@ -1,7 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com', 'lovable.dev'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lovable.dev',
+        pathname: '/**',
+      },
+    ],
   },
   // Exclude old React Router pages directory from compilation
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'].map(ext => `app.${ext}`).concat(['tsx', 'ts', 'jsx', 'js']),

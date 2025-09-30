@@ -303,7 +303,7 @@ const BudgetPreferencesStep = ({ data, onUpdate }: BudgetPreferencesStepProps) =
                 <p className="font-medium text-foreground">Budget Summary</p>
                 <p className="text-sm text-muted-foreground">
                   Your total budget range of ${budgetRange[0].toLocaleString()} - ${budgetRange[1].toLocaleString()} 
-                  includes treatment, accommodation, transportation, and activities. We'll create a detailed 
+                  includes treatment, accommodation, transportation, and activities. We&apos;ll create a detailed 
                   cost breakdown in your final plan.
                 </p>
               </div>

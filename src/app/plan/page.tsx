@@ -149,7 +149,7 @@ export default function PlanTrip() {
                   Plan Your Medical Journey
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                  Choose how you'd like to plan your trip - use our interactive wizard for a personalized experience,
+                  Choose how you&apos;d like to plan your trip - use our interactive wizard for a personalized experience,
                   or learn about our comprehensive process first.
                 </p>
                 <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
@@ -244,7 +244,7 @@ export default function PlanTrip() {
                         Visa Requirements
                       </h3>
                       <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Simple visa process for most countries - we'll guide you through every step
+                        Simple visa process for most countries - we&apos;ll guide you through every step
                       </p>
                     </div>
 

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Award, Star, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const PartnerHospitals = () => {
   const hospitals = [
@@ -46,7 +47,7 @@ const PartnerHospitals = () => {
   const certifications = [
     {
       name: "Joint Commission International (JCI)",
-      description: "World's leading healthcare accreditation body ensuring highest standards of patient safety and care quality."
+      description: "World&apos;s leading healthcare accreditation body ensuring highest standards of patient safety and care quality."
     },
     {
       name: "TEMOS Certification",
@@ -73,7 +74,7 @@ const PartnerHospitals = () => {
             Our Partner Hospitals & Clinics
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            We've carefully selected premier medical facilities across Egypt that meet the highest international 
+            We&apos;ve carefully selected premier medical facilities across Egypt that meet the highest international 
             standards, ensuring you receive world-class healthcare in state-of-the-art environments.
           </p>
         </div>
@@ -83,10 +84,12 @@ const PartnerHospitals = () => {
           {hospitals.slice(0, 2).map((hospital, index) => (
             <Card key={index} className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring">
               <div className="aspect-video relative overflow-hidden">
-                <img 
-                  src={hospital.image} 
+                <Image
+                  src={hospital.image}
                   alt={hospital.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 45vw, 100vw"
                 />
                 <div className="absolute top-4 left-4">
                   <Badge variant="secondary" className="bg-background/90 text-foreground text-center">

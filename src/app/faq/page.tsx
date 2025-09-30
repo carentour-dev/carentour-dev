@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,75 +31,89 @@ import CTASection from "@/components/CTASection";
 export default function FAQ() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("general");
-  const pathname = usePathname();
+  const [hash, setHash] = useState("");
 
-  // Fragment to tab mapping for navigation from Contact page
-  const fragmentToTab = {
-    "visa-travel": "visa",
-    "costs-payment": "costs", 
-    "stay-transport": "accommodation",
-    "recovery-support": "aftercare"
-  };
+  const fragmentToTab = useMemo(
+    () => ({
+      "visa-travel": "visa",
+      "costs-payment": "costs",
+      "stay-transport": "accommodation",
+      "recovery-support": "aftercare"
+    }),
+    []
+  );
 
   useEffect(() => {
-    // Handle navigation from Contact page fragments
-    if (typeof window !== "undefined" ? window.location.hash : "") {
-      const fragment = typeof window !== "undefined" ? window.location.hash : "".substring(1);
-      const mappedTab = fragmentToTab[fragment as keyof typeof fragmentToTab];
-      if (mappedTab) {
-        setActiveTab(mappedTab);
-        
-        // Wait for tab to become active and then scroll to the active tab content
-        const waitForActiveTab = () => {
-          // Look for the active tab content that contains our target element
-          const activeTabContent = document.querySelector(`[data-state="active"][data-orientation="horizontal"]`);
-          
-          if (activeTabContent) {
-            // Found active tab content, now look for our target element within it
-            const targetElement = activeTabContent.querySelector(`#${fragment}`);
-            if (targetElement) {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              return;
-            }
-            
-            // If specific element not found, scroll to the active tab content itself
-            activeTabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            // Fallback: scroll to tabs section
-            const tabsSection = document.querySelector('[role="tablist"]')?.parentElement;
-            if (tabsSection) {
-              tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        };
-        
-        // Use MutationObserver to detect when tab content becomes active
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'data-state') {
-              const target = mutation.target as Element;
-              if (target.getAttribute('data-state') === 'active') {
-                observer.disconnect();
-                setTimeout(waitForActiveTab, 100); // Small delay for DOM updates
-              }
-            }
-          });
-        });
-        
-        // Start observing tab content elements
-        const tabContents = document.querySelectorAll('[data-orientation="horizontal"]');
-        tabContents.forEach(content => {
-          observer.observe(content, { attributes: true, attributeFilter: ['data-state'] });
-        });
-        
-        // Fallback timeout in case observer doesn't fire
-        setTimeout(() => {
-          observer.disconnect();
-          waitForActiveTab();
-        }, 2000);
-      }
+    if (typeof window === "undefined") {
+      return;
     }
-  }, [typeof window !== "undefined" ? window.location.hash : ""]);
+
+    const updateHash = () => {
+      setHash(window.location.hash.replace('#', ''));
+    };
+
+    updateHash();
+    window.addEventListener('hashchange', updateHash);
+
+    return () => {
+      window.removeEventListener('hashchange', updateHash);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hash) {
+      return;
+    }
+
+    const mappedTab = fragmentToTab[hash as keyof typeof fragmentToTab];
+    if (!mappedTab) {
+      return;
+    }
+
+    setActiveTab(mappedTab);
+
+    const waitForActiveTab = () => {
+      const activeTabContent = document.querySelector('[data-state="active"][data-orientation="horizontal"]');
+      if (activeTabContent) {
+        const targetElement =
+          activeTabContent.querySelector(`#${hash}`) ?? activeTabContent;
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const tabsSection = document.querySelector('[role="tablist"]')?.parentElement;
+      if (tabsSection) {
+        tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-state') {
+          const target = mutation.target as Element;
+          if (target.getAttribute('data-state') === 'active') {
+            observer.disconnect();
+            window.setTimeout(waitForActiveTab, 100);
+          }
+        }
+      });
+    });
+
+    const tabContents = document.querySelectorAll('[data-orientation="horizontal"]');
+    tabContents.forEach((content) => {
+      observer.observe(content, { attributes: true, attributeFilter: ['data-state'] });
+    });
+
+    const fallbackTimeout = window.setTimeout(() => {
+      observer.disconnect();
+      waitForActiveTab();
+    }, 2000);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallbackTimeout);
+    };
+  }, [hash, fragmentToTab]);
 
   const categories = [
     {
@@ -169,8 +182,8 @@ export default function FAQ() {
         answer: "All our partner doctors and medical coordinators are fluent in English. Many also speak Arabic, French, German, and other languages. We provide translation services when needed to ensure clear communication throughout your treatment.",
       },
       {
-        question: "How do I know if I'm a candidate for treatment in Egypt?",
-        answer: "Our medical coordinators will review your medical history and current condition through a free consultation. We'll connect you with specialists who will assess your case and recommend the best treatment options available.",
+        question: "How do I know if I&apos;m a candidate for treatment in Egypt?",
+        answer: "Our medical coordinators will review your medical history and current condition through a free consultation. We&apos;ll connect you with specialists who will assess your case and recommend the best treatment options available.",
       },
     ],
     visa: [
@@ -180,7 +193,7 @@ export default function FAQ() {
       },
       {
         question: "What documents do I need for medical treatment in Egypt?",
-        answer: "You'll need a valid passport, visa, medical records, insurance documentation (if applicable), and any relevant test results. We provide a comprehensive checklist and assist with document preparation and translation if needed.",
+        answer: "You&apos;ll need a valid passport, visa, medical records, insurance documentation (if applicable), and any relevant test results. We provide a comprehensive checklist and assist with document preparation and translation if needed.",
       },
       {
         question: "How long can I stay in Egypt for treatment?",
@@ -202,7 +215,7 @@ export default function FAQ() {
       },
       {
         question: "Can I get a second opinion before treatment?",
-        answer: "Absolutely. We encourage second opinions and can arrange consultations with multiple specialists. This ensures you're completely confident in your treatment plan before proceeding.",
+        answer: "Absolutely. We encourage second opinions and can arrange consultations with multiple specialists. This ensures you&apos;re completely confident in your treatment plan before proceeding.",
       },
       {
         question: "What is the typical treatment timeline?",
@@ -260,7 +273,7 @@ export default function FAQ() {
       },
       {
         question: "Is rehabilitation therapy available in Egypt?",
-        answer: "Yes, we have excellent rehabilitation facilities and experienced physical therapists. Extended recovery programs can be arranged in Egypt's favorable climate, often providing better outcomes than immediate return home.",
+        answer: "Yes, we have excellent rehabilitation facilities and experienced physical therapists. Extended recovery programs can be arranged in Egypt&apos;s favorable climate, often providing better outcomes than immediate return home.",
       },
     ],
     emergency: [
@@ -306,7 +319,7 @@ export default function FAQ() {
             Your Questions <span className="bg-gradient-hero bg-clip-text text-transparent">Answered</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-            Find comprehensive answers to all your medical tourism questions. From treatment options to travel arrangements, we've got you covered.
+            Find comprehensive answers to all your medical tourism questions. From treatment options to travel arrangements, we&apos;ve got you covered.
           </p>
           
           {/* Search Bar */}

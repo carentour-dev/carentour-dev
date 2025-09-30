@@ -3,6 +3,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -107,7 +108,7 @@ export default function ConciergeServices() {
     {
       category: "Cultural & Tourism",
       icon: MapPin,
-      description: "Explore Egypt's rich heritage during your recovery period",
+      description: "Explore Egypt&apos;s rich heritage during your recovery period",
       services: [
         "Guided tours to pyramids and historical sites",
         "Nile River cruise arrangements",
@@ -259,11 +260,13 @@ export default function ConciergeServices() {
                   </Button>
                 </div>
               </div>
-              <div>
-                <img
+              <div className="relative h-96">
+                <Image
                   src="/concierge-services.jpg"
                   alt="Professional concierge services for medical tourists in Egypt"
-                  className="w-full h-96 object-cover rounded-lg shadow-elegant"
+                  fill
+                  className="object-cover rounded-lg shadow-elegant"
+                  sizes="(min-width: 1024px) 40vw, 100vw"
                 />
               </div>
             </div>
@@ -406,7 +409,7 @@ export default function ConciergeServices() {
                     </div>
                     
                     <p className="text-muted-foreground italic leading-relaxed mb-4">
-                      "{testimonial.text}"
+                      &ldquo;{testimonial.text}&rdquo;
                     </p>
 
                     <div className="border-t border-border pt-4">

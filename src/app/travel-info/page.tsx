@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Plane, 
   MapPin, 
@@ -322,11 +323,15 @@ export default function TravelInfo() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                   <div>
-                    <img
-                      src="/accommodation-egypt.jpg"
-                      alt="Premium accommodation for medical tourists in Egypt"
-                      className="w-full h-64 object-cover rounded-lg shadow-elegant mb-6"
-                    />
+                    <div className="relative h-64 mb-6">
+                      <Image
+                        src="/accommodation-egypt.jpg"
+                        alt="Premium accommodation for medical tourists in Egypt"
+                        fill
+                        className="object-cover rounded-lg shadow-elegant"
+                        sizes="(min-width: 1024px) 45vw, 100vw"
+                      />
+                    </div>
                     <Card className="border-border/50">
                       <CardHeader>
                         <CardTitle>Accommodation Booking Service</CardTitle>
@@ -408,16 +413,18 @@ export default function TravelInfo() {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-foreground mb-4">About Egypt</h2>
                   <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    Essential information about Egypt's climate, culture, and what to expect during your visit
+                    Essential information about Egypt&apos;s climate, culture, and what to expect during your visit
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                  <div>
-                    <img
+                  <div className="relative h-64">
+                    <Image
                       src="/egypt-travel-info.jpg"
                       alt="Egypt travel information and tourism attractions"
-                      className="w-full h-64 object-cover rounded-lg shadow-elegant mb-6"
+                      fill
+                      className="object-cover rounded-lg shadow-elegant"
+                      sizes="(min-width: 1024px) 45vw, 100vw"
                     />
                   </div>
                   
@@ -555,7 +562,7 @@ export default function TravelInfo() {
                     <h3 className="text-2xl font-bold text-foreground mb-4">Need Assistance?</h3>
                     <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
                       Our travel coordination team is here to help with all aspects of your journey to Egypt. 
-                      From visa assistance to local arrangements, we've got you covered.
+                      From visa assistance to local arrangements, we&apos;ve got you covered.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button size="lg" asChild>

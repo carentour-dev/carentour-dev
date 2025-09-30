@@ -16,7 +16,7 @@ const Testimonials = () => {
       country: "Spain", 
       treatment: "Dental Implants",
       rating: 5,
-      content: "From consultation to recovery, everything was perfectly organized. The medical team spoke excellent English, and Cairo's hospitality made the experience memorable.",
+      content: "From consultation to recovery, everything was perfectly organized. The medical team spoke excellent English, and Cairo&apos;s hospitality made the experience memorable.",
       image: "/placeholder.svg"
     },
     {
@@ -61,7 +61,7 @@ const Testimonials = () => {
 
                 {/* Content */}
                 <p className="text-muted-foreground text-center mb-8 leading-relaxed italic">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
 
                 {/* Patient Info */}

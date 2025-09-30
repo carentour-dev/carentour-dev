@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, ArrowRight, Heart, Stethoscope, Plane } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -36,8 +37,8 @@ export default function Blog() {
     },
     {
       id: 3,
-      title: "Cardiac Surgery Excellence: Egypt's World-Class Heart Centers",
-      excerpt: "Explore Egypt's leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
+      title: "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
+      excerpt: "Explore Egypt&apos;s leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
       category: "Cardiac Surgery",
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
@@ -57,7 +58,7 @@ export default function Blog() {
     {
       id: 5,
       title: "Recovery and Wellness: Making the Most of Your Medical Trip",
-      excerpt: "Tips for a smooth recovery while exploring Egypt's rich culture and history during your medical tourism journey.",
+      excerpt: "Tips for a smooth recovery while exploring Egypt&apos;s rich culture and history during your medical tourism journey.",
       category: "Wellness",
       author: "Fatima El-Sayed",
       readTime: "5 min read",
@@ -163,16 +164,19 @@ export default function Blog() {
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8">
                   <Badge variant="secondary" className="mb-4">Featured Article</Badge>
-                  <h2 className="text-2xl font-bold text-foreground">Editor's Pick</h2>
+                  <h2 className="text-2xl font-bold text-foreground">Editor&apos;s Pick</h2>
                 </div>
                 
                 <Card className="border-border/50 overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-2">
-                    <div className="aspect-video lg:aspect-square bg-muted overflow-hidden">
-                      <img 
-                        src={featuredPost.image} 
+                    <div className="relative aspect-video lg:aspect-square bg-muted overflow-hidden">
+                      <Image
+                        src={featuredPost.image}
                         alt={featuredPost.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 40vw, 100vw"
+                        priority
                       />
                     </div>
                     <CardContent className="p-8 flex flex-col justify-center">
@@ -229,11 +233,13 @@ export default function Blog() {
               {filteredPosts.length > 0 ? (
                 filteredPosts.map((post) => (
                 <Card key={post.id} className="border-border/50 hover:shadow-card-hover transition-spring overflow-hidden">
-                  <div className="aspect-video bg-muted overflow-hidden">
-                    <img 
-                      src={post.image} 
+                  <div className="relative aspect-video bg-muted overflow-hidden">
+                    <Image
+                      src={post.image}
                       alt={post.title}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
                     />
                   </div>
                   <CardHeader>

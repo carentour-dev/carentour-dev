@@ -27,7 +27,7 @@ function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Check if we're in password reset mode
+  // Check if we&apos;re in password reset mode
   const isPasswordResetMode = searchParams.get('reset') === 'true' && session;
 
   useEffect(() => {
@@ -347,7 +347,7 @@ function AuthContent() {
               <CardHeader>
                 <CardTitle>Reset Password</CardTitle>
                 <CardDescription>
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we&apos;ll send you a link to reset your password.
                 </CardDescription>
               </CardHeader>
               <CardContent>

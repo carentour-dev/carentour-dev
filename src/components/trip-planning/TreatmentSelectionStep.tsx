@@ -155,7 +155,7 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
               <div>
                 <p className="font-medium text-foreground">Treatment Selected</p>
                 <p className="text-sm text-muted-foreground">
-                  We'll customize your trip plan based on your {" "}
+                  We&apos;ll customize your trip plan based on your {" "}
                   {treatments.find(t => t.id === data.treatmentType)?.name.toLowerCase()} requirements.
                 </p>
               </div>

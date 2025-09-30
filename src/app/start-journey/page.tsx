@@ -318,7 +318,7 @@ function PatientJourneyContent() {
                 id="previousTreatments"
                 value={formData.previousTreatments}
                 onChange={(e) => updateFormData('previousTreatments', e.target.value)}
-                placeholder="List any previous treatments, surgeries, or procedures you've had..."
+                placeholder="List any previous treatments, surgeries, or procedures you&apos;ve had..."
                 className="min-h-[80px]"
               />
             </div>
@@ -329,7 +329,7 @@ function PatientJourneyContent() {
                 id="currentMedications"
                 value={formData.currentMedications}
                 onChange={(e) => updateFormData('currentMedications', e.target.value)}
-                placeholder="List all medications you're currently taking, including dosages..."
+                placeholder="List all medications you&apos;re currently taking, including dosages..."
                 className="min-h-[80px]"
               />
             </div>

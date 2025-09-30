@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, User, Calendar, Share2, BookOpen } from "lucide-react";
+import Image from "next/image";
 
 export default function BlogPost() {
   const params = useParams();
@@ -24,10 +25,10 @@ export default function BlogPost() {
       date: "March 15, 2024",
       image: "/blog-medical-tourism.jpg",
       content: `
-        <p>Egypt has emerged as one of the world's leading destinations for medical tourism, offering world-class healthcare services at a fraction of the cost found in Western countries. With its rich history, modern medical facilities, and highly trained physicians, Egypt provides an ideal combination of quality healthcare and cultural experience.</p>
+        <p>Egypt has emerged as one of the world&apos;s leading destinations for medical tourism, offering world-class healthcare services at a fraction of the cost found in Western countries. With its rich history, modern medical facilities, and highly trained physicians, Egypt provides an ideal combination of quality healthcare and cultural experience.</p>
 
         <h2>Why Choose Egypt for Medical Tourism?</h2>
-        <p>Egypt's medical tourism industry has grown exponentially over the past decade, driven by several key factors:</p>
+        <p>Egypt&apos;s medical tourism industry has grown exponentially over the past decade, driven by several key factors:</p>
         <ul>
           <li><strong>Cost Effectiveness:</strong> Medical procedures in Egypt cost 60-80% less than equivalent treatments in the US or Europe</li>
           <li><strong>Quality Care:</strong> Many Egyptian hospitals are internationally accredited with state-of-the-art equipment</li>
@@ -61,7 +62,7 @@ export default function BlogPost() {
         <h2>What to Expect</h2>
         <p>Egyptian medical facilities maintain international standards while offering personalized care. Most medical staff speak English, and many hospitals have dedicated international patient coordinators to assist with every aspect of your stay.</p>
 
-        <p>The combination of ancient culture and modern medicine makes Egypt a unique destination where you can combine healing with exploration of one of the world's most fascinating civilizations.</p>
+        <p>The combination of ancient culture and modern medicine makes Egypt a unique destination where you can combine healing with exploration of one of the world&apos;s most fascinating civilizations.</p>
       `
     },
     "2": {
@@ -74,7 +75,7 @@ export default function BlogPost() {
       date: "March 12, 2024",
       image: "/blog-lasik-surgery.jpg",
       content: `
-        <p>LASIK surgery in Egypt has become increasingly popular among international patients seeking high-quality vision correction at affordable prices. Egyptian eye clinics utilize the most advanced laser technology and techniques, delivering results comparable to the world's best facilities.</p>
+        <p>LASIK surgery in Egypt has become increasingly popular among international patients seeking high-quality vision correction at affordable prices. Egyptian eye clinics utilize the most advanced laser technology and techniques, delivering results comparable to the world&apos;s best facilities.</p>
 
         <h2>Advanced LASIK Technology in Egypt</h2>
         <p>Egyptian eye clinics are equipped with state-of-the-art technology including:</p>
@@ -131,8 +132,8 @@ export default function BlogPost() {
     },
     "3": {
       id: 3,
-      title: "Cardiac Surgery Excellence: Egypt's World-Class Heart Centers",
-      excerpt: "Explore Egypt's leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
+      title: "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
+      excerpt: "Explore Egypt&apos;s leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
       category: "Cardiac Surgery",
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
@@ -142,7 +143,7 @@ export default function BlogPost() {
         <p>Egypt has established itself as a regional leader in cardiac surgery, with world-class heart centers that attract patients from across the Middle East, Africa, and beyond. The combination of expert surgeons, advanced technology, and cost-effective treatments makes Egypt an excellent choice for cardiac care.</p>
 
         <h2>Leading Cardiac Centers</h2>
-        <p>Egypt's top cardiac facilities include internationally accredited hospitals with specialized heart centers featuring:</p>
+        <p>Egypt&apos;s top cardiac facilities include internationally accredited hospitals with specialized heart centers featuring:</p>
         <ul>
           <li>State-of-the-art cardiac catheterization laboratories</li>
           <li>Advanced cardiac surgery suites</li>
@@ -227,7 +228,7 @@ export default function BlogPost() {
       date: "March 8, 2024",
       image: "/blog-dental-care.jpg",
       content: `
-        <p>Egypt's dental tourism industry has experienced remarkable growth, attracting thousands of international patients seeking high-quality dental care at affordable prices. With modern clinics, skilled dentists, and comprehensive treatment options, Egypt has become a premier destination for dental tourism.</p>
+        <p>Egypt&apos;s dental tourism industry has experienced remarkable growth, attracting thousands of international patients seeking high-quality dental care at affordable prices. With modern clinics, skilled dentists, and comprehensive treatment options, Egypt has become a premier destination for dental tourism.</p>
 
         <h2>Why Choose Egypt for Dental Care?</h2>
         <h3>Exceptional Value</h3>
@@ -304,13 +305,13 @@ export default function BlogPost() {
         </ul>
 
         <h2>Combining Treatment with Tourism</h2>
-        <p>Many patients extend their stay to explore Egypt's incredible attractions:</p>
+        <p>Many patients extend their stay to explore Egypt&apos;s incredible attractions:</p>
         <ul>
           <li>Ancient pyramids and temples</li>
           <li>Red Sea diving and beaches</li>
           <li>Nile River cruises</li>
           <li>Islamic and Coptic Cairo</li>
-          <li>Luxor's archaeological wonders</li>
+          <li>Luxor&apos;s archaeological wonders</li>
         </ul>
 
         <h2>Recovery and Aftercare</h2>
@@ -323,20 +324,20 @@ export default function BlogPost() {
           <li>Remote consultation options</li>
         </ul>
 
-        <p>With world-class dental care, significant cost savings, and the opportunity to explore one of the world's most fascinating countries, Egypt offers an unbeatable dental tourism experience.</p>
+        <p>With world-class dental care, significant cost savings, and the opportunity to explore one of the world&apos;s most fascinating countries, Egypt offers an unbeatable dental tourism experience.</p>
       `
     },
     "5": {
       id: 5,
       title: "Recovery and Wellness: Making the Most of Your Medical Trip",
-      excerpt: "Tips for a smooth recovery while exploring Egypt's rich culture and history during your medical tourism journey.",
+      excerpt: "Tips for a smooth recovery while exploring Egypt&apos;s rich culture and history during your medical tourism journey.",
       category: "Wellness",
       author: "Fatima El-Sayed",
       readTime: "5 min read",
       date: "March 5, 2024",
       image: "/blog-wellness-recovery.jpg",
       content: `
-        <p>Recovery from medical procedures doesn't have to mean being confined to a hospital room. Egypt offers unique opportunities to combine healing with cultural exploration, creating a holistic wellness experience that can enhance your recovery journey.</p>
+        <p>Recovery from medical procedures doesn&apos;t have to mean being confined to a hospital room. Egypt offers unique opportunities to combine healing with cultural exploration, creating a holistic wellness experience that can enhance your recovery journey.</p>
 
         <h2>Planning Your Recovery Phase</h2>
         <h3>Pre-Procedure Preparation</h3>
@@ -390,7 +391,7 @@ export default function BlogPost() {
         </ul>
 
         <h3>Hydration and Climate</h3>
-        <p>Egypt's climate requires special attention to hydration:</p>
+        <p>Egypt&apos;s climate requires special attention to hydration:</p>
         <ul>
           <li>Drink plenty of water throughout the day</li>
           <li>Avoid excessive sun exposure during peak hours</li>
@@ -692,11 +693,14 @@ export default function BlogPost() {
         <section className="py-0">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              <div className="aspect-video overflow-hidden rounded-lg">
-                <img 
-                  src={post.image} 
+              <div className="relative aspect-video overflow-hidden rounded-lg">
+                <Image
+                  src={post.image}
                   alt={post.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  priority
                 />
               </div>
             </div>

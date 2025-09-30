@@ -33,7 +33,7 @@ const Hero = () => {
           
           <p className="text-xl md:text-2xl text-primary-foreground/90 mb-8 max-w-2xl leading-relaxed">
             Experience premium healthcare treatments with luxury accommodations, 
-            professional care, and significant cost savings in Egypt's top medical facilities.
+            professional care, and significant cost savings in Egypt&apos;s top medical facilities.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">

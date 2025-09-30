@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
@@ -34,10 +35,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <img
+            <Image
               src={mounted && resolvedTheme === 'dark' ? "/care-n-tour-logo-dark.png" : "/care-n-tour-logo-light.png"}
               alt="Care N Tour"
-              className="h-12 mb-4"
+              width={160}
+              height={48}
+              className="h-12 w-auto mb-4"
             />
             <p className="text-background/80 mb-6">
               Your trusted partner for world-class medical treatments in Egypt. 

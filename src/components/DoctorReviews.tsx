@@ -72,7 +72,7 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
             
             <CardContent>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                "{review.review_text}"
+                &ldquo;{review.review_text}&rdquo;
               </p>
               
               <div className="flex items-center justify-between text-xs text-muted-foreground">

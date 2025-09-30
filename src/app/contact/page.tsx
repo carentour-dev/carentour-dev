@@ -63,7 +63,7 @@ export default function Contact() {
 
       toast({
         title: "Message Sent Successfully!",
-        description: "Thank you for contacting us. We'll get back to you within 2 hours.",
+        description: "Thank you for contacting us. We&apos;ll get back to you within 2 hours.",
       });
 
       // Reset form after successful submission
@@ -141,7 +141,7 @@ export default function Contact() {
                   <CardHeader>
                     <CardTitle className="text-2xl">Send Us a Message</CardTitle>
                     <p className="text-muted-foreground">
-                      Fill out the form below and we'll get back to you within 2 hours
+                      Fill out the form below and we&apos;ll get back to you within 2 hours
                     </p>
                   </CardHeader>
                   <CardContent>
