@@ -2,9 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Users, Star, Award } from "lucide-react";
-import drSarahAhmed from "@/assets/team-dr-sarah-ahmed.jpg";
-import drMohamedHassan from "@/assets/team-dr-mohamed-hassan.jpg";
-import amiraKhalil from "@/assets/team-amira-khalil.jpg";
 
 const TeamSection = () => {
   const teamMembers = [
@@ -15,7 +12,7 @@ const TeamSection = () => {
       experience: "15+ years",
       education: "Cairo University Medical School",
       languages: ["English", "Arabic", "French"],
-      image: drSarahAhmed,
+      image: "/team-dr-sarah-ahmed.jpg",
       bio: "Dr. Ahmed leads our medical team with extensive experience in complex cardiac procedures and medical tourism coordination."
     },
     {
@@ -25,7 +22,7 @@ const TeamSection = () => {
       experience: "12+ years",
       education: "Alexandria University Medical School",
       languages: ["English", "Arabic", "German"],
-      image: drMohamedHassan,
+      image: "/team-dr-mohamed-hassan.jpg",
       bio: "Specializing in joint replacement and sports medicine, Dr. Hassan has successfully treated hundreds of international patients."
     },
     {
@@ -35,7 +32,7 @@ const TeamSection = () => {
       experience: "8+ years",
       education: "American University Cairo",
       languages: ["English", "Arabic", "Spanish", "Italian"],
-      image: amiraKhalil,
+      image: "/team-amira-khalil.jpg",
       bio: "Amira ensures seamless patient journeys from initial consultation through recovery, specializing in international patient care."
     }
   ];

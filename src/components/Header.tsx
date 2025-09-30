@@ -1,19 +1,24 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
-import logoLight from "@/assets/care-n-tour-logo-light.png";
-import logoDark from "@/assets/care-n-tour-logo-dark.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
   const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -64,8 +69,8 @@ const Header = () => {
             <ThemeToggle />
             {user ? (
               <>
-                <Link 
-                  to="/dashboard" 
+                <Link
+                  href="/dashboard"
                   className="text-sm text-muted-foreground hidden sm:inline hover:text-primary transition-smooth"
                 >
                   Welcome, {profile?.displayName || 'User'}
@@ -76,7 +81,7 @@ const Header = () => {
                 </Button>
               </>
             ) : (
-              <Link to="/auth">
+              <Link href="/auth">
                 <Button variant="ghost" size="sm">
                   <User className="h-4 w-4 mr-1" />
                   Sign In
@@ -84,7 +89,7 @@ const Header = () => {
               </Link>
             )}
             <Button variant="accent" size="sm" asChild>
-              <Link to="/contact">Get Free Consultation</Link>
+              <Link href="/contact">Get Free Consultation</Link>
             </Button>
           </div>
         </div>
@@ -92,10 +97,10 @@ const Header = () => {
         {/* Main navigation */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
-              <img 
-                src={resolvedTheme === 'dark' ? logoLight : logoDark} 
-                alt="Care N Tour" 
+            <Link href="/" className="flex items-center">
+              <img
+                src={mounted && resolvedTheme === 'dark' ? "/care-n-tour-logo-light.png" : "/care-n-tour-logo-dark.png"}
+                alt="Care N Tour"
                 className="h-14 w-auto"
               />
             </Link>
@@ -106,7 +111,7 @@ const Header = () => {
             {currentNavigation.map((item) => (
               <Link
                 key={item.name}
-                to={item.href}
+                href={item.href}
                 className="text-foreground hover:text-primary transition-smooth font-medium"
               >
                 {item.name}
@@ -135,7 +140,7 @@ const Header = () => {
             {currentNavigation.map((item) => (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  href={item.href}
                   className="text-foreground hover:text-primary transition-smooth font-medium py-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -148,7 +153,7 @@ const Header = () => {
                   Sign Out
                 </Button>
               ) : (
-                <Link to="/auth">
+                <Link href="/auth">
                   <Button variant="ghost" className="mt-4">
                     <User className="h-4 w-4 mr-1" />
                     Sign In
@@ -156,7 +161,7 @@ const Header = () => {
                 </Link>
               )}
               <Button variant="accent" className="mt-2" asChild>
-                <Link to="/contact">Get Free Consultation</Link>
+                <Link href="/contact">Get Free Consultation</Link>
               </Button>
             </div>
           </nav>

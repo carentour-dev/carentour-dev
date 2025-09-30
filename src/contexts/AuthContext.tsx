@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+"use client";
+
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useSecurity } from '@/hooks/useSecurity';
@@ -55,14 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     // Check rate limit before attempting login
     const rateLimitResult = await checkRateLimit(email);
-    
+
     if (!rateLimitResult.allowed) {
       await logSecurityEvent({
         event_type: 'login_blocked_rate_limit',
-        event_data: { 
+        event_data: {
           email,
           reason: rateLimitResult.reason,
           ip_attempts: rateLimitResult.ip_attempts,
@@ -70,12 +72,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         risk_level: 'high'
       });
-      
-      return { 
-        error: { 
+
+      return {
+        error: {
           message: 'Too many failed login attempts. Please try again in 15 minutes.',
           status: 429
-        } 
+        }
       };
     }
 
@@ -97,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       await logSecurityEvent({
         event_type: 'failed_login',
-        event_data: { 
+        event_data: {
           email,
           error_message: error.message
         },
@@ -106,9 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return { error };
-  };
+  }, [checkRateLimit, recordLoginAttempt, logSecurityEvent]);
 
-  const signUp = async (email: string, password: string, username?: string) => {
+  const signUp = useCallback(async (email: string, password: string, username?: string) => {
     // Pre-signup validation: Check if email already exists
     try {
       const { data: emailExists, error: checkError } = await supabase.rpc('check_email_exists', {
@@ -122,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Email already exists, return clear error message
         await logSecurityEvent({
           event_type: 'blocked_duplicate_signup',
-          event_data: { 
+          event_data: {
             email,
             username,
             reason: 'email_already_exists'
@@ -130,8 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           risk_level: 'medium'
         });
 
-        return { 
-          error: { 
+        return {
+          error: {
             message: 'An account with this email address already exists. Please sign in instead or use the "Forgot Password" option if you need to reset your password.'
           } as any
         };
@@ -142,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const redirectUrl = `${window.location.origin}/dashboard`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -156,9 +158,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) {
       let errorToReturn = error;
       let errorType = 'other';
-      
+
       // Check for existing user error and provide clear message
-      if (error.message?.includes('User already registered') || 
+      if (error.message?.includes('User already registered') ||
           error.message?.includes('already been registered') ||
           error.message?.includes('email address is already registered') ||
           error.status === 422) {
@@ -167,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as any;
         errorType = 'existing_email';
       }
-      
+
       // Check for rate limiting
       else if (error.message?.includes('rate') || error.message?.includes('too many')) {
         errorToReturn = {
@@ -175,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as any;
         errorType = 'rate_limited';
       }
-      
+
       // Check for weak password
       else if (error.message?.includes('password') && error.message?.includes('weak')) {
         errorToReturn = {
@@ -183,11 +185,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as any;
         errorType = 'weak_password';
       }
-      
+
       // Log signup attempt
       await logSecurityEvent({
         event_type: 'failed_signup',
-        event_data: { 
+        event_data: {
           email,
           username,
           error_message: error.message,
@@ -202,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Log successful signup attempt
     await logSecurityEvent({
       event_type: 'successful_signup',
-      event_data: { 
+      event_data: {
         email,
         username
       },
@@ -212,9 +214,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Send welcome email after successful signup
     try {
       await supabase.functions.invoke('send-welcome-email', {
-        body: { 
-          email, 
-          username: username || email.split('@')[0] 
+        body: {
+          email,
+          username: username || email.split('@')[0]
         }
       });
     } catch (emailError) {
@@ -223,9 +225,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return { error };
-  };
+  }, [logSecurityEvent]);
 
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = useCallback(async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
@@ -242,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await logSecurityEvent({
         event_type: 'failed_password_update',
         user_id: user?.id,
-        event_data: { 
+        event_data: {
           error_message: error.message
         },
         risk_level: 'medium'
@@ -250,9 +252,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return { error };
-  };
+  }, [user?.id, logSecurityEvent]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     // Log signout event
     if (user) {
       await logSecurityEvent({
@@ -262,13 +264,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         risk_level: 'low'
       });
     }
-    
-    await supabase.auth.signOut();
-  };
 
-  const resetPassword = async (email: string) => {
+    await supabase.auth.signOut();
+  }, [user, logSecurityEvent]);
+
+  const resetPassword = useCallback(async (email: string) => {
     const redirectUrl = `${window.location.origin}/auth?reset=true`;
-    
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
@@ -283,7 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       await logSecurityEvent({
         event_type: 'failed_password_reset',
-        event_data: { 
+        event_data: {
           email,
           error_message: error.message
         },
@@ -292,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return { error };
-  };
+  }, [logSecurityEvent]);
 
   const value = {
     user,

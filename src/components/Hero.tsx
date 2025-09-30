@@ -1,15 +1,16 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Globe } from "lucide-react";
-import { Link } from "react-router-dom";
-import heroImage from "@/assets/hero-medical-facility.webp";
+import Link from "next/link";
 
 const Hero = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroImage})` }}
+        style={{ backgroundImage: `url(/hero-medical-facility.webp)` }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-transparent dark:from-background/95 dark:via-background/85 dark:to-background/30"></div>
       </div>
@@ -37,13 +38,13 @@ const Hero = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             <Button size="lg" variant="accent" className="text-lg px-8 py-4" asChild>
-              <Link to="/start-journey">
+              <Link href="/start-journey">
                 Start Your Journey
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <Button size="lg" variant="hero" className="text-lg px-8 py-4" asChild>
-              <Link to="/treatments">View Treatments</Link>
+              <Link href="/treatments">View Treatments</Link>
             </Button>
           </div>
 

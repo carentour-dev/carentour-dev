@@ -16,7 +16,7 @@ export const useUserProfile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setProfile(null);
       setLoading(false);
       return;
@@ -58,7 +58,7 @@ export const useUserProfile = () => {
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user?.id, user?.user_metadata?.username]);
 
   return { profile, loading };
 };

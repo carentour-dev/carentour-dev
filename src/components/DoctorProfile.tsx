@@ -1,9 +1,11 @@
+"use client";
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Star, Award, Users, Languages, BookOpen, Stethoscope } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 interface Doctor {
   id: string;
@@ -138,7 +140,7 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
         )}
         
         <div className="pt-4 border-t border-border">
-          <Link to={`/doctors/${doctor.id}`}>
+          <Link href={`/doctors/${doctor.id}`}>
             <Button variant="outline" className="w-full">
               View Full Profile
             </Button>

@@ -1,13 +1,15 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { 
-  Award, 
-  Shield, 
-  Heart, 
-  DollarSign, 
-  Clock, 
+import Link from "next/link";
+import {
+  Award,
+  Shield,
+  Heart,
+  DollarSign,
+  Clock,
   Globe,
   CheckCircle,
   Star,
@@ -173,10 +175,10 @@ const USPSection = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
-              <Link to="/contact">Get Free Consultation</Link>
+              <Link href="/contact">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link to="/start-journey">Start Your Journey</Link>
+              <Link href="/start-journey">Start Your Journey</Link>
             </Button>
           </div>
         </div>

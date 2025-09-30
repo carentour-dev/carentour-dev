@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Doctor {
@@ -31,75 +31,70 @@ interface DoctorReview {
   created_at: string;
 }
 
+const fetchDoctors = async (treatmentCategory?: string): Promise<Doctor[]> => {
+  let query = supabase
+    .from('doctors')
+    .select('*')
+    .eq('is_active', true);
+
+  if (treatmentCategory) {
+    // Join with doctor_treatments to filter by treatment category
+    query = supabase
+      .from('doctors')
+      .select(`
+        *,
+        doctor_treatments!inner(treatment_category)
+      `)
+      .eq('is_active', true)
+      .eq('doctor_treatments.treatment_category', treatmentCategory);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  return data || [];
+};
+
 export const useDoctors = (treatmentCategory?: string) => {
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: doctors = [], isLoading: loading, error } = useQuery({
+    queryKey: ['doctors', treatmentCategory],
+    queryFn: () => fetchDoctors(treatmentCategory),
+    staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
+  });
 
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        let query = supabase
-          .from('doctors')
-          .select('*')
-          .eq('is_active', true);
+  return {
+    doctors,
+    loading,
+    error: error instanceof Error ? error.message : null
+  };
+};
 
-        if (treatmentCategory) {
-          // Join with doctor_treatments to filter by treatment category
-          query = supabase
-            .from('doctors')
-            .select(`
-              *,
-              doctor_treatments!inner(treatment_category)
-            `)
-            .eq('is_active', true)
-            .eq('doctor_treatments.treatment_category', treatmentCategory);
-        }
+const fetchDoctorReviews = async (doctorId: string): Promise<DoctorReview[]> => {
+  const { data, error } = await supabase
+    .from('doctor_reviews')
+    .select('*')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false });
 
-        const { data, error } = await query;
+  if (error) throw error;
 
-        if (error) throw error;
-
-        setDoctors(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch doctors');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDoctors();
-  }, [treatmentCategory]);
-
-  return { doctors, loading, error };
+  return data || [];
 };
 
 export const useDoctorReviews = (doctorId: string) => {
-  const [reviews, setReviews] = useState<DoctorReview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: reviews = [], isLoading: loading, error } = useQuery({
+    queryKey: ['doctor-reviews', doctorId],
+    queryFn: () => fetchDoctorReviews(doctorId),
+    staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
+    enabled: !!doctorId, // Only run query if doctorId is provided
+  });
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('doctor_reviews')
-          .select('*')
-          .eq('doctor_id', doctorId)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        setReviews(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch reviews');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReviews();
-  }, [doctorId]);
-
-  return { reviews, loading, error };
+  return {
+    reviews,
+    loading,
+    error: error instanceof Error ? error.message : null
+  };
 };

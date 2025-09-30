@@ -1,18 +1,23 @@
+"use client";
+
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Star, Users, Award } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useDoctors } from "@/hooks/useDoctors";
 
 const DoctorsSection = () => {
   const { doctors, loading } = useDoctors();
-  
-  // Show top 3 doctors based on rating and reviews
-  const featuredDoctors = doctors
-    .sort((a, b) => b.patient_rating - a.patient_rating)
-    .slice(0, 3);
+
+  // Show top 3 doctors based on rating and reviews - memoized to prevent re-sorting
+  const featuredDoctors = useMemo(() => {
+    return doctors
+      .sort((a, b) => b.patient_rating - a.patient_rating)
+      .slice(0, 3);
+  }, [doctors]);
 
   if (loading || featuredDoctors.length === 0) {
     return null;
@@ -74,7 +79,7 @@ const DoctorsSection = () => {
                   </div>
                 )}
 
-                <Link to={`/doctors/${doctor.id}`} className="mt-6 block">
+                <Link href={`/doctors/${doctor.id}`} className="mt-6 block">
                   <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-background transition-smooth">
                     View Profile
                   </Button>
@@ -85,7 +90,7 @@ const DoctorsSection = () => {
         </div>
 
         <div className="text-center">
-          <Link to="/doctors">
+          <Link href="/doctors">
             <Button size="lg" variant="outline">
               View All Doctors
             </Button>

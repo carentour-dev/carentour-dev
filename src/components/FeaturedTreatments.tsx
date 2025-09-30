@@ -1,55 +1,77 @@
+"use client";
+
+import { useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Eye, Smile, Scissors, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import consultationImage from "@/assets/consultation.webp";
-import surgeryImage from "@/assets/surgery-suite.webp";
+import { useRouter } from "next/navigation";
+
+// Static treatments data - defined outside component to avoid recreation
+const TREATMENTS_DATA = [
+  {
+    id: "cardiac-surgery",
+    icon: Heart,
+    title: "Cardiology",
+    description: "Advanced heart procedures with world-class cardiac surgeons",
+    price: "From $8,500",
+    duration: "5-7 days",
+    image: "/surgery-suite.webp",
+    popular: true
+  },
+  {
+    id: "eye-surgery",
+    icon: Eye,
+    title: "Ophthalmology",
+    description: "LASIK, cataract surgery, and comprehensive eye care",
+    price: "From $1,200",
+    duration: "2-3 days",
+    image: "/consultation.webp",
+    popular: false
+  },
+  {
+    id: "dental-care",
+    icon: Smile,
+    title: "Dental Care",
+    description: "Complete dental makeovers, implants, and cosmetic dentistry",
+    price: "From $800",
+    duration: "3-5 days",
+    image: "/surgery-suite.webp",
+    popular: true
+  },
+  {
+    id: "cosmetic-surgery",
+    icon: Scissors,
+    title: "Cosmetic Surgery",
+    description: "Aesthetic procedures with renowned plastic surgeons",
+    price: "From $3,200",
+    duration: "7-10 days",
+    image: "/consultation.webp",
+    popular: false
+  }
+];
 
 const FeaturedTreatments = () => {
-  const navigate = useNavigate();
-  const treatments = [
-    {
-      id: "cardiac-surgery",
-      icon: Heart,
-      title: "Cardiology",
-      description: "Advanced heart procedures with world-class cardiac surgeons",
-      price: "From $8,500",
-      duration: "5-7 days",
-      image: surgeryImage,
-      popular: true
-    },
-    {
-      id: "eye-surgery",
-      icon: Eye,
-      title: "Ophthalmology", 
-      description: "LASIK, cataract surgery, and comprehensive eye care",
-      price: "From $1,200",
-      duration: "2-3 days",
-      image: consultationImage,
-      popular: false
-    },
-    {
-      id: "dental-care",
-      icon: Smile,
-      title: "Dental Care",
-      description: "Complete dental makeovers, implants, and cosmetic dentistry",
-      price: "From $800",
-      duration: "3-5 days",
-      image: surgeryImage,
-      popular: true
-    },
-    {
-      id: "cosmetic-surgery",
-      icon: Scissors,
-      title: "Cosmetic Surgery",
-      description: "Aesthetic procedures with renowned plastic surgeons",
-      price: "From $3,200",
-      duration: "7-10 days",
-      image: consultationImage,
-      popular: false
-    }
-  ];
+  const router = useRouter();
+
+  // Memoize click handlers to prevent function recreation on every render
+  const handleCardClick = useCallback((treatmentId: string) => {
+    router.push(`/treatments/${treatmentId}`);
+  }, [router]);
+
+  const handleStartJourney = useCallback((e: React.MouseEvent, treatmentId: string) => {
+    e.stopPropagation();
+    router.push(`/start-journey?treatment=${treatmentId}`);
+  }, [router]);
+
+  const handleLearnMore = useCallback((e: React.MouseEvent, treatmentId: string) => {
+    e.stopPropagation();
+    router.push(`/treatments/${treatmentId}`);
+  }, [router]);
+
+  const handleViewAll = useCallback(() => {
+    router.push("/treatments");
+  }, [router]);
 
   return (
     <section className="py-20 bg-gradient-card">
@@ -64,13 +86,13 @@ const FeaturedTreatments = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {treatments.map((treatment, index) => {
+          {TREATMENTS_DATA.map((treatment, index) => {
             const Icon = treatment.icon;
             return (
-              <Card 
-                key={index} 
+              <Card
+                key={treatment.id}
                 className="group hover:shadow-elegant transition-spring cursor-pointer border-border/50 overflow-hidden"
-                onClick={() => navigate(`/treatments/${treatment.id}`)}
+                onClick={() => handleCardClick(treatment.id)}
               >
                 {treatment.popular && (
                   <div className="absolute top-4 right-4 z-10">
@@ -79,10 +101,10 @@ const FeaturedTreatments = () => {
                     </Badge>
                   </div>
                 )}
-                
+
                 <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={treatment.image} 
+                  <img
+                    src={treatment.image}
                     alt={treatment.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-spring"
                   />
@@ -108,26 +130,20 @@ const FeaturedTreatments = () => {
                       <p className="text-sm text-muted-foreground">{treatment.duration}</p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Button 
+                    <Button
                       className="w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/start-journey?treatment=${treatment.id}`);
-                      }}
+                      onClick={(e) => handleStartJourney(e, treatment.id)}
                     >
                       Start Your Journey
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
-                    
-                    <Button 
-                      variant="outline" 
+
+                    <Button
+                      variant="outline"
                       className="w-full hover:bg-primary hover:text-primary-foreground transition-smooth"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/treatments/${treatment.id}`);
-                      }}
+                      onClick={(e) => handleLearnMore(e, treatment.id)}
                     >
                       Learn More
                     </Button>
@@ -139,10 +155,10 @@ const FeaturedTreatments = () => {
         </div>
 
         <div className="text-center mt-12">
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             variant="default"
-            onClick={() => navigate("/treatments")}
+            onClick={handleViewAll}
           >
             View All Treatments
             <ArrowRight className="ml-2 h-5 w-5" />

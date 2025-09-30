@@ -1,17 +1,22 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { useTheme } from "next-themes";
-import logoLight from "@/assets/care-n-tour-logo-light.png";
-import logoDark from "@/assets/care-n-tour-logo-dark.png";
 import { useNewsletter } from "@/hooks/useNewsletter";
 
 const Footer = () => {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [email, setEmail] = useState('');
+  const [mounted, setMounted] = useState(false);
   const { subscribe, loading } = useNewsletter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,15 +27,16 @@ const Footer = () => {
       }
     }
   };
+
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <img 
-              src={theme === 'dark' ? logoDark : logoLight} 
-              alt="Care N Tour" 
+            <img
+              src={mounted && resolvedTheme === 'dark' ? "/care-n-tour-logo-dark.png" : "/care-n-tour-logo-light.png"}
+              alt="Care N Tour"
               className="h-12 mb-4"
             />
             <p className="text-background/80 mb-6">
@@ -49,11 +55,11 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4 text-accent">Quick Links</h4>
             <ul className="space-y-2">
-              <li><Link to="/about" className="text-background/80 hover:text-accent transition-smooth">About Us</Link></li>
-              <li><Link to="/treatments" className="text-background/80 hover:text-accent transition-smooth">Treatments</Link></li>
-              <li><Link to="/stories" className="text-background/80 hover:text-accent transition-smooth">Patient Stories</Link></li>
-              <li><Link to="/plan" className="text-background/80 hover:text-accent transition-smooth">Plan Your Trip</Link></li>
-              <li><Link to="/blog" className="text-background/80 hover:text-accent transition-smooth">Blog</Link></li>
+              <li><Link href="/about" className="text-background/80 hover:text-accent transition-smooth">About Us</Link></li>
+              <li><Link href="/treatments" className="text-background/80 hover:text-accent transition-smooth">Treatments</Link></li>
+              <li><Link href="/stories" className="text-background/80 hover:text-accent transition-smooth">Patient Stories</Link></li>
+              <li><Link href="/plan" className="text-background/80 hover:text-accent transition-smooth">Plan Your Trip</Link></li>
+              <li><Link href="/blog" className="text-background/80 hover:text-accent transition-smooth">Blog</Link></li>
             </ul>
           </div>
 

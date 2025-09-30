@@ -1,10 +1,10 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Award, Star, MapPin, Phone } from "lucide-react";
-import { Link } from "react-router-dom";
-import hospitalCairoMedical from "@/assets/hospital-cairo-medical.jpg";
-import clinicAlexandriaPremier from "@/assets/clinic-alexandria-premier.jpg";
+import Link from "next/link";
 
 const PartnerHospitals = () => {
   const hospitals = [
@@ -12,7 +12,7 @@ const PartnerHospitals = () => {
       name: "Cairo Medical Center",
       type: "Multi-Specialty Hospital",
       location: "New Cairo, Egypt",
-      image: hospitalCairoMedical,
+      image: "/hospital-cairo-medical.jpg",
       accreditations: ["JCI Accredited", "ISO 9001:2015", "CBAHI Certified"],
       specialties: ["Cardiology", "Orthopedics", "Oncology", "Neurology"],
       features: ["500+ Beds", "24/7 Emergency", "International Patients Unit", "Telemedicine"],
@@ -23,7 +23,7 @@ const PartnerHospitals = () => {
       name: "Alexandria Premier Clinic",
       type: "Luxury Medical Facility",
       location: "Alexandria, Egypt",
-      image: clinicAlexandriaPremier,
+      image: "/clinic-alexandria-premier.jpg",
       accreditations: ["JCI Gold Seal", "CAP Accredited", "AACI Certified"],
       specialties: ["Plastic Surgery", "Dermatology", "Ophthalmology", "Dental Care"],
       features: ["VIP Suites", "Concierge Service", "Multilingual Staff", "Recovery Spa"],
@@ -147,7 +147,7 @@ const PartnerHospitals = () => {
                 </div>
 
                 <Button className="w-full mt-4" asChild>
-                  <Link to="/contact">
+                  <Link href="/contact">
                     <Phone className="h-4 w-4 mr-2" />
                     Contact Facility
                   </Link>

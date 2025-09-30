@@ -1,5 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 const CTASection = () => {
   return (
@@ -14,10 +16,10 @@ const CTASection = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
-              <Link to="/contact">Get Free Consultation</Link>
+              <Link href="/contact">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link to="/start-journey">Start Your Journey</Link>
+              <Link href="/start-journey">Start Your Journey</Link>
             </Button>
           </div>
         </div>
