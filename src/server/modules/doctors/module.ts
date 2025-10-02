@@ -4,6 +4,20 @@ import { ApiError } from "@/server/utils/errors";
 
 const doctorServiceInstance = new CrudService("doctors", "doctor");
 
+const avatarUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value.length === 0 ||
+      value.startsWith("http://") ||
+      value.startsWith("https://") ||
+      value.startsWith("/"),
+    {
+      message: "Invalid URL",
+    },
+  );
+
 const doctorFields = {
   name: z.string().min(2),
   title: z.string().min(2),
@@ -16,8 +30,10 @@ const doctorFields = {
   certifications: z.array(z.string()).optional(),
   patient_rating: z.coerce.number().min(0).max(5).optional(),
   total_reviews: z.coerce.number().int().min(0).optional(),
+  successful_procedures: z.coerce.number().int().min(0).optional(),
+  research_publications: z.coerce.number().int().min(0).optional(),
   is_active: z.boolean().optional(),
-  avatar_url: z.string().url().nullable().optional(),
+  avatar_url: avatarUrlSchema.nullable().optional(),
 };
 
 const createDoctorSchema = z.object(doctorFields);
@@ -44,6 +60,12 @@ export const doctorController = {
       languages: parsed.languages ?? [],
       achievements: parsed.achievements ?? [],
       certifications: parsed.certifications ?? [],
+      successful_procedures: parsed.successful_procedures ?? 0,
+      research_publications: parsed.research_publications ?? 0,
+      avatar_url:
+        typeof parsed.avatar_url === "string" && parsed.avatar_url.trim().length > 0
+          ? parsed.avatar_url.trim()
+          : null,
     });
   },
 
@@ -55,7 +77,17 @@ export const doctorController = {
       throw new ApiError(400, "No fields provided for update");
     }
 
-    return doctorService.update(doctorId, parsed);
+    const payloadForUpdate = {
+      ...parsed,
+      avatar_url:
+        typeof parsed.avatar_url === "string"
+          ? parsed.avatar_url.trim().length > 0
+            ? parsed.avatar_url.trim()
+            : null
+          : parsed.avatar_url,
+    };
+
+    return doctorService.update(doctorId, payloadForUpdate);
   },
 
   async delete(id: unknown) {

@@ -12,6 +12,11 @@ const nextConfig = {
         hostname: 'lovable.dev',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cmnwwchipysvwvijqjcu.supabase.co',
+        pathname: '/storage/v1/object/public/media/**',
+      },
     ],
   },
   // Exclude old React Router pages directory from compilation

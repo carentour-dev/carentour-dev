@@ -42,6 +42,20 @@ import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Form schema keeps runtime validation in sync with Supabase types.
+const urlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value.length === 0 ||
+      value.startsWith("http://") ||
+      value.startsWith("https://") ||
+      value.startsWith("/"),
+    {
+      message: "Invalid URL",
+    },
+  );
+
 const doctorSchema = z.object({
   name: z.string().min(2, "Name is required"),
   title: z.string().min(2, "Title is required"),
@@ -54,8 +68,10 @@ const doctorSchema = z.object({
   certifications_input: z.string().optional(),
   patient_rating: z.coerce.number().min(0).max(5).optional(),
   total_reviews: z.coerce.number().int().min(0).optional(),
+  successful_procedures: z.coerce.number().int().min(0).optional(),
+  research_publications: z.coerce.number().int().min(0).optional(),
   is_active: z.boolean().optional(),
-  avatar_url: z.string().url().nullable().optional(),
+  avatar_url: urlSchema.nullable().optional(),
 });
 
 type DoctorFormValues = z.infer<typeof doctorSchema>;
@@ -72,6 +88,8 @@ type DoctorPayload = {
   certifications?: string[];
   patient_rating?: number;
   total_reviews?: number;
+  successful_procedures?: number;
+  research_publications?: number;
   is_active?: boolean;
   avatar_url?: string | null;
 };
@@ -107,6 +125,8 @@ export default function AdminDoctorsPage() {
       certifications_input: "",
       patient_rating: undefined,
       total_reviews: undefined,
+      successful_procedures: undefined,
+      research_publications: undefined,
       is_active: true,
       avatar_url: null,
     },
@@ -219,6 +239,8 @@ export default function AdminDoctorsPage() {
       certifications_input: "",
       patient_rating: undefined,
       total_reviews: undefined,
+      successful_procedures: undefined,
+      research_publications: undefined,
       is_active: true,
       avatar_url: null,
     });
@@ -239,6 +261,8 @@ export default function AdminDoctorsPage() {
       certifications_input: (doctor.certifications ?? []).join(", "),
       patient_rating: doctor.patient_rating,
       total_reviews: doctor.total_reviews,
+      successful_procedures: doctor.successful_procedures ?? undefined,
+      research_publications: doctor.research_publications ?? undefined,
       is_active: doctor.is_active ?? true,
       avatar_url: doctor.avatar_url ?? null,
     });
@@ -278,8 +302,12 @@ export default function AdminDoctorsPage() {
       certifications: toArray(values.certifications_input),
       patient_rating: values.patient_rating,
       total_reviews: values.total_reviews,
+      successful_procedures: values.successful_procedures,
+      research_publications: values.research_publications,
       is_active: values.is_active ?? true,
-      avatar_url: values.avatar_url ?? undefined,
+      avatar_url: values.avatar_url?.trim()
+        ? values.avatar_url.trim()
+        : undefined,
     };
 
     if (editingDoctor) {
@@ -458,6 +486,41 @@ export default function AdminDoctorsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Total reviews</FormLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          {...field}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="successful_procedures"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total procedures</FormLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          {...field}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="research_publications"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Research publications</FormLabel>
                         <Input
                           type="number"
                           min={0}
