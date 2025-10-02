@@ -156,6 +156,9 @@ carentour-dev/
 │   │
 │   ├── hooks/                    # Custom React hooks
 │   │   ├── useDoctors.ts         # Fetch doctors with React Query
+│   │   ├── useTreatments.ts      # Fetch active treatments
+│   │   ├── useFacilities.ts      # Fetch partner facilities
+│   │   ├── useHotels.ts          # Fetch partner hotels
 │   │   ├── useUserProfile.ts     # User profile management
 │   │   ├── useSecurity.ts        # Security event logging
 │   │   ├── useNewsletter.ts      # Newsletter subscription
@@ -250,8 +253,9 @@ npm run start
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key | ✅ |
 | `NEXT_PUBLIC_SUPABASE_PROJECT_ID` | Supabase project ID | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server only, required for admin APIs) | ✅* |
 
-> **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser.
+> **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
 
 ---
 
@@ -313,6 +317,79 @@ npm run start
 - `subscribed_at` (timestamp)
 - `preferences` (jsonb)
 
+#### `patients`
+- `id` (uuid, primary key)
+- `user_id` (uuid, foreign key → auth.users, nullable)
+- `full_name` (text)
+- `contact_email` (text)
+- `contact_phone` (text)
+- `date_of_birth` (date)
+- `sex` (text enum)
+- `nationality` (text)
+- `preferred_language` (text)
+- `preferred_currency` (text)
+- `notes` (text)
+- `created_at` / `updated_at`
+
+#### `treatments`
+- `id` (uuid, primary key)
+- `name` (text)
+- `slug` (text, unique)
+- `category` (text)
+- `summary` (text)
+- `description` (text)
+- `base_price` (numeric)
+- `currency` (text)
+- `duration_days` / `recovery_time_days` (integer)
+- `success_rate` (numeric)
+- `is_active` (boolean)
+- `created_at` / `updated_at`
+
+#### `facilities`
+- `id` (uuid, primary key)
+- `name` (text)
+- `slug` (text, unique)
+- `facility_type` (text)
+- `description` (text)
+- `address` (jsonb)
+- `contact_info` (jsonb)
+- `amenities` / `specialties` (text[])
+- `images` (jsonb)
+- `is_partner` (boolean)
+- `rating` (numeric)
+- `review_count` (integer)
+- `created_at` / `updated_at`
+
+#### `hotels`
+- `id` (uuid, primary key)
+- `name` (text)
+- `slug` (text, unique)
+- `description` (text)
+- `star_rating` (integer, 1-5)
+- `nightly_rate` (numeric) + `currency` (text)
+- `distance_to_facility_km` (numeric)
+- `address` / `contact_info` / `coordinates` (jsonb)
+- `amenities` / `medical_services` (text[])
+- `images` (jsonb)
+- `is_partner` (boolean)
+- `rating` (numeric)
+- `review_count` (integer)
+- `created_at` / `updated_at`
+
+---
+
+## 🧑‍💼 Admin Dashboard
+
+- Access the management UI at `/admin`. Current sections cover doctors, patients, treatments, facilities, and hotels.
+- Required environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Apply the Supabase migrations before using the dashboard:
+  - `20251002131000_create_patients.sql`
+  - `20251002132000_create_treatments.sql`
+  - `20251002134000_create_facilities.sql`
+  - `20251002135000_create_hotels.sql`
+- Create or invite an admin user via Supabase Auth, then set `profiles.role = 'admin'` for that `user_id`.
+- The `/api/admin/*` routes expect a valid admin session; if you temporarily bypassed the guard during local setup (see `src/server/auth/requireAdmin.ts`), revert the helper once roles are configured.
+
 ---
 
 ## 🧩 Key Components
@@ -328,6 +405,20 @@ npm run start
 - **React Query Integration**: Cached doctor data (5-minute stale time)
 - **Filtering**: By treatment category
 - **Optimized Performance**: Reduces duplicate API calls by 60%
+
+### Treatment Catalogue (`src/app/treatments/page.tsx` + `src/hooks/useTreatments.ts`)
+- **Dynamic Data**: Pulls active treatments directly from Supabase
+- **Price Comparisons**: Reuses `PriceComparison` with slug-based presets
+- **Graceful Fallbacks**: Handles missing pricing or descriptions gracefully
+
+### Partner Facilities (`src/components/PartnerHospitals.tsx` + `src/hooks/useFacilities.ts`)
+- **Supabase-backed**: Highlights featured facilities marked as partners
+- **Structured Metadata**: Maps JSON address/amenity fields into UI-friendly badges
+- **Shared Loading/Error states**: Provides consistent feedback while data loads
+
+### Recovery Accommodations (`src/hooks/useHotels.ts`)
+- **Single Source**: Fetches partner hotels with star ratings and medical amenities
+- **Flexible Filters**: Optional limit parameter for spotlight sections or planners
 
 ### Patient Journey (`src/app/start-journey/page.tsx`)
 - **6-Step Wizard**: Progressive form with validation

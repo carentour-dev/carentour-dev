@@ -53,16 +53,64 @@ export type Database = {
           recovery_time?: string | null
           review_text?: string
           updated_at?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "doctor_reviews_doctor_id_fkey"
+          columns: ["doctor_id"]
+          isOneToOne: false
+          referencedRelation: "doctors"
+          referencedColumns: ["id"]
+        },
+      ]
+      }
+      patients: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          date_of_birth: string | null
+          full_name: string
+          id: string
+          nationality: string | null
+          notes: string | null
+          preferred_currency: string | null
+          preferred_language: string | null
+          sex: string | null
+          updated_at: string
+          user_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "doctor_reviews_doctor_id_fkey"
-            columns: ["doctor_id"]
-            isOneToOne: false
-            referencedRelation: "doctors"
-            referencedColumns: ["id"]
-          },
-        ]
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name: string
+          id?: string
+          nationality?: string | null
+          notes?: string | null
+          preferred_currency?: string | null
+          preferred_language?: string | null
+          sex?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string
+          id?: string
+          nationality?: string | null
+          notes?: string | null
+          preferred_currency?: string | null
+          preferred_language?: string | null
+          sex?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       doctor_specialties: {
         Row: {
@@ -113,9 +161,183 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
-            referencedColumns: ["id"]
+          referencedColumns: ["id"]
           },
         ]
+      }
+      treatments: {
+        Row: {
+          base_price: number | null
+          category: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          duration_days: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          recovery_time_days: number | null
+          slug: string
+          success_rate: number | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number | null
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          duration_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          recovery_time_days?: number | null
+          slug: string
+          success_rate?: number | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number | null
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          duration_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          recovery_time_days?: number | null
+          slug?: string
+          success_rate?: number | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      facilities: {
+        Row: {
+          amenities: string[] | null
+          contact_info: Json | null
+          coordinates: Json | null
+          created_at: string
+          description: string | null
+          facility_type: string
+          id: string
+          images: Json | null
+          is_partner: boolean | null
+          name: string
+          rating: number | null
+          review_count: number | null
+          slug: string
+          specialties: string[] | null
+          updated_at: string
+          address: Json | null
+        }
+        Insert: {
+          amenities?: string[] | null
+          contact_info?: Json | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          facility_type: string
+          id?: string
+          images?: Json | null
+          is_partner?: boolean | null
+          name: string
+          rating?: number | null
+          review_count?: number | null
+          slug: string
+          specialties?: string[] | null
+          updated_at?: string
+          address?: Json | null
+        }
+        Update: {
+          amenities?: string[] | null
+          contact_info?: Json | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          facility_type?: string
+          id?: string
+          images?: Json | null
+          is_partner?: boolean | null
+          name?: string
+          rating?: number | null
+          review_count?: number | null
+          slug?: string
+          specialties?: string[] | null
+          updated_at?: string
+          address?: Json | null
+        }
+        Relationships: []
+      }
+      hotels: {
+        Row: {
+          amenities: string[] | null
+          contact_info: Json | null
+          coordinates: Json | null
+          created_at: string
+          description: string | null
+          distance_to_facility_km: number | null
+          id: string
+          images: Json | null
+          is_partner: boolean | null
+          medical_services: string[] | null
+          name: string
+          nightly_rate: number | null
+          rating: number | null
+          review_count: number | null
+          slug: string
+          star_rating: number
+          updated_at: string
+          address: Json | null
+          currency: string | null
+        }
+        Insert: {
+          amenities?: string[] | null
+          contact_info?: Json | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          distance_to_facility_km?: number | null
+          id?: string
+          images?: Json | null
+          is_partner?: boolean | null
+          medical_services?: string[] | null
+          name: string
+          nightly_rate?: number | null
+          rating?: number | null
+          review_count?: number | null
+          slug: string
+          star_rating: number
+          updated_at?: string
+          address?: Json | null
+          currency?: string | null
+        }
+        Update: {
+          amenities?: string[] | null
+          contact_info?: Json | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          distance_to_facility_km?: number | null
+          id?: string
+          images?: Json | null
+          is_partner?: boolean | null
+          medical_services?: string[] | null
+          name?: string
+          nightly_rate?: number | null
+          rating?: number | null
+          review_count?: number | null
+          slug?: string
+          star_rating?: number
+          updated_at?: string
+          address?: Json | null
+          currency?: string | null
+        }
+        Relationships: []
       }
       doctors: {
         Row: {

@@ -63,7 +63,7 @@ export default function Contact() {
 
       toast({
         title: "Message Sent Successfully!",
-        description: "Thank you for contacting us. We&apos;ll get back to you within 2 hours.",
+        description: "Thank you for contacting us. We will get back to you within 2 hours.",
       });
 
       // Reset form after successful submission

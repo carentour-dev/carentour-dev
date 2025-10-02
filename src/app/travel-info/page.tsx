@@ -1,13 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Link from "next/link";
-import Image from "next/image";
+import { useHotels } from "@/hooks/useHotels";
 import { 
   Plane, 
   MapPin, 
@@ -22,6 +24,7 @@ import {
   Sun,
   Mountain,
   Building,
+  Palmtree,
   Calendar,
   AlertTriangle,
   CheckCircle,
@@ -30,7 +33,25 @@ import {
   Globe
 } from "lucide-react";
 
+const formatPrice = (value: number, currency?: string) => {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch (error) {
+    return `$${value.toLocaleString()}`;
+  }
+};
+
 export default function TravelInfo() {
+  const {
+    hotels,
+    loading: hotelsLoading,
+    error: hotelsError,
+  } = useHotels({ limit: 4 });
+
   const visaRequirements = [
     {
       country: "European Union",
@@ -74,7 +95,7 @@ export default function TravelInfo() {
     }
   ];
 
-  const accommodationOptions = [
+  const fallbackAccommodationOptions = [
     {
       type: "Luxury Medical Hotels",
       description: "5-star hotels partnered with medical facilities",
@@ -104,6 +125,46 @@ export default function TravelInfo() {
       locations: ["Near partner hospitals"]
     }
   ];
+
+  const accommodationCards = useMemo(() => {
+    if (hotels.length === 0) {
+      return fallbackAccommodationOptions.map((option) => ({
+        title: option.type,
+        description: option.description,
+        amenities: option.amenities,
+        medical: [] as string[],
+        priceLabel: option.priceRange,
+        locationLabel: option.locations.join(", "),
+        icon: option.type.includes("Apartment") ? Building : option.type.includes("Resort") ? Palmtree : Hotel,
+        starRating: undefined as number | undefined,
+      }));
+    }
+
+    return hotels.map((hotel) => {
+      const address = (hotel.address ?? {}) as Record<string, unknown>;
+      const location = [address?.["city"], address?.["country"]]
+        .filter(Boolean)
+        .join(", ");
+      const icon = hotel.star_rating >= 4 ? Hotel : Building;
+
+      return {
+        title: hotel.name,
+        description: hotel.description ?? "Partner accommodation close to medical facilities.",
+        amenities: hotel.amenities ?? [],
+        medical: hotel.medical_services ?? [],
+        priceLabel:
+          typeof hotel.nightly_rate === "number"
+            ? `${formatPrice(hotel.nightly_rate, hotel.currency ?? "USD")}/night`
+            : "Contact for pricing",
+        locationLabel:
+          location || (typeof hotel.distance_to_facility_km === "number"
+            ? `${hotel.distance_to_facility_km} km from partner facility`
+            : "Near partner hospitals"),
+        icon,
+        starRating: hotel.star_rating,
+      };
+    });
+  }, [hotels]);
 
   const egyptInfo = {
     climate: [
@@ -367,43 +428,85 @@ export default function TravelInfo() {
                   </div>
 
                   <div className="space-y-6">
-                    {accommodationOptions.map((option, index) => (
-                      <Card key={index} className="border-border/50">
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{option.type}</CardTitle>
-                            <Badge variant="outline">{option.priceRange}</Badge>
-                          </div>
-                          <p className="text-muted-foreground text-sm">{option.description}</p>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <h5 className="font-semibold text-sm mb-2">Amenities</h5>
-                              <ul className="space-y-1">
-                                {option.amenities.map((amenity, idx) => (
-                                  <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <div className="w-1 h-1 bg-primary rounded-full"></div>
-                                    {amenity}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            <div>
-                              <h5 className="font-semibold text-sm mb-2">Locations</h5>
-                              <ul className="space-y-1">
-                                {option.locations.map((location, idx) => (
-                                  <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {location}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
+                    {hotelsLoading ? (
+                      <Card className="border-border/50">
+                        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                          Refreshing partner hotel list...
                         </CardContent>
                       </Card>
-                    ))}
+                    ) : null}
+
+                    {hotelsError ? (
+                      <Card className="border-border/50">
+                        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                          Showing sample accommodation options while partner data loads.
+                        </CardContent>
+                      </Card>
+                    ) : null}
+
+                    {accommodationCards.map((option) => {
+                      const Icon = option.icon;
+                      return (
+                        <Card key={option.title} className="border-border/50">
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <Icon className="h-5 w-5 text-secondary" />
+                                {option.title}
+                              </CardTitle>
+                              <Badge variant="outline">{option.priceLabel}</Badge>
+                            </div>
+                            <p className="text-muted-foreground text-sm">{option.description}</p>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h5 className="font-semibold text-sm mb-2">Amenities</h5>
+                                <ul className="space-y-1">
+                                  {option.amenities.slice(0, 6).map((amenity) => (
+                                    <li key={amenity} className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <div className="w-1 h-1 bg-primary rounded-full"></div>
+                                      {amenity}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-sm mb-2">Location</h5>
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {option.locationLabel}
+                                </div>
+                                {option.starRating ? (
+                                  <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                                    Rated {option.starRating}-star accommodation
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            {option.medical && option.medical.length > 0 ? (
+                              <div className="border border-dashed border-border/60 rounded-md p-3">
+                                <div className="text-xs uppercase text-muted-foreground mb-2">
+                                  Medical Services
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {option.medical.map((service) => (
+                                    <Badge key={service} variant="outline" className="text-xs">
+                                      {service}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <Button variant="outline" className="w-full">
+                              Request Accommodation Options
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
               </TabsContent>
@@ -588,4 +691,3 @@ export default function TravelInfo() {
     </div>
   );
 };
-
