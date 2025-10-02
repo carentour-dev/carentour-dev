@@ -22,5 +22,13 @@ export function handleRouteError(error: unknown) {
   }
 
   console.error(error);
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  const fallbackMessage =
+    typeof error === "object" && error !== null && "message" in error
+      ? String((error as any).message)
+      : String(error);
+
+  return NextResponse.json(
+    { error: "Internal server error", details: fallbackMessage },
+    { status: 500 },
+  );
 }

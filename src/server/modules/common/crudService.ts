@@ -77,7 +77,7 @@ export class CrudService<TableName extends keyof Tables> {
   }
 
   async remove(id: string) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from(this.table as string)
       .delete()
       .eq("id", id)
