@@ -1,7 +1,7 @@
 # Care N Tour - Medical Tourism Platform
 
 <div align="center">
-  <img src="public/care-n-tour-logo-dark.png" alt="Care N Tour Logo" width="300"/>
+  <img src="public/care-n-tour-logo-light.png" alt="Care N Tour Logo" width="300"/>
 
   **World-Class Medical Care in Egypt**
 
