@@ -3,10 +3,10 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Quote, MapPin, Calendar, Loader2 } from "lucide-react";
+import { Quote, MapPin, Calendar, Loader2, Globe2, Stethoscope } from "lucide-react";
 import { usePatientStories } from "@/hooks/useTestimonials";
 
 const StoriesPage = () => {
@@ -71,54 +71,134 @@ const StoriesPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {stories.map((story) => (
-                  <Card key={story.id} className="border-border/50 hover:shadow-card-hover transition-spring">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <CardTitle className="text-lg text-foreground">{story.headline}</CardTitle>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{story.patient_name ?? "International Patient"}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="capitalize">
-                          {story.treatment_slug.replace(/-/g, " ")}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="relative">
-                        <Quote className="h-6 w-6 text-primary/30 absolute -top-2 -left-2" />
-                        <p className="text-muted-foreground leading-relaxed pl-4 line-clamp-6">
-                          {(story.excerpt || story.body_markdown).replace(/[#*_`>/]/g, "")}
-                        </p>
-                      </div>
+                {stories.map((story) => {
+                  const treatmentLabel = story.treatment_name
+                    ? story.treatment_name
+                    : story.treatment_slug?.replace(/-/g, " ") ?? "Medical Journey";
+                  const cleanCopy = (story.excerpt || story.body_markdown)
+                    .replace(/[#*_`>/]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                  const outcomeHighlight = cleanCopy.split(/[.!?]/).map((segment) => segment.trim()).find(Boolean);
+                  const formattedDate = new Date(story.created_at).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
+                  const localeBadge = story.locale?.toUpperCase() ?? "EN";
 
-                      <div className="flex items-center justify-between pt-4 border-t border-border text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          {story.doctor_name && <span>Lead specialist: {story.doctor_name}</span>}
-                          {story.patient_id && (
-                            <>
-                              <span>•</span>
-                              <Link
-                                href={`/patients/${story.patient_id}`}
-                                className="text-primary hover:underline"
-                              >
-                                View patient journey
-                              </Link>
-                            </>
-                          )}
+                  return (
+                    <Card
+                      key={story.id}
+                      className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring"
+                    >
+                      <div className="md:grid md:grid-cols-[minmax(220px,260px)_1fr] lg:grid-cols-[280px_1fr]">
+                        <div className="relative bg-background p-6">
+                          <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary/80 via-primary to-accent" />
+                          <div className="flex flex-col gap-6">
+                            <div className="space-y-2">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Treatment Center</p>
+                              <Badge variant="secondary" className="px-3 py-1 rounded-full text-sm font-medium">
+                                {treatmentLabel}
+                              </Badge>
+                            </div>
+
+                            {outcomeHighlight && (
+                              <div className="rounded-xl bg-muted/40 p-4">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Outcome</p>
+                                <p className="mt-2 text-sm text-foreground leading-relaxed">
+                                  {outcomeHighlight}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="space-y-3 pt-2 border-t border-border/60">
+                              <div className="flex items-start gap-3">
+                                <div className="rounded-full bg-primary/15 p-2 text-primary">
+                                  <MapPin className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Patient</p>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {story.patient_name ?? "International Patient"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-3">
+                                <div className="rounded-full bg-primary/15 p-2 text-primary">
+                                  <Calendar className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Treatment Date</p>
+                                  <p className="text-sm font-medium text-foreground">{formattedDate}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-3">
+                                <div className="rounded-full bg-primary/15 p-2 text-primary">
+                                  <Globe2 className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p>
+                                  <Badge variant="outline" className="mt-1 text-xs uppercase tracking-wide">
+                                    {localeBadge}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {story.doctor_name && (
+                                <div className="flex items-start gap-3">
+                                  <div className="rounded-full bg-primary/15 p-2 text-primary">
+                                    <Stethoscope className="h-4 w-4" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Lead Specialist</p>
+                                    <p className="text-sm font-medium text-foreground">{story.doctor_name}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <span>{story.locale?.toUpperCase() ?? "EN"}</span>
+
+                        <div className="bg-muted/20 p-6 flex flex-col gap-6">
+                          <div className="flex items-start gap-4">
+                            <div className="rounded-2xl bg-primary/15 p-3 text-primary">
+                              <Quote className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-3">
+                              <h3 className="text-2xl font-semibold text-foreground leading-snug">
+                                {story.headline}
+                              </h3>
+                              <p className="text-base text-muted-foreground leading-relaxed line-clamp-7">
+                                {cleanCopy}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-border/60">
+                            <div className="text-sm text-muted-foreground">
+                              {story.doctor_name ? `Coordinated with ${story.doctor_name}` : "Personal care from our team"}
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                              {story.patient_id && (
+                                <Button asChild size="sm">
+                                  <Link href={`/patients/${story.patient_id}`}>Read full journey</Link>
+                                </Button>
+                              )}
+                              {story.treatment_slug && (
+                                <Button asChild size="sm" variant="ghost" className="text-primary hover:text-primary">
+                                  <Link href={`/treatments/${story.treatment_slug}`}>Explore treatment</Link>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             )}
 

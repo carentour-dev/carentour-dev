@@ -8,15 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Star,
-  MapPin,
-  Calendar,
-  ChevronLeft,
-  Loader2,
-  Quote,
-  Award,
-} from "lucide-react";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { Star, MapPin, Calendar, ChevronLeft, Loader2, Quote, Award } from "lucide-react";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 
 export default function PatientProfilePage() {
@@ -200,11 +193,12 @@ export default function PatientProfilePage() {
                           <p className="text-muted-foreground italic">{story.excerpt}</p>
                         )}
 
-                        <div className="prose prose-sm max-w-none">
-                          <Quote className="h-6 w-6 text-primary/30 mb-2" />
-                          <div className="whitespace-pre-wrap text-foreground">
-                            {story.body_markdown}
-                          </div>
+                        <div className="space-y-4">
+                          <Quote className="h-6 w-6 text-primary/30" />
+                          <MarkdownRenderer
+                            content={story.body_markdown}
+                            className="prose prose-sm max-w-none text-foreground"
+                          />
                         </div>
                       </CardContent>
                     </Card>
