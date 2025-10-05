@@ -90,10 +90,10 @@ const StoriesPage = () => {
                   return (
                     <Card
                       key={story.id}
-                      className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring"
+                      className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring h-full"
                     >
-                      <div className="md:grid md:grid-cols-[minmax(220px,260px)_1fr] lg:grid-cols-[280px_1fr]">
-                        <div className="relative bg-background p-6">
+                      <div className="md:grid md:grid-cols-[minmax(220px,260px)_1fr] lg:grid-cols-[280px_1fr] h-full">
+                        <div className="relative bg-background p-6 flex h-full flex-col">
                           <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary/80 via-primary to-accent" />
                           <div className="flex flex-col gap-6">
                             <div className="space-y-2">
@@ -162,7 +162,7 @@ const StoriesPage = () => {
                           </div>
                         </div>
 
-                        <div className="bg-muted/20 p-6 flex flex-col gap-6">
+                        <div className="bg-muted/20 p-6 flex h-full flex-col">
                           <div className="flex items-start gap-4">
                             <div className="rounded-2xl bg-primary/15 p-3 text-primary">
                               <Quote className="h-6 w-6" />
