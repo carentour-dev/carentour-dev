@@ -8,7 +8,7 @@ import { usePatientReviews } from "@/hooks/useTestimonials";
 const MAX_TESTIMONIALS = 3;
 
 const Testimonials = () => {
-  const { reviews, loading, error } = usePatientReviews(undefined, {
+  const { reviews, loading, error } = usePatientReviews({
     highlightOnly: true,
     limit: MAX_TESTIMONIALS,
   });

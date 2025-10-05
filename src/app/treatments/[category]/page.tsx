@@ -101,14 +101,23 @@ export default function TreatmentDetails() {
     };
   }, [dynamicTreatment, fallbackProcedures]);
 
+  const treatmentId = normalizedTreatment?.id ?? dynamicTreatment?.id ?? undefined;
+  const treatmentSlugValue = normalizedTreatment?.slug ?? dynamicTreatment?.slug ?? undefined;
+
   const rawDoctorCategory = normalizedTreatment?.category ?? dynamicTreatment?.category ?? undefined;
   const doctorCategorySlug = rawDoctorCategory
     ? rawDoctorCategory.trim().toLowerCase()
     : undefined;
 
   const { doctors, loading: doctorsLoading } = useDoctors(doctorCategorySlug);
-  const { reviews: patientReviews, loading: patientReviewsLoading } = usePatientReviews(slug || undefined);
-  const { stories: patientStories, loading: patientStoriesLoading } = usePatientStories(slug || undefined);
+  const { reviews: patientReviews, loading: patientReviewsLoading } = usePatientReviews({
+    treatmentId,
+    treatmentSlug: treatmentSlugValue,
+  });
+  const { stories: patientStories, loading: patientStoriesLoading } = usePatientStories({
+    treatmentId,
+    treatmentSlug: treatmentSlugValue,
+  });
 
   const treatment = useMemo(() => {
     if (!normalizedTreatment) return null;

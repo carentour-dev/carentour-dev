@@ -10,7 +10,7 @@ import { Quote, MapPin, Calendar, Loader2 } from "lucide-react";
 import { usePatientStories } from "@/hooks/useTestimonials";
 
 const StoriesPage = () => {
-  const { stories, loading, error } = usePatientStories(undefined, { limit: 12 });
+  const { stories, loading, error } = usePatientStories({ limit: 12 });
 
   return (
     <div className="min-h-screen">

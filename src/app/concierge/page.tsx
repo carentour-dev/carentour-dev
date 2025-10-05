@@ -174,7 +174,7 @@ export default function ConciergeServices() {
     }
   ];
 
-  const { reviews: conciergeReviews, loading: conciergeReviewsLoading } = usePatientReviews(undefined, {
+  const { reviews: conciergeReviews, loading: conciergeReviewsLoading } = usePatientReviews({
     highlightOnly: true,
     limit: 3,
   });

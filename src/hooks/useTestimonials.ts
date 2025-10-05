@@ -37,12 +37,13 @@ export type PatientStory = {
 };
 
 interface ReviewQuery {
+  treatmentId?: string;
   treatmentSlug?: string;
   highlightOnly?: boolean;
   limit?: number;
 }
 
-const fetchReviews = async ({ treatmentSlug, highlightOnly, limit }: ReviewQuery): Promise<PatientReview[]> => {
+const fetchReviews = async ({ treatmentId, treatmentSlug, highlightOnly, limit }: ReviewQuery): Promise<PatientReview[]> => {
   let query = supabase
     .from("doctor_reviews")
     .select(
@@ -53,7 +54,9 @@ const fetchReviews = async ({ treatmentSlug, highlightOnly, limit }: ReviewQuery
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (treatmentSlug) {
+  if (treatmentId) {
+    query = query.eq("treatment_id", treatmentId);
+  } else if (treatmentSlug) {
     query = query.eq("treatments.slug", treatmentSlug);
   }
 
@@ -81,12 +84,13 @@ const fetchReviews = async ({ treatmentSlug, highlightOnly, limit }: ReviewQuery
 };
 
 interface StoryQuery {
+  treatmentId?: string;
   treatmentSlug?: string;
   featuredOnly?: boolean;
   limit?: number;
 }
 
-const fetchStories = async ({ treatmentSlug, featuredOnly, limit }: StoryQuery): Promise<PatientStory[]> => {
+const fetchStories = async ({ treatmentId, treatmentSlug, featuredOnly, limit }: StoryQuery): Promise<PatientStory[]> => {
   let query = supabase
     .from("patient_stories")
     .select("id, patient_id, treatment_id, headline, excerpt, body_markdown, hero_image, featured, locale, created_at, patients(full_name), doctors(name), treatments(slug, name)")
@@ -95,7 +99,9 @@ const fetchStories = async ({ treatmentSlug, featuredOnly, limit }: StoryQuery):
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (treatmentSlug) {
+  if (treatmentId) {
+    query = query.eq("treatment_id", treatmentId);
+  } else if (treatmentSlug) {
     query = query.eq("treatments.slug", treatmentSlug);
   }
 
@@ -122,18 +128,32 @@ const fetchStories = async ({ treatmentSlug, featuredOnly, limit }: StoryQuery):
   });
 };
 
-export const usePatientReviews = (treatmentSlug?: string, options?: { highlightOnly?: boolean; limit?: number }) => {
+type ReviewHookParams = {
+  treatmentId?: string;
+  treatmentSlug?: string;
+  highlightOnly?: boolean;
+  limit?: number;
+};
+
+export const usePatientReviews = (params?: ReviewHookParams) => {
+  const treatmentId = params?.treatmentId;
+  const treatmentSlug = params?.treatmentSlug;
+  const highlightOnly = params?.highlightOnly ?? false;
+  const limit = params?.limit;
+
   const {
     data: reviews = [],
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["patient-reviews", treatmentSlug, options?.highlightOnly, options?.limit],
-    queryFn: () => fetchReviews({
-      treatmentSlug,
-      highlightOnly: options?.highlightOnly ?? false,
-      limit: options?.limit,
-    }),
+    queryKey: ["patient-reviews", treatmentId ?? null, treatmentSlug ?? null, highlightOnly, limit ?? null],
+    queryFn: () =>
+      fetchReviews({
+        treatmentId,
+        treatmentSlug,
+        highlightOnly,
+        limit,
+      }),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -145,21 +165,32 @@ export const usePatientReviews = (treatmentSlug?: string, options?: { highlightO
   };
 };
 
-export const usePatientStories = (
-  treatmentSlug?: string,
-  options?: { featuredOnly?: boolean; limit?: number },
-) => {
+type StoryHookParams = {
+  treatmentId?: string;
+  treatmentSlug?: string;
+  featuredOnly?: boolean;
+  limit?: number;
+};
+
+export const usePatientStories = (params?: StoryHookParams) => {
+  const treatmentId = params?.treatmentId;
+  const treatmentSlug = params?.treatmentSlug;
+  const featuredOnly = params?.featuredOnly ?? false;
+  const limit = params?.limit;
+
   const {
     data: stories = [],
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["patient-stories", treatmentSlug, options?.featuredOnly, options?.limit],
-    queryFn: () => fetchStories({
-      treatmentSlug,
-      featuredOnly: options?.featuredOnly ?? false,
-      limit: options?.limit,
-    }),
+    queryKey: ["patient-stories", treatmentId ?? null, treatmentSlug ?? null, featuredOnly, limit ?? null],
+    queryFn: () =>
+      fetchStories({
+        treatmentId,
+        treatmentSlug,
+        featuredOnly,
+        limit,
+      }),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
