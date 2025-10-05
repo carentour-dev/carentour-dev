@@ -1,16 +1,18 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, ExternalLink } from "lucide-react";
 
 interface DoctorReview {
   id: string;
+  patient_id?: string | null;
   patient_name: string;
-  patient_country: string;
-  procedure_name: string;
+  patient_country?: string | null;
+  procedure_name?: string | null;
   rating: number;
   review_text: string;
-  recovery_time: string;
-  is_verified: boolean;
+  recovery_time?: string | null;
+  is_verified?: boolean | null;
   created_at: string;
 }
 
@@ -42,9 +44,9 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
                   <CardTitle className="text-lg">{review.patient_name}</CardTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
-                      {review.patient_country}
+                      {review.patient_country ?? "International"}
                     </Badge>
-                    {review.is_verified && (
+                    {review.is_verified !== false && (
                       <Badge variant="secondary" className="text-xs">
                         Verified
                       </Badge>
@@ -66,7 +68,7 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
                   ))}
                 </div>
                 <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">{review.procedure_name}</span>
+                {review.procedure_name && <span className="text-muted-foreground">{review.procedure_name}</span>}
               </div>
             </CardHeader>
             
@@ -76,7 +78,21 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
               </p>
               
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Recovery: {review.recovery_time}</span>
+                <div className="flex items-center gap-2">
+                  {review.recovery_time && <span>Recovery: {review.recovery_time}</span>}
+                  {review.patient_id && (
+                    <>
+                      <span>•</span>
+                      <Link
+                        href={`/patients/${review.patient_id}`}
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        View patient journey
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </>
+                  )}
+                </div>
                 <span>{new Date(review.created_at).toLocaleDateString()}</span>
               </div>
             </CardContent>

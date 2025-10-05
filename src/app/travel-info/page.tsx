@@ -95,36 +95,39 @@ export default function TravelInfo() {
     }
   ];
 
-  const fallbackAccommodationOptions = [
-    {
-      type: "Luxury Medical Hotels",
-      description: "5-star hotels partnered with medical facilities",
-      amenities: ["Medical concierge", "24/7 nursing", "Recovery suites", "Specialized diet"],
-      priceRange: "$150 - $300/night",
-      locations: ["New Cairo", "Zamalek", "Heliopolis"]
-    },
-    {
-      type: "Premium Business Hotels",
-      description: "4-star international chain hotels",
-      amenities: ["Airport transfer", "Business center", "Fitness center", "International cuisine"],
-      priceRange: "$80 - $150/night", 
-      locations: ["Downtown Cairo", "Giza", "New Capital"]
-    },
-    {
-      type: "Serviced Apartments",
-      description: "Fully furnished apartments for extended stays",
-      amenities: ["Kitchen facilities", "Laundry", "Living areas", "Weekly cleaning"],
-      priceRange: "$50 - $120/night",
-      locations: ["Maadi", "Zamalek", "New Cairo"]
-    },
-    {
-      type: "Recovery Centers",
-      description: "Specialized medical tourism facilities",
-      amenities: ["Post-op care", "Medical staff", "Therapy rooms", "Nutritionist"],
-      priceRange: "$200 - $400/night",
-      locations: ["Near partner hospitals"]
-    }
-  ];
+  const fallbackAccommodationOptions = useMemo(
+    () => [
+      {
+        type: "Luxury Medical Hotels",
+        description: "5-star hotels partnered with medical facilities",
+        amenities: ["Medical concierge", "24/7 nursing", "Recovery suites", "Specialized diet"],
+        priceRange: "$150 - $300/night",
+        locations: ["New Cairo", "Zamalek", "Heliopolis"],
+      },
+      {
+        type: "Premium Business Hotels",
+        description: "4-star international chain hotels",
+        amenities: ["Airport transfer", "Business center", "Fitness center", "International cuisine"],
+        priceRange: "$80 - $150/night",
+        locations: ["Downtown Cairo", "Giza", "New Capital"],
+      },
+      {
+        type: "Serviced Apartments",
+        description: "Fully furnished apartments for extended stays",
+        amenities: ["Kitchen facilities", "Laundry", "Living areas", "Weekly cleaning"],
+        priceRange: "$50 - $120/night",
+        locations: ["Maadi", "Zamalek", "New Cairo"],
+      },
+      {
+        type: "Recovery Centers",
+        description: "Specialized medical tourism facilities",
+        amenities: ["Post-op care", "Medical staff", "Therapy rooms", "Nutritionist"],
+        priceRange: "$200 - $400/night",
+        locations: ["Near partner hospitals"],
+      },
+    ],
+    [],
+  );
 
   const accommodationCards = useMemo(() => {
     if (hotels.length === 0) {
@@ -164,7 +167,7 @@ export default function TravelInfo() {
         starRating: hotel.star_rating,
       };
     });
-  }, [hotels]);
+  }, [hotels, fallbackAccommodationOptions]);
 
   const egyptInfo = {
     climate: [

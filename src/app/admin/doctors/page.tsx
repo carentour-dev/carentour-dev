@@ -62,7 +62,7 @@ const doctorSchema = z.object({
   specialization: z.string().min(2, "Specialization is required"),
   bio: z.string().optional(),
   experience_years: z.coerce.number().int().min(0),
-  education: z.string().optional(),
+  education: z.string().min(2, "Education is required"),
   languages_input: z.string().optional(),
   achievements_input: z.string().optional(),
   certifications_input: z.string().optional(),
@@ -82,7 +82,7 @@ type DoctorPayload = {
   specialization: string;
   bio?: string;
   experience_years: number;
-  education?: string;
+  education: string;
   languages?: string[];
   achievements?: string[];
   certifications?: string[];
@@ -296,7 +296,7 @@ export default function AdminDoctorsPage() {
       specialization: values.specialization.trim(),
       bio: values.bio?.trim() || undefined,
       experience_years: values.experience_years,
-      education: values.education?.trim() || undefined,
+      education: values.education.trim(),
       languages: toArray(values.languages_input),
       achievements: toArray(values.achievements_input),
       certifications: toArray(values.certifications_input),

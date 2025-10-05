@@ -22,11 +22,14 @@ interface Doctor {
 interface DoctorReview {
   id: string;
   patient_name: string;
-  patient_country: string;
-  procedure_name: string;
+  patient_country: string | null;
+  treatment_id: string;
+  treatment_slug: string | null;
+  treatment_name?: string | null;
+  procedure_name: string | null;
   rating: number;
   review_text: string;
-  recovery_time: string;
+  recovery_time: string | null;
   is_verified: boolean;
   created_at: string;
 }
@@ -74,13 +77,22 @@ export const useDoctors = (treatmentCategory?: string) => {
 const fetchDoctorReviews = async (doctorId: string): Promise<DoctorReview[]> => {
   const { data, error } = await supabase
     .from('doctor_reviews')
-    .select('*')
+    .select('id, patient_name, patient_country, treatment_id, procedure_name, rating, review_text, recovery_time, is_verified, created_at, treatments(slug, name)')
+    .eq('published', true)
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
 
-  return data || [];
+  return (data || []).map((review: any) => {
+    const mapped: DoctorReview = {
+      ...review,
+      treatment_slug: review.treatments?.slug ?? null,
+      treatment_name: review.treatments?.name ?? null,
+    };
+    delete (mapped as any).treatments;
+    return mapped;
+  });
 };
 
 export const useDoctorReviews = (doctorId: string) => {

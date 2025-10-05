@@ -4,7 +4,7 @@ import { TrendingDown, DollarSign } from "lucide-react";
 
 interface CountryPrice {
   country: string;
-  flag: string;
+  flag?: string;
   price: number;
   currency: string;
 }
@@ -17,6 +17,10 @@ interface PriceComparisonProps {
 }
 
 const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className }: PriceComparisonProps) => {
+  if (internationalPrices.length === 0) {
+    return null;
+  }
+
   const calculateSavings = (internationalPrice: number) => {
     const savings = internationalPrice - egyptPrice;
     const percentage = Math.round((savings / internationalPrice) * 100);
@@ -72,7 +76,7 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
                 <div key={index} className="p-3 bg-muted/30 rounded-lg border border-border/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{country.flag}</span>
+                      <span className="text-xl">{country.flag ?? "🌍"}</span>
                       <div>
                         <h4 className="font-medium text-foreground">{country.country}</h4>
                         <p className="text-xs text-muted-foreground">Typical Cost</p>

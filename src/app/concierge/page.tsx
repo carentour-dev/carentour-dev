@@ -7,15 +7,16 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { 
-  Phone, 
-  Calendar, 
-  Car, 
+import { usePatientReviews } from "@/hooks/useTestimonials";
+import {
+  Phone,
+  Calendar,
+  Car,
   Utensils,
-  ShoppingBag, 
-  MapPin, 
-  Clock, 
-  Users, 
+  ShoppingBag,
+  MapPin,
+  Clock,
+  Users,
   Heart,
   Plane,
   Hotel,
@@ -25,7 +26,8 @@ import {
   Shield,
   Star,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 
 export default function ConciergeServices() {
@@ -172,29 +174,10 @@ export default function ConciergeServices() {
     }
   ];
 
-  const testimonials = [
-    {
-      name: "James Wilson",
-      country: "United Kingdom",
-      service: "Complete Care Package",
-      rating: 5,
-      text: "The concierge team made my cardiac surgery trip seamless. From airport pickup to daily check-ins, everything was perfectly organized. My wife and I felt completely supported throughout our 3-week stay."
-    },
-    {
-      name: "Marie Dubois",
-      country: "France",
-      service: "VIP Premium Package", 
-      rating: 5,
-      text: "Exceptional service! Our personal assistant spoke perfect French and arranged everything beautifully. While I recovered from my cosmetic surgery, my husband enjoyed private tours of the pyramids."
-    },
-    {
-      name: "Carlos Rodriguez", 
-      country: "Spain",
-      service: "Essential Care Package",
-      rating: 5,
-      text: "Great value for money. The basic package covered all our essential needs during my dental treatment. The Spanish-speaking coordinator was very helpful and professional."
-    }
-  ];
+  const { reviews: conciergeReviews, loading: conciergeReviewsLoading } = usePatientReviews(undefined, {
+    highlightOnly: true,
+    limit: 3,
+  });
 
   return (
     <div className="min-h-screen">
@@ -398,35 +381,47 @@ export default function ConciergeServices() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="border-border/50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-1 mb-4">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
-                      ))}
-                    </div>
-                    
-                    <p className="text-muted-foreground italic leading-relaxed mb-4">
-                      &ldquo;{testimonial.text}&rdquo;
-                    </p>
-
-                    <div className="border-t border-border pt-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold text-foreground">{testimonial.name}</p>
-                          <p className="text-sm text-muted-foreground">{testimonial.country}</p>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {testimonial.service}
-                        </Badge>
+            {conciergeReviewsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : conciergeReviews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                {conciergeReviews.map((review) => (
+                  <Card key={review.id} className="border-border/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-1 mb-4">
+                        {[...Array(Math.round(review.rating))].map((_, i) => (
+                          <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
+                        ))}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+
+                      <p className="text-muted-foreground italic leading-relaxed mb-4">
+                        &ldquo;{review.review_text}&rdquo;
+                      </p>
+
+                      <div className="border-t border-border pt-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-foreground">{review.patient_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {review.patient_country ?? "International Patient"}
+                            </p>
+                          </div>
+                          {review.treatment_slug && (
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {review.treatment_slug.replace(/-/g, ' ')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">Add patient testimonials to showcase concierge outcomes.</div>
+            )}
           </div>
         </section>
 
@@ -459,4 +454,3 @@ export default function ConciergeServices() {
     </div>
   );
 };
-

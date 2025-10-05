@@ -6,94 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Star, Quote, MapPin, Calendar } from "lucide-react";
+import { Quote, MapPin, Calendar, Loader2 } from "lucide-react";
+import { usePatientStories } from "@/hooks/useTestimonials";
 
-export default function PatientStories() {
-  const stories = [
-    {
-      name: "Sarah Johnson",
-      country: "United States",
-      flag: "🇺🇸",
-      treatment: "LASIK Eye Surgery",
-      date: "March 2024",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "I came to Egypt for LASIK surgery and couldn&apos;t be happier with the results. The medical team was incredibly professional, and the cost was 70% less than what I would have paid back home. The recovery was smooth, and I can now see perfectly without glasses.",
-      savings: "$4,200",
-      quote: "The best decision I&apos;ve made for my vision and my wallet!"
-    },
-    {
-      name: "Ahmed Al-Rashid",
-      country: "Saudi Arabia",
-      flag: "🇸🇦",
-      treatment: "Cardiac Surgery",
-      date: "January 2024",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "After my heart surgery at one of Care N Tour&apos;s partner hospitals, I feel like I have a new lease on life. The cardiologist was world-class, and the follow-up care has been exceptional. My family and I felt supported throughout the entire process.",
-      savings: "$15,000",
-      quote: "They saved my life and treated me like family."
-    },
-    {
-      name: "Emma Thompson",
-      country: "United Kingdom",
-      flag: "🇬🇧",
-      treatment: "Dental Implants",
-      date: "February 2024",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "I needed multiple dental implants and was quoted an astronomical amount in London. Care N Tour connected me with an excellent dentist in Cairo. The quality of work is outstanding, and I saved thousands while enjoying a mini vacation in Egypt.",
-      savings: "$8,500",
-      quote: "Perfect teeth and an unforgettable experience!"
-    },
-    {
-      name: "Michael Schmidt",
-      country: "Germany",
-      flag: "🇩🇪",
-      treatment: "Hip Replacement",
-      date: "December 2023",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "My hip replacement surgery was performed flawlessly. The orthopedic surgeon explained everything clearly, and the rehabilitation program was comprehensive. I&apos;m back to hiking and feeling better than I have in years.",
-      savings: "$12,000",
-      quote: "Back to an active lifestyle thanks to expert care."
-    },
-    {
-      name: "Lisa Chen",
-      country: "Canada",
-      flag: "🇨🇦",
-      treatment: "Cosmetic Surgery",
-      date: "November 2023",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "I traveled to Egypt for rhinoplasty and the results exceeded my expectations. The plastic surgeon was an artist, and the results look completely natural. The care team made sure I was comfortable throughout my stay.",
-      savings: "$6,800",
-      quote: "Natural results that boosted my confidence!"
-    },
-    {
-      name: "Roberto Silva",
-      country: "Brazil",
-      flag: "🇧🇷",
-      treatment: "Gastric Sleeve",
-      date: "October 2023",
-      rating: 5,
-      image: "/api/placeholder/400/300",
-      story: "My weight loss surgery changed my life completely. The bariatric surgeon and nutritionist team provided ongoing support even after I returned home. I&apos;ve lost 80 pounds and gained a new perspective on health.",
-      savings: "$9,200",
-      quote: "A life-changing journey with incredible support!"
-    }
-  ];
+const StoriesPage = () => {
+  const { stories, loading, error } = usePatientStories(undefined, { limit: 12 });
 
   return (
     <div className="min-h-screen">
       <Header />
 
       <main>
-        {/* Hero Section */}
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Patient Stories</Badge>
+              <Badge variant="outline" className="mb-6">
+                Patient Stories
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Real Stories from
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -101,38 +30,24 @@ export default function PatientStories() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Discover how patients from around the world have transformed their lives
-                through world-class medical care in Egypt.
+                Discover how patients from around the world have transformed their lives through world-class medical care
+                in Egypt.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Success Stats */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div>
-                <p className="text-4xl font-bold text-primary mb-2">5000+</p>
-                <p className="text-muted-foreground">Successful Procedures</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-primary mb-2">50+</p>
-                <p className="text-muted-foreground">Countries Served</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-primary mb-2">98%</p>
-                <p className="text-muted-foreground">Satisfaction Rate</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-primary mb-2">70%</p>
-                <p className="text-muted-foreground">Average Savings</p>
-              </div>
+              <Stat label="Successful Procedures" value="5000+" />
+              <Stat label="Countries Served" value="50+" />
+              <Stat label="Satisfaction Rate" value="98%" />
+              <Stat label="Average Savings" value="70%" />
             </div>
           </div>
         </section>
 
-        {/* Patient Stories Grid */}
         <section className="py-20 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
@@ -144,68 +59,77 @@ export default function PatientStories() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {stories.map((story, index) => (
-                <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center text-2xl">
-                          {story.flag}
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{story.name}</CardTitle>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : error ? (
+              <div className="text-center text-destructive">Failed to load patient stories.</div>
+            ) : stories.length === 0 ? (
+              <div className="text-center text-muted-foreground">
+                Stories are coming soon. Check back to hear from our latest patients.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {stories.map((story) => (
+                  <Card key={story.id} className="border-border/50 hover:shadow-card-hover transition-spring">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <CardTitle className="text-lg text-foreground">{story.headline}</CardTitle>
                           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                             <MapPin className="h-4 w-4" />
-                            <span>{story.country}</span>
+                            <span>{story.patient_name ?? "International Patient"}</span>
                           </div>
                           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{story.date}</span>
+                            <span>{new Date(story.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
+                        <Badge variant="secondary" className="capitalize">
+                          {story.treatment_slug.replace(/-/g, " ")}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary">{story.treatment}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-1">
-                      {[...Array(story.rating)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 text-accent fill-current" />
-                      ))}
-                    </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="relative">
+                        <Quote className="h-6 w-6 text-primary/30 absolute -top-2 -left-2" />
+                        <p className="text-muted-foreground leading-relaxed pl-4 line-clamp-6">
+                          {(story.excerpt || story.body_markdown).replace(/[#*_`>/]/g, "")}
+                        </p>
+                      </div>
 
-                    <div className="relative">
-                      <Quote className="h-6 w-6 text-primary/30 absolute -top-2 -left-2" />
-                      <p className="text-muted-foreground leading-relaxed pl-4">
-                        {story.story}
-                      </p>
-                    </div>
-
-                    <div className="bg-accent-light rounded-lg p-4">
-                      <p className="font-semibold text-foreground italic">
-                        &ldquo;{story.quote}&rdquo;
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <span className="text-sm text-muted-foreground">Total Savings:</span>
-                      <span className="text-lg font-bold text-primary">{story.savings}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="flex items-center justify-between pt-4 border-t border-border text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          {story.doctor_name && <span>Lead specialist: {story.doctor_name}</span>}
+                          {story.patient_id && (
+                            <>
+                              <span>•</span>
+                              <Link
+                                href={`/patients/${story.patient_id}`}
+                                className="text-primary hover:underline"
+                              >
+                                View patient journey
+                              </Link>
+                            </>
+                          )}
+                        </div>
+                        <span>{story.locale?.toUpperCase() ?? "EN"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             <div className="text-center mt-12">
-              <Button size="lg">
-                Share Your Story
+              <Button size="lg" asChild>
+                <Link href="/contact">Share Your Story</Link>
               </Button>
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
         <section className="py-20 bg-gradient-hero">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
@@ -229,4 +153,13 @@ export default function PatientStories() {
       <Footer />
     </div>
   );
-}
+};
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-4xl font-bold text-primary mb-2">{value}</p>
+    <p className="text-muted-foreground">{label}</p>
+  </div>
+);
+
+export default StoriesPage;

@@ -20,6 +20,13 @@ export type Database = {
           doctor_id: string
           id: string
           is_verified: boolean | null
+          patient_id: string | null
+          treatment_id: string
+          locale: string | null
+          published: boolean | null
+          highlight: boolean | null
+          display_order: number | null
+          media: Json | null
           patient_country: string | null
           patient_name: string
           procedure_name: string | null
@@ -33,6 +40,13 @@ export type Database = {
           doctor_id: string
           id?: string
           is_verified?: boolean | null
+          patient_id?: string | null
+          treatment_id: string
+          locale?: string | null
+          published?: boolean | null
+          highlight?: boolean | null
+          display_order?: number | null
+          media?: Json | null
           patient_country?: string | null
           patient_name: string
           procedure_name?: string | null
@@ -46,6 +60,13 @@ export type Database = {
           doctor_id?: string
           id?: string
           is_verified?: boolean | null
+          patient_id?: string | null
+          treatment_id?: string
+          locale?: string | null
+          published?: boolean | null
+          highlight?: boolean | null
+          display_order?: number | null
+          media?: Json | null
           patient_country?: string | null
           patient_name?: string
           procedure_name?: string | null
@@ -54,15 +75,29 @@ export type Database = {
           review_text?: string
           updated_at?: string
       }
-      Relationships: [
-        {
-          foreignKeyName: "doctor_reviews_doctor_id_fkey"
-          columns: ["doctor_id"]
-          isOneToOne: false
-          referencedRelation: "doctors"
-          referencedColumns: ["id"]
-        },
-      ]
+        Relationships: [
+          {
+            foreignKeyName: "doctor_reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_reviews_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_reviews_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patients: {
         Row: {
@@ -70,6 +105,9 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           date_of_birth: string | null
+          home_city: string | null
+          travel_year: number | null
+          has_testimonial: boolean | null
           full_name: string
           id: string
           nationality: string | null
@@ -85,6 +123,9 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           date_of_birth?: string | null
+          home_city?: string | null
+          travel_year?: number | null
+          has_testimonial?: boolean | null
           full_name: string
           id?: string
           nationality?: string | null
@@ -100,6 +141,9 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           date_of_birth?: string | null
+          home_city?: string | null
+          travel_year?: number | null
+          has_testimonial?: boolean | null
           full_name?: string
           id?: string
           nationality?: string | null
@@ -161,7 +205,86 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
-          referencedColumns: ["id"]
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_stories: {
+        Row: {
+          body_markdown: string
+          created_at: string
+          display_order: number | null
+          doctor_id: string | null
+          featured: boolean | null
+          headline: string
+          hero_image: string | null
+          id: string
+          locale: string | null
+          media: Json | null
+          outcome_summary: Json | null
+          patient_id: string | null
+          published: boolean | null
+          treatment_id: string
+          excerpt: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_markdown: string
+          created_at?: string
+          display_order?: number | null
+          doctor_id?: string | null
+          featured?: boolean | null
+          headline: string
+          hero_image?: string | null
+          id?: string
+          locale?: string | null
+          media?: Json | null
+          outcome_summary?: Json | null
+          patient_id?: string | null
+          published?: boolean | null
+          treatment_id: string
+          excerpt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_markdown?: string
+          created_at?: string
+          display_order?: number | null
+          doctor_id?: string | null
+          featured?: boolean | null
+          headline?: string
+          hero_image?: string | null
+          id?: string
+          locale?: string | null
+          media?: Json | null
+          outcome_summary?: Json | null
+          patient_id?: string | null
+          published?: boolean | null
+          treatment_id?: string
+          excerpt?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_stories_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_stories_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_stories_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -172,10 +295,13 @@ export type Database = {
           created_at: string
           currency: string | null
           description: string | null
+          ideal_candidates: string[] | null
           duration_days: number | null
           id: string
           is_active: boolean | null
           name: string
+          overview: string | null
+          procedures: Json | null
           recovery_time_days: number | null
           slug: string
           success_rate: number | null
@@ -188,10 +314,13 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          ideal_candidates?: string[] | null
           duration_days?: number | null
           id?: string
           is_active?: boolean | null
           name: string
+          overview?: string | null
+          procedures?: Json | null
           recovery_time_days?: number | null
           slug: string
           success_rate?: number | null
@@ -204,10 +333,13 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          ideal_candidates?: string[] | null
           duration_days?: number | null
           id?: string
           is_active?: boolean | null
           name?: string
+          overview?: string | null
+          procedures?: Json | null
           recovery_time_days?: number | null
           slug?: string
           success_rate?: number | null
@@ -743,7 +875,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      patient_testimonial_public: {
+        Row: {
+          created_at: string
+          full_name: string
+          has_testimonial: boolean | null
+          home_city: string | null
+          nationality: string | null
+          patient_id: string
+          published_review_count: number
+          published_story_count: number
+          reviews: Json
+          stories: Json
+          travel_year: number | null
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      patient_testimonial_rollup: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          date_of_birth: string | null
+          full_name: string
+          has_testimonial: boolean | null
+          home_city: string | null
+          nationality: string | null
+          notes: string | null
+          patient_id: string
+          preferred_currency: string | null
+          preferred_language: string | null
+          published_review_count: number
+          published_story_count: number
+          reviews: Json
+          sex: string | null
+          stories: Json
+          total_review_count: number
+          total_story_count: number
+          travel_year: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Functions: {
       check_email_exists: {

@@ -12,6 +12,7 @@ import PriceComparison from "@/components/PriceComparison";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { normalizeTreatment, getPriceComparison, getPrimaryProcedure } from "@/lib/treatments";
 import {
   Activity,
   ChevronDown,
@@ -41,63 +42,6 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   orthopedic: Activity,
 };
 
-const priceComparisonMap = {
-  "cardiac-surgery": {
-    egyptPrice: 8500,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 45000, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 38000, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 35000, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 42000, currency: "C$" },
-    ],
-  },
-  "eye-surgery": {
-    egyptPrice: 1200,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 4500, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 3800, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 3200, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 3900, currency: "C$" },
-    ],
-  },
-  "dental-care": {
-    egyptPrice: 300,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 2500, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 2200, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 1800, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 2100, currency: "C$" },
-    ],
-  },
-  "cosmetic-surgery": {
-    egyptPrice: 2800,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 12000, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 10500, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 9800, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 11200, currency: "C$" },
-    ],
-  },
-  "general-surgery": {
-    egyptPrice: 1500,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 8500, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 7200, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 6800, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 7800, currency: "C$" },
-    ],
-  },
-  "orthopedic-surgery": {
-    egyptPrice: 4200,
-    internationalPrices: [
-      { country: "United States", flag: "🇺🇸", price: 22000, currency: "$" },
-      { country: "United Kingdom", flag: "🇬🇧", price: 18500, currency: "£" },
-      { country: "Germany", flag: "🇩🇪", price: 17200, currency: "€" },
-      { country: "Canada", flag: "🇨🇦", price: 19800, currency: "C$" },
-    ],
-  },
-} as const;
-
 const formatCurrency = (value: number, currency?: string) => {
   try {
     return new Intl.NumberFormat("en-US", {
@@ -118,30 +62,39 @@ export default function Treatments() {
 
   const cards = useMemo(() => {
     return treatments.map((treatment) => {
-      const key = treatment.slug || treatment.category || treatment.name;
-      const iconKey = treatment.slug || treatment.category || "";
+      const normalized = normalizeTreatment(treatment);
+      const key = normalized.slug || normalized.category || normalized.name;
+      const iconKey = normalized.slug || normalized.category || "";
       const Icon = iconMap[iconKey.toLowerCase()] || Stethoscope;
-      const comparison =
-        priceComparisonMap[treatment.slug as keyof typeof priceComparisonMap] ||
-        priceComparisonMap[(treatment.category as keyof typeof priceComparisonMap) ?? ""];
+
+      const dbComparison = getPriceComparison(normalized.procedures);
+      const comparison = dbComparison ?? null;
+
+      const primaryProcedure = getPrimaryProcedure(normalized.procedures);
+
+      const basePriceValue =
+        typeof normalized.base_price === "number"
+          ? normalized.base_price
+          : primaryProcedure?.egyptPrice ?? null;
 
       return {
-        id: treatment.slug,
-        title: treatment.name,
+        id: normalized.slug,
+        title: normalized.name,
         icon: Icon,
-        summary: treatment.summary || "World-class treatment delivered by accredited specialists.",
-        description: treatment.description,
-        basePrice: typeof treatment.base_price === "number" ? treatment.base_price : null,
-        currency: treatment.currency || "USD",
-        isActive: treatment.is_active !== false,
+        summary:
+          normalized.summary ||
+          normalized.description ||
+          "World-class treatment delivered by accredited specialists.",
+        description: normalized.overview || normalized.description || undefined,
+        basePrice: basePriceValue,
+        currency: normalized.currency || "USD",
+        isActive: normalized.is_active !== false,
         comparison,
       };
     });
   }, [treatments]);
 
-  const comparisonEntries = cards.filter(
-    (card) => card.basePrice !== null && card.comparison,
-  );
+  const comparisonEntries = cards.filter((card) => card.comparison);
 
   if (loading) {
     return (
@@ -255,7 +208,7 @@ export default function Treatments() {
                               Learn More
                             </Button>
 
-                            {category.comparison && category.basePrice !== null ? (
+                            {category.comparison ? (
                               <Button
                                 className="w-full"
                                 variant="ghost"
@@ -281,9 +234,7 @@ export default function Treatments() {
                             ) : null}
                           </div>
 
-                          {expandedComparison === category.id &&
-                            category.comparison &&
-                            category.basePrice !== null && (
+                          {expandedComparison === category.id && category.comparison && (
                               <div className="mt-4">
                                 <PriceComparison
                                   treatment={category.title}

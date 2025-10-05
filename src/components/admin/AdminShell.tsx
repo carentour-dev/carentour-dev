@@ -32,6 +32,7 @@ import {
   LogOut,
   Stethoscope,
   Users,
+  Sparkles,
 } from "lucide-react";
 
 // Admin navigation configuration keeps sidebar items in one place.
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
+  { label: "Testimonials", href: "/admin/testimonials", icon: Sparkles },
   { label: "Facilities", href: "/admin/facilities", icon: Building2 },
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
 ];
