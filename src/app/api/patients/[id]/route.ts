@@ -9,10 +9,7 @@ export async function GET(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("patient_testimonial_public")
-      .select("*")
-      .eq("patient_id", params.id)
-      .maybeSingle();
+      .rpc("get_patient_testimonial", { p_patient_id: params.id });
 
     if (error) {
       console.error("Error fetching patient profile:", error);

@@ -945,6 +945,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      get_patient_testimonial: {
+        Args: { p_patient_id: string }
+        Returns: Database["public"]["Views"]["patient_testimonial_public"]["Row"] | null
+      }
       log_security_event: {
         Args: {
           p_event_data?: Json
