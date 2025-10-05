@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import {
   Calendar,
   FileText,
@@ -46,28 +47,28 @@ export default function Dashboard() {
       description: "Book a consultation with our specialists",
       icon: Calendar,
       action: () => router.push('/contact'),
-      color: "bg-primary text-background"
+      accentClass: "bg-sky-500/20 text-sky-100 group-hover:bg-sky-400/25"
     },
     {
       title: "Get Free Quote",
       description: "Get personalized treatment pricing",
       icon: FileText,
       action: () => router.push('/contact'),
-      color: "bg-secondary text-secondary-foreground"
+      accentClass: "bg-emerald-500/15 text-emerald-300 group-hover:bg-emerald-500/25 group-hover:text-emerald-200"
     },
     {
       title: "Find Doctors",
       description: "Browse our specialist doctors",
       icon: User,
       action: () => router.push('/doctors'),
-      color: "bg-accent text-accent-foreground"
+      accentClass: "bg-blue-500/15 text-blue-200 group-hover:bg-blue-500/25 group-hover:text-blue-100"
     },
     {
       title: "View Treatments",
       description: "Explore available medical procedures",
       icon: Heart,
       action: () => router.push('/treatments'),
-      color: "bg-muted text-muted-foreground"
+      accentClass: "bg-violet-500/15 text-violet-300 group-hover:bg-violet-500/25 group-hover:text-violet-200"
     }
   ];
 
@@ -162,20 +163,22 @@ export default function Dashboard() {
                     return (
                       <Button
                         key={index}
-                        variant="outline"
-                        className="h-auto p-4 justify-start gap-3 hover:shadow-md transition-shadow"
+                        variant="ghost"
+                        className="group h-full w-full justify-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 text-left text-foreground transition-all duration-200 hover:border-primary/40 hover:bg-muted/30 hover:text-foreground"
                         onClick={action.action}
                       >
-                        <div className={`p-2 rounded-lg ${action.color}`}>
+                        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-colors", action.accentClass)}>
                           <Icon className="h-4 w-4" />
                         </div>
-                        <div className="text-left">
-                          <div className="font-medium">{action.title}</div>
-                          <div className="text-sm text-muted-foreground">
+                        <div className="flex-1">
+                          <div className="font-semibold tracking-tight">
+                            {action.title}
+                          </div>
+                          <div className="text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
                             {action.description}
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 ml-auto" />
+                        <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                       </Button>
                     );
                   })}
