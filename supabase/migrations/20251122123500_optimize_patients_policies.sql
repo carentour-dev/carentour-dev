@@ -22,4 +22,12 @@ CREATE POLICY "Patients can update their own record"
   FOR UPDATE
   USING ((SELECT auth.uid()) = user_id);
 
+-- Recreate service role policy for treatments to avoid per-row auth.role evaluation
+DROP POLICY IF EXISTS "Service role can manage treatments" ON public.treatments;
+CREATE POLICY "Service role can manage treatments"
+  ON public.treatments
+  FOR ALL
+  USING ((SELECT auth.role()) = 'service_role')
+  WITH CHECK ((SELECT auth.role()) = 'service_role');
+
 COMMIT;
