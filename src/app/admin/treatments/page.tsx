@@ -78,6 +78,15 @@ const procedureSchema = z.object({
   recoveryStages: z.array(recoveryStageSchema).default([]),
 });
 
+type TreatmentGrade = Database["public"]["Enums"]["treatment_grade"];
+const gradeValues = ["grade_a", "grade_b", "grade_c"] as const satisfies readonly TreatmentGrade[];
+const gradeSchema = z.enum(gradeValues);
+const gradeLabels: Record<TreatmentGrade, string> = {
+  grade_a: "Grade A",
+  grade_b: "Grade B",
+  grade_c: "Grade C",
+};
+
 const treatmentSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
@@ -94,6 +103,7 @@ const treatmentSchema = z.object({
   procedures: z.array(procedureSchema).min(1, "Add at least one procedure"),
   is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  grade: gradeSchema.default("grade_c"),
 });
 
 type ProcedureFormValues = z.infer<typeof procedureSchema>;
@@ -113,11 +123,14 @@ type TreatmentPayload = {
   success_rate?: number;
   is_featured?: boolean;
   is_active?: boolean;
+  grade: TreatmentGrade;
   ideal_candidates: string[];
   procedures: ProcedureFormValues[];
 };
 
-type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"];
+type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"] & {
+  grade: TreatmentGrade;
+};
 
 type DoctorAssignment = {
   id: string;
@@ -156,6 +169,7 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   success_rate: undefined,
   is_featured: false,
   is_active: true,
+  grade: "grade_c",
   ideal_candidates: [],
   procedures: [createEmptyProcedure()],
 });
@@ -264,6 +278,7 @@ const mapRecordToFormValues = (treatment: TreatmentRecord): TreatmentFormValues 
     success_rate: treatment.success_rate ?? undefined,
     is_featured: treatment.is_featured ?? false,
     is_active: treatment.is_active ?? true,
+    grade: treatment.grade ?? "grade_c",
     ideal_candidates: Array.isArray(treatment.ideal_candidates)
       ? treatment.ideal_candidates.filter((entry): entry is string => typeof entry === "string")
       : [],
@@ -347,6 +362,7 @@ const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload =
     success_rate: values.success_rate ?? undefined,
     is_featured: values.is_featured ?? false,
     is_active: values.is_active ?? true,
+    grade: values.grade,
     ideal_candidates: idealCandidates,
     procedures,
   };
@@ -729,6 +745,34 @@ export default function AdminTreatmentsPage() {
 
                 <FormField
                   control={form.control}
+                  name="grade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Internal grade</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gradeValues.map((value) => (
+                              <SelectItem key={value} value={value}>
+                                {gradeLabels[value]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        Guides internal prioritization. Patients never see this label.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="summary"
                   render={({ field }) => (
                     <FormItem>
@@ -966,6 +1010,7 @@ export default function AdminTreatmentsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Grade</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Featured</TableHead>
                   <TableHead>Status</TableHead>
@@ -982,6 +1027,9 @@ export default function AdminTreatmentsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{treatment.category || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{gradeLabels[treatment.grade]}</Badge>
+                    </TableCell>
                     <TableCell>
                       {typeof treatment.base_price === "number"
                         ? `${treatment.base_price.toLocaleString()} ${treatment.currency ?? "USD"}`
@@ -1017,7 +1065,7 @@ export default function AdminTreatmentsPage() {
 
                 {filteredTreatments.length === 0 && !treatmentsQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       No treatments found. Adjust filters or create a new treatment.
                     </TableCell>
                   </TableRow>
