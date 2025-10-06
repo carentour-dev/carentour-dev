@@ -926,6 +926,32 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      treatment_metadata: {
+        Row: {
+          grade: Database["public"]["Enums"]["treatment_grade"]
+          treatment_id: string
+          updated_at: string
+        }
+        Insert: {
+          grade?: Database["public"]["Enums"]["treatment_grade"]
+          treatment_id: string
+          updated_at?: string
+        }
+        Update: {
+          grade?: Database["public"]["Enums"]["treatment_grade"]
+          treatment_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_metadata_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: true
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_email_exists: {
@@ -970,6 +996,7 @@ export type Database = {
     }
     Enums: {
       subscription_status: "pending" | "active" | "unsubscribed" | "bounced"
+      treatment_grade: "grade_a" | "grade_b" | "grade_c"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1098,6 +1125,7 @@ export const Constants = {
   public: {
     Enums: {
       subscription_status: ["pending", "active", "unsubscribed", "bounced"],
+      treatment_grade: ["grade_a", "grade_b", "grade_c"],
     },
   },
 } as const
