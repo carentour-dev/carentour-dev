@@ -18,6 +18,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const clearSupabaseAuthStorage = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const authClient = supabase.auth as unknown as { storageKey?: string };
+  const storageKey = authClient?.storageKey;
+
+  if (!storageKey) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(storageKey);
+    window.localStorage.removeItem(`${storageKey}-code-verifier`);
+  } catch (storageError) {
+    console.error('Failed to clear Supabase auth storage:', storageError);
+  }
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -255,7 +275,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.id, logSecurityEvent]);
 
   const signOut = useCallback(async () => {
-    // Log signout event
     if (user) {
       await logSecurityEvent({
         event_type: 'user_signout',
@@ -265,7 +284,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
 
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Supabase sign-out failed:', error);
+
+        if (user) {
+          await logSecurityEvent({
+            event_type: 'failed_signout',
+            user_id: user.id,
+            event_data: {
+              error_message: error.message,
+              status: (error as { status?: number }).status
+            },
+            risk_level: 'medium'
+          });
+        }
+
+        clearSupabaseAuthStorage();
+      }
+    } catch (signOutError) {
+      console.error('Unexpected error during sign-out:', signOutError);
+      clearSupabaseAuthStorage();
+    } finally {
+      setSession(null);
+      setUser(null);
+    }
   }, [user, logSecurityEvent]);
 
   const resetPassword = useCallback(async (email: string) => {
