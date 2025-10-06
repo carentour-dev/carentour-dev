@@ -16,54 +16,78 @@ export type Database = {
     Tables: {
       contact_requests: {
         Row: {
+          additional_questions: string | null
           assigned_to: string | null
+          budget_range: string | null
+          companions: string | null
+          contact_preference: string | null
           country: string | null
           created_at: string
+          destination: string | null
           email: string
           first_name: string
+          health_background: string | null
           id: string
           last_name: string
           message: string
+          medical_reports: string | null
           notes: string | null
           phone: string | null
           request_type: string
           resolved_at: string | null
           status: Database["public"]["Enums"]["contact_request_status"]
           treatment: string | null
+          travel_window: string | null
           updated_at: string
         }
         Insert: {
+          additional_questions?: string | null
           assigned_to?: string | null
+          budget_range?: string | null
+          companions?: string | null
+          contact_preference?: string | null
           country?: string | null
           created_at?: string
+          destination?: string | null
           email: string
           first_name: string
+          health_background?: string | null
           id?: string
           last_name: string
           message: string
+          medical_reports?: string | null
           notes?: string | null
           phone?: string | null
           request_type?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["contact_request_status"]
           treatment?: string | null
+          travel_window?: string | null
           updated_at?: string
         }
         Update: {
+          additional_questions?: string | null
           assigned_to?: string | null
+          budget_range?: string | null
+          companions?: string | null
+          contact_preference?: string | null
           country?: string | null
           created_at?: string
+          destination?: string | null
           email?: string
           first_name?: string
+          health_background?: string | null
           id?: string
           last_name?: string
           message?: string
+          medical_reports?: string | null
           notes?: string | null
           phone?: string | null
           request_type?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["contact_request_status"]
           treatment?: string | null
+          travel_window?: string | null
           updated_at?: string
         }
         Relationships: [
