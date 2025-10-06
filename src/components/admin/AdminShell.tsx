@@ -28,6 +28,7 @@ import {
   ActivitySquare,
   Building2,
   Hotel,
+  Inbox,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -39,6 +40,7 @@ import {
 // Admin navigation configuration keeps sidebar items in one place.
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Requests", href: "/admin/requests", icon: Inbox },
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
