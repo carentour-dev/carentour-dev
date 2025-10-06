@@ -1,12 +1,83 @@
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
+import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import type { Database } from "@/integrations/supabase/types";
 
 type TreatmentInsert = Database["public"]["Tables"]["treatments"]["Insert"];
 type TreatmentUpdate = Database["public"]["Tables"]["treatments"]["Update"];
+type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
+type TreatmentGrade = Database["public"]["Enums"]["treatment_grade"];
+
+type TreatmentWithGrade = TreatmentRow & {
+  grade: TreatmentGrade;
+};
 
 const treatmentsService = new CrudService("treatments", "treatment");
+const gradeSchema = z.enum(["grade_a", "grade_b", "grade_c"]);
+const METADATA_TABLE = "treatment_metadata";
+const DEFAULT_GRADE: TreatmentGrade = "grade_c";
+
+const upsertTreatmentGrade = async (treatmentId: string, grade: TreatmentGrade) => {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from(METADATA_TABLE)
+    .upsert({ treatment_id: treatmentId, grade })
+    .select("grade")
+    .single();
+
+  if (error) {
+    throw new ApiError(500, "Failed to update treatment grade", error.message);
+  }
+
+  return (data?.grade ?? grade) as TreatmentGrade;
+};
+
+const fetchTreatmentGrade = async (treatmentId: string): Promise<TreatmentGrade> => {
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const { data, error } = await supabase
+      .from(METADATA_TABLE)
+      .select("grade")
+      .eq("treatment_id", treatmentId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return (data?.grade ?? DEFAULT_GRADE) as TreatmentGrade;
+  } catch (error) {
+    console.error("Failed to load treatment metadata", error);
+    return DEFAULT_GRADE;
+  }
+};
+
+const fetchTreatmentMetadataMap = async () => {
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const { data, error } = await supabase
+      .from(METADATA_TABLE)
+      .select("treatment_id, grade");
+
+    if (error) {
+      throw error;
+    }
+
+    const map = new Map<string, TreatmentGrade>();
+
+    for (const row of data ?? []) {
+      map.set(row.treatment_id, row.grade as TreatmentGrade);
+    }
+
+    return map;
+  } catch (error) {
+    console.error("Failed to load treatment metadata", error);
+    return new Map<string, TreatmentGrade>();
+  }
+};
 
 const internationalPriceSchema = z.object({
   country: z.string().min(1),
@@ -49,22 +120,31 @@ const createTreatmentSchema = z.object({
   procedures: z.array(procedureSchema).nonempty("Add at least one procedure"),
   is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  grade: gradeSchema.default("grade_c"),
 });
 
 const updateTreatmentSchema = createTreatmentSchema.partial();
 const treatmentIdSchema = z.string().uuid();
 
 export const treatmentController = {
-  async list() {
-    return treatmentsService.list();
+  async list(): Promise<TreatmentWithGrade[]> {
+    const treatments = (await treatmentsService.list()) as TreatmentRow[];
+    const metadataMap = await fetchTreatmentMetadataMap();
+
+    return treatments.map((treatment) => ({
+      ...treatment,
+      grade: metadataMap.get(treatment.id) ?? DEFAULT_GRADE,
+    }));
   },
 
-  async get(id: unknown) {
+  async get(id: unknown): Promise<TreatmentWithGrade> {
     const treatmentId = treatmentIdSchema.parse(id);
-    return treatmentsService.getById(treatmentId);
+    const treatment = (await treatmentsService.getById(treatmentId)) as TreatmentRow;
+    const grade = await fetchTreatmentGrade(treatment.id);
+    return { ...treatment, grade };
   },
 
-  async create(payload: unknown) {
+  async create(payload: unknown): Promise<TreatmentWithGrade> {
     const parsed = createTreatmentSchema.parse(payload);
 
     const sanitizedProcedures = parsed.procedures.map((procedure) => ({
@@ -92,10 +172,12 @@ export const treatmentController = {
       procedures: sanitizedProcedures,
     };
 
-    return treatmentsService.create(createPayload);
+    const created = (await treatmentsService.create(createPayload)) as TreatmentRow;
+    const grade = await upsertTreatmentGrade(created.id, (parsed.grade ?? DEFAULT_GRADE) as TreatmentGrade);
+    return { ...created, grade };
   },
 
-  async update(id: unknown, payload: unknown) {
+  async update(id: unknown, payload: unknown): Promise<TreatmentWithGrade> {
     const treatmentId = treatmentIdSchema.parse(id);
     const parsed = updateTreatmentSchema.parse(payload);
 
@@ -130,7 +212,17 @@ export const treatmentController = {
       }));
     }
 
-    return treatmentsService.update(treatmentId, updatePayload);
+    const updated = (await treatmentsService.update(treatmentId, updatePayload)) as TreatmentRow;
+
+    const shouldUpdateGrade = Object.prototype.hasOwnProperty.call(parsed, "grade");
+    const grade = shouldUpdateGrade
+      ? await upsertTreatmentGrade(
+          treatmentId,
+          ((parsed.grade ?? DEFAULT_GRADE) as TreatmentGrade),
+        )
+      : await fetchTreatmentGrade(treatmentId);
+
+    return { ...updated, grade };
   },
 
   async delete(id: unknown) {
