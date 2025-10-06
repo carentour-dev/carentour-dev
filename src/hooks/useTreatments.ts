@@ -9,6 +9,7 @@ const fetchTreatments = async (): Promise<TreatmentRow[]> => {
     .from("treatments")
     .select("*")
     .eq("is_active", true)
+    .order("is_featured", { ascending: false })
     .order("name", { ascending: true });
 
   if (error) {
