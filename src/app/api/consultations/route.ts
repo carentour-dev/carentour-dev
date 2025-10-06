@@ -77,6 +77,7 @@ export const POST = async (req: NextRequest) => {
         destination: payload.destination,
         travelWindow: payload.travelWindow,
         healthBackground,
+        message: healthBackground,
         budgetRange: payload.budgetRange,
         companions: payload.companions,
         medicalReports: payload.medicalReports,
