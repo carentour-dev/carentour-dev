@@ -230,7 +230,7 @@ export default function PatientProfilePage() {
               Join {profile.full_name} and thousands of satisfied patients who have chosen Egypt for their medical care
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent" onClick={() => router.push("/contact")}>
+              <Button size="lg" variant="accent" onClick={() => router.push("/consultation")}>
                 Get Free Consultation
               </Button>
               <Button size="lg" variant="hero" onClick={() => router.push("/treatments")}>
