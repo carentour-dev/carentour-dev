@@ -175,7 +175,7 @@ const USPSection = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
-              <Link href="/contact">Get Free Consultation</Link>
+              <Link href="/consultation">Get Free Consultation</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
               <Link href="/start-journey">Start Your Journey</Link>
