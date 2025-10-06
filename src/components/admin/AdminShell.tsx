@@ -29,6 +29,7 @@ import {
   Building2,
   Hotel,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Stethoscope,
   Users,
@@ -49,14 +50,40 @@ const NAV_ITEMS = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useAuth();
-  const { profile } = useUserProfile();
+  const { signOut, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+
+  const isCheckingAccess = authLoading || profileLoading;
+  const isAdmin = profile?.role === "admin";
 
   // Reuse existing auth provider to fully sign out admins.
   const handleSignOut = async () => {
     await signOut();
     router.replace("/auth");
   };
+
+  if (isCheckingAccess) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Checking admin access…</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Admin access required</h2>
+          <p className="text-sm text-muted-foreground">
+            You&apos;re signed in, but your account doesn&apos;t have admin privileges.
+          </p>
+        </div>
+        <Button onClick={() => router.replace("/dashboard")}>Return to dashboard</Button>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
