@@ -343,6 +343,105 @@ export default function TreatmentDetails() {
           </div>
         </section>
 
+        {/* Procedures Section */}
+        <section className="py-20 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Available Procedures
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Comprehensive information about each procedure including recovery details and candidate requirements
+              </p>
+            </div>
+
+            <div className="space-y-12">
+              {treatment.procedures && treatment.procedures.length > 0 ? (
+                treatment.procedures.map((procedure: any, index: number) => (
+                  <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring">
+                    <CardHeader>
+                      <CardTitle className="text-2xl">{procedure.name}</CardTitle>
+                      <p className="text-muted-foreground text-lg">{procedure.description}</p>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Basic Info Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
+                          <div className="text-sm font-medium text-foreground">Duration</div>
+                          <div className="text-sm text-muted-foreground">{procedure.duration}</div>
+                        </div>
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <Heart className="h-6 w-6 text-primary mx-auto mb-2" />
+                          <div className="text-sm font-medium text-foreground">Recovery</div>
+                          <div className="text-sm text-muted-foreground">{procedure.recovery}</div>
+                        </div>
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <DollarSign className="h-6 w-6 text-primary mx-auto mb-2" />
+                          <div className="text-sm font-medium text-foreground">Price</div>
+                          <div className="text-sm text-muted-foreground">{procedure.price}</div>
+                        </div>
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <Star className="h-6 w-6 text-primary mx-auto mb-2" />
+                          <div className="text-sm font-medium text-foreground">Success Rate</div>
+                          <div className="text-sm text-muted-foreground">{procedure.success_rate}</div>
+                        </div>
+                      </div>
+
+                      {/* Candidate Requirements */}
+                      <div className="mb-8">
+                        <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5 text-primary" />
+                          Candidate Requirements
+                        </h4>
+                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {procedure.candidateRequirements.map((req: string, reqIndex: number) => (
+                            <li key={reqIndex} className="flex items-start gap-2">
+                              <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                              <span className="text-muted-foreground">{req}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Price Comparison */}
+                      {procedure.internationalPrices && procedure.internationalPrices.length > 0 && procedure.egyptPrice ? (
+                        <div className="mb-8">
+                          <PriceComparison
+                            treatment={procedure.name}
+                            egyptPrice={procedure.egyptPrice}
+                            internationalPrices={procedure.internationalPrices}
+                          />
+                        </div>
+                      ) : null}
+
+                      {/* Recovery Timeline */}
+                      <div>
+                        <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-primary" />
+                          Recovery Timeline
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {procedure.recoveryStages.map((stage: any, stageIndex: number) => (
+                            <div key={stageIndex} className="p-4 border border-border rounded-lg">
+                              <div className="text-sm font-medium text-primary mb-2">{stage.stage}</div>
+                              <div className="text-sm text-muted-foreground">{stage.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  Detailed procedure information for this treatment will be provided during your consultation.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Specialist Doctors */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
@@ -452,105 +551,6 @@ export default function TreatmentDetails() {
                 No patient stories published yet. Check back soon for real-case journeys.
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Procedures Section */}
-        <section className="py-20 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Available Procedures
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Comprehensive information about each procedure including recovery details and candidate requirements
-              </p>
-            </div>
-
-            <div className="space-y-12">
-              {treatment.procedures && treatment.procedures.length > 0 ? (
-                treatment.procedures.map((procedure: any, index: number) => (
-                  <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">{procedure.name}</CardTitle>
-                    <p className="text-muted-foreground text-lg">{procedure.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Basic Info Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                      <div className="text-center p-4 bg-muted/50 rounded-lg">
-                        <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm font-medium text-foreground">Duration</div>
-                        <div className="text-sm text-muted-foreground">{procedure.duration}</div>
-                      </div>
-                      <div className="text-center p-4 bg-muted/50 rounded-lg">
-                        <Heart className="h-6 w-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm font-medium text-foreground">Recovery</div>
-                        <div className="text-sm text-muted-foreground">{procedure.recovery}</div>
-                      </div>
-                      <div className="text-center p-4 bg-muted/50 rounded-lg">
-                        <DollarSign className="h-6 w-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm font-medium text-foreground">Price</div>
-                        <div className="text-sm text-muted-foreground">{procedure.price}</div>
-                      </div>
-                      <div className="text-center p-4 bg-muted/50 rounded-lg">
-                        <Star className="h-6 w-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm font-medium text-foreground">Success Rate</div>
-                        <div className="text-sm text-muted-foreground">{procedure.success_rate}</div>
-                      </div>
-                    </div>
-
-                    {/* Candidate Requirements */}
-                    <div className="mb-8">
-                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-primary" />
-                        Candidate Requirements
-                      </h4>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {procedure.candidateRequirements.map((req: string, reqIndex: number) => (
-                          <li key={reqIndex} className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                            <span className="text-muted-foreground">{req}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Price Comparison */}
-                    {procedure.internationalPrices && procedure.internationalPrices.length > 0 && procedure.egyptPrice ? (
-                      <div className="mb-8">
-                        <PriceComparison
-                          treatment={procedure.name}
-                          egyptPrice={procedure.egyptPrice}
-                          internationalPrices={procedure.internationalPrices}
-                        />
-                      </div>
-                    ) : null}
-
-                    {/* Recovery Timeline */}
-                    <div>
-                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-primary" />
-                        Recovery Timeline
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {procedure.recoveryStages.map((stage: any, stageIndex: number) => (
-                          <div key={stageIndex} className="p-4 border border-border rounded-lg">
-                            <div className="text-sm font-medium text-primary mb-2">{stage.stage}</div>
-                            <div className="text-sm text-muted-foreground">{stage.description}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                ))
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  Detailed procedure information for this treatment will be provided during your consultation.
-                </div>
-              )}
-            </div>
           </div>
         </section>
 
