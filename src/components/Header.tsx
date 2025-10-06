@@ -90,7 +90,7 @@ const Header = () => {
               </Link>
             )}
             <Button variant="accent" size="sm" asChild>
-              <Link href="/contact">Get Free Consultation</Link>
+              <Link href="/consultation">Get Free Consultation</Link>
             </Button>
           </div>
         </div>
@@ -165,7 +165,7 @@ const Header = () => {
                 </Link>
               )}
               <Button variant="accent" className="mt-2" asChild>
-                <Link href="/contact">Get Free Consultation</Link>
+                <Link href="/consultation">Get Free Consultation</Link>
               </Button>
             </div>
           </nav>
