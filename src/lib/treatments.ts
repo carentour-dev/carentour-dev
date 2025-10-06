@@ -36,6 +36,7 @@ export type NormalizedTreatment = {
   duration_days?: number | null;
   recovery_time_days?: number | null;
   success_rate?: number | null;
+  is_featured?: boolean | null;
   is_active?: boolean | null;
   idealCandidates: string[];
   procedures: TreatmentProcedure[];
@@ -141,6 +142,7 @@ export const normalizeTreatment = (treatment: TreatmentRow): NormalizedTreatment
     duration_days: treatment.duration_days,
     recovery_time_days: treatment.recovery_time_days,
     success_rate: treatment.success_rate,
+    is_featured: treatment.is_featured,
     is_active: treatment.is_active,
     idealCandidates,
     procedures,
