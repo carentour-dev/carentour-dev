@@ -14,7 +14,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import * as z from "zod";
 
@@ -51,19 +50,25 @@ export default function Contact() {
     try {
       console.log("Sending contact form submission:", values);
 
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: values
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
       });
 
-      if (error) {
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Failed to submit contact request");
       }
 
-      console.log("Email sent successfully:", data);
+      console.log("Contact request stored with ID:", data?.contactRequestId);
 
       toast({
         title: "Message Sent Successfully!",
-        description: "Thank you for contacting us. We will get back to you within 2 hours.",
+        description: "Thanks for reaching out—our coordinators see your request instantly and will be in touch within 2 hours.",
       });
 
       // Reset form after successful submission
