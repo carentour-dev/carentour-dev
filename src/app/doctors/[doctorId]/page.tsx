@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -118,16 +119,12 @@ export default function DoctorDetail() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Button size="lg">
+                  <Button size="lg" asChild>
+                    <Link href="/consultation">
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Schedule Consultation
-                    </Button>
-                    <Button size="lg" variant="outline">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Get Free Quote
-                    </Button>
-                  </div>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -276,11 +273,8 @@ export default function DoctorDetail() {
                     <p className="text-sm text-muted-foreground">
                       Book a consultation with Dr. {doctor.name.split(' ')[1] || doctor.name.split(' ')[0]} to discuss your treatment options.
                     </p>
-                    <Button className="w-full" size="lg">
-                      Schedule Consultation
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Get Free Quote
+                    <Button className="w-full" size="lg" asChild>
+                      <Link href="/consultation">Schedule Consultation</Link>
                     </Button>
                   </CardContent>
                 </Card>
