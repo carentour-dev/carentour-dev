@@ -1,7 +1,16 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const supabaseUrl = Deno.env.get("SUPABASE_URL");
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for send-contact-email function");
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +26,7 @@ interface ContactEmailRequest {
   country?: string;
   treatment?: string;
   message: string;
+  skipLogging?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -26,9 +36,63 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { firstName, lastName, email, phone, country, treatment, message }: ContactEmailRequest = await req.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      country,
+      treatment,
+      message,
+      skipLogging = false,
+    }: ContactEmailRequest = await req.json();
 
-    console.log("Processing contact form submission:", { firstName, lastName, email });
+    const submission = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      phone: phone?.trim() ?? null,
+      country: country?.trim() ?? null,
+      treatment: treatment?.trim() ?? null,
+      message: message.trim(),
+    };
+
+    console.log("Processing contact form submission:", {
+      firstName: submission.firstName,
+      lastName: submission.lastName,
+      email: submission.email,
+    });
+
+    let contactRequest: { id: string } | null = null;
+
+    if (!skipLogging) {
+      // Persist the request so admins can triage it in the console.
+      const { data, error: insertError } = await supabase
+        .from("contact_requests")
+        .insert({
+          first_name: submission.firstName,
+          last_name: submission.lastName,
+          email: submission.email.toLowerCase(),
+          phone: submission.phone,
+          country: submission.country,
+          treatment: submission.treatment,
+          message: submission.message,
+          request_type: "general",
+        })
+        .select("id")
+        .single();
+
+      if (insertError) {
+        console.error("Failed to log contact request:", insertError);
+        throw new Error(`Failed to log contact request: ${insertError.message}`);
+      }
+
+      contactRequest = data ?? null;
+
+      if (contactRequest) {
+        console.log("Contact request stored with ID:", contactRequest.id);
+      }
+    }
 
     // Send confirmation email to the user
     const userEmailResponse = await resend.emails.send({
@@ -38,18 +102,18 @@ const handler = async (req: Request): Promise<Response> => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #2563eb; margin-bottom: 20px;">Thank you for contacting us!</h1>
-          <p>Dear ${firstName} ${lastName},</p>
+          <p>Dear ${submission.firstName} ${submission.lastName},</p>
           <p>We have received your message and will get back to you within 2 hours.</p>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Your message details:</h3>
-            <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ''}
-            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ''}
+            <p><strong>Name:</strong> ${submission.firstName} ${submission.lastName}</p>
+            <p><strong>Email:</strong> ${submission.email}</p>
+            ${submission.phone ? `<p><strong>Phone:</strong> ${submission.phone}</p>` : ''}
+            ${submission.country ? `<p><strong>Country:</strong> ${submission.country}</p>` : ''}
+            ${submission.treatment ? `<p><strong>Treatment of Interest:</strong> ${submission.treatment}</p>` : ''}
             <p><strong>Message:</strong></p>
-            <p style="background-color: white; padding: 15px; border-radius: 4px;">${message}</p>
+            <p style="background-color: white; padding: 15px; border-radius: 4px;">${submission.message}</p>
           </div>
           
           <p>Our medical coordinators will review your inquiry and contact you soon with personalized information about your treatment options.</p>
@@ -72,23 +136,23 @@ const handler = async (req: Request): Promise<Response> => {
     const businessEmailResponse = await resend.emails.send({
       from: "Care N Tour Contact Form <onboarding@resend.dev>",
       to: ["info@carentour.com"], // Replace with actual business email
-      subject: `New Contact Form Submission - ${firstName} ${lastName}`,
+      subject: `New Contact Form Submission - ${submission.firstName} ${submission.lastName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #dc2626; margin-bottom: 20px;">New Contact Form Submission</h1>
           
           <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
             <h3 style="margin-top: 0; color: #dc2626;">Contact Details:</h3>
-            <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ''}
-            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ''}
+            <p><strong>Name:</strong> ${submission.firstName} ${submission.lastName}</p>
+            <p><strong>Email:</strong> ${submission.email}</p>
+            ${submission.phone ? `<p><strong>Phone:</strong> ${submission.phone}</p>` : ''}
+            ${submission.country ? `<p><strong>Country:</strong> ${submission.country}</p>` : ''}
+            ${submission.treatment ? `<p><strong>Treatment of Interest:</strong> ${submission.treatment}</p>` : ''}
           </div>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Message:</h3>
-            <p style="background-color: white; padding: 15px; border-radius: 4px; white-space: pre-line;">${message}</p>
+            <p style="background-color: white; padding: 15px; border-radius: 4px; white-space: pre-line;">${submission.message}</p>
           </div>
           
           <p style="color: #dc2626; font-weight: bold;">⚠️ Please respond within 2 hours as promised to the customer.</p>
@@ -107,7 +171,8 @@ const handler = async (req: Request): Promise<Response> => {
       success: true, 
       message: "Emails sent successfully",
       userEmailId: userEmailResponse.data?.id,
-      businessEmailId: businessEmailResponse.data?.id 
+      businessEmailId: businessEmailResponse.data?.id,
+      contactRequestId: contactRequest?.id ?? null
     }), {
       status: 200,
       headers: {
