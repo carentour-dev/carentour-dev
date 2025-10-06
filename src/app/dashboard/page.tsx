@@ -46,7 +46,7 @@ export default function Dashboard() {
       title: "Schedule Consultation",
       description: "Book a consultation with our specialists",
       icon: Calendar,
-      action: () => router.push('/contact'),
+      action: () => router.push('/consultation'),
       accentClass: "bg-sky-500/20 text-sky-100 group-hover:bg-sky-400/25"
     },
     {
