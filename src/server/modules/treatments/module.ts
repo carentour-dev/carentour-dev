@@ -47,6 +47,7 @@ const createTreatmentSchema = z.object({
   recovery_time_days: z.coerce.number().int().min(0).optional(),
   success_rate: z.coerce.number().min(0).max(100).optional(),
   procedures: z.array(procedureSchema).nonempty("Add at least one procedure"),
+  is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -85,6 +86,7 @@ export const treatmentController = {
       duration_days: parsed.duration_days ?? null,
       recovery_time_days: parsed.recovery_time_days ?? null,
       success_rate: parsed.success_rate ?? null,
+      is_featured: parsed.is_featured ?? false,
       is_active: parsed.is_active ?? true,
       ideal_candidates: parsed.ideal_candidates ?? [],
       procedures: sanitizedProcedures,
@@ -115,6 +117,7 @@ export const treatmentController = {
     if (parsed.recovery_time_days !== undefined)
       updatePayload.recovery_time_days = parsed.recovery_time_days ?? null;
     if (parsed.success_rate !== undefined) updatePayload.success_rate = parsed.success_rate ?? null;
+    if (parsed.is_featured !== undefined) updatePayload.is_featured = parsed.is_featured;
     if (parsed.is_active !== undefined) updatePayload.is_active = parsed.is_active;
     if (parsed.ideal_candidates !== undefined)
       updatePayload.ideal_candidates = parsed.ideal_candidates ?? [];
