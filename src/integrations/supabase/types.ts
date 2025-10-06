@@ -296,10 +296,11 @@ export type Database = {
           currency: string | null
           description: string | null
           ideal_candidates: string[] | null
-          duration_days: number | null
-          id: string
-          is_active: boolean | null
-          name: string
+      duration_days: number | null
+      id: string
+      is_featured: boolean
+      is_active: boolean | null
+      name: string
           overview: string | null
           procedures: Json | null
           recovery_time_days: number | null
@@ -315,9 +316,10 @@ export type Database = {
           currency?: string | null
           description?: string | null
           ideal_candidates?: string[] | null
-          duration_days?: number | null
-          id?: string
-          is_active?: boolean | null
+      duration_days?: number | null
+      id?: string
+      is_featured?: boolean
+      is_active?: boolean | null
           name: string
           overview?: string | null
           procedures?: Json | null
@@ -334,9 +336,10 @@ export type Database = {
           currency?: string | null
           description?: string | null
           ideal_candidates?: string[] | null
-          duration_days?: number | null
-          id?: string
-          is_active?: boolean | null
+      duration_days?: number | null
+      id?: string
+      is_featured?: boolean
+      is_active?: boolean | null
           name?: string
           overview?: string | null
           procedures?: Json | null
