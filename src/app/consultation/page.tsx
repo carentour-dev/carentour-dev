@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { format } from "date-fns";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +21,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarDays, Globe2, HeartPulse, MapPin, Stethoscope, Users } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  CalendarDays,
+  Globe2,
+  HeartPulse,
+  MapPin,
+  Stethoscope,
+  Users,
+} from "lucide-react";
 
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Share your full name"),
@@ -29,7 +41,7 @@ const consultationSchema = z.object({
   phone: z.string().min(1, "Share a phone or WhatsApp number"),
   country: z.string().min(1, "Tell us where you live"),
   treatment: z.string().min(1, "Which treatment or procedure interests you?"),
-  travelWindow: z.string().min(1, "When would you like to travel?"),
+  travelWindow: z.date({ required_error: "Select your ideal travel date" }),
   healthBackground: z
     .string()
     .min(20, "Describe your health goals or diagnosis (20 characters minimum)"),
@@ -91,7 +103,7 @@ export default function ConsultationPage() {
       phone: "",
       country: "",
       treatment: "",
-      travelWindow: "",
+      travelWindow: undefined,
       healthBackground: "",
       budgetRange: "",
       companions: "",
@@ -100,15 +112,21 @@ export default function ConsultationPage() {
       additionalQuestions: "",
     },
   });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const handleSubmit = async (values: ConsultationFormValues) => {
     setIsSubmitting(true);
 
     try {
+      const submissionPayload = {
+        ...values,
+        travelWindow: values.travelWindow.toISOString(),
+      };
       const response = await fetch("/api/consultations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(submissionPayload),
       });
 
       const result = await response.json();
@@ -262,11 +280,32 @@ export default function ConsultationPage() {
                         control={form.control}
                         name="travelWindow"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel>Ideal Travel Window *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Late March or early April 2025" {...field} />
-                            </FormControl>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? format(field.value, "PPP") : "Select a date"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={(date) => field.onChange(date)}
+                                  initialFocus
+                                  disabled={(date) => date < today}
+                                />
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
