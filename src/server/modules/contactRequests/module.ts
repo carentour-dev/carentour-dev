@@ -26,6 +26,14 @@ const createContactRequestSchema = z.object({
   phone: z.string().optional(),
   country: z.string().optional(),
   treatment: z.string().optional(),
+  destination: z.string().optional(),
+  travel_window: z.string().optional(),
+  health_background: z.string().optional(),
+  budget_range: z.string().optional(),
+  companions: z.string().optional(),
+  medical_reports: z.string().optional(),
+  contact_preference: z.string().optional(),
+  additional_questions: z.string().optional(),
   message: z.string().min(1),
   request_type: z.string().optional(),
   notes: z.string().optional(),
@@ -39,6 +47,14 @@ const updateContactRequestSchema = z
     request_type: z.string().optional(),
     notes: z.string().optional(),
     assigned_to: optionalUuid,
+    destination: z.string().optional(),
+    travel_window: z.string().optional(),
+    health_background: z.string().optional(),
+    budget_range: z.string().optional(),
+    companions: z.string().optional(),
+    medical_reports: z.string().optional(),
+    contact_preference: z.string().optional(),
+    additional_questions: z.string().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields provided for update",
@@ -109,6 +125,14 @@ export const contactRequestController = {
       phone: trimOptional(parsed.phone),
       country: trimOptional(parsed.country),
       treatment: trimOptional(parsed.treatment),
+      destination: trimOptional(parsed.destination),
+      travel_window: trimOptional(parsed.travel_window),
+      health_background: trimOptional(parsed.health_background),
+      budget_range: trimOptional(parsed.budget_range),
+      companions: trimOptional(parsed.companions),
+      medical_reports: trimOptional(parsed.medical_reports),
+      contact_preference: trimOptional(parsed.contact_preference),
+      additional_questions: trimOptional(parsed.additional_questions),
       message: trim(parsed.message),
       request_type: parsed.request_type ? trim(parsed.request_type) : "general",
       notes: trimOptional(parsed.notes),
@@ -146,6 +170,38 @@ export const contactRequestController = {
 
     if (parsed.assigned_to !== undefined) {
       updatePayload.assigned_to = parsed.assigned_to ?? null;
+    }
+
+    if (parsed.destination !== undefined) {
+      updatePayload.destination = trimOptional(parsed.destination);
+    }
+
+    if (parsed.travel_window !== undefined) {
+      updatePayload.travel_window = trimOptional(parsed.travel_window);
+    }
+
+    if (parsed.health_background !== undefined) {
+      updatePayload.health_background = trimOptional(parsed.health_background);
+    }
+
+    if (parsed.budget_range !== undefined) {
+      updatePayload.budget_range = trimOptional(parsed.budget_range);
+    }
+
+    if (parsed.companions !== undefined) {
+      updatePayload.companions = trimOptional(parsed.companions);
+    }
+
+    if (parsed.medical_reports !== undefined) {
+      updatePayload.medical_reports = trimOptional(parsed.medical_reports);
+    }
+
+    if (parsed.contact_preference !== undefined) {
+      updatePayload.contact_preference = trimOptional(parsed.contact_preference);
+    }
+
+    if (parsed.additional_questions !== undefined) {
+      updatePayload.additional_questions = trimOptional(parsed.additional_questions);
     }
 
     if (Object.keys(updatePayload).length === 0) {
