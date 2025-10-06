@@ -220,7 +220,7 @@ const StoriesPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
-                <Link href="/contact">Get Free Consultation</Link>
+                <Link href="/consultation">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
                 <Link href="/start-journey">Start Your Journey</Link>
