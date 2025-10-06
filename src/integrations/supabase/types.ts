@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact_requests: {
+        Row: {
+          assigned_to: string | null
+          country: string | null
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          message: string
+          notes: string | null
+          phone: string | null
+          request_type: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["contact_request_status"]
+          treatment: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          country?: string | null
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          message: string
+          notes?: string | null
+          phone?: string | null
+          request_type?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["contact_request_status"]
+          treatment?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          message?: string
+          notes?: string | null
+          phone?: string | null
+          request_type?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["contact_request_status"]
+          treatment?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_reviews: {
         Row: {
           created_at: string
@@ -995,6 +1057,7 @@ export type Database = {
       }
     }
     Enums: {
+      contact_request_status: "new" | "in_progress" | "resolved"
       subscription_status: "pending" | "active" | "unsubscribed" | "bounced"
       treatment_grade: "grade_a" | "grade_b" | "grade_c"
     }
