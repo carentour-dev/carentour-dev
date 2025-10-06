@@ -32,6 +32,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormDescription,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
@@ -43,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -90,6 +92,7 @@ const treatmentSchema = z.object({
   recovery_time_days: z.coerce.number().int().min(0).optional(),
   success_rate: z.coerce.number().min(0).max(100).optional(),
   procedures: z.array(procedureSchema).min(1, "Add at least one procedure"),
+  is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -108,6 +111,7 @@ type TreatmentPayload = {
   duration_days?: number;
   recovery_time_days?: number;
   success_rate?: number;
+  is_featured?: boolean;
   is_active?: boolean;
   ideal_candidates: string[];
   procedures: ProcedureFormValues[];
@@ -150,6 +154,7 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   duration_days: undefined,
   recovery_time_days: undefined,
   success_rate: undefined,
+  is_featured: false,
   is_active: true,
   ideal_candidates: [],
   procedures: [createEmptyProcedure()],
@@ -257,6 +262,7 @@ const mapRecordToFormValues = (treatment: TreatmentRecord): TreatmentFormValues 
     duration_days: treatment.duration_days ?? undefined,
     recovery_time_days: treatment.recovery_time_days ?? undefined,
     success_rate: treatment.success_rate ?? undefined,
+    is_featured: treatment.is_featured ?? false,
     is_active: treatment.is_active ?? true,
     ideal_candidates: Array.isArray(treatment.ideal_candidates)
       ? treatment.ideal_candidates.filter((entry): entry is string => typeof entry === "string")
@@ -339,6 +345,7 @@ const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload =
     duration_days: values.duration_days ?? undefined,
     recovery_time_days: values.recovery_time_days ?? undefined,
     success_rate: values.success_rate ?? undefined,
+    is_featured: values.is_featured ?? false,
     is_active: values.is_active ?? true,
     ideal_candidates: idealCandidates,
     procedures,
@@ -850,6 +857,27 @@ export default function AdminTreatmentsPage() {
 
                 <FormField
                   control={form.control}
+                  name="is_featured"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1">
+                        <FormLabel>Homepage spotlight</FormLabel>
+                        <FormDescription>
+                          Display this treatment in the Featured Treatments section on the home page.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="is_active"
                   render={({ field }) => (
                     <FormItem>
@@ -939,6 +967,7 @@ export default function AdminTreatmentsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Featured</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
@@ -958,8 +987,15 @@ export default function AdminTreatmentsPage() {
                         ? `${treatment.base_price.toLocaleString()} ${treatment.currency ?? "USD"}`
                         : "—"}
                     </TableCell>
-                  <TableCell>{treatment.is_active === false ? "Inactive" : "Active"}</TableCell>
-                  <TableCell className="flex justify-end gap-2">
+                    <TableCell>
+                      {treatment.is_featured ? (
+                        <Badge variant="secondary">Featured</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{treatment.is_active === false ? "Inactive" : "Active"}</TableCell>
+                    <TableCell className="flex justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => openSpecialistsDialog(treatment)}>
                       <Users className="h-4 w-4" />
                     </Button>
@@ -981,7 +1017,7 @@ export default function AdminTreatmentsPage() {
 
                 {filteredTreatments.length === 0 && !treatmentsQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                       No treatments found. Adjust filters or create a new treatment.
                     </TableCell>
                   </TableRow>
