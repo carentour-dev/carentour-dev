@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -277,6 +278,11 @@ function AuthContent() {
                     >
                       Forgot your password?
                     </button>
+                  </div>
+                  <div className="text-center">
+                    <Link href="/" className="text-sm text-primary hover:underline">
+                      Back to Home
+                    </Link>
                   </div>
                 </form>
               </TabsContent>
