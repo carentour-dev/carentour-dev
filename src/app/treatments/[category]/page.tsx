@@ -571,10 +571,10 @@ export default function TreatmentDetails() {
               >
                 Start Your Journey
               </Button>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 variant="hero"
-                onClick={() => router.push('/contact')}
+                onClick={() => router.push("/consultation")}
               >
                 Schedule Consultation
               </Button>
