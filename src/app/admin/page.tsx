@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, Hotel, Stethoscope, Users, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, Hotel, Inbox, Stethoscope, Users, Sparkles } from "lucide-react";
 
 // Surface the main admin areas for quick navigation.
 const quickLinks = [
+  {
+    title: "Contact Requests",
+    href: "/admin/requests",
+    description: "Log new inquiries and assign follow-up actions.",
+    icon: Inbox,
+  },
   {
     title: "Manage Doctors",
     href: "/admin/doctors",
