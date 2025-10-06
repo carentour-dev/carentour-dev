@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, User, Calendar, Share2, BookOpen } from "lucide-react";
@@ -735,11 +736,11 @@ export default function BlogPost() {
               Get personalized advice and a free consultation for your medical needs
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent">
-                Get Free Consultation
+              <Button size="lg" variant="accent" asChild>
+                <Link href="/consultation">Get Free Consultation</Link>
               </Button>
-              <Button size="lg" variant="hero">
-                Contact Us Today
+              <Button size="lg" variant="hero" asChild>
+                <Link href="/contact">Contact Us Today</Link>
               </Button>
             </div>
           </div>
@@ -750,4 +751,3 @@ export default function BlogPost() {
     </div>
   );
 };
-
