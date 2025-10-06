@@ -48,8 +48,14 @@ const STATUS_OPTIONS: Array<{ value: "all" | ContactRequestStatus; label: string
 
 const QUERY_KEY = ["admin", "contact-requests"] as const;
 
-const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) return "Not provided";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "Not provided";
+  }
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+};
 
 const capitalize = (value: string | null) => {
   if (!value) return "General";
@@ -297,7 +303,7 @@ export default function AdminRequestsPage() {
                           <TableCell className="align-top">
                             <div className="space-y-1">
                               <span className="text-sm text-foreground">
-                                {request.travel_window ?? "Not specified"}
+                                {formatDateTime(request.travel_window)}
                               </span>
                               {request.companions && (
                                 <p className="text-xs text-muted-foreground">
@@ -529,8 +535,9 @@ export default function AdminRequestsPage() {
                     <h3 className="text-sm font-semibold text-muted-foreground">Travel & Logistics</h3>
                     <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm text-foreground space-y-1">
                       <p>Treatment: {activeRequest.treatment ?? "Not provided"}</p>
-                      <p>Destination: {activeRequest.destination ?? "Not provided"}</p>
-                      <p>Travel window: {activeRequest.travel_window ?? "Not provided"}</p>
+                      <p>
+                        Travel window: {formatDateTime(activeRequest.travel_window)}
+                      </p>
                       {activeRequest.companions && <p>Companions: {activeRequest.companions}</p>}
                       {activeRequest.budget_range && <p>Budget guidance: {activeRequest.budget_range}</p>}
                     </div>
