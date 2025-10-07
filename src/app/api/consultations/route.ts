@@ -5,6 +5,7 @@ import { z } from "zod";
 import { contactRequestController } from "@/server/modules/contactRequests/module";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
+import { createClient as createSupabaseClient } from "@/integrations/supabase/server";
 
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -41,6 +42,50 @@ const splitFullName = (fullName: string): { firstName: string; lastName: string 
 
 export const POST = async (req: NextRequest) => {
   try {
+    const supabaseClient = await createSupabaseClient();
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const authHeader = req.headers.get("authorization");
+    let user = null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const accessToken = authHeader.slice(7).trim();
+      if (accessToken.length > 0) {
+        const { data: tokenUser, error: tokenError } = await supabaseAdmin.auth.getUser(accessToken);
+        if (!tokenError && tokenUser?.user) {
+          user = tokenUser.user;
+        }
+      }
+    }
+
+    if (!user) {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabaseClient.auth.getSession();
+
+      user = session?.user ?? null;
+
+      if (!user && !sessionError) {
+        const { data: userResult } = await supabaseClient.auth.getUser();
+        user = userResult?.user ?? null;
+      }
+    }
+
+    let patientId: string | null = null;
+
+    if (user?.id) {
+      const { data: existingPatient, error: patientError } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!patientError && existingPatient?.id) {
+        patientId = existingPatient.id;
+      }
+    }
+
     const payload = consultationSchema.parse(await req.json());
     const { firstName, lastName } = splitFullName(payload.fullName);
 
@@ -63,10 +108,12 @@ export const POST = async (req: NextRequest) => {
       additional_questions: payload.additionalQuestions,
       message: healthBackground,
       request_type: "consultation",
+      user_id: user?.id ?? null,
+      patient_id: patientId,
+      origin: user ? "portal" : undefined,
     });
 
-    const supabase = getSupabaseAdmin();
-    const { error: emailError } = await supabase.functions.invoke("send-contact-email", {
+    const { error: emailError } = await supabaseAdmin.functions.invoke("send-contact-email", {
       body: {
         firstName,
         lastName,
