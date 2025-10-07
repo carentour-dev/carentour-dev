@@ -47,11 +47,11 @@ const reviewSchema = z.object({
   patient_id: z.string().uuid().optional().nullable(),
   doctor_id: z.preprocess(
     (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
-    z.string().uuid({ required_error: "Select a doctor" }),
+    z.string({ required_error: "Select a doctor" }).uuid(),
   ),
   treatment_id: z.preprocess(
     (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
-    z.string().uuid({ required_error: "Select a treatment" }),
+    z.string({ required_error: "Select a treatment" }).uuid(),
   ),
   procedure_name: z.string().optional().nullable(),
   rating: z.coerce.number().min(0).max(5),
@@ -75,7 +75,7 @@ const storySchema = z.object({
   ),
   treatment_id: z.preprocess(
     (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
-    z.string().uuid({ required_error: "Select a treatment" }),
+    z.string({ required_error: "Select a treatment" }).uuid(),
   ),
   headline: z.string().min(4),
   excerpt: z.string().optional().nullable(),
