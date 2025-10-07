@@ -4,10 +4,12 @@ import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 const STATUS_VALUES = ["new", "in_progress", "resolved"] as const;
 const statusSchema = z.enum(STATUS_VALUES);
+const ORIGIN_VALUES = ["web", "portal", "manual"] as const;
+const originSchema = z.enum(ORIGIN_VALUES).optional();
 
 const optionalUuid = z.preprocess(
   (value) => {
@@ -17,6 +19,17 @@ const optionalUuid = z.preprocess(
     return value;
   },
   z.string().uuid().nullable().optional(),
+);
+
+const jsonSchema: z.ZodType<Json> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonSchema),
+    z.record(jsonSchema),
+  ]),
 );
 
 const createContactRequestSchema = z.object({
@@ -38,6 +51,10 @@ const createContactRequestSchema = z.object({
   request_type: z.string().optional(),
   notes: z.string().optional(),
   assigned_to: optionalUuid,
+  user_id: optionalUuid,
+  patient_id: optionalUuid,
+  origin: originSchema,
+  portal_metadata: jsonSchema.optional(),
   status: statusSchema.optional(),
 });
 
@@ -55,6 +72,10 @@ const updateContactRequestSchema = z
     medical_reports: z.string().optional(),
     contact_preference: z.string().optional(),
     additional_questions: z.string().optional(),
+    user_id: optionalUuid,
+    patient_id: optionalUuid,
+    origin: originSchema,
+    portal_metadata: jsonSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields provided for update",
@@ -79,6 +100,13 @@ const trimOptional = (value: string | undefined): string | null => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const sanitizeOrigin = (origin?: string | null, hasUser = false): ContactRequestInsert["origin"] => {
+  if (origin && ORIGIN_VALUES.includes(origin as (typeof ORIGIN_VALUES)[number])) {
+    return origin as ContactRequestInsert["origin"];
+  }
+  return hasUser ? "portal" : "web";
 };
 
 export const CONTACT_REQUEST_STATUSES = STATUS_VALUES;
@@ -137,6 +165,10 @@ export const contactRequestController = {
       request_type: parsed.request_type ? trim(parsed.request_type) : "general",
       notes: trimOptional(parsed.notes),
       assigned_to: parsed.assigned_to ?? null,
+      user_id: parsed.user_id ?? null,
+      patient_id: parsed.patient_id ?? null,
+      origin: sanitizeOrigin(parsed.origin, parsed.user_id != null),
+      portal_metadata: parsed.portal_metadata ?? null,
       status: parsed.status ?? "new",
     };
 
@@ -202,6 +234,22 @@ export const contactRequestController = {
 
     if (parsed.additional_questions !== undefined) {
       updatePayload.additional_questions = trimOptional(parsed.additional_questions);
+    }
+
+    if (parsed.user_id !== undefined) {
+      updatePayload.user_id = parsed.user_id ?? null;
+    }
+
+    if (parsed.patient_id !== undefined) {
+      updatePayload.patient_id = parsed.patient_id ?? null;
+    }
+
+    if (parsed.origin !== undefined) {
+      updatePayload.origin = sanitizeOrigin(parsed.origin, parsed.user_id != null);
+    }
+
+    if (parsed.portal_metadata !== undefined) {
+      updatePayload.portal_metadata = parsed.portal_metadata ?? null;
     }
 
     if (Object.keys(updatePayload).length === 0) {
