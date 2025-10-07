@@ -34,6 +34,7 @@ import {
   Stethoscope,
   Users,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Share your full name"),
@@ -94,6 +95,7 @@ export default function ConsultationPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { session } = useAuth();
 
   const form = useForm<ConsultationFormValues>({
     resolver: zodResolver(consultationSchema),
@@ -123,9 +125,13 @@ export default function ConsultationPage() {
         ...values,
         travelWindow: values.travelWindow.toISOString(),
       };
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
       const response = await fetch("/api/consultations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(submissionPayload),
       });
 
