@@ -6,6 +6,7 @@ import { FileQuestion, Inbox, Loader2, RefreshCcw } from "lucide-react";
 import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -46,6 +47,11 @@ const STATUS_OPTIONS: Array<{ value: "all" | ContactRequestStatus; label: string
   { value: "resolved", label: STATUS_LABELS.resolved },
 ];
 
+const REQUEST_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "general", label: "General inquiry" },
+  { value: "consultation", label: "Consultation intake" },
+];
+
 const QUERY_KEY = ["admin", "contact-requests"] as const;
 
 const formatDateTime = (value: string | null | undefined) => {
@@ -69,6 +75,8 @@ export default function AdminRequestsPage() {
     consultation: "all",
   });
   const [notesDraft, setNotesDraft] = useState("");
+  const [requestTypeDraft, setRequestTypeDraft] = useState("general");
+  const [customRequestType, setCustomRequestType] = useState("");
   const [activeRequest, setActiveRequest] = useState<ContactRequest | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -90,7 +98,7 @@ export default function AdminRequestsPage() {
 
   const contactQuery = useQuery({
     queryKey: [...QUERY_KEY, "contact", statusFilters.contact],
-    queryFn: () => fetchRequests(statusFilters.contact, "general"),
+    queryFn: () => fetchRequests(statusFilters.contact),
   });
 
   const consultationQuery = useQuery({
@@ -99,16 +107,29 @@ export default function AdminRequestsPage() {
   });
 
   const updateRequest = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<ContactRequest, "status" | "notes">> }) =>
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Pick<ContactRequest, "status" | "notes" | "request_type">>;
+    }) =>
       adminFetch<ContactRequest>(`/api/admin/requests/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
     onSuccess: (request) => {
       invalidate(QUERY_KEY);
+      setActiveRequest(request);
+      setRequestTypeDraft(request.request_type ?? "general");
+      setCustomRequestType(
+        REQUEST_TYPE_OPTIONS.some((option) => option.value === (request.request_type ?? ""))
+          ? ""
+          : request.request_type ?? "",
+      );
       toast({
         title: "Request updated",
-        description: `Status set to ${STATUS_LABELS[request.status]}.`,
+        description: `Status: ${STATUS_LABELS[request.status]} · Type: ${capitalize(request.request_type)}`,
       });
     },
     onError: (error: Error) => {
@@ -127,11 +148,18 @@ export default function AdminRequestsPage() {
     setDialogOpen(false);
     setActiveRequest(null);
     setNotesDraft("");
+    setRequestTypeDraft("general");
+    setCustomRequestType("");
   };
 
   const openDialogFor = (request: ContactRequest) => {
     setActiveRequest(request);
     setNotesDraft(request.notes ?? "");
+    const inferredType = request.request_type ?? "general";
+    setRequestTypeDraft(inferredType);
+    setCustomRequestType(
+      REQUEST_TYPE_OPTIONS.some((option) => option.value === inferredType) ? "" : inferredType,
+    );
     setDialogOpen(true);
   };
 
@@ -140,17 +168,35 @@ export default function AdminRequestsPage() {
     await updateRequest.mutateAsync({ id: requestId, data: { status } });
   };
 
-  const handleSaveNotes = async () => {
+  const handleSaveDetails = async () => {
     if (!activeRequest) return;
+    const trimmedType = requestTypeDraft.trim();
+    const normalizedType = trimmedType.length > 0 ? trimmedType : "general";
+    const trimmedNotes = notesDraft.trim();
+    const existingNotes = activeRequest.notes ?? "";
+    let notesPayload: string | undefined;
+
+    if (trimmedNotes.length > 0) {
+      notesPayload = trimmedNotes;
+    } else if (existingNotes.trim().length > 0 && trimmedNotes.length === 0) {
+      // sending an empty string signals the API to clear the notes
+      notesPayload = "";
+    }
+
     setUpdatingId(activeRequest.id);
     await updateRequest.mutateAsync({
       id: activeRequest.id,
-      data: { notes: notesDraft.trim().length > 0 ? notesDraft.trim() : null },
+      data: {
+        notes: notesPayload,
+        request_type: normalizedType,
+      },
     });
     closeDialog();
   };
 
-  const contactRequests = contactQuery.data ?? [];
+  const contactRequests = (contactQuery.data ?? []).filter(
+    (request) => (request.request_type ?? "general") !== "consultation",
+  );
   const consultationRequests = consultationQuery.data ?? [];
 
   const updateStatusFilter = (tab: RequestTab, value: StatusFilter) => {
@@ -247,7 +293,7 @@ export default function AdminRequestsPage() {
                       <TableRow>
                         <TableHead>Received</TableHead>
                         <TableHead>Patient</TableHead>
-                        <TableHead>Treatment</TableHead>
+                        <TableHead className="w-[220px]">Treatment</TableHead>
                         <TableHead>Travel Window</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[140px] text-right">Actions</TableHead>
@@ -262,6 +308,9 @@ export default function AdminRequestsPage() {
                               <span className="text-xs text-muted-foreground">
                                 Updated {formatDateTime(request.updated_at)}
                               </span>
+                              <Badge variant="secondary" className="mt-2 w-fit capitalize">
+                                {request.origin ?? "web"}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="align-top">
@@ -417,7 +466,7 @@ export default function AdminRequestsPage() {
                       <TableRow>
                         <TableHead>Received</TableHead>
                         <TableHead>Contact</TableHead>
-                        <TableHead>Treatment</TableHead>
+                        <TableHead className="w-[220px]">Treatment</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[140px] text-right">Actions</TableHead>
@@ -432,6 +481,9 @@ export default function AdminRequestsPage() {
                               <span className="text-xs text-muted-foreground">
                                 Updated {formatDateTime(request.updated_at)}
                               </span>
+                              <Badge variant="secondary" className="mt-2 w-fit capitalize">
+                                {request.origin ?? "web"}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="align-top">
@@ -446,12 +498,25 @@ export default function AdminRequestsPage() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <span className="text-sm text-foreground">{request.treatment ?? "Not specified"}</span>
-                              {request.notes && (
-                                <p className="text-xs text-muted-foreground line-clamp-2">Note: {request.notes}</p>
-                              )}
+                          <TableCell className="align-top min-w-[200px]">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-sm text-foreground">
+                                {request.treatment && request.treatment.trim().length > 0
+                                  ? request.treatment
+                                  : "Not specified"}
+                              </span>
+                              {request.notes && request.notes.trim().length > 0 ? (
+                                <p className="text-xs leading-snug text-muted-foreground break-words">
+                                  <span className="font-medium text-muted-foreground/90">Note:&nbsp;</span>
+                                  {request.notes}
+                                </p>
+                              ) : null}
+                              {request.health_background && request.health_background.trim().length > 0 ? (
+                                <p className="text-xs leading-snug text-muted-foreground break-words">
+                                  <span className="font-medium text-muted-foreground/90">Background:&nbsp;</span>
+                                  {request.health_background}
+                                </p>
+                              ) : null}
                             </div>
                           </TableCell>
                           <TableCell className="align-top">
@@ -508,10 +573,13 @@ export default function AdminRequestsPage() {
 
           {activeRequest && (
             <div className="space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-muted-foreground">Submitted</h3>
-                <p className="text-sm">{formatDateTime(activeRequest.created_at)}</p>
-              </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-muted-foreground">Submitted</h3>
+              <p className="text-sm">{formatDateTime(activeRequest.created_at)}</p>
+              <Badge variant="outline" className="capitalize">
+                Source: {activeRequest.origin ?? "web"}
+              </Badge>
+            </div>
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-muted-foreground">Contact</h3>
                 <p className="text-sm font-medium">
@@ -526,6 +594,48 @@ export default function AdminRequestsPage() {
                   <p className="text-xs text-muted-foreground">
                     Prefers: {activeRequest.contact_preference}
                   </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground">Request type</h3>
+                <Select
+                  value={
+                    REQUEST_TYPE_OPTIONS.some((option) => option.value === requestTypeDraft)
+                      ? requestTypeDraft
+                      : "custom"
+                  }
+                  onValueChange={(value) => {
+                    if (value === "custom") {
+                      setRequestTypeDraft(customRequestType.trim().length > 0 ? customRequestType : "");
+                      return;
+                    }
+                    setRequestTypeDraft(value);
+                  }}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REQUEST_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom value…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(!REQUEST_TYPE_OPTIONS.some((option) => option.value === requestTypeDraft) ||
+                  requestTypeDraft === "") && (
+                  <Input
+                    value={requestTypeDraft}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setRequestTypeDraft(value);
+                      setCustomRequestType(value);
+                    }}
+                    placeholder="e.g. vip, referral"
+                  />
                 )}
               </div>
 
@@ -592,14 +702,14 @@ export default function AdminRequestsPage() {
             <Button variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button onClick={() => void handleSaveNotes()} disabled={updatingId === activeRequest?.id}>
+            <Button onClick={() => void handleSaveDetails()} disabled={updatingId === activeRequest?.id}>
               {updatingId === activeRequest?.id ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving
                 </>
               ) : (
-                "Save notes"
+                "Save changes"
               )}
             </Button>
           </DialogFooter>
