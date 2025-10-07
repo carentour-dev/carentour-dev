@@ -32,13 +32,17 @@ export type Database = {
           message: string
           medical_reports: string | null
           notes: string | null
+          origin: string
+          patient_id: string | null
           phone: string | null
+          portal_metadata: Json | null
           request_type: string
           resolved_at: string | null
           status: Database["public"]["Enums"]["contact_request_status"]
           treatment: string | null
           travel_window: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           additional_questions?: string | null
@@ -57,13 +61,17 @@ export type Database = {
           message: string
           medical_reports?: string | null
           notes?: string | null
+          origin?: string
+          patient_id?: string | null
           phone?: string | null
+          portal_metadata?: Json | null
           request_type?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["contact_request_status"]
           treatment?: string | null
           travel_window?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           additional_questions?: string | null
@@ -82,13 +90,17 @@ export type Database = {
           message?: string
           medical_reports?: string | null
           notes?: string | null
+          origin?: string
+          patient_id?: string | null
           phone?: string | null
+          portal_metadata?: Json | null
           request_type?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["contact_request_status"]
           treatment?: string | null
           travel_window?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -96,6 +108,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -241,6 +260,178 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      patient_consultations: {
+        Row: {
+          contact_request_id: string | null
+          coordinator_id: string | null
+          created_at: string
+          doctor_id: string | null
+          duration_minutes: number | null
+          id: string
+          location: string | null
+          meeting_url: string | null
+          notes: string | null
+          patient_id: string
+          scheduled_at: string
+          status: Database["public"]["Enums"]["consultation_status"]
+          timezone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          contact_request_id?: string | null
+          coordinator_id?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          patient_id: string
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contact_request_id?: string | null
+          coordinator_id?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          patient_id?: string
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_consultations_contact_request_id_fkey"
+            columns: ["contact_request_id"]
+            isOneToOne: false
+            referencedRelation: "contact_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_consultations_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_consultations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_appointments: {
+        Row: {
+          appointment_type: string
+          consultation_id: string | null
+          created_at: string
+          doctor_id: string | null
+          ends_at: string | null
+          facility_id: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          patient_id: string
+          pre_visit_instructions: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          timezone: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          appointment_type: string
+          consultation_id?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          ends_at?: string | null
+          facility_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          patient_id: string
+          pre_visit_instructions?: string | null
+          starts_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          timezone?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          appointment_type?: string
+          consultation_id?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          ends_at?: string | null
+          facility_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          patient_id?: string
+          pre_visit_instructions?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          timezone?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_appointments_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "patient_consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       doctor_specialties: {
         Row: {
@@ -1081,7 +1272,9 @@ export type Database = {
       }
     }
     Enums: {
+      appointment_status: "scheduled" | "confirmed" | "completed" | "cancelled" | "rescheduled"
       contact_request_status: "new" | "in_progress" | "resolved"
+      consultation_status: "scheduled" | "rescheduled" | "completed" | "cancelled" | "no_show"
       subscription_status: "pending" | "active" | "unsubscribed" | "bounced"
       treatment_grade: "grade_a" | "grade_b" | "grade_c"
     }
