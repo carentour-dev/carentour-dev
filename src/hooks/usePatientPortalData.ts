@@ -57,7 +57,7 @@ const fetchPatientRecord = async (userId: string) => {
   return supabase
     .from("patients")
     .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, created_at, updated_at",
+      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, date_of_birth, home_city, travel_year, notes, sex, created_at, updated_at",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -84,7 +84,7 @@ const ensurePatientRecord = async (user: NonNullable<ReturnType<typeof useAuth>[
       contact_email: user.email ?? null,
     })
     .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, created_at, updated_at",
+      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, date_of_birth, home_city, travel_year, notes, sex, created_at, updated_at",
     )
     .maybeSingle();
 
