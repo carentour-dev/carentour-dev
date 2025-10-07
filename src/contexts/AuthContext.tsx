@@ -131,7 +131,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [checkRateLimit, recordLoginAttempt, logSecurityEvent]);
 
   const signUp = useCallback(async (email: string, password: string, username?: string) => {
-    // Pre-signup validation: Check if email already exists
+    let duplicateDetectedDuringPrecheck = false;
+
+    // Pre-signup validation: Check if email already exists. We record the result but
+    // still attempt the signup so that false positives in the RPC do not block users.
     try {
       const { data: emailExists, error: checkError } = await supabase.rpc('check_email_exists', {
         p_email: email
@@ -140,23 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (checkError) {
         console.error('Error checking email existence:', checkError);
         // Continue with signup if check fails (fallback behavior)
-      } else if (emailExists) {
-        // Email already exists, return clear error message
-        await logSecurityEvent({
-          event_type: 'blocked_duplicate_signup',
-          event_data: {
-            email,
-            username,
-            reason: 'email_already_exists'
-          },
-          risk_level: 'medium'
-        });
-
-        return {
-          error: {
-            message: 'An account with this email address already exists. Please sign in instead or use the "Forgot Password" option if you need to reset your password.'
-          } as any
-        };
+      } else {
+        duplicateDetectedDuringPrecheck = emailExists === true;
       }
     } catch (preCheckError) {
       console.error('Pre-signup check failed:', preCheckError);
@@ -206,19 +194,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errorType = 'weak_password';
       }
 
-      // Log signup attempt
+      // Log signup attempt with context on how the duplicate was detected
       await logSecurityEvent({
-        event_type: 'failed_signup',
+        event_type: errorType === 'existing_email' ? 'blocked_duplicate_signup' : 'failed_signup',
         event_data: {
           email,
           username,
           error_message: error.message,
-          error_type: errorType
+          error_type: errorType,
+          detection_source: errorType === 'existing_email'
+            ? (duplicateDetectedDuringPrecheck ? 'precheck' : 'supabase')
+            : undefined
         },
         risk_level: errorType === 'existing_email' ? 'high' : 'medium'
       });
 
       return { error: errorToReturn };
+    }
+
+    if (duplicateDetectedDuringPrecheck) {
+      await logSecurityEvent({
+        event_type: 'duplicate_precheck_false_positive',
+        event_data: {
+          email,
+          username
+        },
+        risk_level: 'low'
+      });
     }
 
     // Log successful signup attempt
