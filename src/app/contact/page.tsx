@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import * as z from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -31,6 +32,7 @@ export default function Contact() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { session } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,11 +52,17 @@ export default function Contact() {
     try {
       console.log("Sending contact form submission:", values);
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch("/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(values),
       });
 
