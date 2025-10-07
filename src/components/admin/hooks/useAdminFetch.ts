@@ -42,8 +42,16 @@ export async function adminFetch<T>(input: RequestInfo, init?: RequestInit): Pro
 
   if (!response.ok) {
     // Bubble up readable errors so UI components can show toasts/messages.
-    const payload = await response.json().catch(() => null);
-    const message = payload?.error ?? "Request failed";
+    const rawBody = await response.text();
+    let payload: any = null;
+
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : null;
+    } catch (parseError) {
+      console.error("Admin request failed:", response.status, rawBody);
+    }
+
+    const message = payload?.error ?? `Request failed (${response.status})`;
     const details =
       typeof payload?.details === "string"
         ? payload.details
