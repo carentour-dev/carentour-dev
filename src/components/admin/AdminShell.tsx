@@ -27,20 +27,24 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   ActivitySquare,
   Building2,
+  CalendarCheck,
+  CalendarDays,
   Hotel,
   Inbox,
   LayoutDashboard,
   Loader2,
   LogOut,
+  Sparkles,
   Stethoscope,
   Users,
-  Sparkles,
 } from "lucide-react";
 
 // Admin navigation configuration keeps sidebar items in one place.
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
   { label: "Requests", href: "/admin/requests", icon: Inbox },
+  { label: "Consultations", href: "/admin/consultations", icon: CalendarCheck },
+  { label: "Appointments", href: "/admin/appointments", icon: CalendarDays },
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
