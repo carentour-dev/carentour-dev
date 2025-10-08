@@ -16,11 +16,13 @@ export const GET = adminRoute(async (req: NextRequest) => {
   const filters: {
     status?: (typeof consultationStatusValues)[number];
     patientId?: string;
+    contactRequestId?: string;
     upcomingOnly?: boolean;
   } = {};
 
   const statusParam = params.get("status");
   const patientId = params.get("patientId");
+  const contactRequestId = params.get("contactRequestId");
   const upcomingOnly = params.get("upcomingOnly");
 
   if (isValidStatus(statusParam)) {
@@ -29,6 +31,10 @@ export const GET = adminRoute(async (req: NextRequest) => {
 
   if (patientId && patientId.trim().length > 0) {
     filters.patientId = patientId.trim();
+  }
+
+  if (contactRequestId && contactRequestId.trim().length > 0) {
+    filters.contactRequestId = contactRequestId.trim();
   }
 
   if (upcomingOnly !== null) {
