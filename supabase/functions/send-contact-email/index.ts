@@ -25,8 +25,10 @@ interface ContactEmailRequest {
   phone?: string;
   country?: string;
   treatment?: string;
+  procedure?: string;
   message: string;
   skipLogging?: boolean;
+  portalMetadata?: Record<string, unknown>;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -43,6 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
       phone,
       country,
       treatment,
+      procedure,
       message,
       skipLogging = false,
     }: ContactEmailRequest = await req.json();
@@ -54,6 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       phone: phone?.trim() ?? null,
       country: country?.trim() ?? null,
       treatment: treatment?.trim() ?? null,
+      procedure: procedure?.trim() ?? null,
       message: message.trim(),
     };
 
@@ -112,6 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${submission.phone ? `<p><strong>Phone:</strong> ${submission.phone}</p>` : ''}
             ${submission.country ? `<p><strong>Country:</strong> ${submission.country}</p>` : ''}
             ${submission.treatment ? `<p><strong>Treatment of Interest:</strong> ${submission.treatment}</p>` : ''}
+            ${submission.procedure ? `<p><strong>Preferred Procedure:</strong> ${submission.procedure}</p>` : ''}
             <p><strong>Message:</strong></p>
             <p style="background-color: white; padding: 15px; border-radius: 4px;">${submission.message}</p>
           </div>
@@ -148,6 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${submission.phone ? `<p><strong>Phone:</strong> ${submission.phone}</p>` : ''}
             ${submission.country ? `<p><strong>Country:</strong> ${submission.country}</p>` : ''}
             ${submission.treatment ? `<p><strong>Treatment of Interest:</strong> ${submission.treatment}</p>` : ''}
+            ${submission.procedure ? `<p><strong>Preferred Procedure:</strong> ${submission.procedure}</p>` : ''}
           </div>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
