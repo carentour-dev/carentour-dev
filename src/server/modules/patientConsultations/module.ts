@@ -63,6 +63,7 @@ const updateConsultationSchema = createConsultationSchema
 const listFiltersSchema = z.object({
   status: statusSchema.optional(),
   patientId: z.string().uuid().optional(),
+  contactRequestId: z.string().uuid().optional(),
   upcomingOnly: z.coerce.boolean().optional(),
 });
 
@@ -94,7 +95,14 @@ const resolveUserIdForPatient = async (
 export const consultationStatusValues = STATUS_VALUES;
 
 export const patientConsultationController = {
-  async list(filters: { status?: (typeof STATUS_VALUES)[number]; patientId?: string; upcomingOnly?: boolean } = {}) {
+  async list(
+    filters: {
+      status?: (typeof STATUS_VALUES)[number];
+      patientId?: string;
+      contactRequestId?: string;
+      upcomingOnly?: boolean;
+    } = {},
+  ) {
     const parsed = listFiltersSchema.parse(filters);
     const supabase = getSupabaseAdmin();
 
@@ -109,6 +117,10 @@ export const patientConsultationController = {
 
     if (parsed.patientId) {
       query = query.eq("patient_id", parsed.patientId);
+    }
+
+    if (parsed.contactRequestId) {
+      query = query.eq("contact_request_id", parsed.contactRequestId);
     }
 
     if (parsed.upcomingOnly) {
