@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { CalendarClock, Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type ConsultationRow = Database["public"]["Tables"]["patient_consultations"]["Row"];
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
@@ -70,6 +71,9 @@ type ConsultationRecord = ConsultationRow & {
 
 const consultationStatuses = ["scheduled", "rescheduled", "completed", "cancelled", "no_show"] as const;
 type ConsultationStatus = (typeof consultationStatuses)[number];
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (value?: string | null): value is string => Boolean(value && uuidPattern.test(value));
 
 const nullableUuidField = z.preprocess(
   (value) => {
@@ -88,9 +92,22 @@ const formSchema = z.object({
   contact_request_id: nullableUuidField,
   scheduled_at: z.string().min(1, "Provide a schedule"),
   duration_minutes: z
-    .string()
+    .union([z.string(), z.number()])
     .optional()
-    .transform((value) => (value ? Number(value) : undefined))
+    .transform((value) => {
+      if (value === undefined || value === null) {
+        return undefined;
+      }
+      if (typeof value === "number") {
+        return value;
+      }
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return undefined;
+      }
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    })
     .refine((value) => value === undefined || (Number.isInteger(value) && value >= 5 && value <= 480), {
       message: "Duration must be between 5 and 480 minutes",
     }),
@@ -132,6 +149,9 @@ export default function AdminConsultationsPage() {
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConsultation, setEditingConsultation] = useState<ConsultationRecord | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const schedulePrefillKeyRef = useRef<string | null>(null);
 
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
@@ -150,64 +170,61 @@ export default function AdminConsultationsPage() {
     },
   });
 
-  const form = useForm<ConsultationFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
+const form = useForm<ConsultationFormValues>({
+  resolver: zodResolver(formSchema),
+  defaultValues: {
+    patient_id: "",
+    doctor_id: null,
+    contact_request_id: null,
+    scheduled_at: "",
+    duration_minutes: undefined,
+    timezone: "UTC",
+    location: "",
+    meeting_url: "",
+    notes: "",
+    status: "scheduled",
+  },
+  });
+
+const resetForm = useCallback(
+  (overrides?: Partial<ConsultationFormValues>) => {
+    form.reset({
       patient_id: "",
       doctor_id: null,
       contact_request_id: null,
       scheduled_at: "",
       duration_minutes: undefined,
-      timezone: "UTC",
-      location: "",
-      meeting_url: "",
-      notes: "",
-      status: "scheduled",
+        timezone: "UTC",
+        location: "",
+        meeting_url: "",
+        notes: "",
+        status: "scheduled",
+        ...overrides,
+      });
     },
-  });
+    [form],
+  );
 
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingConsultation(null);
-    form.reset({
-      patient_id: "",
-      doctor_id: null,
-      contact_request_id: null,
-      scheduled_at: "",
-      duration_minutes: undefined,
-      timezone: "UTC",
-      location: "",
-      meeting_url: "",
-      notes: "",
-      status: "scheduled",
-    });
+    resetForm();
   };
 
   const openCreateDialog = () => {
     setEditingConsultation(null);
-    form.reset({
-      patient_id: "",
-      doctor_id: null,
-      contact_request_id: null,
-      scheduled_at: "",
-      duration_minutes: undefined,
-      timezone: "UTC",
-      location: "",
-      meeting_url: "",
-      notes: "",
-      status: "scheduled",
-    });
+    resetForm();
     setDialogOpen(true);
   };
 
-  const openEditDialog = (consultation: ConsultationRecord) => {
-    setEditingConsultation(consultation);
-    form.reset({
-      patient_id: consultation.patient_id,
-      doctor_id: consultation.doctor_id ?? null,
-      contact_request_id: consultation.contact_request_id ?? null,
-      scheduled_at: toDateTimeLocal(consultation.scheduled_at),
-      duration_minutes: consultation.duration_minutes ?? undefined,
+const openEditDialog = (consultation: ConsultationRecord) => {
+  setEditingConsultation(consultation);
+  resetForm({
+    patient_id: consultation.patient_id,
+    doctor_id: consultation.doctor_id ?? null,
+    contact_request_id: consultation.contact_request_id ?? null,
+    scheduled_at: toDateTimeLocal(consultation.scheduled_at),
+    duration_minutes: consultation.duration_minutes ?? undefined,
       timezone: consultation.timezone ?? "UTC",
       location: consultation.location ?? "",
       meeting_url: consultation.meeting_url ?? "",
@@ -216,6 +233,167 @@ export default function AdminConsultationsPage() {
     });
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    const scheduleFlag = searchParams.get("schedule");
+
+    if (scheduleFlag !== "1") {
+      schedulePrefillKeyRef.current = null;
+      return;
+    }
+
+    const patientIdParam = searchParams.get("patientId");
+    const contactRequestIdParam = searchParams.get("contactRequestId");
+    const key = `${scheduleFlag}:${patientIdParam ?? ""}:${contactRequestIdParam ?? ""}`;
+
+    if (schedulePrefillKeyRef.current === key) {
+      return;
+    }
+
+    schedulePrefillKeyRef.current = key;
+
+    resetForm({
+      patient_id: patientIdParam ?? "",
+      contact_request_id: contactRequestIdParam ?? null,
+    });
+    setEditingConsultation(null);
+    setDialogOpen(true);
+
+    router.replace("/admin/consultations", { scroll: false });
+  }, [resetForm, router, searchParams]);
+
+  const contactRequestIdField = form.watch("contact_request_id");
+  const normalizedContactRequestId = useMemo(() => {
+    if (typeof contactRequestIdField !== "string") {
+      return null;
+    }
+    const trimmed = contactRequestIdField.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }, [contactRequestIdField]);
+
+  const isContactRequestIdValid = isUuid(normalizedContactRequestId);
+
+  const contactRequestQuery = useQuery({
+    queryKey: ["admin", "contact-request", normalizedContactRequestId],
+    queryFn: () =>
+      normalizedContactRequestId
+        ? adminFetch<ContactRequestRow>(`/api/admin/requests/${normalizedContactRequestId}`)
+        : Promise.resolve(null),
+    enabled: isContactRequestIdValid,
+    staleTime: 30_000,
+  });
+
+  const renderLinkedRequestSummary = () => {
+    if (!normalizedContactRequestId) {
+      return null;
+    }
+
+    if (!isContactRequestIdValid) {
+      return (
+        <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Provide a valid request ID to load the original intake.
+        </div>
+      );
+    }
+
+    if (contactRequestQuery.isLoading) {
+      return (
+        <div className="mt-4 flex items-center gap-2 rounded-md border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading request details…
+        </div>
+      );
+    }
+
+    if (contactRequestQuery.isError) {
+      return (
+        <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Failed to load request details. You can still continue scheduling.
+        </div>
+      );
+    }
+
+    const request = contactRequestQuery.data;
+
+    if (!request) {
+      return (
+        <div className="mt-4 rounded-md border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
+          No request details found for this ID.
+        </div>
+      );
+    }
+
+    const travelDate = request.travel_window ? new Date(request.travel_window) : null;
+    const travelDisplay =
+      travelDate && !Number.isNaN(travelDate.getTime()) ? format(travelDate, "PPpp") : request.travel_window ?? "";
+
+    return (
+      <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-4 text-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs uppercase text-muted-foreground">Linked intake</p>
+            <p className="font-medium text-foreground">
+              {request.first_name} {request.last_name}
+            </p>
+            <p className="text-xs text-muted-foreground">{request.email}</p>
+            {request.phone && <p className="text-xs text-muted-foreground">{request.phone}</p>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="capitalize">
+              {request.status.replace("_", " ")}
+            </Badge>
+            <Badge variant="secondary" className="capitalize">
+              {request.request_type ?? "general"}
+            </Badge>
+            {request.origin && (
+              <Badge variant="ghost" className="capitalize">
+                {request.origin}
+              </Badge>
+            )}
+          </div>
+        </div>
+        {request.treatment && (
+          <p className="mt-3 text-xs uppercase text-muted-foreground">
+            Treatment interest:&nbsp;
+            <span className="normal-case text-foreground">{request.treatment}</span>
+          </p>
+        )}
+        {request.travel_window && (
+          <p className="text-xs uppercase text-muted-foreground">
+            Travel window:&nbsp;
+            <span className="normal-case text-foreground">{travelDisplay}</span>
+          </p>
+        )}
+        {request.message && (
+          <p className="mt-3 line-clamp-3 text-sm text-muted-foreground whitespace-pre-line">{request.message}</p>
+        )}
+      </div>
+    );
+  };
+
+  const syncLinkedRequest = useCallback(
+    async (requestId: string, patientId: string) => {
+      try {
+        await adminFetch<ContactRequestRow>(`/api/admin/requests/${requestId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "in_progress",
+            patient_id: patientId,
+          }),
+        });
+        invalidate(["admin", "contact-requests"]);
+      } catch (error) {
+        console.error("Failed to sync linked contact request", error);
+        toast({
+          title: "Linked request update failed",
+          description:
+            error instanceof Error ? error.message : "Unable to update the linked request status.",
+          variant: "destructive",
+        });
+      }
+    },
+    [invalidate, toast],
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: ConsultationFormValues) =>
@@ -232,8 +410,11 @@ export default function AdminConsultationsPage() {
           notes: payload.notes?.trim() || null,
         }),
       }),
-    onSuccess: () => {
+    onSuccess: async (_consultation, variables) => {
       invalidate(QUERY_KEY);
+      if (variables?.contact_request_id && variables.patient_id) {
+        await syncLinkedRequest(variables.contact_request_id, variables.patient_id);
+      }
       toast({ title: "Consultation scheduled" });
       closeDialog();
     },
@@ -261,8 +442,11 @@ export default function AdminConsultationsPage() {
           notes: data.notes?.trim() || null,
         }),
       }),
-    onSuccess: () => {
+    onSuccess: async (_consultation, variables) => {
       invalidate(QUERY_KEY);
+      if (variables?.data.contact_request_id && variables.data.patient_id) {
+        await syncLinkedRequest(variables.data.contact_request_id, variables.data.patient_id);
+      }
       toast({ title: "Consultation updated" });
       closeDialog();
     },
@@ -503,6 +687,7 @@ export default function AdminConsultationsPage() {
                 : "Link a patient to an upcoming consultation slot for your care coordinators."}
             </DialogDescription>
           </DialogHeader>
+          {renderLinkedRequestSummary()}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
