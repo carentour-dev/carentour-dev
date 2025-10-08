@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -180,6 +181,24 @@ function AuthContent() {
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <Image
+                  src="/care-n-tour-logo-dark.png"
+                  alt="Care N Tour logo"
+                  width={176}
+                  height={40}
+                  className="mx-auto h-12 w-auto dark:hidden"
+                  priority
+                />
+                <Image
+                  src="/care-n-tour-logo-light.png"
+                  alt="Care N Tour logo"
+                  width={176}
+                  height={40}
+                  className="mx-auto hidden h-12 w-auto dark:block"
+                  priority
+                />
+              </div>
               <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
               <CardDescription>
                 Enter your new password below
@@ -230,6 +249,24 @@ function AuthContent() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Image
+                src="/care-n-tour-logo-dark.png"
+                alt="Care N Tour logo"
+                width={176}
+                height={40}
+                className="mx-auto h-12 w-auto dark:hidden"
+                priority
+              />
+              <Image
+                src="/care-n-tour-logo-light.png"
+                alt="Care N Tour logo"
+                width={176}
+                height={40}
+                className="mx-auto hidden h-12 w-auto dark:block"
+                priority
+              />
+            </div>
             <CardTitle className="text-2xl font-bold">Welcome to Care N Tour</CardTitle>
             <CardDescription>
               Access your medical tourism account
