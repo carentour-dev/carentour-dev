@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,13 +42,17 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTreatments } from "@/hooks/useTreatments";
+import { normalizeTreatment } from "@/lib/treatments";
+import { COUNTRY_OPTIONS } from "@/constants/countries";
 
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Share your full name"),
   email: z.string().email("Enter a valid email"),
   phone: z.string().min(1, "Share a phone or WhatsApp number"),
   country: z.string().min(1, "Tell us where you live"),
-  treatment: z.string().min(1, "Which treatment or procedure interests you?"),
+  treatmentId: z.string().min(1, "Select a treatment"),
+  procedure: z.string().min(1, "Select a procedure"),
   travelWindow: z.date({ required_error: "Select your ideal travel date" }),
   healthBackground: z
     .string()
@@ -104,7 +115,8 @@ export default function ConsultationPage() {
       email: "",
       phone: "",
       country: "",
-      treatment: "",
+      treatmentId: "",
+      procedure: "",
       travelWindow: undefined,
       healthBackground: "",
       budgetRange: "",
@@ -117,13 +129,54 @@ export default function ConsultationPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const {
+    treatments: treatmentRows,
+    loading: treatmentsLoading,
+  } = useTreatments();
+
+  const treatments = useMemo(
+    () => treatmentRows.map((row) => normalizeTreatment(row)),
+    [treatmentRows],
+  );
+
+  const selectedTreatmentId = form.watch("treatmentId");
+
+  const selectedTreatment = useMemo(
+    () => treatments.find((treatment) => treatment.id === selectedTreatmentId),
+    [selectedTreatmentId, treatments],
+  );
+
+  const procedureOptions = selectedTreatment?.procedures ?? [];
+
+  useEffect(() => {
+    if (selectedTreatmentId) {
+      form.setValue("procedure", "");
+      form.clearErrors("procedure");
+    } else {
+      form.setValue("procedure", "");
+      form.clearErrors("procedure");
+    }
+  }, [selectedTreatmentId, form]);
+
   const handleSubmit = async (values: ConsultationFormValues) => {
     setIsSubmitting(true);
 
     try {
+      const selectedTreatmentName =
+        treatments.find((treatment) => treatment.id === values.treatmentId)?.name ?? "";
+
+      const combinedTreatment = [selectedTreatmentName, values.procedure]
+        .filter((part) => part && part.length > 0)
+        .join(" — ");
+
+      const { treatmentId, procedure, travelWindow, ...rest } = values;
+
       const submissionPayload = {
-        ...values,
-        travelWindow: values.travelWindow.toISOString(),
+        ...rest,
+        treatmentId,
+        procedure,
+        treatment: combinedTreatment || selectedTreatmentName || procedure,
+        travelWindow: travelWindow.toISOString(),
       };
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (session?.access_token) {
@@ -257,25 +310,103 @@ export default function ConsultationPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Country of Residence *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="United Arab Emirates" {...field} />
-                              </FormControl>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your country" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {COUNTRY_OPTIONS.map((country) => (
+                                    <SelectItem key={country} value={country}>
+                                      {country}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
 
-                      <div className="grid gap-6">
+                      <div className="grid gap-6 md:grid-cols-2">
                         <FormField
                           control={form.control}
-                          name="treatment"
+                          name="treatmentId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Preferred Treatment or Procedure *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Knee Replacement Surgery" {...field} />
-                              </FormControl>
+                              <FormLabel>Preferred Treatment *</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={treatmentsLoading || treatments.length === 0}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue
+                                      placeholder={
+                                        treatmentsLoading
+                                          ? "Loading treatments..."
+                                          : treatments.length === 0
+                                            ? "No treatments available"
+                                            : "Select a treatment"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {treatments.map((treatment) => (
+                                    <SelectItem key={treatment.id} value={treatment.id}>
+                                      {treatment.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="procedure"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preferred Procedure *</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  form.clearErrors("procedure");
+                                }}
+                                value={field.value}
+                                disabled={
+                                  !selectedTreatment || procedureOptions.length === 0
+                                }
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue
+                                      placeholder={
+                                        selectedTreatment
+                                          ? procedureOptions.length === 0
+                                            ? "No procedures available"
+                                            : "Select a procedure"
+                                          : "Select a treatment first"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {procedureOptions.map((procedureOption) => (
+                                    <SelectItem
+                                      key={procedureOption.name}
+                                      value={procedureOption.name}
+                                    >
+                                      {procedureOption.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
