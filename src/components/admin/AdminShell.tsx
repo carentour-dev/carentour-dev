@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTheme } from "next-themes";
 import {
   ActivitySquare,
   Building2,
@@ -95,15 +97,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="bg-sidebar text-sidebar-foreground">
         <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Stethoscope className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold tracking-tight">Care N Tour</span>
-              <span className="text-xs text-muted-foreground">Admin Console</span>
-            </div>
-          </div>
+          <AdminBranding />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -173,5 +167,47 @@ function AdminTopbar() {
         <span className="text-lg font-semibold tracking-tight">Operations Console</span>
       </div>
     </header>
+  );
+}
+
+function AdminBranding() {
+  const { state } = useSidebar();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const logoSrc = mounted && resolvedTheme === "dark" ? "/care-n-tour-logo-light.png" : "/care-n-tour-logo-dark.png";
+  const isCollapsed = state === "collapsed";
+
+  if (isCollapsed) {
+    return (
+      <div className="flex items-center justify-center">
+        <Image
+          src={logoSrc}
+          alt="Care N Tour logo"
+          width={44}
+          height={44}
+          className="h-11 w-11 rounded-md border border-sidebar-border bg-sidebar-accent/30 p-1.5 object-contain"
+          priority
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col items-center gap-2 text-center">
+      <Image
+        src={logoSrc}
+        alt="Care N Tour logo"
+        width={160}
+        height={54}
+        className="h-12 w-auto max-w-[160px]"
+        priority
+      />
+      <span className="text-xs text-muted-foreground">Admin Console</span>
+    </div>
   );
 }
