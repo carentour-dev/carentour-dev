@@ -13,6 +13,8 @@ const consultationSchema = z.object({
   phone: z.string().min(1, "Please share a phone or WhatsApp number"),
   country: z.string().min(1, "Country of residence is required"),
   treatment: z.string().min(1, "Preferred treatment is required"),
+  treatmentId: z.string().optional(),
+  procedure: z.string().optional(),
   destination: z.string().optional(),
   travelWindow: z.string().min(1, "Please share your ideal travel window"),
   healthBackground: z.string().min(1, "Health goals or current diagnosis is required"),
@@ -91,6 +93,14 @@ export const POST = async (req: NextRequest) => {
 
     const healthBackground = payload.healthBackground.trim();
 
+    const portalMetadata =
+      payload.treatmentId || payload.procedure
+        ? {
+            ...(payload.treatmentId ? { treatmentId: payload.treatmentId } : {}),
+            ...(payload.procedure ? { procedure: payload.procedure } : {}),
+          }
+        : undefined;
+
     const consultationRequest = await contactRequestController.create({
       first_name: firstName,
       last_name: lastName,
@@ -111,6 +121,7 @@ export const POST = async (req: NextRequest) => {
       user_id: user?.id ?? null,
       patient_id: patientId,
       origin: user ? "portal" : undefined,
+      portal_metadata: portalMetadata,
     });
 
     const { error: emailError } = await supabaseAdmin.functions.invoke("send-contact-email", {
@@ -121,6 +132,7 @@ export const POST = async (req: NextRequest) => {
         phone: payload.phone,
         country: payload.country,
         treatment: payload.treatment,
+        procedure: payload.procedure,
         destination: payload.destination,
         travelWindow: payload.travelWindow,
         healthBackground,
@@ -131,6 +143,7 @@ export const POST = async (req: NextRequest) => {
         contactPreference: payload.contactPreference,
         additionalQuestions: payload.additionalQuestions,
         requestType: "consultation",
+        portalMetadata,
         skipLogging: true,
       },
     });
