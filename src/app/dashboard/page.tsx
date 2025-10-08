@@ -497,51 +497,55 @@ export default function DashboardPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {nextConsultation ? (
+                  {upcomingConsultations.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatDateTime(nextConsultation.scheduled_at)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatRelativeTime(nextConsultation.scheduled_at)}
-                            </p>
+                      {upcomingConsultations.map((consultation) => (
+                        <div key={consultation.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {formatDateTime(consultation.scheduled_at)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatRelativeTime(consultation.scheduled_at)}
+                              </p>
+                            </div>
+                            <Badge variant={statusBadgeVariant(consultation.status)}>
+                              {consultationStatusLabels[consultation.status]}
+                            </Badge>
                           </div>
-                          <Badge variant={statusBadgeVariant(nextConsultation.status)}>
-                            {consultationStatusLabels[nextConsultation.status]}
-                          </Badge>
+                          <div className="mt-3 space-y-2 text-sm">
+                            {consultation.doctors ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Stethoscope className="h-4 w-4" />
+                                <span>{consultation.doctors.name}</span>
+                              </div>
+                            ) : null}
+                            {consultation.location ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <MapPin className="h-4 w-4" />
+                                <span>{consultation.location}</span>
+                              </div>
+                            ) : null}
+                            {consultation.meeting_url ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2"
+                                onClick={() => window.open(consultation.meeting_url ?? "#", "_blank")}
+                              >
+                                <Video className="mr-2 h-4 w-4" />
+                                Join virtual meeting
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          {nextConsultation.doctors ? (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Stethoscope className="h-4 w-4" />
-                              <span>{nextConsultation.doctors.name}</span>
-                            </div>
-                          ) : null}
-                          {nextConsultation.location ? (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <MapPin className="h-4 w-4" />
-                              <span>{nextConsultation.location}</span>
-                            </div>
-                          ) : null}
-                          {nextConsultation.meeting_url ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-2"
-                              onClick={() => window.open(nextConsultation.meeting_url ?? "#", "_blank")}
-                            >
-                              <Video className="mr-2 h-4 w-4" />
-                              Join virtual meeting
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => scrollToSection("appointments")}>
-                        View all appointments
-                      </Button>
+                      ))}
+                      {consultations.length > upcomingConsultations.length ? (
+                        <p className="text-xs text-muted-foreground">
+                          Showing {upcomingConsultations.length} upcoming consultations. Contact your coordinator for past visits or schedule changes.
+                        </p>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
