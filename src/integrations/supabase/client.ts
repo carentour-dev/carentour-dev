@@ -2,11 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zfidusggwrarnjbsgkva.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmaWR1c2dnd3Jhcm5qYnNna3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxMTE0MTYsImV4cCI6MjA3MzY4NzQxNn0.P8_hdEyLH2SULAaUkGrfu4Z5UudCwbbFtQuwL4mwuyw";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error(
+    'Supabase client is missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Check your environment variables.'
+  );
+}
+
+if (typeof window !== 'undefined') {
+  console.info('[Supabase] Using project:', SUPABASE_URL);
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
