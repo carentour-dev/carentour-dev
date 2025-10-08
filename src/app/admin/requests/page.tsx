@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FileQuestion, Inbox, Loader2, RefreshCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { PatientSelector } from "@/components/admin/PatientSelector";
 import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +27,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 type ContactRequest = Tables<"contact_requests">;
 type ContactRequestStatus = ContactRequest["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
 type RequestTab = "contact" | "consultation";
+type PatientConsultationRow = Database["public"]["Tables"]["patient_consultations"]["Row"] & {
+  contact_requests?: Pick<ContactRequest, "id" | "status" | "request_type" | "origin"> | null;
+};
 
 const STATUS_LABELS: Record<ContactRequestStatus, string> = {
   new: "New",
@@ -69,6 +78,7 @@ const capitalize = (value: string | null) => {
 };
 
 export default function AdminRequestsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<RequestTab>("consultation");
   const [statusFilters, setStatusFilters] = useState<Record<RequestTab, StatusFilter>>({
     contact: "all",
@@ -77,6 +87,7 @@ export default function AdminRequestsPage() {
   const [notesDraft, setNotesDraft] = useState("");
   const [requestTypeDraft, setRequestTypeDraft] = useState("general");
   const [customRequestType, setCustomRequestType] = useState("");
+  const [patientIdDraft, setPatientIdDraft] = useState<string | null>(null);
   const [activeRequest, setActiveRequest] = useState<ContactRequest | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -112,7 +123,7 @@ export default function AdminRequestsPage() {
       data,
     }: {
       id: string;
-      data: Partial<Pick<ContactRequest, "status" | "notes" | "request_type">>;
+      data: Partial<Pick<ContactRequest, "status" | "notes" | "request_type" | "patient_id">>;
     }) =>
       adminFetch<ContactRequest>(`/api/admin/requests/${id}`, {
         method: "PATCH",
@@ -127,6 +138,7 @@ export default function AdminRequestsPage() {
           ? ""
           : request.request_type ?? "",
       );
+      setPatientIdDraft(request.patient_id ?? null);
       toast({
         title: "Request updated",
         description: `Status: ${STATUS_LABELS[request.status]} · Type: ${capitalize(request.request_type)}`,
@@ -150,6 +162,7 @@ export default function AdminRequestsPage() {
     setNotesDraft("");
     setRequestTypeDraft("general");
     setCustomRequestType("");
+    setPatientIdDraft(null);
   };
 
   const openDialogFor = (request: ContactRequest) => {
@@ -160,6 +173,7 @@ export default function AdminRequestsPage() {
     setCustomRequestType(
       REQUEST_TYPE_OPTIONS.some((option) => option.value === inferredType) ? "" : inferredType,
     );
+    setPatientIdDraft(request.patient_id ?? null);
     setDialogOpen(true);
   };
 
@@ -175,6 +189,7 @@ export default function AdminRequestsPage() {
     const trimmedNotes = notesDraft.trim();
     const existingNotes = activeRequest.notes ?? "";
     let notesPayload: string | undefined;
+    const patientPayload = patientIdDraft ?? null;
 
     if (trimmedNotes.length > 0) {
       notesPayload = trimmedNotes;
@@ -189,6 +204,7 @@ export default function AdminRequestsPage() {
       data: {
         notes: notesPayload,
         request_type: normalizedType,
+        patient_id: patientPayload,
       },
     });
     closeDialog();
@@ -198,6 +214,87 @@ export default function AdminRequestsPage() {
     (request) => (request.request_type ?? "general") !== "consultation",
   );
   const consultationRequests = consultationQuery.data ?? [];
+
+  const selectedPatientForDialog = useMemo(() => patientIdDraft ?? activeRequest?.patient_id ?? null, [
+    patientIdDraft,
+    activeRequest?.patient_id,
+  ]);
+
+  const relatedConsultationsQuery = useQuery({
+    queryKey: [...QUERY_KEY, "patient-consultations", selectedPatientForDialog],
+    queryFn: () =>
+      selectedPatientForDialog
+        ? adminFetch<PatientConsultationRow[]>(
+            `/api/admin/consultations?patientId=${encodeURIComponent(selectedPatientForDialog)}`,
+          )
+        : Promise.resolve([]),
+    enabled: selectedPatientForDialog !== null,
+    staleTime: 30_000,
+  });
+
+  const handleSchedule = (request: ContactRequest) => {
+    if (!request.patient_id) {
+      openDialogFor(request);
+      return;
+    }
+    const params = new URLSearchParams({
+      schedule: "1",
+      contactRequestId: request.id,
+      patientId: request.patient_id,
+    });
+    router.push(`/admin/consultations?${params.toString()}`);
+  };
+
+  const renderConsultationSummary = () => {
+    if (!selectedPatientForDialog) {
+      return null;
+    }
+
+    if (relatedConsultationsQuery.isLoading) {
+      return (
+        <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading related consultations…
+        </div>
+      );
+    }
+
+    if (relatedConsultationsQuery.isError) {
+      return (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          Failed to load related consultations. Try again later.
+        </div>
+      );
+    }
+
+    const consultations = relatedConsultationsQuery.data ?? [];
+
+    if (consultations.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          No consultations linked to this patient yet. Scheduling will create the first one.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {consultations.map((consultation) => (
+          <div key={consultation.id} className="rounded-md border border-border/60 bg-muted/10 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium">Consultation on {formatDateTime(consultation.scheduled_at)}</span>
+              <Badge variant="outline" className="capitalize">
+                {consultation.status.replace("_", " ")}
+              </Badge>
+            </div>
+            {consultation.contact_request_id && (
+              <p className="text-xs text-muted-foreground">Linked request: {consultation.contact_request_id}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const updateStatusFilter = (tab: RequestTab, value: StatusFilter) => {
     setStatusFilters((prev) => ({ ...prev, [tab]: value }));
@@ -287,81 +384,117 @@ export default function AdminRequestsPage() {
               )}
 
               {consultationRequests.length > 0 && (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Received</TableHead>
-                        <TableHead>Patient</TableHead>
-                        <TableHead className="w-[220px]">Treatment</TableHead>
-                        <TableHead>Travel Window</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-[140px] text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {consultationRequests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell className="align-top">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{formatDateTime(request.created_at)}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Updated {formatDateTime(request.updated_at)}
-                              </span>
-                              <Badge variant="secondary" className="mt-2 w-fit capitalize">
-                                {request.origin ?? "web"}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <p className="font-semibold">
-                                {request.first_name} {request.last_name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{request.email}</p>
-                              {request.phone && <p className="text-sm text-muted-foreground">{request.phone}</p>}
-                              {request.country && (
-                                <p className="text-xs text-muted-foreground uppercase">
-                                  Based in {request.country}
+                <div className="space-y-4">
+                  {consultationRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-1 flex-col gap-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-lg font-semibold text-foreground">
+                                  {request.first_name} {request.last_name}
                                 </p>
-                              )}
-                              {request.contact_preference && (
-                                <p className="text-xs font-medium text-primary">
-                                  Prefers: {request.contact_preference}
-                                </p>
-                              )}
+                                <Badge variant="secondary" className="capitalize">
+                                  {request.origin ?? "web"}
+                                </Badge>
+                                <Badge variant="outline">{STATUS_LABELS[request.status]}</Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span>Received {formatDateTime(request.created_at)}</span>
+                                <span>Updated {formatDateTime(request.updated_at)}</span>
+                              </div>
+                              <div className="space-y-1 text-sm text-muted-foreground">
+                                <p>{request.email}</p>
+                                {request.phone && <p>{request.phone}</p>}
+                                {request.country && <p className="uppercase">Based in {request.country}</p>}
+                                {request.contact_preference && (
+                                  <p className="font-medium text-primary">
+                                    Prefers: {request.contact_preference}
+                                  </p>
+                                )}
+                                {request.patient_id && (
+                                  <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
+                                    Linked patient • {request.patient_id.slice(0, 8)}
+                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <span className="text-sm text-foreground">
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
+                              <p className="text-sm text-foreground">
                                 {request.treatment ?? "Not specified"}
-                              </span>
-                              {request.budget_range && (
-                                <p className="text-xs text-muted-foreground">
-                                  Budget: {request.budget_range}
-                                </p>
-                              )}
-                              {request.medical_reports && (
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  Reports: {request.medical_reports}
-                                </p>
-                              )}
+                              </p>
+                              <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                                {request.budget_range && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Budget</p>
+                                    <p className="text-sm text-muted-foreground">{request.budget_range}</p>
+                                  </div>
+                                )}
+                                {request.medical_reports && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                      Medical Reports
+                                    </p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {request.medical_reports}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <span className="text-sm text-foreground">
+                            {request.health_background && request.health_background.trim().length > 0 && (
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Background</p>
+                                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                  {request.health_background}
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Travel window</p>
+                              <p className="text-sm text-muted-foreground">
                                 {formatDateTime(request.travel_window)}
-                              </span>
+                              </p>
                               {request.companions && (
-                                <p className="text-xs text-muted-foreground">
-                                  Companion plan: {request.companions}
-                                </p>
+                                <p className="text-xs text-muted-foreground">Companion plan: {request.companions}</p>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top">
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                          <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
+                            View
+                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  disabled={!request.patient_id}
+                                  onClick={() => handleSchedule(request)}
+                                  className="w-full"
+                                >
+                                  Schedule
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {!request.patient_id ? (
+                              <TooltipContent>Link this request to a patient before scheduling</TooltipContent>
+                            ) : (
+                              <TooltipContent>Open the scheduling form with this patient pre-filled</TooltipContent>
+                            )}
+                          </Tooltip>
+                          <div className="space-y-1 text-xs text-muted-foreground md:text-right">
+                            <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
                             <Select
                               value={request.status}
                               onValueChange={(value) => {
@@ -369,7 +502,7 @@ export default function AdminRequestsPage() {
                               }}
                               disabled={updatingId === request.id || updateRequest.isPending}
                             >
-                              <SelectTrigger className="w-[140px]">
+                              <SelectTrigger className="w-full">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -380,16 +513,11 @@ export default function AdminRequestsPage() {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </TableCell>
-                          <TableCell className="align-top text-right">
-                            <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -460,69 +588,119 @@ export default function AdminRequestsPage() {
               )}
 
               {contactRequests.length > 0 && (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Received</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead className="w-[220px]">Treatment</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-[140px] text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {contactRequests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell className="align-top">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{formatDateTime(request.created_at)}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Updated {formatDateTime(request.updated_at)}
-                              </span>
-                              <Badge variant="secondary" className="mt-2 w-fit capitalize">
-                                {request.origin ?? "web"}
-                              </Badge>
+                <div className="space-y-4">
+                  {contactRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-1 flex-col gap-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-lg font-semibold text-foreground">
+                                  {request.first_name} {request.last_name}
+                                </p>
+                                <Badge variant="secondary" className="capitalize">
+                                  {request.origin ?? "web"}
+                                </Badge>
+                                <Badge variant="outline" className="capitalize">
+                                  {capitalize(request.request_type)}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span>Received {formatDateTime(request.created_at)}</span>
+                                <span>Updated {formatDateTime(request.updated_at)}</span>
+                              </div>
+                              <div className="space-y-1 text-sm text-muted-foreground">
+                                <p>{request.email}</p>
+                                {request.phone && <p>{request.phone}</p>}
+                                {request.country && <p className="uppercase">{request.country}</p>}
+                                {request.contact_preference && (
+                                  <p className="font-medium text-primary">
+                                    Prefers: {request.contact_preference}
+                                  </p>
+                                )}
+                                {request.patient_id && (
+                                  <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
+                                    Linked patient • {request.patient_id.slice(0, 8)}
+                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <p className="font-semibold">
-                                {request.first_name} {request.last_name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{request.email}</p>
-                              {request.phone && <p className="text-sm text-muted-foreground">{request.phone}</p>}
-                              {request.country && (
-                                <p className="text-xs text-muted-foreground uppercase">{request.country}</p>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
+                                <p className="text-sm text-foreground">
+                                  {request.treatment && request.treatment.trim().length > 0
+                                    ? request.treatment
+                                    : "Not specified"}
+                                </p>
+                              </div>
+                              {request.health_background && request.health_background.trim().length > 0 && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Background</p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                    {request.health_background}
+                                  </p>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Travel window</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {request.travel_window ? formatDateTime(request.travel_window) : "Not provided"}
+                                </p>
+                                {request.companions && (
+                                  <p className="text-xs text-muted-foreground">Companion plan: {request.companions}</p>
+                                )}
+                              </div>
+                              {request.notes && request.notes.trim().length > 0 && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Note</p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{request.notes}</p>
+                                </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top min-w-[200px]">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-medium text-sm text-foreground">
-                                {request.treatment && request.treatment.trim().length > 0
-                                  ? request.treatment
-                                  : "Not specified"}
-                              </span>
-                              {request.notes && request.notes.trim().length > 0 ? (
-                                <p className="text-xs leading-snug text-muted-foreground break-words">
-                                  <span className="font-medium text-muted-foreground/90">Note:&nbsp;</span>
-                                  {request.notes}
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              {request.additional_questions && request.additional_questions.trim().length > 0 && (
+                                <p>
+                                  <span className="font-medium text-muted-foreground/90">Additional details:&nbsp;</span>
+                                  {request.additional_questions}
                                 </p>
-                              ) : null}
-                              {request.health_background && request.health_background.trim().length > 0 ? (
-                                <p className="text-xs leading-snug text-muted-foreground break-words">
-                                  <span className="font-medium text-muted-foreground/90">Background:&nbsp;</span>
-                                  {request.health_background}
-                                </p>
-                              ) : null}
+                              )}
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Badge variant="secondary">{capitalize(request.request_type)}</Badge>
-                          </TableCell>
-                          <TableCell className="align-top">
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                          <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
+                            View
+                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  disabled={!request.patient_id}
+                                  onClick={() => handleSchedule(request)}
+                                  className="w-full"
+                                >
+                                  Schedule
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {!request.patient_id ? (
+                              <TooltipContent>Link this request to a patient before scheduling</TooltipContent>
+                            ) : (
+                              <TooltipContent>Open the scheduling form with this patient pre-filled</TooltipContent>
+                            )}
+                          </Tooltip>
+                          <div className="space-y-1 text-xs text-muted-foreground md:text-right">
+                            <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
                             <Select
                               value={request.status}
                               onValueChange={(value) => {
@@ -530,7 +708,7 @@ export default function AdminRequestsPage() {
                               }}
                               disabled={updatingId === request.id || updateRequest.isPending}
                             >
-                              <SelectTrigger className="w-[140px]">
+                              <SelectTrigger className="w-full">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -541,16 +719,11 @@ export default function AdminRequestsPage() {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </TableCell>
-                          <TableCell className="align-top text-right">
-                            <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -649,7 +822,6 @@ export default function AdminRequestsPage() {
                         Travel window: {formatDateTime(activeRequest.travel_window)}
                       </p>
                       {activeRequest.companions && <p>Companions: {activeRequest.companions}</p>}
-                      {activeRequest.budget_range && <p>Budget guidance: {activeRequest.budget_range}</p>}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -694,6 +866,46 @@ export default function AdminRequestsPage() {
                   placeholder="Add coordination notes or handoff details..."
                   rows={4}
                 />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground">Linked patient</h3>
+                <PatientSelector
+                  value={patientIdDraft}
+                  onValueChange={(value) => setPatientIdDraft(value)}
+                  placeholder="Select patient to link…"
+                  className="w-full"
+                />
+                {selectedPatientForDialog ? (
+                  <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs uppercase text-muted-foreground">
+                        Consultations for this patient
+                      </span>
+                      {activeRequest.contact_preference && (
+                        <Badge variant="outline" className="capitalize">
+                          Prefers {activeRequest.contact_preference}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-2 space-y-2">{renderConsultationSummary()}</div>
+                    <Button
+                      className="mt-3 w-full"
+                      disabled={!selectedPatientForDialog}
+                      onClick={() =>
+                        handleSchedule({
+                          ...activeRequest,
+                          patient_id: selectedPatientForDialog,
+                        })
+                      }
+                    >
+                      Schedule consultation
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Choose a patient record to enable scheduling and track follow-up.
+                  </p>
+                )}
               </div>
             </div>
           )}
