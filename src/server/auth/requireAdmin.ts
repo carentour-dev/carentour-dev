@@ -1,9 +1,9 @@
-import { NextRequest } from "next/server";
+import { headers } from "next/headers";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 
-export async function requireAdmin(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
+export async function requireAdmin() {
+  const authHeader = headers().get("authorization");
 
   if (!authHeader?.startsWith("Bearer ")) {
     throw new ApiError(401, "Missing or invalid Authorization header");
