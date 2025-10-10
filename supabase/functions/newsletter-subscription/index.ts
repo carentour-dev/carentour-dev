@@ -1,38 +1,24 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@4.0.0";
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
-
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const resendApiKey = Deno.env.get('RESEND_API_KEY');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const resend = new Resend(resendApiKey);
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
-
-interface SubscriptionRequest {
-  email: string;
-  source?: string;
-  preferences?: Record<string, any>;
-}
-
-interface UnsubscribeRequest {
-  token: string;
-}
-
-const handler = async (req: Request): Promise<Response> => {
+const handler = async (req)=>{
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
-
   const url = new URL(req.url);
   const action = url.searchParams.get('action') || 'subscribe';
-
   try {
     if (action === 'subscribe') {
       return await handleSubscription(req);
@@ -41,34 +27,44 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (action === 'confirm') {
       return await handleConfirmation(req);
     }
-
-    return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error: any) {
+    return new Response(JSON.stringify({
+      error: 'Invalid action'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (error) {
     console.error('Error in newsletter-subscription function:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
 };
-
-async function handleSubscription(req: Request): Promise<Response> {
-  const { email, source = 'footer', preferences = {} }: SubscriptionRequest = await req.json();
-
+async function handleSubscription(req) {
+  const { email, source = 'footer', preferences = {} } = await req.json();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid email address' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: 'Invalid email address'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
-
   // Get client IP and user agent
   const forwardedFor = req.headers.get('x-forwarded-for');
   let clientIP = 'unknown';
-  
   if (forwardedFor) {
     // Handle comma-separated IP addresses (x-forwarded-for can contain multiple IPs)
     const firstIP = forwardedFor.split(',')[0].trim();
@@ -77,173 +73,166 @@ async function handleSubscription(req: Request): Promise<Response> {
       clientIP = firstIP;
     }
   }
-  
   const userAgent = req.headers.get('user-agent') || '';
-
   // Check if email already exists
-  const { data: existing } = await supabase
-    .from('newsletter_subscriptions')
-    .select('id, status')
-    .eq('email', email.toLowerCase())
-    .single();
-
+  const { data: existing } = await supabase.from('newsletter_subscriptions').select('id, status').eq('email', email.toLowerCase()).single();
   if (existing) {
     if (existing.status === 'active') {
-      return new Response(
-        JSON.stringify({ message: 'Already subscribed', subscriptionId: existing.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({
+        message: 'Already subscribed',
+        subscriptionId: existing.id
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
     } else {
       // Reactivate subscription
-      const { error } = await supabase
-        .from('newsletter_subscriptions')
-        .update({ 
-          status: 'pending',
-          subscribed_at: new Date().toISOString(),
-          unsubscribed_at: null,
-          subscription_source: source,
-          preferences,
-          ip_address: clientIP,
-          user_agent: userAgent
-        })
-        .eq('id', existing.id);
-
-      if (error) throw error;
-    }
-  } else {
-    // Create new subscription
-    const { error } = await supabase
-      .from('newsletter_subscriptions')
-      .insert({
-        email: email.toLowerCase(),
+      const { error } = await supabase.from('newsletter_subscriptions').update({
+        status: 'pending',
+        subscribed_at: new Date().toISOString(),
+        unsubscribed_at: null,
         subscription_source: source,
         preferences,
         ip_address: clientIP,
         user_agent: userAgent
-      });
-
+      }).eq('id', existing.id);
+      if (error) throw error;
+    }
+  } else {
+    // Create new subscription
+    const { error } = await supabase.from('newsletter_subscriptions').insert({
+      email: email.toLowerCase(),
+      subscription_source: source,
+      preferences,
+      ip_address: clientIP,
+      user_agent: userAgent
+    });
     if (error) throw error;
   }
-
   // Send confirmation email
   try {
     await sendConfirmationEmail(email, source);
     console.log(`Confirmation email sent successfully to: ${email}`);
   } catch (emailError) {
     console.error('Failed to send confirmation email:', emailError);
-    // Don't fail the subscription if email fails
+  // Don't fail the subscription if email fails
   }
-
-  return new Response(
-    JSON.stringify({ message: 'Subscription confirmation sent to your email' }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({
+    message: 'Subscription confirmation sent to your email'
+  }), {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
+  });
 }
-
-async function handleUnsubscribe(req: Request): Promise<Response> {
-  const { token }: UnsubscribeRequest = await req.json();
-
+async function handleUnsubscribe(req) {
+  const { token } = await req.json();
   if (!token) {
-    return new Response(
-      JSON.stringify({ error: 'Unsubscribe token required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: 'Unsubscribe token required'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
-
-  const { data, error } = await supabase
-    .from('newsletter_subscriptions')
-    .update({ 
-      status: 'unsubscribed',
-      unsubscribed_at: new Date().toISOString()
-    })
-    .eq('unsubscribe_token', token)
-    .select('email')
-    .single();
-
+  const { data, error } = await supabase.from('newsletter_subscriptions').update({
+    status: 'unsubscribed',
+    unsubscribed_at: new Date().toISOString()
+  }).eq('unsubscribe_token', token).select('email').single();
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid unsubscribe token' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: 'Invalid unsubscribe token'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
-
-  return new Response(
-    JSON.stringify({ message: 'Successfully unsubscribed', email: data.email }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({
+    message: 'Successfully unsubscribed',
+    email: data.email
+  }), {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
+  });
 }
-
-async function handleConfirmation(req: Request): Promise<Response> {
+async function handleConfirmation(req) {
   const url = new URL(req.url);
   const token = url.searchParams.get('token');
-
   if (!token) {
-    return new Response(
-      JSON.stringify({ error: 'Confirmation token required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: 'Confirmation token required'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
-
-  const { data, error } = await supabase
-    .from('newsletter_subscriptions')
-    .update({ 
-      status: 'active',
-      confirmed_at: new Date().toISOString()
-    })
-    .eq('unsubscribe_token', token)
-    .eq('status', 'pending')
-    .select('email')
-    .single();
-
+  const { data, error } = await supabase.from('newsletter_subscriptions').update({
+    status: 'active',
+    confirmed_at: new Date().toISOString()
+  }).eq('unsubscribe_token', token).eq('status', 'pending').select('email').single();
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid or expired confirmation token' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      error: 'Invalid or expired confirmation token'
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
-
   // Send welcome email
   try {
     await sendWelcomeEmail(data.email);
     console.log(`Welcome email sent successfully to: ${data.email}`);
   } catch (emailError) {
     console.error('Failed to send welcome email:', emailError);
-    // Don't fail the confirmation if email fails
+  // Don't fail the confirmation if email fails
   }
-
-  return new Response(
-    JSON.stringify({ message: 'Email confirmed successfully!', email: data.email }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({
+    message: 'Email confirmed successfully!',
+    email: data.email
+  }), {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
+  });
 }
-
-async function sendConfirmationEmail(email: string, source: string): Promise<void> {
+async function sendConfirmationEmail(email, source) {
   console.log(`Sending confirmation email to: ${email} from source: ${source}`);
-  
   // Get the subscription token for confirmation link
-  const { data, error: dbError } = await supabase
-    .from('newsletter_subscriptions')
-    .select('unsubscribe_token')
-    .eq('email', email.toLowerCase())
-    .single();
-
+  const { data, error: dbError } = await supabase.from('newsletter_subscriptions').select('unsubscribe_token').eq('email', email.toLowerCase()).single();
   if (dbError) {
     console.error('Database error getting subscription token:', dbError);
     throw new Error(`Failed to get subscription token: ${dbError.message}`);
   }
-
   if (!data) {
     console.error('No subscription data found for email:', email);
     throw new Error('Subscription not found');
   }
-
   const confirmationUrl = `${supabaseUrl}/functions/v1/newsletter-subscription?action=confirm&token=${data.unsubscribe_token}`;
   console.log(`Generated confirmation URL: ${confirmationUrl}`);
-
   try {
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'Care N Tour <admin@carentour.com>',
-      to: [email],
+      from: 'Care N Tour <newsletter@carentour.com>',
+      to: [
+        email
+      ],
       subject: 'Please confirm your newsletter subscription',
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
@@ -266,28 +255,26 @@ async function sendConfirmationEmail(email: string, source: string): Promise<voi
             If you didn't request this subscription, you can safely ignore this email.
           </p>
         </div>
-      `,
+      `
     });
-
     if (emailError) {
       console.error('Resend API error:', emailError);
       throw new Error(`Email sending failed: ${emailError.message}`);
     }
-
     console.log('Email sent successfully via Resend:', emailResult);
   } catch (error) {
     console.error('Error in sendConfirmationEmail:', error);
     throw error;
   }
 }
-
-async function sendWelcomeEmail(email: string): Promise<void> {
+async function sendWelcomeEmail(email) {
   console.log(`Sending welcome email to: ${email}`);
-  
   try {
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'Care N Tour <onboarding@resend.dev>',
-      to: [email],
+      from: 'Care N Tour <newsletter@carentour.com>',
+      to: [
+        email
+      ],
       subject: 'Welcome to Care N Tour Newsletter!',
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
@@ -306,19 +293,16 @@ async function sendWelcomeEmail(email: string): Promise<void> {
             The Care N Tour Team
           </p>
         </div>
-      `,
+      `
     });
-
     if (emailError) {
       console.error('Resend API error in welcome email:', emailError);
       throw new Error(`Welcome email failed: ${emailError.message}`);
     }
-
     console.log('Welcome email sent successfully via Resend:', emailResult);
   } catch (error) {
     console.error('Error in sendWelcomeEmail:', error);
     throw error;
   }
 }
-
 serve(handler);
