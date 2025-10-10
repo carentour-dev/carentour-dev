@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Sending confirmation email to:', user.email)
 
     const { data, error } = await resend.emails.send({
-      from: 'Care N Tour <onboarding@resend.dev>',
+      from: 'Care N Tour <admin@carentour.com>',
       to: [user.email],
       subject: 'Confirm your Care N Tour account',
       html,
