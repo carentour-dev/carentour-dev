@@ -14,7 +14,7 @@ type WrappedHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>
 export function adminRoute(handler: RouteHandler): WrappedHandler {
   return async (req, ctx) => {
     try {
-      await requireAdmin(req);
+      await requireAdmin();
       return await handler(req, ctx);
     } catch (error) {
       return handleRouteError(error);
