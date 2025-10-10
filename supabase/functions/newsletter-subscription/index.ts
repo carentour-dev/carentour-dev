@@ -242,7 +242,7 @@ async function sendConfirmationEmail(email: string, source: string): Promise<voi
 
   try {
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'Care N Tour <onboarding@resend.dev>',
+      from: 'Care N Tour <admin@carentour.com>',
       to: [email],
       subject: 'Please confirm your newsletter subscription',
       html: `
