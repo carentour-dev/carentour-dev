@@ -100,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send confirmation email to the user
     const userEmailResponse = await resend.emails.send({
-      from: "Care N Tour <onboarding@resend.dev>",
+      from: "Care N Tour <admin@carentour.com>",
       to: ["me@myassin.net"], // Using verified email for testing
       subject: "Thank you for contacting Care N Tour",
       html: `
