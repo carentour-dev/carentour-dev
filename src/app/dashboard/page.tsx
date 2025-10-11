@@ -241,8 +241,8 @@ export default function DashboardPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+            <div className="flex items-center gap-4 xl:col-span-2">
               <Avatar className="h-16 w-16">
                 <AvatarImage src={profile?.avatar_url ?? undefined} alt="User avatar" />
                 <AvatarFallback className="text-lg bg-primary/10">
@@ -259,7 +259,7 @@ export default function DashboardPage() {
               </div>
             </div>
             {patient && (
-              <div className="rounded-xl border border-border/60 bg-muted/20 px-5 py-4">
+              <div className="w-full rounded-2xl border border-border/60 bg-muted/20 px-6 py-5 text-left shadow-sm xl:col-span-1">
                 <p className="text-sm text-muted-foreground">Patient ID</p>
                 <p className="text-lg font-semibold text-foreground">{patient.id}</p>
               </div>
