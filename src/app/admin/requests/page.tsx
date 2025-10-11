@@ -233,16 +233,55 @@ export default function AdminRequestsPage() {
   });
 
   const handleSchedule = (request: ContactRequest) => {
-    if (!request.patient_id) {
+    const hasLinkedPatient = Boolean(request.patient_id);
+    const isPortalRequest = Boolean(request.user_id) || request.origin === "portal";
+
+    if (!hasLinkedPatient) {
+      if (!isPortalRequest) {
+        const params = new URLSearchParams({
+          new: "1",
+          fromRequestId: request.id,
+        });
+        if (request.first_name || request.last_name) {
+          params.set("fullName", `${request.first_name ?? ""} ${request.last_name ?? ""}`.trim());
+        }
+        if (request.email) {
+          params.set("email", request.email);
+        }
+        if (request.phone) {
+          params.set("phone", request.phone);
+        }
+        router.push(`/admin/patients?${params.toString()}`);
+        return;
+      }
+
       openDialogFor(request);
       return;
     }
+
     const params = new URLSearchParams({
       schedule: "1",
       contactRequestId: request.id,
       patientId: request.patient_id,
     });
     router.push(`/admin/consultations?${params.toString()}`);
+  };
+
+  const getScheduleButtonLabel = (request: ContactRequest) => {
+    const isPortalRequest = Boolean(request.user_id) || request.origin === "portal";
+    if (!isPortalRequest && !request.patient_id) {
+      return "Add Patient";
+    }
+    return "Schedule";
+  };
+
+  const getScheduleTooltip = (request: ContactRequest) => {
+    if (!request.patient_id) {
+      return Boolean(request.user_id) || request.origin === "portal"
+        ? "Link this request to a patient before scheduling"
+        : "Open the add patient form to capture this requester";
+    }
+    return "Open the scheduling form with this patient pre-filled";
   };
 
   const renderConsultationSummary = () => {
@@ -385,139 +424,143 @@ export default function AdminRequestsPage() {
 
               {consultationRequests.length > 0 && (
                 <div className="space-y-4">
-                  {consultationRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                    >
-                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex flex-1 flex-col gap-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-lg font-semibold text-foreground">
-                                  {request.first_name} {request.last_name}
-                                </p>
-                                <Badge variant="secondary" className="capitalize">
-                                  {request.origin ?? "web"}
-                                </Badge>
-                                <Badge variant="outline">{STATUS_LABELS[request.status]}</Badge>
-                              </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                <span>Received {formatDateTime(request.created_at)}</span>
-                                <span>Updated {formatDateTime(request.updated_at)}</span>
-                              </div>
-                              <div className="space-y-1 text-sm text-muted-foreground">
-                                <p>{request.email}</p>
-                                {request.phone && <p>{request.phone}</p>}
-                                {request.country && <p className="uppercase">Based in {request.country}</p>}
-                                {request.contact_preference && (
-                                  <p className="font-medium text-primary">
-                                    Prefers: {request.contact_preference}
+                  {consultationRequests.map((request) => {
+                    const scheduleTooltip = getScheduleTooltip(request);
+                    const scheduleLabel = getScheduleButtonLabel(request);
+
+                    return (
+                      <div
+                        key={request.id}
+                        className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                      >
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="flex flex-1 flex-col gap-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-lg font-semibold text-foreground">
+                                    {request.first_name} {request.last_name}
                                   </p>
-                                )}
-                                {request.patient_id && (
-                                  <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
-                                    Linked patient • {request.patient_id.slice(0, 8)}
-                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  <Badge variant="secondary" className="capitalize">
+                                    {request.origin ?? "web"}
                                   </Badge>
-                                )}
+                                  <Badge variant="outline">{STATUS_LABELS[request.status]}</Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                  <span>Received {formatDateTime(request.created_at)}</span>
+                                  <span>Updated {formatDateTime(request.updated_at)}</span>
+                                </div>
+                                <div className="space-y-1 text-sm text-muted-foreground">
+                                  <p>{request.email}</p>
+                                  {request.phone && <p>{request.phone}</p>}
+                                  {request.country && <p className="uppercase">Based in {request.country}</p>}
+                                  {request.contact_preference && (
+                                    <p className="font-medium text-primary">
+                                      Prefers: {request.contact_preference}
+                                    </p>
+                                  )}
+                                  {request.patient_id && (
+                                    <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
+                                      Linked patient • {request.patient_id.slice(0, 8)}
+                                      {request.patient_id.length > 8 ? "…" : ""}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
-                              <p className="text-sm text-foreground">
-                                {request.treatment ?? "Not specified"}
-                              </p>
-                              <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                                {request.budget_range && (
-                                  <div>
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Budget</p>
-                                    <p className="text-sm text-muted-foreground">{request.budget_range}</p>
-                                  </div>
-                                )}
-                                {request.medical_reports && (
-                                  <div>
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                      Medical Reports
-                                    </p>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                      {request.medical_reports}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {request.health_background && request.health_background.trim().length > 0 && (
+                            <div className="space-y-3">
                               <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Background</p>
-                                <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                  {request.health_background}
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
+                                <p className="text-sm text-foreground">
+                                  {request.treatment ?? "Not specified"}
                                 </p>
+                                <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                                  {request.budget_range && (
+                                    <div>
+                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                        Budget
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">{request.budget_range}</p>
+                                    </div>
+                                  )}
+                                  {request.medical_reports && (
+                                    <div>
+                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                        Medical Reports
+                                      </p>
+                                      <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                        {request.medical_reports}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Travel window</p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatDateTime(request.travel_window)}
-                              </p>
-                              {request.companions && (
-                                <p className="text-xs text-muted-foreground">Companion plan: {request.companions}</p>
+                              {request.health_background && request.health_background.trim().length > 0 && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Background
+                                  </p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                    {request.health_background}
+                                  </p>
+                                </div>
                               )}
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Travel window</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {formatDateTime(request.travel_window)}
+                                </p>
+                                {request.companions && (
+                                  <p className="text-xs text-muted-foreground">Companion plan: {request.companions}</p>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
-                          <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
-                            View
-                          </Button>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  disabled={!request.patient_id}
-                                  onClick={() => handleSchedule(request)}
-                                  className="w-full"
-                                >
-                                  Schedule
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!request.patient_id ? (
-                              <TooltipContent>Link this request to a patient before scheduling</TooltipContent>
-                            ) : (
-                              <TooltipContent>Open the scheduling form with this patient pre-filled</TooltipContent>
-                            )}
-                          </Tooltip>
-                          <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                            <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
-                            <Select
-                              value={request.status}
-                              onValueChange={(value) => {
-                                void handleStatusChange(request.id, value as ContactRequestStatus);
-                              }}
-                              disabled={updatingId === request.id || updateRequest.isPending}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUS_OPTIONS.filter((option) => option.value !== "all").map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                            <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
+                              View
+                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => handleSchedule(request)}
+                                    className="w-full"
+                                  >
+                                    {scheduleLabel}
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{scheduleTooltip}</TooltipContent>
+                            </Tooltip>
+                            <div className="space-y-1 text-xs text-muted-foreground md:text-right">
+                              <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
+                              <Select
+                                value={request.status}
+                                onValueChange={(value) => {
+                                  void handleStatusChange(request.id, value as ContactRequestStatus);
+                                }}
+                                disabled={updatingId === request.id || updateRequest.isPending}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.filter((option) => option.value !== "all").map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -589,141 +632,151 @@ export default function AdminRequestsPage() {
 
               {contactRequests.length > 0 && (
                 <div className="space-y-4">
-                  {contactRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                    >
-                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex flex-1 flex-col gap-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-lg font-semibold text-foreground">
-                                  {request.first_name} {request.last_name}
-                                </p>
-                                <Badge variant="secondary" className="capitalize">
-                                  {request.origin ?? "web"}
-                                </Badge>
-                                <Badge variant="outline" className="capitalize">
-                                  {capitalize(request.request_type)}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                <span>Received {formatDateTime(request.created_at)}</span>
-                                <span>Updated {formatDateTime(request.updated_at)}</span>
-                              </div>
-                              <div className="space-y-1 text-sm text-muted-foreground">
-                                <p>{request.email}</p>
-                                {request.phone && <p>{request.phone}</p>}
-                                {request.country && <p className="uppercase">{request.country}</p>}
-                                {request.contact_preference && (
-                                  <p className="font-medium text-primary">
-                                    Prefers: {request.contact_preference}
+                  {contactRequests.map((request) => {
+                    const scheduleTooltip = getScheduleTooltip(request);
+                    const scheduleLabel = getScheduleButtonLabel(request);
+
+                    return (
+                      <div
+                        key={request.id}
+                        className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                      >
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="flex flex-1 flex-col gap-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-lg font-semibold text-foreground">
+                                    {request.first_name} {request.last_name}
                                   </p>
-                                )}
-                                {request.patient_id && (
-                                  <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
-                                    Linked patient • {request.patient_id.slice(0, 8)}
-                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  <Badge variant="secondary" className="capitalize">
+                                    {request.origin ?? "web"}
                                   </Badge>
-                                )}
+                                  <Badge variant="outline" className="capitalize">
+                                    {capitalize(request.request_type)}
+                                  </Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                  <span>Received {formatDateTime(request.created_at)}</span>
+                                  <span>Updated {formatDateTime(request.updated_at)}</span>
+                                </div>
+                                <div className="space-y-1 text-sm text-muted-foreground">
+                                  <p>{request.email}</p>
+                                  {request.phone && <p>{request.phone}</p>}
+                                  {request.country && <p className="uppercase">{request.country}</p>}
+                                  {request.contact_preference && (
+                                    <p className="font-medium text-primary">
+                                      Prefers: {request.contact_preference}
+                                    </p>
+                                  )}
+                                  {request.patient_id && (
+                                    <Badge variant="outline" className="mt-1 w-fit text-xs font-normal">
+                                      Linked patient • {request.patient_id.slice(0, 8)}
+                                      {request.patient_id.length > 8 ? "…" : ""}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
-                                <p className="text-sm text-foreground">
-                                  {request.treatment && request.treatment.trim().length > 0
-                                    ? request.treatment
-                                    : "Not specified"}
-                                </p>
-                              </div>
-                              {request.health_background && request.health_background.trim().length > 0 && (
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-3">
                                 <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Background</p>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                    {request.health_background}
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Treatment</p>
+                                  <p className="text-sm text-foreground">
+                                    {request.treatment && request.treatment.trim().length > 0
+                                      ? request.treatment
+                                      : "Not specified"}
                                   </p>
                                 </div>
-                              )}
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Travel window</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {request.travel_window ? formatDateTime(request.travel_window) : "Not provided"}
-                                </p>
-                                {request.companions && (
-                                  <p className="text-xs text-muted-foreground">Companion plan: {request.companions}</p>
+                                {request.health_background && request.health_background.trim().length > 0 && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                      Background
+                                    </p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {request.health_background}
+                                    </p>
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Travel window
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {request.travel_window ? formatDateTime(request.travel_window) : "Not provided"}
+                                  </p>
+                                  {request.companions && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Companion plan: {request.companions}
+                                    </p>
+                                  )}
+                                </div>
+                                {request.notes && request.notes.trim().length > 0 && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Note</p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {request.notes}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
-                              {request.notes && request.notes.trim().length > 0 && (
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Note</p>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{request.notes}</p>
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-2 text-sm text-muted-foreground">
-                              {request.additional_questions && request.additional_questions.trim().length > 0 && (
-                                <p>
-                                  <span className="font-medium text-muted-foreground/90">Additional details:&nbsp;</span>
-                                  {request.additional_questions}
-                                </p>
-                              )}
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                {request.additional_questions && request.additional_questions.trim().length > 0 && (
+                                  <p>
+                                    <span className="font-medium text-muted-foreground/90">
+                                      Additional details:&nbsp;
+                                    </span>
+                                    {request.additional_questions}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
-                          <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
-                            View
-                          </Button>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  disabled={!request.patient_id}
-                                  onClick={() => handleSchedule(request)}
-                                  className="w-full"
-                                >
-                                  Schedule
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!request.patient_id ? (
-                              <TooltipContent>Link this request to a patient before scheduling</TooltipContent>
-                            ) : (
-                              <TooltipContent>Open the scheduling form with this patient pre-filled</TooltipContent>
-                            )}
-                          </Tooltip>
-                          <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                            <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
-                            <Select
-                              value={request.status}
-                              onValueChange={(value) => {
-                                void handleStatusChange(request.id, value as ContactRequestStatus);
-                              }}
-                              disabled={updatingId === request.id || updateRequest.isPending}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUS_OPTIONS.filter((option) => option.value !== "all").map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                            <Button variant="outline" size="sm" onClick={() => openDialogFor(request)}>
+                              View
+                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => handleSchedule(request)}
+                                    className="w-full"
+                                  >
+                                    {scheduleLabel}
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{scheduleTooltip}</TooltipContent>
+                            </Tooltip>
+                            <div className="space-y-1 text-xs text-muted-foreground md:text-right">
+                              <p className="uppercase tracking-wide text-muted-foreground/80">Status</p>
+                              <Select
+                                value={request.status}
+                                onValueChange={(value) => {
+                                  void handleStatusChange(request.id, value as ContactRequestStatus);
+                                }}
+                                disabled={updatingId === request.id || updateRequest.isPending}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.filter((option) => option.value !== "all").map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
