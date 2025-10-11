@@ -41,7 +41,12 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "fixed z-50 flex h-auto flex-col border bg-background text-foreground shadow-lg",
+        "max-h-[96vh] overflow-y-auto",
+        "inset-x-0 bottom-0 mt-24 rounded-t-[10px]",
+        "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mt-0 data-[vaul-drawer-direction=top]:rounded-b-[10px] data-[vaul-drawer-direction=top]:rounded-t-none",
+        "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:mt-0 data-[vaul-drawer-direction=left]:h-full data-[vaul-drawer-direction=left]:w-[80vw] data-[vaul-drawer-direction=left]:max-w-sm data-[vaul-drawer-direction=left]:rounded-r-[10px] data-[vaul-drawer-direction=left]:rounded-l-none",
+        "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:mt-0 data-[vaul-drawer-direction=right]:h-full data-[vaul-drawer-direction=right]:w-[80vw] data-[vaul-drawer-direction=right]:max-w-sm data-[vaul-drawer-direction=right]:rounded-l-[10px] data-[vaul-drawer-direction=right]:rounded-r-none",
         className
       )}
       {...props}
