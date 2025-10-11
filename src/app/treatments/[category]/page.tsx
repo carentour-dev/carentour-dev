@@ -131,7 +131,7 @@ export default function TreatmentDetails() {
       overview:
         normalizedTreatment.overview ||
         normalizedTreatment.description ||
-        "Our medical experts craft individualized treatment plans combining top specialists and facilities.",
+        "Our medical experts craft individualized treatment plans combining top specialists and service providers.",
       idealCandidates: normalizedTreatment.idealCandidates,
       procedures: normalizedTreatment.procedures,
       quickFacts: {
@@ -242,6 +242,15 @@ export default function TreatmentDetails() {
               <p className="text-xl text-muted-foreground leading-relaxed">
                 {treatment.description}
               </p>
+              <div className="mt-6 flex flex-wrap gap-4">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  onClick={() => router.push("/consultation")}
+                >
+                  Book Now
+                </Button>
+              </div>
             </div>
           </div>
         </section>
