@@ -23,7 +23,7 @@ export default function About() {
     {
       icon: Shield,
       title: "Safety First",
-      description: "We maintain the highest safety standards with internationally accredited facilities and certified medical professionals."
+      description: "We maintain the highest safety standards with internationally accredited service providers and certified medical professionals."
     },
     {
       icon: Heart,
@@ -54,7 +54,7 @@ export default function About() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                For over a decade, we&apos;ve been connecting patients from around the world with Egypt&apos;s finest medical facilities,
+                For over a decade, we&apos;ve been connecting patients from around the world with Egypt&apos;s finest medical service providers,
                 delivering exceptional healthcare experiences that combine clinical excellence with warm hospitality.
               </p>
             </div>
