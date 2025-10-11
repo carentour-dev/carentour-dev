@@ -99,7 +99,7 @@ export default function TravelInfo() {
     () => [
       {
         type: "Luxury Medical Hotels",
-        description: "5-star hotels partnered with medical facilities",
+        description: "5-star hotels partnered with medical service providers",
         amenities: ["Medical concierge", "24/7 nursing", "Recovery suites", "Specialized diet"],
         priceRange: "$150 - $300/night",
         locations: ["New Cairo", "Zamalek", "Heliopolis"],
@@ -120,7 +120,7 @@ export default function TravelInfo() {
       },
       {
         type: "Recovery Centers",
-        description: "Specialized medical tourism facilities",
+        description: "Specialized medical tourism recovery centers",
         amenities: ["Post-op care", "Medical staff", "Therapy rooms", "Nutritionist"],
         priceRange: "$200 - $400/night",
         locations: ["Near partner hospitals"],
@@ -152,7 +152,7 @@ export default function TravelInfo() {
 
       return {
         title: hotel.name,
-        description: hotel.description ?? "Partner accommodation close to medical facilities.",
+        description: hotel.description ?? "Partner accommodation close to medical service providers.",
         amenities: hotel.amenities ?? [],
         medical: hotel.medical_services ?? [],
         priceLabel:
@@ -161,7 +161,7 @@ export default function TravelInfo() {
             : "Contact for pricing",
         locationLabel:
           location || (typeof hotel.distance_to_facility_km === "number"
-            ? `${hotel.distance_to_facility_km} km from partner facility`
+            ? `${hotel.distance_to_facility_km} km from partner service provider`
             : "Near partner hospitals"),
         icon,
         starRating: hotel.star_rating,
@@ -173,11 +173,11 @@ export default function TravelInfo() {
     climate: [
       { season: "Winter (Dec-Feb)", temp: "15-25°C", description: "Mild and pleasant, ideal for recovery" },
       { season: "Spring (Mar-May)", temp: "20-30°C", description: "Warm and comfortable weather" },
-      { season: "Summer (Jun-Aug)", temp: "25-35°C", description: "Hot and dry, air-conditioned facilities" },
+      { season: "Summer (Jun-Aug)", temp: "25-35°C", description: "Hot and dry, air-conditioned treatment centers" },
       { season: "Autumn (Sep-Nov)", temp: "20-30°C", description: "Perfect weather for medical tourism" }
     ],
     culture: [
-      "English widely spoken in medical facilities",
+      "English widely spoken across medical service providers",
       "Islamic culture with tolerance for international visitors", 
       "Rich historical heritage and modern amenities",
       "Welcoming hospitality towards medical tourists"
