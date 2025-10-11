@@ -84,42 +84,44 @@ export function DoctorSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList className="max-h-64 overflow-y-auto overscroll-contain">
-            {isLoading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">Loading doctors…</div>
-            ) : (
-              <>
-                <CommandEmpty>No doctors found.</CommandEmpty>
-                <CommandGroup>
-                  {filteredDoctors.map((doctor) => (
-                    <CommandItem
-                      key={doctor.id}
-                      value={doctor.id}
-                      onSelect={() => {
-                        if (allowClear && doctor.id === value) {
-                          onValueChange(null);
-                        } else {
-                          onValueChange(doctor.id);
-                        }
-                        setOpen(false);
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{doctor.name}</span>
-                        <span className="text-xs text-foreground/70">{doctor.specialization}</span>
-                      </div>
-                      <Check
-                        className={cn(
-                          "ml-auto h-4 w-4",
-                          doctor.id === value ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
+          <div className="max-h-64 overflow-y-auto overscroll-contain [@supports(-webkit-touch-callout:none)]:[-webkit-overflow-scrolling:touch]">
+            <CommandList className="max-h-none">
+              {isLoading ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">Loading doctors…</div>
+              ) : (
+                <>
+                  <CommandEmpty>No doctors found.</CommandEmpty>
+                  <CommandGroup>
+                    {filteredDoctors.map((doctor) => (
+                      <CommandItem
+                        key={doctor.id}
+                        value={doctor.id}
+                        onSelect={() => {
+                          if (allowClear && doctor.id === value) {
+                            onValueChange(null);
+                          } else {
+                            onValueChange(doctor.id);
+                          }
+                          setOpen(false);
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{doctor.name}</span>
+                          <span className="text-xs text-foreground/70">{doctor.specialization}</span>
+                        </div>
+                        <Check
+                          className={cn(
+                            "ml-auto h-4 w-4",
+                            doctor.id === value ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>
