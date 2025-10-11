@@ -113,7 +113,7 @@ export function PatientSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList className="max-h-64 overflow-y-auto overscroll-contain">
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -142,7 +142,7 @@ export function PatientSelector({
                         />
                         <div className="flex flex-col min-w-0">
                           <span className="font-medium truncate">{patient.full_name}</span>
-                          <span className="text-xs text-muted-foreground truncate">
+                          <span className="text-xs text-foreground/70 truncate">
                             {[
                               patient.contact_email,
                               patient.nationality,
