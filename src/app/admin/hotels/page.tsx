@@ -452,7 +452,7 @@ export default function AdminHotelsPage() {
                     name="distance_to_facility_km"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Distance to facility (km)</FormLabel>
+                        <FormLabel>Distance to service provider (km)</FormLabel>
                         <Input
                           type="number"
                           min={0}
