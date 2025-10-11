@@ -21,7 +21,7 @@ const ProcessSection = () => {
     {
       icon: Heart,
       title: "Medical Treatment",
-      description: "Receive world-class care in state-of-the-art medical facilities"
+      description: "Receive world-class care from state-of-the-art medical service providers"
     },
     {
       icon: Home,
