@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/integrations/supabase/server";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  context: RouteContext<"/api/patients/[id]">
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await context.params;
 
     const { data, error } = await supabase
-      .rpc("get_patient_testimonial", { p_patient_id: params.id });
+      .rpc("get_patient_testimonial", { p_patient_id: id });
 
     if (error) {
       console.error("Error fetching patient profile:", error);
