@@ -84,7 +84,7 @@ export function DoctorSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList className="max-h-64 overflow-y-auto overscroll-contain">
             {isLoading ? (
               <div className="py-6 text-center text-sm text-muted-foreground">Loading doctors…</div>
             ) : (
@@ -106,7 +106,7 @@ export function DoctorSelector({
                     >
                       <div className="flex flex-col">
                         <span className="font-medium text-foreground">{doctor.name}</span>
-                        <span className="text-xs text-muted-foreground">{doctor.specialization}</span>
+                        <span className="text-xs text-foreground/70">{doctor.specialization}</span>
                       </div>
                       <Check
                         className={cn(
