@@ -8,7 +8,7 @@ const Testimonials = () => {
       country: "United States",
       treatment: "Cardiac Surgery",
       rating: 5,
-      content: "The level of care I received was exceptional. The doctors were highly skilled, and the facilities were world-class. I saved 60% compared to US prices while receiving superior treatment.",
+      content: "The level of care I received was exceptional. The doctors were highly skilled, and the service providers were world-class. I saved 60% compared to US prices while receiving superior treatment.",
       image: "/placeholder.svg"
     },
     {
