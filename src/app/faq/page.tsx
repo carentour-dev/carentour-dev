@@ -171,10 +171,10 @@ export default function FAQ() {
     general: [
       {
         question: "What is medical tourism and why choose Egypt?",
-        answer: "Medical tourism involves traveling to another country for medical treatment. Egypt offers world-class healthcare facilities, internationally trained doctors, significant cost savings (50-70% less than Western countries), and the opportunity to recover in a historically rich environment with excellent hospitality.",
+        answer: "Medical tourism involves traveling to another country for medical treatment. Egypt offers world-class healthcare service providers, internationally trained doctors, significant cost savings (50-70% less than Western countries), and the opportunity to recover in a historically rich environment with excellent hospitality.",
       },
       {
-        question: "Are Egyptian medical facilities up to international standards?",
+        question: "Are Egyptian medical service providers up to international standards?",
         answer: "Yes, our partner hospitals are internationally accredited (JCI, ISO) with state-of-the-art equipment and internationally trained doctors. Many Egyptian physicians have trained in Europe, the US, or Canada and hold international certifications.",
       },
       {
@@ -243,7 +243,7 @@ export default function FAQ() {
     accommodation: [
       {
         question: "What accommodation options are available?",
-        answer: "We offer various options from 5-star hotels to comfortable apartments and medical hotels near hospitals. All accommodations are carefully selected for comfort, cleanliness, and proximity to medical facilities.",
+        answer: "We offer various options from 5-star hotels to comfortable apartments and medical hotels near hospitals. All accommodations are carefully selected for comfort, cleanliness, and proximity to medical service providers.",
       },
       {
         question: "Can my family accompany me during treatment?",
@@ -273,7 +273,7 @@ export default function FAQ() {
       },
       {
         question: "Is rehabilitation therapy available in Egypt?",
-        answer: "Yes, we have excellent rehabilitation facilities and experienced physical therapists. Extended recovery programs can be arranged in Egypt&apos;s favorable climate, often providing better outcomes than immediate return home.",
+        answer: "Yes, we have excellent rehabilitation service providers and experienced physical therapists. Extended recovery programs can be arranged in Egypt&apos;s favorable climate, often providing better outcomes than immediate return home.",
       },
     ],
     emergency: [
@@ -283,7 +283,7 @@ export default function FAQ() {
       },
       {
         question: "What safety measures are in place during treatment?",
-        answer: "All partner facilities follow international safety protocols. We maintain comprehensive medical insurance, have emergency response procedures, and ensure all treatments are performed in accredited facilities with proper safety measures.",
+        answer: "All partner service providers follow international safety protocols. We maintain comprehensive medical insurance, have emergency response procedures, and ensure all treatments are performed in accredited service providers with proper safety measures.",
       },
       {
         question: "How do you handle medical emergencies?",
