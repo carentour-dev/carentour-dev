@@ -134,7 +134,7 @@ export default function Treatments() {
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Discover our full range of medical treatments performed by certified specialists
-                in state-of-the-art facilities across Egypt.
+                in state-of-the-art service providers across Egypt.
               </p>
             </div>
           </div>
