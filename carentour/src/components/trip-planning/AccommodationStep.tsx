@@ -313,11 +313,11 @@ const AccommodationStep = ({ data, onUpdate }: AccommodationStepProps) => {
               }
             />
             <Label htmlFor="proximityToHospital" className="text-sm font-medium">
-              Prioritize proximity to medical facilities
+              Prioritize proximity to medical service providers
             </Label>
           </div>
           <p className="text-xs text-muted-foreground mt-2 ml-6">
-            Staying close to your treatment facility reduces travel time and stress during recovery.
+            Staying close to your treatment provider reduces travel time and stress during recovery.
           </p>
         </CardContent>
       </Card>
