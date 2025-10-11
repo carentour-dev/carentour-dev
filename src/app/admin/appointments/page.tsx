@@ -61,13 +61,13 @@ import { format } from "date-fns";
 type AppointmentRow = Database["public"]["Tables"]["patient_appointments"]["Row"];
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
-type FacilityRow = Database["public"]["Tables"]["facilities"]["Row"];
+type ServiceProviderRow = Database["public"]["Tables"]["service_providers"]["Row"];
 type ConsultationRow = Database["public"]["Tables"]["patient_consultations"]["Row"];
 
 type AppointmentRecord = AppointmentRow & {
   patients?: Pick<PatientRow, "id" | "full_name" | "contact_email" | "contact_phone" | "nationality"> | null;
   doctors?: Pick<DoctorRow, "id" | "name" | "title"> | null;
-  facilities?: Pick<FacilityRow, "id" | "name" | "facility_type"> | null;
+  service_provider?: Pick<ServiceProviderRow, "id" | "name" | "facility_type"> | null;
   patient_consultations?: Pick<ConsultationRow, "id" | "scheduled_at" | "status"> | null;
 };
 
@@ -333,7 +333,7 @@ export default function AdminAppointmentsPage() {
             Care Appointments
           </h1>
           <p className="text-sm text-muted-foreground">
-            Track patient appointments across facilities and ensure everyone has the right context.
+            Track patient appointments across service providers and ensure everyone has the right context.
           </p>
         </div>
         <Button onClick={openCreateDialog}>
@@ -409,7 +409,7 @@ export default function AdminAppointmentsPage() {
                     <TableHead>Doctor</TableHead>
                     <TableHead>Starts</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Facility</TableHead>
+                  <TableHead className="hidden lg:table-cell">Service Provider</TableHead>
                     <TableHead className="hidden lg:table-cell">Consultation</TableHead>
                     <TableHead className="w-[140px] text-right">Actions</TableHead>
                   </TableRow>
@@ -464,11 +464,11 @@ export default function AdminAppointmentsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {appointment.facilities ? (
+                        {appointment.service_provider ? (
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{appointment.facilities.name}</span>
+                            <span className="text-sm font-medium">{appointment.service_provider.name}</span>
                             <span className="text-xs text-muted-foreground">
-                              {appointment.facilities.facility_type}
+                              {appointment.service_provider.facility_type}
                             </span>
                           </div>
                         ) : (
@@ -518,7 +518,7 @@ export default function AdminAppointmentsPage() {
             <DialogDescription>
               {editingAppointment
                 ? "Update timing or contextual details for this appointment."
-                : "Coordinate facility visits and follow-up care for your patients."}
+                : "Coordinate service provider visits and follow-up care for your patients."}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -559,10 +559,10 @@ export default function AdminAppointmentsPage() {
                   name="facility_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Facility ID (optional)</FormLabel>
+                      <FormLabel>Service provider ID (optional)</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Paste facility ID"
+                          placeholder="Paste service provider ID"
                           value={field.value ?? ""}
                           onChange={(event) => field.onChange(event.target.value || null)}
                         />
