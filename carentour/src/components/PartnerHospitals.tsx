@@ -16,18 +16,18 @@ const PartnerHospitals = () => {
       accreditations: ["JCI Accredited", "ISO 9001:2015", "CBAHI Certified"],
       specialties: ["Cardiology", "Orthopedics", "Oncology", "Neurology"],
       features: ["500+ Beds", "24/7 Emergency", "International Patients Unit", "Telemedicine"],
-      description: "Leading multi-specialty hospital with state-of-the-art facilities and international standards of care.",
+      description: "Leading multi-specialty hospital with state-of-the-art service providers and international standards of care.",
       rating: 4.9
     },
     {
       name: "Alexandria Premier Clinic",
-      type: "Luxury Medical Facility",
+      type: "Luxury Medical Service Provider",
       location: "Alexandria, Egypt",
       image: "/clinic-alexandria-premier.jpg",
       accreditations: ["JCI Gold Seal", "CAP Accredited", "AACI Certified"],
       specialties: ["Plastic Surgery", "Dermatology", "Ophthalmology", "Dental Care"],
       features: ["VIP Suites", "Concierge Service", "Multilingual Staff", "Recovery Spa"],
-      description: "Premium medical facility offering luxury healthcare services with personalized patient experiences.",
+      description: "Premium medical service provider offering luxury healthcare services with personalized patient experiences.",
       rating: 4.8
     },
     {
@@ -73,7 +73,7 @@ const PartnerHospitals = () => {
             Our Partner Hospitals & Clinics
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            We've carefully selected premier medical facilities across Egypt that meet the highest international 
+            We've carefully selected premier medical service providers across Egypt that meet the highest international 
             standards, ensuring you receive world-class healthcare in state-of-the-art environments.
           </p>
         </div>
@@ -149,7 +149,7 @@ const PartnerHospitals = () => {
                 <Button className="w-full mt-4" asChild>
                   <Link href="/contact">
                     <Phone className="h-4 w-4 mr-2" />
-                    Contact Facility
+                    Contact Service Provider
                   </Link>
                 </Button>
               </CardContent>
