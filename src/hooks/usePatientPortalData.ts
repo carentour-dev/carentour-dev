@@ -12,7 +12,7 @@ type AppointmentRow = Database["public"]["Tables"]["patient_appointments"]["Row"
 type DoctorReviewRow = Database["public"]["Tables"]["doctor_reviews"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
-type FacilityRow = Database["public"]["Tables"]["facilities"]["Row"];
+type ServiceProviderRow = Database["public"]["Tables"]["service_providers"]["Row"];
 
 export type PatientConsultation = ConsultationRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
@@ -21,7 +21,7 @@ export type PatientConsultation = ConsultationRow & {
 
 export type PatientAppointment = AppointmentRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
-  facilities?: Pick<FacilityRow, "id" | "name" | "facility_type"> | null;
+  service_provider?: Pick<ServiceProviderRow, "id" | "name" | "facility_type"> | null;
   patient_consultations?: Pick<ConsultationRow, "id" | "scheduled_at" | "status"> | null;
 };
 
@@ -138,7 +138,7 @@ const fetchPatientPortalSnapshot = async (user: NonNullable<ReturnType<typeof us
     supabase
       .from("patient_appointments")
       .select(
-        "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), facilities(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
+        "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), service_provider:service_providers(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
       )
       .eq("patient_id", patient.id)
       .order("starts_at", { ascending: true }),
