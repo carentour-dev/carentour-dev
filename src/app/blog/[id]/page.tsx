@@ -26,7 +26,7 @@ export default function BlogPost() {
       date: "March 15, 2024",
       image: "/blog-medical-tourism.jpg",
       content: `
-        <p>Egypt has emerged as one of the world&apos;s leading destinations for medical tourism, offering world-class healthcare services at a fraction of the cost found in Western countries. With its rich history, modern medical facilities, and highly trained physicians, Egypt provides an ideal combination of quality healthcare and cultural experience.</p>
+        <p>Egypt has emerged as one of the world&apos;s leading destinations for medical tourism, offering world-class healthcare services at a fraction of the cost found in Western countries. With its rich history, modern medical service providers, and highly trained physicians, Egypt provides an ideal combination of quality healthcare and cultural experience.</p>
 
         <h2>Why Choose Egypt for Medical Tourism?</h2>
         <p>Egypt&apos;s medical tourism industry has grown exponentially over the past decade, driven by several key factors:</p>
@@ -41,13 +41,13 @@ export default function BlogPost() {
         <p>Successfully planning a medical trip to Egypt requires careful consideration of several factors:</p>
         
         <h3>1. Research and Hospital Selection</h3>
-        <p>Begin by researching accredited hospitals and clinics that specialize in your required procedure. Look for facilities with international certifications such as JCI (Joint Commission International) accreditation.</p>
+        <p>Begin by researching accredited hospitals and clinics that specialize in your required procedure. Look for service providers with international certifications such as JCI (Joint Commission International) accreditation.</p>
 
         <h3>2. Visa and Travel Arrangements</h3>
         <p>Most visitors can obtain a tourist visa on arrival or through e-visa services. Plan to arrive a few days before your procedure to allow for consultation and pre-operative assessments.</p>
 
         <h3>3. Accommodation and Recovery</h3>
-        <p>Many medical facilities offer partnerships with nearby hotels or recovery centers. Consider staying close to your treatment facility for follow-up appointments.</p>
+        <p>Many medical service providers offer partnerships with nearby hotels or recovery centers. Consider staying close to your treatment provider for follow-up appointments.</p>
 
         <h2>Popular Medical Procedures</h2>
         <p>Egypt excels in several medical specialties:</p>
@@ -61,7 +61,7 @@ export default function BlogPost() {
         </ul>
 
         <h2>What to Expect</h2>
-        <p>Egyptian medical facilities maintain international standards while offering personalized care. Most medical staff speak English, and many hospitals have dedicated international patient coordinators to assist with every aspect of your stay.</p>
+        <p>Egyptian medical service providers maintain international standards while offering personalized care. Most medical staff speak English, and many hospitals have dedicated international patient coordinators to assist with every aspect of your stay.</p>
 
         <p>The combination of ancient culture and modern medicine makes Egypt a unique destination where you can combine healing with exploration of one of the world&apos;s most fascinating civilizations.</p>
       `
@@ -76,7 +76,7 @@ export default function BlogPost() {
       date: "March 12, 2024",
       image: "/blog-lasik-surgery.jpg",
       content: `
-        <p>LASIK surgery in Egypt has become increasingly popular among international patients seeking high-quality vision correction at affordable prices. Egyptian eye clinics utilize the most advanced laser technology and techniques, delivering results comparable to the world&apos;s best facilities.</p>
+        <p>LASIK surgery in Egypt has become increasingly popular among international patients seeking high-quality vision correction at affordable prices. Egyptian eye clinics utilize the most advanced laser technology and techniques, delivering results comparable to the world&apos;s best service providers.</p>
 
         <h2>Advanced LASIK Technology in Egypt</h2>
         <p>Egyptian eye clinics are equipped with state-of-the-art technology including:</p>
@@ -134,7 +134,7 @@ export default function BlogPost() {
     "3": {
       id: 3,
       title: "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
-      excerpt: "Explore Egypt&apos;s leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
+      excerpt: "Explore Egypt&apos;s leading cardiac surgery service providers and the internationally trained surgeons performing life-saving procedures.",
       category: "Cardiac Surgery",
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
@@ -144,7 +144,7 @@ export default function BlogPost() {
         <p>Egypt has established itself as a regional leader in cardiac surgery, with world-class heart centers that attract patients from across the Middle East, Africa, and beyond. The combination of expert surgeons, advanced technology, and cost-effective treatments makes Egypt an excellent choice for cardiac care.</p>
 
         <h2>Leading Cardiac Centers</h2>
-        <p>Egypt&apos;s top cardiac facilities include internationally accredited hospitals with specialized heart centers featuring:</p>
+        <p>Egypt&apos;s top cardiac service providers include internationally accredited hospitals with specialized heart centers featuring:</p>
         <ul>
           <li>State-of-the-art cardiac catheterization laboratories</li>
           <li>Advanced cardiac surgery suites</li>
@@ -216,7 +216,7 @@ export default function BlogPost() {
           <li>Long-term follow-up care</li>
         </ul>
 
-        <p>With world-class facilities, expert surgeons, and comprehensive care programs, Egypt offers excellent outcomes for cardiac patients at a fraction of international costs.</p>
+        <p>With world-class service providers, expert surgeons, and comprehensive care programs, Egypt offers excellent outcomes for cardiac patients at a fraction of international costs.</p>
       `
     },
     "4": {
@@ -345,7 +345,7 @@ export default function BlogPost() {
         <p>Optimize your recovery by preparing in advance:</p>
         <ul>
           <li>Arrive 2-3 days before your procedure for acclimatization</li>
-          <li>Book accommodation near your medical facility</li>
+          <li>Book accommodation near your medical service provider</li>
           <li>Arrange for a companion or caregiver if needed</li>
           <li>Research recovery-friendly activities</li>
           <li>Understand your post-procedure limitations</li>
@@ -404,7 +404,7 @@ export default function BlogPost() {
         <h3>Recovery-Focused Hotels</h3>
         <p>Many hotels cater specifically to medical tourists:</p>
         <ul>
-          <li>Proximity to medical facilities</li>
+          <li>Proximity to medical service providers</li>
           <li>Quiet, comfortable rooms</li>
           <li>Room service and special meal options</li>
           <li>Concierge services for medical appointments</li>
@@ -527,7 +527,7 @@ export default function BlogPost() {
         </ul>
 
         <h3>Payment Options</h3>
-        <p>Egyptian medical facilities typically offer flexible payment arrangements:</p>
+        <p>Egyptian medical service providers typically offer flexible payment arrangements:</p>
         <ul>
           <li><strong>Direct Payment:</strong> Full payment at time of service</li>
           <li><strong>Insurance Assignment:</strong> Direct billing to insurance companies</li>
