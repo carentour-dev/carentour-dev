@@ -1,6 +1,5 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const optionalUuid = z.preprocess(
   (value) => {
@@ -53,21 +54,64 @@ const optionalUuid = z.preprocess(
   z.string().uuid().nullable().optional(),
 );
 
-const patientSchema = z.object({
-  user_id: optionalUuid,
-  full_name: z.string().min(2),
-  contact_email: z.string().email().optional(),
-  contact_phone: z.string().optional(),
-  nationality: z.string().optional(),
-  preferred_language: z.string().optional(),
-  preferred_currency: z.string().optional(),
-  date_of_birth: z
-    .string()
-    .regex(/^(\d{4})-(\d{2})-(\d{2})$/)
-    .optional(),
-  sex: z.enum(["female", "male", "non_binary", "prefer_not_to_say"]).optional(),
-  notes: z.string().optional(),
-});
+const patientSchema = z
+  .object({
+    user_id: optionalUuid,
+    full_name: z.string().min(2),
+    contact_email: z
+      .preprocess(
+        (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+        z.string().email().optional(),
+      )
+      .optional(),
+    contact_phone: z.string().optional(),
+    nationality: z.string().optional(),
+    preferred_language: z.string().optional(),
+    preferred_currency: z.string().optional(),
+    date_of_birth: z
+      .string()
+      .regex(/^(\d{4})-(\d{2})-(\d{2})$/)
+      .optional(),
+    sex: z.enum(["female", "male", "non_binary", "prefer_not_to_say"]).optional(),
+    notes: z.string().optional(),
+    email_verified: z.boolean().optional(),
+    portal_password: z
+      .preprocess(
+        (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+        z.string().min(8, "Password must be at least 8 characters").max(72).optional(),
+      )
+      .optional(),
+    portal_password_confirm: z
+      .preprocess((value) => (typeof value === "string" ? value : ""), z.string().optional()),
+  })
+  .superRefine((data, ctx) => {
+    const password = data.portal_password;
+    const confirm = (data.portal_password_confirm ?? "").trim();
+
+    if (password) {
+      if (!data.contact_email || data.contact_email.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["contact_email"],
+          message: "Provide an email to send the portal password.",
+        });
+      }
+
+      if (confirm.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["portal_password_confirm"],
+          message: "Confirm the password to continue.",
+        });
+      } else if (confirm !== password) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["portal_password_confirm"],
+          message: "Passwords do not match.",
+        });
+      }
+    }
+  });
 
 type PatientFormValues = z.infer<typeof patientSchema>;
 
@@ -82,17 +126,22 @@ type PatientPayload = {
   date_of_birth?: string | null;
   sex?: "female" | "male" | "non_binary" | "prefer_not_to_say" | null;
   notes?: string | null;
+  email_verified?: boolean;
+  portal_password?: string;
 };
 
-type PatientRecord = PatientPayload & {
+type PatientRecord = Omit<PatientPayload, "portal_password"> & {
   id: string;
   created_at?: string;
   updated_at?: string;
+  email_verified?: boolean | null;
 };
 
 const QUERY_KEY = ["admin", "patients"] as const;
 
 export default function AdminPatientsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,8 +162,17 @@ export default function AdminPatientsPage() {
       date_of_birth: "",
       sex: undefined,
       notes: "",
+      email_verified: false,
+      portal_password: "",
+      portal_password_confirm: "",
     },
   });
+  const watchPortalPassword = form.watch("portal_password");
+  useEffect(() => {
+    if (watchPortalPassword && watchPortalPassword.length > 0 && !form.getValues("email_verified")) {
+      form.setValue("email_verified", true, { shouldDirty: true });
+    }
+  }, [watchPortalPassword, form]);
 
   const patientsQuery = useQuery({
     queryKey: QUERY_KEY,
@@ -231,6 +289,9 @@ export default function AdminPatientsPage() {
       date_of_birth: "",
       sex: undefined,
       notes: "",
+      email_verified: false,
+      portal_password: "",
+      portal_password_confirm: "",
     });
     setDialogOpen(true);
   };
@@ -248,6 +309,9 @@ export default function AdminPatientsPage() {
       date_of_birth: patient.date_of_birth ?? "",
       sex: patient.sex ?? undefined,
       notes: patient.notes ?? "",
+      email_verified: patient.email_verified ?? false,
+      portal_password: "",
+      portal_password_confirm: "",
     });
     setDialogOpen(true);
   };
@@ -265,19 +329,63 @@ export default function AdminPatientsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!searchParams) return;
+    if (searchParams.get("new") !== "1" || dialogOpen) {
+      return;
+    }
+
+    const fullName = (searchParams.get("fullName") ?? "").trim();
+    const email = (searchParams.get("email") ?? "").trim();
+    const phone = (searchParams.get("phone") ?? "").trim();
+
+    setEditingPatient(null);
+    setDialogOpen(true);
+    form.reset({
+      user_id: "",
+      full_name: fullName,
+      contact_email: email,
+      contact_phone: phone,
+      nationality: "",
+      preferred_language: "",
+      preferred_currency: "",
+      date_of_birth: "",
+      sex: undefined,
+      notes: "",
+      email_verified: false,
+      portal_password: "",
+      portal_password_confirm: "",
+    });
+
+    const params = new URLSearchParams(searchParams.toString());
+    ["new", "fullName", "email", "phone", "fromRequestId"].forEach((key) => params.delete(key));
+    const nextUrl = params.size > 0 ? `/admin/patients?${params.toString()}` : "/admin/patients";
+    router.replace(nextUrl, { scroll: false });
+  }, [searchParams, dialogOpen, form, router]);
+
   const onSubmit = (values: PatientFormValues) => {
+    const { portal_password_confirm: _confirm, portal_password, ...rest } = values;
+    const trimmedFullName = rest.full_name.trim();
+    const normalizedEmail = rest.contact_email ? rest.contact_email.trim().toLowerCase() : null;
+
     const payload: PatientPayload = {
-      user_id: values.user_id?.trim() ? values.user_id.trim() : null,
-      full_name: values.full_name.trim(),
-      contact_email: values.contact_email?.trim() || null,
-      contact_phone: values.contact_phone?.trim() || null,
-      nationality: values.nationality?.trim() || null,
-      preferred_language: values.preferred_language?.trim() || null,
-      preferred_currency: values.preferred_currency?.trim() || null,
-      date_of_birth: values.date_of_birth || null,
-      sex: values.sex ?? null,
-      notes: values.notes?.trim() || null,
+      user_id: rest.user_id?.trim() ? rest.user_id.trim() : null,
+      full_name: trimmedFullName,
+      contact_email: normalizedEmail ?? undefined,
+      contact_phone: rest.contact_phone?.trim() || undefined,
+      nationality: rest.nationality?.trim() || undefined,
+      preferred_language: rest.preferred_language?.trim() || undefined,
+      preferred_currency: rest.preferred_currency?.trim() || undefined,
+      date_of_birth: rest.date_of_birth || undefined,
+      sex: rest.sex ?? undefined,
+      notes: rest.notes?.trim() || undefined,
+      email_verified: rest.email_verified ?? false,
     };
+
+    const trimmedPassword = portal_password?.trim();
+    if (trimmedPassword && trimmedPassword.length > 0) {
+      payload.portal_password = trimmedPassword;
+    }
 
     if (editingPatient) {
       updatePatient.mutate({ id: editingPatient.id, data: payload });
@@ -440,7 +548,58 @@ export default function AdminPatientsPage() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="portal_password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Portal password</FormLabel>
+                        <Input type="password" placeholder="Create a temporary password" autoComplete="new-password" {...field} />
+                        <FormDescription className="text-xs">
+                          Provide a password to create or reset portal access. We&apos;ll email it to the patient.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+
+                {watchPortalPassword && watchPortalPassword.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="portal_password_confirm"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm password</FormLabel>
+                        <Input type="password" placeholder="Re-enter the portal password" autoComplete="new-password" {...field} />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="email_verified"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value ?? false}
+                            onCheckedChange={(checked) => field.onChange(checked === true)}
+                          />
+                        </FormControl>
+                        <FormLabel className="text-sm font-medium leading-none">
+                          Email already verified
+                        </FormLabel>
+                      </div>
+                      <FormDescription className="text-xs">
+                        Bypass the verification flow for this patient&apos;s email address.
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -529,6 +688,9 @@ export default function AdminPatientsPage() {
                       <div className="flex flex-col text-sm">
                         <span>{patient.contact_email || "—"}</span>
                         <span className="text-muted-foreground">{patient.contact_phone || "—"}</span>
+                        {patient.email_verified && (
+                          <span className="mt-1 text-xs font-medium text-emerald-600">Email verified</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{patient.nationality || "—"}</TableCell>
