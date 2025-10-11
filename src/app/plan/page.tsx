@@ -31,7 +31,7 @@ export default function PlanTrip() {
     {
       icon: Hotel,
       title: "Accommodation",
-      description: "Carefully selected hotels near medical facilities",
+      description: "Carefully selected hotels near medical service providers",
       features: ["4-5 star hotels", "Special medical rates", "Recovery-friendly rooms"]
     },
     {
