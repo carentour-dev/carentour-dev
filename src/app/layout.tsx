@@ -12,12 +12,12 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Care N Tour | World-Class Medical Care in Egypt",
-  description: "Experience premium medical treatments in Egypt with significant cost savings. World-class facilities, certified specialists, and comprehensive medical tourism services.",
+  description: "Experience premium medical treatments in Egypt with significant cost savings. World-class service providers, certified specialists, and comprehensive medical tourism services.",
   keywords: "medical tourism, Egypt healthcare, medical procedures, cosmetic surgery, cardiac surgery, dental care, LASIK, affordable healthcare",
   authors: [{ name: "Care N Tour" }],
   openGraph: {
     title: "Care N Tour | World-Class Medical Care",
-    description: "Experience premium medical treatments in Egypt with significant cost savings. World-class facilities and certified specialists.",
+    description: "Experience premium medical treatments in Egypt with significant cost savings. World-class service providers and certified specialists.",
     type: "website",
     images: [{ url: "https://lovable.dev/opengraph-image-p98pqg.png" }],
   },
