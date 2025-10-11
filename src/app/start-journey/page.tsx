@@ -392,7 +392,7 @@ function PatientJourneyContent() {
                   <SelectItem value="premium">Premium Hotel (4-star)</SelectItem>
                   <SelectItem value="standard">Standard Hotel (3-star)</SelectItem>
                   <SelectItem value="budget">Budget Accommodation</SelectItem>
-                  <SelectItem value="medical">Medical Facility Nearby</SelectItem>
+                  <SelectItem value="medical">Medical Service Provider Nearby</SelectItem>
                   <SelectItem value="apartment">Service Apartment</SelectItem>
                 </SelectContent>
               </Select>
