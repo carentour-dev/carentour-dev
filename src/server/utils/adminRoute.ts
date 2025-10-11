@@ -2,20 +2,32 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/server/auth/requireAdmin";
 import { handleRouteError } from "@/server/utils/http";
 
-type RouteContext = {
+type ResolvedRouteContext = {
   params?: Record<string, string | string[]>;
+  [key: string]: unknown;
 };
 
-type RouteHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>;
+type IncomingRouteContext = RouteContext<any>;
 
-type WrappedHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>;
+type RouteHandler = (req: NextRequest, ctx: ResolvedRouteContext) => Promise<Response>;
+
+type WrappedHandler = (req: NextRequest, ctx: IncomingRouteContext) => Promise<Response>;
 
 // Wrap a route handler with shared error handling.
 export function adminRoute(handler: RouteHandler): WrappedHandler {
   return async (req, ctx) => {
     try {
       await requireAdmin();
-      return await handler(req, ctx);
+
+      const resolvedCtx: ResolvedRouteContext =
+        ctx && typeof ctx === "object"
+          ? {
+              ...ctx,
+              params: "params" in ctx ? await ctx.params : undefined,
+            }
+          : {};
+
+      return await handler(req, resolvedCtx);
     } catch (error) {
       return handleRouteError(error);
     }
