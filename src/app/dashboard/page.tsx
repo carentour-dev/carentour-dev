@@ -578,7 +578,7 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {upcomingAppointments.slice(0, 4).map((appointment) => (
+                      {upcomingAppointments.map((appointment) => (
                         <div key={appointment.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
