@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   Form,
   FormControl,
@@ -620,11 +621,12 @@ export default function AdminAppointmentsPage() {
                     <FormItem>
                       <FormLabel>Starts at</FormLabel>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
+                        <DateTimePicker
                           value={field.value}
-                          onChange={(event) => field.onChange(event.target.value)}
-                          required
+                          onChange={field.onChange}
+                          minuteStep={15}
+                          defaultHour={9}
+                          defaultMinute={0}
                         />
                       </FormControl>
                       <FormMessage />
@@ -638,10 +640,12 @@ export default function AdminAppointmentsPage() {
                     <FormItem>
                       <FormLabel>Ends at (optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
+                        <DateTimePicker
                           value={field.value ?? ""}
-                          onChange={(event) => field.onChange(event.target.value || "")}
+                          onChange={field.onChange}
+                          minuteStep={15}
+                          allowClear
+                          placeholder="No end time"
                         />
                       </FormControl>
                       <FormMessage />
