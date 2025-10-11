@@ -113,57 +113,59 @@ export function PatientSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList className="max-h-64 overflow-y-auto overscroll-contain">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>
-                  {debouncedSearch.length < 2
-                    ? "Type at least 2 characters to search..."
-                    : "No patients found."}
-                </CommandEmpty>
-                <CommandGroup>
-                  {patients.map((patient) => (
-                    <CommandItem
-                      key={patient.id}
-                      value={patient.id}
-                      onSelect={handleSelect}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Check
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            value === patient.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium truncate">{patient.full_name}</span>
-                          <span className="text-xs text-foreground/70 truncate">
-                            {[
-                              patient.contact_email,
-                              patient.nationality,
-                              patient.home_city,
-                            ]
-                              .filter(Boolean)
-                              .join(" • ")}
-                          </span>
+          <div className="max-h-64 overflow-y-auto overscroll-contain [@supports(-webkit-touch-callout:none)]:[-webkit-overflow-scrolling:touch]">
+            <CommandList className="max-h-none">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty>
+                    {debouncedSearch.length < 2
+                      ? "Type at least 2 characters to search..."
+                      : "No patients found."}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {patients.map((patient) => (
+                      <CommandItem
+                        key={patient.id}
+                        value={patient.id}
+                        onSelect={handleSelect}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Check
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              value === patient.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">{patient.full_name}</span>
+                            <span className="text-xs text-foreground/70 truncate">
+                              {[
+                                patient.contact_email,
+                                patient.nationality,
+                                patient.home_city,
+                              ]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      {patient.has_testimonial && (
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                          Has testimonial
-                        </span>
-                      )}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
+                        {patient.has_testimonial && (
+                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                            Has testimonial
+                          </span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>
