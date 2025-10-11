@@ -10,6 +10,7 @@ import { useTreatments } from "@/hooks/useTreatments";
 import { useDoctors } from "@/hooks/useDoctors";
 import PriceComparison from "@/components/PriceComparison";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { normalizeTreatment, getPriceComparison, getPrimaryProcedure } from "@/lib/treatments";
@@ -23,6 +24,7 @@ import {
   Smile,
   Stethoscope,
   Users,
+  Search,
 } from "lucide-react";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
@@ -59,6 +61,7 @@ export default function Treatments() {
   const { treatments, loading, error } = useTreatments();
   const { doctors } = useDoctors();
   const [expandedComparison, setExpandedComparison] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const cards = useMemo(() => {
     return treatments.map((treatment) => {
@@ -93,6 +96,19 @@ export default function Treatments() {
       };
     });
   }, [treatments]);
+
+  const filteredCards = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return cards;
+    }
+
+    return cards.filter((card) => {
+      const haystack = [card.title, card.summary, card.description].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [cards, searchTerm]);
 
   const comparisonEntries = cards.filter((card) => card.comparison);
 
@@ -144,8 +160,7 @@ export default function Treatments() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Discover our full range of medical treatments performed by certified specialists in state-of-the-art
-                facilities across Egypt.
+                Discover our full range of medical treatments performed by certified specialists in state-of-the-art service providers across Egypt.
               </p>
             </div>
           </div>
@@ -162,15 +177,40 @@ export default function Treatments() {
               </p>
             </div>
 
-            {cards.length === 0 ? (
+            <div className="max-w-3xl mx-auto mb-12">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="search"
+                  placeholder="Search treatments by name or specialty..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground text-center">
+                {searchTerm
+                  ? `Showing ${filteredCards.length} of ${cards.length} treatments`
+                  : `Showing all ${cards.length} treatments`}
+              </p>
+            </div>
+
+            {filteredCards.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground text-lg">
-                  Treatments will appear here once they are published in the admin dashboard.
+                  {searchTerm
+                    ? "No treatments match your search. Try a different keyword."
+                    : "Treatments will appear here once they are published in the admin dashboard."}
                 </p>
+                {searchTerm ? (
+                  <Button variant="outline" className="mt-4" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {cards.map((category) => {
+                {filteredCards.map((category) => {
                   const Icon = category.icon;
                   const basePriceLabel =
                     category.basePrice !== null
