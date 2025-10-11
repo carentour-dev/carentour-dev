@@ -28,7 +28,7 @@ const trimOptional = (value: string | undefined | null): string | null => {
 };
 
 const selectColumns =
-  "*, patients(id, full_name, contact_email, contact_phone, nationality), doctors(id, name, title), patient_consultations(id, scheduled_at, status), facilities(id, name, facility_type)";
+  "*, patients(id, full_name, contact_email, contact_phone, nationality), doctors(id, name, title), patient_consultations(id, scheduled_at, status), service_provider:service_providers(id, name, facility_type)";
 
 const appointmentService = new CrudService("patient_appointments", "patient appointment", selectColumns);
 
