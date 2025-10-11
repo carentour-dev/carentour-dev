@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { WheelEvent as ReactWheelEvent, TouchEvent as ReactTouchEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,8 @@ export function PatientSelector({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const touchStartRef = useRef<number>(0);
 
   // Debounce search input
   useEffect(() => {
@@ -90,6 +93,28 @@ export function PatientSelector({
     ? `${selectedPatient.full_name}${selectedPatient.nationality ? ` (${selectedPatient.nationality})` : ""}`
     : placeholder;
 
+  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!scrollContainerRef.current) return;
+    event.preventDefault();
+    scrollContainerRef.current.scrollTop += event.deltaY;
+  }, []);
+
+  const handleTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    touchStartRef.current = event.touches[0]?.clientY ?? 0;
+  }, []);
+
+  const handleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!scrollContainerRef.current) return;
+    const currentY = event.touches[0]?.clientY ?? 0;
+    const delta = touchStartRef.current - currentY;
+    if (Math.abs(delta) < 0.5) {
+      return;
+    }
+    event.preventDefault();
+    scrollContainerRef.current.scrollTop += delta;
+    touchStartRef.current = currentY;
+  }, []);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -113,7 +138,13 @@ export function PatientSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <div className="max-h-64 overflow-y-auto overscroll-contain [@supports(-webkit-touch-callout:none)]:[-webkit-overflow-scrolling:touch]">
+          <div
+            ref={scrollContainerRef}
+            className="max-h-64 overflow-y-auto overscroll-contain [@supports(-webkit-touch-callout:none)]:[-webkit-overflow-scrolling:touch]"
+            onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+          >
             <CommandList className="max-h-none">
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
