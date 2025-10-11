@@ -38,7 +38,7 @@ export default function Blog() {
     {
       id: 3,
       title: "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
-      excerpt: "Explore Egypt&apos;s leading cardiac surgery facilities and the internationally trained surgeons performing life-saving procedures.",
+      excerpt: "Explore Egypt&apos;s leading cardiac surgery service providers and the internationally trained surgeons performing life-saving procedures.",
       category: "Cardiac Surgery",
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
