@@ -213,6 +213,7 @@ export type Database = {
           home_city: string | null
           travel_year: number | null
           has_testimonial: boolean | null
+          email_verified: boolean | null
           full_name: string
           id: string
           nationality: string | null
@@ -231,6 +232,7 @@ export type Database = {
           home_city?: string | null
           travel_year?: number | null
           has_testimonial?: boolean | null
+          email_verified?: boolean | null
           full_name: string
           id?: string
           nationality?: string | null
@@ -249,6 +251,7 @@ export type Database = {
           home_city?: string | null
           travel_year?: number | null
           has_testimonial?: boolean | null
+          email_verified?: boolean | null
           full_name?: string
           id?: string
           nationality?: string | null
@@ -421,7 +424,7 @@ export type Database = {
             foreignKeyName: "patient_appointments_facility_id_fkey"
             columns: ["facility_id"]
             isOneToOne: false
-            referencedRelation: "facilities"
+            referencedRelation: "service_providers"
             referencedColumns: ["id"]
           },
           {
@@ -628,7 +631,7 @@ export type Database = {
         }
         Relationships: []
       }
-      facilities: {
+      service_providers: {
         Row: {
           amenities: string[] | null
           contact_info: Json | null
