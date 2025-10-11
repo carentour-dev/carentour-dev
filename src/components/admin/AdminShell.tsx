@@ -51,7 +51,7 @@ const NAV_ITEMS = [
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
   { label: "Testimonials", href: "/admin/testimonials", icon: Sparkles },
-  { label: "Facilities", href: "/admin/facilities", icon: Building2 },
+  { label: "Service Providers", href: "/admin/service-providers", icon: Building2 },
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
 ];
 
