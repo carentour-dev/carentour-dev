@@ -5,7 +5,7 @@
 
   **World-Class Medical Care in Egypt**
 
-  A comprehensive medical tourism platform connecting international patients with premium healthcare facilities in Egypt.
+  A comprehensive medical tourism platform connecting international patients with premium healthcare service providers in Egypt.
 </div>
 
 ---
@@ -157,7 +157,7 @@ carentour-dev/
 │   ├── hooks/                    # Custom React hooks
 │   │   ├── useDoctors.ts         # Fetch doctors with React Query
 │   │   ├── useTreatments.ts      # Fetch active treatments
-│   │   ├── useFacilities.ts      # Fetch partner facilities
+│   │   ├── useServiceProviders.ts      # Fetch partner service providers
 │   │   ├── useHotels.ts          # Fetch partner hotels
 │   │   ├── useUserProfile.ts     # User profile management
 │   │   ├── useSecurity.ts        # Security event logging
@@ -345,7 +345,7 @@ npm run start
 - `is_active` (boolean)
 - `created_at` / `updated_at`
 
-#### `facilities`
+#### `service_providers`
 - `id` (uuid, primary key)
 - `name` (text)
 - `slug` (text, unique)
@@ -380,7 +380,7 @@ npm run start
 
 ## 🧑‍💼 Admin Dashboard
 
-- Access the management UI at `/admin`. Current sections cover doctors, patients, treatments, facilities, and hotels.
+- Access the management UI at `/admin`. Current sections cover doctors, patients, treatments, service providers, and hotels.
 - Required environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 - Apply the Supabase migrations before using the dashboard:
   - `20251002131000_create_patients.sql`
@@ -411,8 +411,8 @@ npm run start
 - **Price Comparisons**: Reuses `PriceComparison` with slug-based presets
 - **Graceful Fallbacks**: Handles missing pricing or descriptions gracefully
 
-### Partner Facilities (`src/components/PartnerHospitals.tsx` + `src/hooks/useFacilities.ts`)
-- **Supabase-backed**: Highlights featured facilities marked as partners
+### Service Providers (`src/components/PartnerHospitals.tsx` + `src/hooks/useServiceProviders.ts`)
+- **Supabase-backed**: Highlights featured service providers marked as partners
 - **Structured Metadata**: Maps JSON address/amenity fields into UI-friendly badges
 - **Shared Loading/Error states**: Provides consistent feedback while data loads
 
