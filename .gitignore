@@ -49,3 +49,9 @@ bun.lockb
 *.njsproj
 *.sln
 *.sw?
+
+# Gitleaks and Husky
+.gitleaks.toml
+gitleaks-report.json
+.husky/
+scripts/
