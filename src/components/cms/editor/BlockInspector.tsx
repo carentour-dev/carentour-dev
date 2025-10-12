@@ -1939,7 +1939,7 @@ function DoctorsBlockFields({ form }: { form: UseFormReturn<BlockValue<"doctors"
   );
 }
 
-const blockEditors: Record<BlockType, (form: UseFormReturn<any>) => JSX.Element> = {
+const blockEditors: Record<BlockType, (form: UseFormReturn<any>) => React.ReactElement> = {
   hero: (form) => <HeroBlockFields form={form} />,
   statGrid: (form) => <StatGridBlockFields form={form} />,
   richText: (form) => <RichTextBlockFields form={form} />,
