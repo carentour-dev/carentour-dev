@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/server/auth/requireAdmin";
+import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+
+export async function POST(req: NextRequest) {
+  await requireRole(["admin", "editor"]);
+
+  const formData = await req.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "file is required" }, { status: 400 });
+  }
+
+  const fileName = `${Date.now()}_${file.name}`.replace(/[^a-zA-Z0-9_.-]/g, "_");
+
+  const supabase = getSupabaseAdmin();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const { data, error } = await supabase.storage
+    .from("cms-assets")
+    .upload(fileName, Buffer.from(arrayBuffer), {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const { data: publicUrl } = supabase.storage.from("cms-assets").getPublicUrl(data.path);
+  return NextResponse.json({ url: publicUrl.publicUrl, path: data.path }, { status: 201 });
+}
+
+
