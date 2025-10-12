@@ -3,21 +3,23 @@ import { headers } from "next/headers";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 type PreviewProps = {
-  params: { slug: string };
-  searchParams?: { token?: string };
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ token?: string }>;
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function CmsPreviewPage({ params, searchParams }: PreviewProps) {
+  const { slug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const headerStore = headers();
   const authHeader = headerStore.get("authorization");
   let token: string | undefined;
 
   if (authHeader?.startsWith("Bearer ")) {
     token = authHeader.slice(7).trim();
-  } else if (searchParams?.token) {
-    token = decodeURIComponent(searchParams.token);
+  } else if (resolvedSearchParams?.token) {
+    token = decodeURIComponent(resolvedSearchParams.token);
   }
 
   if (!token) {
@@ -40,7 +42,7 @@ export default async function CmsPreviewPage({ params, searchParams }: PreviewPr
   const { data } = await admin
     .from("cms_pages")
     .select("content")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .maybeSingle();
 
   if (!data?.content) {
