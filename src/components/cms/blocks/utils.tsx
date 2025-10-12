@@ -1,7 +1,7 @@
 import * as Icons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-const iconRegistry = Icons as Record<string, LucideIcon>;
+const iconRegistry = Icons as unknown as Record<string, LucideIcon>;
 
 export function resolveIcon(name?: string): LucideIcon | null {
   if (!name) return null;
