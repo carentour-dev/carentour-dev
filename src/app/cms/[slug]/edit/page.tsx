@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CalendarClock, CheckCircle2, Eye, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  Eye,
+  Loader2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +50,10 @@ type ApiPageResponse = {
   };
 };
 
-const statusCopy: Record<PageRecord["status"], { label: string; tone: string }> = {
+const statusCopy: Record<
+  PageRecord["status"],
+  { label: string; tone: string }
+> = {
   draft: { label: "Draft", tone: "bg-muted text-muted-foreground" },
   published: { label: "Published", tone: "bg-emerald-100 text-emerald-700" },
 };
@@ -63,7 +72,9 @@ export default function CmsEditPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token ?? null;
       setAuthToken(token);
 
@@ -75,7 +86,9 @@ export default function CmsEditPage() {
         return;
       }
       const json = await listRes.json();
-      const found = (json.pages as Array<{ slug: string; id: string }>).find((p) => p.slug === params.slug);
+      const found = (json.pages as Array<{ slug: string; id: string }>).find(
+        (p) => p.slug === params.slug,
+      );
       if (!found) {
         setLoading(false);
         toast({ title: "Page not found", variant: "destructive" });
@@ -112,12 +125,20 @@ export default function CmsEditPage() {
     return current !== initial;
   }, [page, initialPage]);
 
-  const handleMetaChange = <K extends keyof PageRecord>(key: K, value: PageRecord[K]) => {
+  const handleMetaChange = <K extends keyof PageRecord>(
+    key: K,
+    value: PageRecord[K],
+  ) => {
     setPage((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
-  const handleSeoChange = <K extends keyof PageSeo>(key: K, value: PageSeo[K]) => {
-    setPage((prev) => (prev ? { ...prev, seo: { ...(prev.seo ?? {}), [key]: value } } : prev));
+  const handleSeoChange = <K extends keyof PageSeo>(
+    key: K,
+    value: PageSeo[K],
+  ) => {
+    setPage((prev) =>
+      prev ? { ...prev, seo: { ...(prev.seo ?? {}), [key]: value } } : prev,
+    );
   };
 
   const handleBlocksChange = (blocks: BlockValue[]) => {
@@ -128,7 +149,10 @@ export default function CmsEditPage() {
     if (!page) return false;
     setSaving(true);
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
       if (sessionError) {
         throw sessionError;
       }
@@ -136,6 +160,8 @@ export default function CmsEditPage() {
       setAuthToken(freshToken);
 
       const targetStatus = nextStatus ?? page.status;
+      const previousSlug = page.slug;
+      const previousStatus = page.status;
       const payload = {
         ...page,
         status: targetStatus,
@@ -167,6 +193,39 @@ export default function CmsEditPage() {
       };
       setPage(normalized);
       setInitialPage(normalized);
+
+      const pathsToRevalidate = new Set<string>();
+      if (targetStatus === "published") {
+        pathsToRevalidate.add(`/${normalized.slug}`);
+      }
+      if (previousSlug !== normalized.slug) {
+        pathsToRevalidate.add(`/${previousSlug}`);
+        if (targetStatus === "published") {
+          pathsToRevalidate.add(`/${normalized.slug}`);
+        }
+      }
+      if (previousStatus === "published" && targetStatus !== "published") {
+        pathsToRevalidate.add(`/${previousSlug}`);
+      }
+      if (pathsToRevalidate.size && freshToken) {
+        await Promise.all(
+          Array.from(pathsToRevalidate).map(async (path) => {
+            try {
+              await fetch("/api/revalidate", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${freshToken}`,
+                },
+                body: JSON.stringify({ path }),
+              });
+            } catch (revalidateError) {
+              console.warn("Failed to revalidate path", path, revalidateError);
+            }
+          }),
+        );
+      }
+
       toast({
         title:
           targetStatus === "published"
@@ -196,7 +255,11 @@ export default function CmsEditPage() {
   const handlePreview = async () => {
     if (!page) return;
     if (!authToken) {
-      toast({ title: "Preview unavailable", description: "Sign in again to refresh your session.", variant: "destructive" });
+      toast({
+        title: "Preview unavailable",
+        description: "Sign in again to refresh your session.",
+        variant: "destructive",
+      });
       return;
     }
     const success = await save();
@@ -248,9 +311,12 @@ export default function CmsEditPage() {
               </span>
             ) : null}
           </div>
-          <h1 className="text-3xl font-semibold text-foreground">Editing “{page.title}”</h1>
+          <h1 className="text-3xl font-semibold text-foreground">
+            Editing “{page.title}”
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Configure SEO metadata, reorder sections, and fine-tune block content before publishing.
+            Configure SEO metadata, reorder sections, and fine-tune block
+            content before publishing.
           </p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +325,11 @@ export default function CmsEditPage() {
             onClick={handlePreview}
             disabled={saving || !authToken}
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="mr-2 h-4 w-4" />
+            )}
             Preview
           </Button>
           <Button
@@ -267,14 +337,22 @@ export default function CmsEditPage() {
             onClick={() => save("draft")}
             disabled={saving || (!isDirty && page.status !== "published")}
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
             {page.status === "published" ? "Unpublish" : "Save Draft"}
           </Button>
           <Button
             onClick={() => save("published")}
             disabled={saving || (!isDirty && page.status === "published")}
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
             Publish
           </Button>
         </div>
@@ -288,18 +366,29 @@ export default function CmsEditPage() {
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Title</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Title
+                </label>
                 <Input
                   value={page.title}
-                  onChange={(event) => handleMetaChange("title", event.target.value)}
+                  onChange={(event) =>
+                    handleMetaChange("title", event.target.value)
+                  }
                   placeholder="Page title"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Slug</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Slug
+                </label>
                 <Input
                   value={page.slug}
-                  onChange={(event) => handleMetaChange("slug", event.target.value.replace(/\s+/g, "-"))}
+                  onChange={(event) =>
+                    handleMetaChange(
+                      "slug",
+                      event.target.value.replace(/\s+/g, "-"),
+                    )
+                  }
                   placeholder="about"
                 />
               </div>
@@ -309,27 +398,39 @@ export default function CmsEditPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-foreground">SEO Title</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  SEO Title
+                </label>
                 <Input
                   value={page.seo?.title ?? ""}
-                  onChange={(event) => handleSeoChange("title", event.target.value)}
+                  onChange={(event) =>
+                    handleSeoChange("title", event.target.value)
+                  }
                   placeholder="About Care N Tour | World-class medical travel"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-foreground">SEO Description</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  SEO Description
+                </label>
                 <Textarea
                   value={page.seo?.description ?? ""}
-                  onChange={(event) => handleSeoChange("description", event.target.value)}
+                  onChange={(event) =>
+                    handleSeoChange("description", event.target.value)
+                  }
                   rows={3}
                   placeholder="Short, compelling summary shown in search results."
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-foreground">Open Graph Image URL</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Open Graph Image URL
+                </label>
                 <Input
                   value={page.seo?.ogImage ?? ""}
-                  onChange={(event) => handleSeoChange("ogImage", event.target.value)}
+                  onChange={(event) =>
+                    handleSeoChange("ogImage", event.target.value)
+                  }
                   placeholder="https://..."
                 />
               </div>
@@ -344,9 +445,15 @@ export default function CmsEditPage() {
         />
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.push("/cms")}>Cancel</Button>
+          <Button variant="outline" onClick={() => router.push("/cms")}>
+            Cancel
+          </Button>
           <Button onClick={() => save()} disabled={saving || !isDirty}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
             Save changes
           </Button>
         </div>
