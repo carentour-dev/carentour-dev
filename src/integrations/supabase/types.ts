@@ -1156,6 +1156,42 @@ export type Database = {
         }
         Relationships: []
       }
+      cms_pages: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          status: string
+          seo: Json | null
+          content: Json
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          status?: string
+          seo?: Json | null
+          content?: Json
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          status?: string
+          seo?: Json | null
+          content?: Json
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       patient_testimonial_public: {
