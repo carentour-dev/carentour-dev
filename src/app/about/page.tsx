@@ -1,4 +1,4 @@
-"use client";
+ 
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,8 +10,32 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Heart, Award, Users, Globe, Shield, Clock } from "lucide-react";
 import Image from "next/image";
+import { BlockRenderer } from "@/components/cms/BlockRenderer";
+import { getPublishedPageBySlug } from "@/lib/cms/server";
 
-export default function About() {
+export const revalidate = 300;
+export async function generateMetadata() {
+  const cmsPage = await getPublishedPageBySlug("about");
+  return {
+    title: cmsPage?.seo?.title ?? "About | Care N Tour",
+    description: cmsPage?.seo?.description ?? undefined,
+    openGraph: cmsPage?.seo?.ogImage ? { images: [cmsPage.seo.ogImage] } : undefined,
+  } as any;
+}
+
+export default async function About() {
+  const cmsPage = await getPublishedPageBySlug("about");
+  if (cmsPage?.content?.length) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="py-10 container mx-auto px-4">
+          <BlockRenderer blocks={cmsPage.content} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   const stats = [
     { icon: Heart, label: "Successful Procedures", value: "5000+" },
     { icon: Users, label: "Medical Specialists", value: "200+" },
