@@ -90,7 +90,7 @@ export default function CmsNewPage() {
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert variant="secondary">
+        <Alert>
           <AlertTitle className="text-sm">Start from scratch or pick a template</AlertTitle>
           <AlertDescription className="text-xs text-muted-foreground">
             Use the templates below to jump-start your content structure.
