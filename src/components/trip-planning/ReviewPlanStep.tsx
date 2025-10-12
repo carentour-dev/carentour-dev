@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -383,7 +384,7 @@ const ReviewPlanStep = ({ data, onUpdate }: ReviewPlanStepProps) => {
 
             {!user && (
               <p className="text-xs text-muted-foreground">
-                Please <a href="/auth" className="text-primary hover:underline">log in</a> to submit your trip plan.
+                Please <Link href="/auth" className="text-primary hover:underline">log in</Link> to submit your trip plan.
               </p>
             )}
           </div>
