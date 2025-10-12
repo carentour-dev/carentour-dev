@@ -31,7 +31,7 @@ export async function getPublishedPageBySlug(slug: string): Promise<CmsPage | nu
     slug: data.slug,
     title: data.title,
     status: data.status as "draft" | "published",
-    seo: data.seo,
+    seo: data.seo as Record<string, any> | null,
   content: normalizeBlocks(data.content) as BlockValue[],
   updated_at: data.updated_at,
   };
