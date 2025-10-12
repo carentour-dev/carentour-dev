@@ -3,15 +3,14 @@ import { requireRole } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema } from "@/lib/cms/blocks";
 
-type Params = { params: { id: string } };
-
-export async function GET(_: NextRequest, { params }: Params) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await requireRole(["admin", "editor"]);
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
     .select("id, slug, title, seo, content, status, updated_at")
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -23,7 +22,8 @@ export async function GET(_: NextRequest, { params }: Params) {
   return NextResponse.json({ page: data });
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await requireRole(["admin", "editor"]);
   const updates = await req.json();
   const parsedContent = blockArraySchema.safeParse(updates.content ?? []);
@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       content: parsedContent.data,
       status: updates.status,
     })
-    .eq("id", params.id)
+    .eq("id", id)
     .select("id, slug, title, seo, content, status, updated_at")
     .single();
 
@@ -51,10 +51,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
   return NextResponse.json({ page: data });
 }
 
-export async function DELETE(_: NextRequest, { params }: Params) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await requireRole(["admin", "editor"]);
   const supabaseAdmin = getSupabaseAdmin();
-  const { error } = await supabaseAdmin.from("cms_pages").delete().eq("id", params.id);
+  const { error } = await supabaseAdmin.from("cms_pages").delete().eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
