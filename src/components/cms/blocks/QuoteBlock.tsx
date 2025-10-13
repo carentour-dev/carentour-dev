@@ -1,21 +1,61 @@
 import Image from "next/image";
 import type { BlockValue } from "@/lib/cms/blocks";
+import { cn } from "@/lib/utils";
+import { BlockSurface } from "./BlockSurface";
+import { getFirstDefinedResponsiveValue } from "./styleUtils";
 
 export function QuoteBlock({ block }: { block: BlockValue<"quote"> }) {
+  const styleAlignValue = getFirstDefinedResponsiveValue(
+    block.style?.layout?.horizontalAlign,
+  );
+  const alignmentClass =
+    styleAlignValue === "center"
+      ? "text-center"
+      : styleAlignValue === "end"
+        ? "text-right"
+        : "text-left";
+  const attributionAlign =
+    alignmentClass === "text-right"
+      ? "items-end text-right"
+      : alignmentClass === "text-center"
+        ? "items-center text-center"
+        : "items-start text-left";
   return (
-    <section className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-4xl rounded-3xl bg-card p-10 shadow-card-hover">
+    <BlockSurface
+      block={block}
+      className="bg-muted/30"
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName="max-w-4xl"
+    >
+      {() => (
+        <div
+          className={cn(
+            "rounded-3xl bg-card p-10 shadow-card-hover",
+            alignmentClass,
+          )}
+        >
           {block.eyebrow ? (
-            <span className="text-sm uppercase tracking-wide text-primary">{block.eyebrow}</span>
+            <span className="text-sm uppercase tracking-wide text-primary">
+              {block.eyebrow}
+            </span>
           ) : null}
           <blockquote className="mt-4 text-2xl font-medium leading-relaxed text-foreground">
             “{block.quote}”
           </blockquote>
           {block.highlight ? (
-            <p className="mt-6 text-lg font-semibold text-primary">{block.highlight}</p>
+            <p className="mt-6 text-lg font-semibold text-primary">
+              {block.highlight}
+            </p>
           ) : null}
-          <div className="mt-8 flex items-center gap-4">
+          <div
+            className={cn(
+              "mt-8 flex gap-4",
+              alignmentClass === "text-center"
+                ? "flex-col items-center"
+                : "items-center",
+              alignmentClass === "text-right" ? "flex-row-reverse" : undefined,
+            )}
+          >
             {block.avatar?.src ? (
               <div className="relative h-14 w-14 overflow-hidden rounded-full">
                 <Image
@@ -27,9 +67,11 @@ export function QuoteBlock({ block }: { block: BlockValue<"quote"> }) {
                 />
               </div>
             ) : null}
-            <div>
+            <div className={cn("flex flex-col", attributionAlign)}>
               {block.attribution ? (
-                <p className="text-base font-semibold text-foreground">{block.attribution}</p>
+                <p className="text-base font-semibold text-foreground">
+                  {block.attribution}
+                </p>
               ) : null}
               {block.role ? (
                 <p className="text-sm text-muted-foreground">{block.role}</p>
@@ -37,7 +79,7 @@ export function QuoteBlock({ block }: { block: BlockValue<"quote"> }) {
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      )}
+    </BlockSurface>
   );
 }
