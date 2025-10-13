@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { BlockValue, BlockStyle } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockStyle, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -18,7 +18,7 @@ const backgroundClasses: Record<
 export function CallToActionBlock({
   block,
 }: {
-  block: BlockValue<"callToAction">;
+  block: BlockInstance<"callToAction">;
 }) {
   const actions = block.actions ?? [];
   const descriptionClass =
@@ -40,14 +40,14 @@ export function CallToActionBlock({
         } satisfies NonNullable<BlockStyle["background"]>)
       : undefined;
 
-  const blockWithStyle = derivedBackground
-    ? ({
+  const blockWithStyle: BlockInstance<"callToAction"> = derivedBackground
+    ? {
         ...block,
         style: {
           ...(block.style ?? {}),
           background: derivedBackground,
         },
-      } as BlockValue<"callToAction">)
+      }
     : block;
   const customBackgroundVariant = blockWithStyle.style?.background?.variant;
   const useDefaultBackgroundClass =
