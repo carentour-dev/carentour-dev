@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { getDoctorsForBlock } from "@/lib/cms/server";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -19,7 +19,7 @@ const initials = (name: string) =>
 export async function DoctorsBlock({
   block,
 }: {
-  block: BlockValue<"doctors">;
+  block: BlockInstance<"doctors">;
 }) {
   const doctors = await getDoctorsForBlock(block);
 
