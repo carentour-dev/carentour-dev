@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import { blockArraySchema } from "@/lib/cms/blocks";
+import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   await requireRole(["admin", "editor"]);
   const supabaseAdmin = getSupabaseAdmin();
@@ -22,13 +25,25 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   return NextResponse.json({ page: data });
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   await requireRole(["admin", "editor"]);
   const updates = await req.json();
-  const parsedContent = blockArraySchema.safeParse(updates.content ?? []);
+  const sanitizedContent = sanitizeCmsBlocks(updates.content ?? []);
+  const parsedContent = blockArraySchema.safeParse(sanitizedContent);
   if (!parsedContent.success) {
-    return NextResponse.json({ error: "Invalid block structure" }, { status: 400 });
+    const issue = parsedContent.error.issues[0];
+    const fieldPath = issue?.path?.length
+      ? issue.path.map(String).join(".")
+      : undefined;
+    const message = issue?.message ?? "Invalid block structure";
+    return NextResponse.json(
+      { error: fieldPath ? `${message} (field: ${fieldPath})` : message },
+      { status: 400 },
+    );
   }
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -51,7 +66,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json({ page: data });
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   await requireRole(["admin", "editor"]);
   const supabaseAdmin = getSupabaseAdmin();
@@ -61,4 +79,3 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   }
   return NextResponse.json({ ok: true });
 }
-
