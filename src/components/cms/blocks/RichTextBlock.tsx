@@ -1,5 +1,5 @@
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -20,7 +20,7 @@ const alignMap: Record<BlockValue<"richText">["align"], string> = {
   center: "text-center mx-auto",
 };
 
-export function RichTextBlock({ block }: { block: BlockValue<"richText"> }) {
+export function RichTextBlock({ block }: { block: BlockInstance<"richText"> }) {
   const cta = block.advanced?.cta;
   const layout = block.style?.layout;
   const hasCustomMaxWidth = hasResponsiveValue(layout?.maxWidth);
