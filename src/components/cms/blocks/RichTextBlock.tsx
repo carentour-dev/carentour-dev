@@ -1,6 +1,13 @@
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { BlockSurface } from "./BlockSurface";
+import {
+  getFirstDefinedResponsiveValue,
+  hasResponsiveValue,
+} from "./styleUtils";
 
 const widthMap: Record<BlockValue<"richText">["width"], string> = {
   prose: "prose prose-lg dark:prose-invert",
@@ -14,13 +21,59 @@ const alignMap: Record<BlockValue<"richText">["align"], string> = {
 };
 
 export function RichTextBlock({ block }: { block: BlockValue<"richText"> }) {
+  const cta = block.advanced?.cta;
+  const layout = block.style?.layout;
+  const hasCustomMaxWidth = hasResponsiveValue(layout?.maxWidth);
+  const hasCustomHorizontalAlign = hasResponsiveValue(layout?.horizontalAlign);
+  const styleAlignValue = getFirstDefinedResponsiveValue(
+    layout?.horizontalAlign,
+  );
+
+  const fallbackAlignClass = hasCustomHorizontalAlign
+    ? undefined
+    : block.align === "center"
+      ? alignMap.center
+      : cn("mx-auto", alignMap.start);
+
+  const contentClasses = cn(
+    "space-y-4",
+    hasCustomMaxWidth ? "max-w-none" : widthMap[block.width],
+    fallbackAlignClass,
+  );
+
   return (
-    <section className="py-16 bg-background">
-      <div className="container mx-auto px-4">
-        <div className={cn("mx-auto", widthMap[block.width], alignMap[block.align])}>
+    <BlockSurface block={block} contentClassName={contentClasses}>
+      {() => (
+        <>
           <MarkdownRenderer content={block.markdown} className="space-y-4" />
-        </div>
-      </div>
-    </section>
+          {cta ? (
+            <div
+              className={cn(
+                "mt-6 flex",
+                styleAlignValue === "center"
+                  ? "justify-center"
+                  : styleAlignValue === "end"
+                    ? "justify-end"
+                    : block.align === "center"
+                      ? "justify-center"
+                      : "justify-start",
+              )}
+            >
+              <Button asChild variant={cta.variant ?? "default"} size="lg">
+                <Link
+                  href={cta.href}
+                  target={cta.target ?? "_self"}
+                  rel={
+                    cta.target === "_blank" ? "noopener noreferrer" : undefined
+                  }
+                >
+                  {cta.label}
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </BlockSurface>
   );
 }
