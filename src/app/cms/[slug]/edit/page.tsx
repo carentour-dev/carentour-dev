@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Eye,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,17 @@ import { useToast } from "@/hooks/use-toast";
 import { PageBuilder } from "@/components/cms/editor/PageBuilder";
 import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type PageSeo = {
   title?: string;
@@ -68,6 +80,7 @@ export default function CmsEditPage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -265,6 +278,63 @@ export default function CmsEditPage() {
     }
   };
 
+  const handleDeletePage = async () => {
+    if (!page || deleting) return;
+    setDeleting(true);
+    const pageSnapshot = { ...page };
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw sessionError;
+      }
+      const freshToken = session?.access_token ?? null;
+      const res = await fetch(`/api/cms/pages/${pageSnapshot.id}`, {
+        method: "DELETE",
+        headers: freshToken ? { Authorization: `Bearer ${freshToken}` } : {},
+      });
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        const message =
+          typeof errorBody?.error === "string" && errorBody.error.trim().length
+            ? errorBody.error
+            : "Failed to delete page";
+        throw new Error(message);
+      }
+      if (pageSnapshot.status === "published" && freshToken) {
+        try {
+          await fetch("/api/revalidate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${freshToken}`,
+            },
+            body: JSON.stringify({ path: `/${pageSnapshot.slug}` }),
+          });
+        } catch (revalidateError) {
+          console.warn("Failed to revalidate deleted page", revalidateError);
+        }
+      }
+      toast({
+        title: "Page deleted",
+        description: `“${pageSnapshot.title}” removed from the CMS.`,
+      });
+      router.push("/cms");
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Delete failed",
+        description: error?.message ?? "Unable to delete this page.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handlePreview = async () => {
     if (!page) return;
     if (!authToken) {
@@ -336,7 +406,7 @@ export default function CmsEditPage() {
           <Button
             variant="outline"
             onClick={handlePreview}
-            disabled={saving || !authToken}
+            disabled={saving || !authToken || deleting}
           >
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -348,7 +418,9 @@ export default function CmsEditPage() {
           <Button
             variant="secondary"
             onClick={() => save("draft")}
-            disabled={saving || (!isDirty && page.status !== "published")}
+            disabled={
+              saving || (!isDirty && page.status !== "published") || deleting
+            }
           >
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -359,7 +431,9 @@ export default function CmsEditPage() {
           </Button>
           <Button
             onClick={() => save("published")}
-            disabled={saving || (!isDirty && page.status === "published")}
+            disabled={
+              saving || (!isDirty && page.status === "published") || deleting
+            }
           >
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -368,6 +442,44 @@ export default function CmsEditPage() {
             )}
             Publish
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={deleting}>
+                {deleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this page?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes “{page.title}” and all of its blocks.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
+                  onClick={handleDeletePage}
+                  disabled={deleting}
+                >
+                  Confirm delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
@@ -458,10 +570,17 @@ export default function CmsEditPage() {
         />
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.push("/cms")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/cms")}
+            disabled={deleting}
+          >
             Cancel
           </Button>
-          <Button onClick={() => save()} disabled={saving || !isDirty}>
+          <Button
+            onClick={() => save()}
+            disabled={saving || !isDirty || deleting}
+          >
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
