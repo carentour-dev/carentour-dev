@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import {
@@ -54,7 +54,7 @@ function ActionLink({
   );
 }
 
-export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
+export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
   const hasActions = block.primaryAction || block.secondaryAction;
   const hasMedia = Boolean(block.media?.src);
   const layout = block.style?.layout;
