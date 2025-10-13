@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { PageBuilder } from "@/components/cms/editor/PageBuilder";
-import { normalizeBlocks, type BlockValue } from "@/lib/cms/blocks";
+import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
 import { supabase } from "@/integrations/supabase/client";
 
 type PageSeo = {
@@ -34,7 +34,7 @@ type PageRecord = {
   title: string;
   status: "draft" | "published";
   seo: PageSeo | null;
-  content: BlockValue[];
+  content: BlockInstance[];
   updated_at?: string;
 };
 
@@ -107,7 +107,7 @@ export default function CmsEditPage() {
         title: detail.page.title,
         status: detail.page.status,
         seo: detail.page.seo ?? {},
-        content: normalizeBlocks(detail.page.content) as BlockValue[],
+        content: normalizeBlocks(detail.page.content),
         updated_at: detail.page.updated_at,
       };
       setPage(normalized);
@@ -141,7 +141,7 @@ export default function CmsEditPage() {
     );
   };
 
-  const handleBlocksChange = (blocks: BlockValue[]) => {
+  const handleBlocksChange = (blocks: BlockInstance[]) => {
     setPage((prev) => (prev ? { ...prev, content: blocks } : prev));
   };
 
@@ -178,7 +178,20 @@ export default function CmsEditPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save page");
+        let errorMessage = "Failed to save page";
+        try {
+          const errorBody = await res.json();
+          if (
+            errorBody &&
+            typeof errorBody.error === "string" &&
+            errorBody.error.trim().length > 0
+          ) {
+            errorMessage = errorBody.error;
+          }
+        } catch {
+          // ignore JSON parsing issues and use default message
+        }
+        throw new Error(errorMessage);
       }
 
       const data = (await res.json()) as ApiPageResponse;
@@ -188,7 +201,7 @@ export default function CmsEditPage() {
         title: data.page.title,
         status: data.page.status,
         seo: data.page.seo ?? {},
-        content: normalizeBlocks(data.page.content) as BlockValue[],
+        content: normalizeBlocks(data.page.content),
         updated_at: data.page.updated_at,
       };
       setPage(normalized);
