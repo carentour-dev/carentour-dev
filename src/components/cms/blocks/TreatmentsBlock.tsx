@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
 import { getPrimaryProcedure } from "@/lib/treatments";
 import { BlockSurface } from "./BlockSurface";
@@ -37,7 +37,7 @@ const formatDuration = (duration?: number | null) => {
 export async function TreatmentsBlock({
   block,
 }: {
-  block: BlockValue<"treatments">;
+  block: BlockInstance<"treatments">;
 }) {
   const treatments = await getTreatmentsForBlock(block);
 
