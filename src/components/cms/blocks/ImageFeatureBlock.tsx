@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -10,7 +10,7 @@ import { resolveIcon } from "./utils";
 export function ImageFeatureBlock({
   block,
 }: {
-  block: BlockValue<"imageFeature">;
+  block: BlockInstance<"imageFeature">;
 }) {
   const isImageLeft = block.layout === "imageLeft";
   const actions = block.actions ?? [];
