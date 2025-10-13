@@ -23,9 +23,10 @@ import {
 
 import {
   blockRegistry,
+  cloneBlockWithNewId,
   createDefaultBlock,
+  type BlockInstance,
   type BlockType,
-  type BlockValue,
 } from "@/lib/cms/blocks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,6 @@ import {
   BlockInspector,
   EmptyInspector,
   blockSummary,
-  duplicateBlock,
 } from "./BlockInspector";
 
 type PreviewDevice = "responsive" | "desktop" | "tablet" | "mobile";
@@ -65,8 +65,8 @@ const previewWidths: Record<PreviewDevice, number | "100%"> = {
 };
 
 interface PageBuilderProps {
-  blocks: BlockValue[];
-  onChange: (blocks: BlockValue[]) => void;
+  blocks: BlockInstance[];
+  onChange: (blocks: BlockInstance[]) => void;
   previewKey?: string;
 }
 
@@ -75,7 +75,9 @@ export function PageBuilder({
   onChange,
   previewKey,
 }: PageBuilderProps) {
-  const [selectedIndex, setSelectedIndex] = useState(blocks.length ? 0 : -1);
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    blocks.length ? blocks[0].blockId : null,
+  );
   const [structureCollapsed, setStructureCollapsed] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>(() => {
@@ -94,24 +96,30 @@ export function PageBuilder({
     window.localStorage.setItem(PREVIEW_DEVICE_STORAGE_KEY, previewDevice);
   }, [previewDevice]);
 
-  const selectedBlock = selectedIndex >= 0 ? blocks[selectedIndex] : null;
-
   useEffect(() => {
     if (!blocks.length) {
-      setSelectedIndex(-1);
+      setSelectedId(null);
       return;
     }
-    if (selectedIndex < 0) {
-      setSelectedIndex(0);
-      return;
-    }
-    if (selectedIndex > blocks.length - 1) {
-      setSelectedIndex(blocks.length - 1);
-    }
-  }, [blocks, selectedIndex]);
+    setSelectedId((prev) => {
+      if (prev && blocks.some((block) => block.blockId === prev)) {
+        return prev;
+      }
+      return blocks[0]?.blockId ?? null;
+    });
+  }, [blocks]);
+
+  const selectedBlock = useMemo(
+    () => blocks.find((block) => block.blockId === selectedId) ?? null,
+    [blocks, selectedId],
+  );
 
   const handleUpdateBlock = useCallback(
-    (index: number, updated: BlockValue) => {
+    (updated: BlockInstance) => {
+      const index = blocks.findIndex(
+        (block) => block.blockId === updated.blockId,
+      );
+      if (index < 0) return;
       const next = [...blocks];
       next[index] = updated;
       onChange(next);
@@ -124,7 +132,7 @@ export function PageBuilder({
       const nextBlock = createDefaultBlock(type);
       const next = [...blocks, nextBlock];
       onChange(next);
-      setSelectedIndex(next.length - 1);
+      setSelectedId(nextBlock.blockId);
     },
     [blocks, onChange],
   );
@@ -137,7 +145,7 @@ export function PageBuilder({
       const [item] = next.splice(index, 1);
       next.splice(target, 0, item);
       onChange(next);
-      setSelectedIndex(target);
+      setSelectedId(item.blockId);
     },
     [blocks, onChange],
   );
@@ -145,12 +153,15 @@ export function PageBuilder({
   const removeBlock = useCallback(
     (index: number) => {
       const next = [...blocks];
-      next.splice(index, 1);
+      const [removed] = next.splice(index, 1);
       onChange(next);
-      setSelectedIndex((prev) => {
-        if (prev === index) return Math.min(index, next.length - 1);
-        if (prev > index) return prev - 1;
-        return prev;
+      setSelectedId((prev) => {
+        if (!next.length) return null;
+        if (prev && prev !== removed?.blockId) {
+          return prev;
+        }
+        const fallback = next[index] ?? next[index - 1] ?? next[0];
+        return fallback?.blockId ?? null;
       });
     },
     [blocks, onChange],
@@ -159,15 +170,19 @@ export function PageBuilder({
   const duplicate = useCallback(
     (index: number) => {
       const next = [...blocks];
-      next.splice(index + 1, 0, duplicateBlock(blocks[index] as BlockValue));
+      const duplicated = cloneBlockWithNewId(blocks[index]);
+      next.splice(index + 1, 0, duplicated);
       onChange(next);
-      setSelectedIndex(index + 1);
+      setSelectedId(duplicated.blockId);
     },
     [blocks, onChange],
   );
 
   const previewBlocks = useMemo(() => blocks, [blocks]);
-  const previewInstanceKey = previewKey ?? previewBlocks.length;
+  // Use JSON stringify to create a stable key that changes with content
+  const previewInstanceKey = useMemo(() => {
+    return previewKey ?? JSON.stringify(blocks);
+  }, [previewKey, blocks]);
   const previewWidth = previewWidths[previewDevice];
   const previewFrameStyle: CSSProperties =
     previewWidth === "100%"
@@ -208,17 +223,17 @@ export function PageBuilder({
             <div className="divide-y divide-border/60">
               {blocks.map((block, index) => {
                 const definition = blockRegistry[block.type];
-                const isActive = index === selectedIndex;
+                const isActive = block.blockId === selectedId;
                 return (
                   <div
-                    key={`${block.type}-${index}`}
+                    key={block.blockId}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setSelectedIndex(index)}
+                    onClick={() => setSelectedId(block.blockId)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        setSelectedIndex(index);
+                        setSelectedId(block.blockId);
                       }
                     }}
                     className={cn(
@@ -386,10 +401,7 @@ export function PageBuilder({
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
         {selectedBlock ? (
-          <BlockInspector
-            block={selectedBlock}
-            onChange={(next) => handleUpdateBlock(selectedIndex, next)}
-          />
+          <BlockInspector block={selectedBlock} onChange={handleUpdateBlock} />
         ) : (
           <EmptyInspector />
         )}
