@@ -1,10 +1,10 @@
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 import { resolveIcon } from "./utils";
 
-export function StatGridBlock({ block }: { block: BlockValue<"statGrid"> }) {
+export function StatGridBlock({ block }: { block: BlockInstance<"statGrid"> }) {
   const IconSize = 28;
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
