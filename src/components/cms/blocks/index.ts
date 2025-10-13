@@ -3,6 +3,7 @@ export { StatGridBlock } from "./StatGridBlock";
 export { RichTextBlock } from "./RichTextBlock";
 export { ImageFeatureBlock } from "./ImageFeatureBlock";
 export { FeatureGridBlock } from "./FeatureGridBlock";
+export { LogoGridBlock } from "./LogoGridBlock";
 export { CallToActionBlock } from "./CallToActionBlock";
 export { FaqBlock } from "./FaqBlock";
 export { QuoteBlock } from "./QuoteBlock";
