@@ -1,6 +1,10 @@
 import { createClient } from "@/integrations/supabase/server";
 import type { Database } from "@/integrations/supabase/types";
-import { normalizeBlocks, type BlockValue } from "@/lib/cms/blocks";
+import {
+  normalizeBlocks,
+  type BlockInstance,
+  type BlockValue,
+} from "@/lib/cms/blocks";
 import { normalizeTreatment } from "@/lib/treatments";
 
 export type CmsPage = {
@@ -9,11 +13,13 @@ export type CmsPage = {
   title: string;
   status: "draft" | "published";
   seo: Record<string, any> | null;
-  content: BlockValue[];
+  content: BlockInstance[];
   updated_at: string | null;
 };
 
-export async function getPublishedPageBySlug(slug: string): Promise<CmsPage | null> {
+export async function getPublishedPageBySlug(
+  slug: string,
+): Promise<CmsPage | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cms_pages")
@@ -32,20 +38,24 @@ export async function getPublishedPageBySlug(slug: string): Promise<CmsPage | nu
     title: data.title,
     status: data.status as "draft" | "published",
     seo: data.seo as Record<string, any> | null,
-  content: normalizeBlocks(data.content) as BlockValue[],
-  updated_at: data.updated_at,
+    content: normalizeBlocks(data.content),
+    updated_at: data.updated_at,
   };
 }
 
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 
-const TREATMENT_SELECT = "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, procedures, ideal_candidates";
-const DOCTOR_SELECT = "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
+const TREATMENT_SELECT =
+  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, procedures, ideal_candidates";
+const DOCTOR_SELECT =
+  "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
 export async function getTreatmentsForBlock(config: BlockValue<"treatments">) {
   const supabase = await createClient();
-  const manual = (config.manualTreatments ?? []).map((entry) => entry.trim()).filter(Boolean);
+  const manual = (config.manualTreatments ?? [])
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
   if (manual.length > 0) {
     const { data, error } = await supabase
@@ -96,7 +106,9 @@ export async function getTreatmentsForBlock(config: BlockValue<"treatments">) {
 
 export async function getDoctorsForBlock(config: BlockValue<"doctors">) {
   const supabase = await createClient();
-  const manual = (config.manualDoctors ?? []).map((entry) => entry.trim()).filter(Boolean);
+  const manual = (config.manualDoctors ?? [])
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
   if (manual.length > 0) {
     const { data, error } = await supabase
