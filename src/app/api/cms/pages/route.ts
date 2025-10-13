@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import { blockArraySchema } from "@/lib/cms/blocks";
+import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
 
 export async function GET() {
   await requireRole(["admin", "editor"]);
@@ -23,12 +23,24 @@ export async function POST(req: NextRequest) {
   const { slug, title, content = [], seo = {}, status = "draft" } = body ?? {};
 
   if (!slug || !title) {
-    return NextResponse.json({ error: "slug and title are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "slug and title are required" },
+      { status: 400 },
+    );
   }
 
-  const parsedContent = blockArraySchema.safeParse(content ?? []);
+  const sanitizedContent = sanitizeCmsBlocks(content ?? []);
+  const parsedContent = blockArraySchema.safeParse(sanitizedContent);
   if (!parsedContent.success) {
-    return NextResponse.json({ error: "Invalid block structure" }, { status: 400 });
+    const issue = parsedContent.error.issues[0];
+    const fieldPath = issue?.path?.length
+      ? issue.path.map(String).join(".")
+      : undefined;
+    const message = issue?.message ?? "Invalid block structure";
+    return NextResponse.json(
+      { error: fieldPath ? `${message} (field: ${fieldPath})` : message },
+      { status: 400 },
+    );
   }
 
   // Use service-role for writes to avoid client-session RLS edge cases; access is already enforced above
