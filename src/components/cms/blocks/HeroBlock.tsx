@@ -1,8 +1,13 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
+import { BlockSurface } from "./BlockSurface";
+import {
+  getFirstDefinedResponsiveValue,
+  hasResponsiveValue,
+} from "./styleUtils";
 
 const backgroundMap: Record<BlockValue<"hero">["background"], string> = {
   white: "bg-background",
@@ -11,11 +16,12 @@ const backgroundMap: Record<BlockValue<"hero">["background"], string> = {
   primary: "bg-primary text-primary-foreground",
 };
 
-const containerWidthMap: Record<BlockValue<"hero">["containerWidth"], string> = {
-  default: "max-w-5xl",
-  wide: "max-w-6xl",
-  narrow: "max-w-2xl",
-};
+const containerWidthMap: Record<BlockValue<"hero">["containerWidth"], string> =
+  {
+    default: "max-w-5xl",
+    wide: "max-w-6xl",
+    narrow: "max-w-2xl",
+  };
 
 const alignmentMap: Record<BlockValue<"hero">["alignment"], string> = {
   left: "items-start text-left",
@@ -51,20 +57,35 @@ function ActionLink({
 export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
   const hasActions = block.primaryAction || block.secondaryAction;
   const hasMedia = Boolean(block.media?.src);
+  const layout = block.style?.layout;
+  const hasCustomAlign = hasResponsiveValue(layout?.horizontalAlign);
+  const styleAlignValue = getFirstDefinedResponsiveValue(
+    layout?.horizontalAlign,
+  );
+  const backgroundVariant = block.style?.background?.variant;
+  const useDefaultBackground =
+    !backgroundVariant || backgroundVariant === "none";
 
   return (
-    <section className={cn("py-20", backgroundMap[block.background])}>
-      <div className="container mx-auto px-4">
-        <div
-          className={cn(
-            "grid gap-10 items-center",
-            hasMedia ? "lg:grid-cols-2" : "lg:grid-cols-[minmax(0,680px)] justify-center",
-          )}
-        >
+    <BlockSurface
+      block={block}
+      className={
+        useDefaultBackground ? backgroundMap[block.background] : undefined
+      }
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName={cn(
+        "grid gap-10 items-center",
+        hasMedia
+          ? "lg:grid-cols-2"
+          : "lg:grid-cols-[minmax(0,680px)] justify-center",
+      )}
+    >
+      {() => (
+        <>
           <div
             className={cn(
               "flex flex-col gap-6",
-              alignmentMap[block.alignment],
+              hasCustomAlign ? "" : alignmentMap[block.alignment],
               containerWidthMap[block.containerWidth],
               hasMedia ? "lg:mx-0" : "mx-auto",
             )}
@@ -76,7 +97,12 @@ export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
             ) : null}
 
             <div className="space-y-4">
-              <h1 className={cn("text-4xl md:text-5xl font-bold leading-tight", block.alignment === "center" ? "mx-auto" : undefined)}>
+              <h1
+                className={cn(
+                  "text-4xl md:text-5xl font-bold leading-tight",
+                  block.alignment === "center" ? "mx-auto" : undefined,
+                )}
+              >
                 {block.heading}
                 {block.highlight ? (
                   <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -86,7 +112,16 @@ export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
               </h1>
 
               {block.description ? (
-                <p className={cn("text-lg md:text-xl text-muted-foreground", block.alignment === "center" ? "mx-auto max-w-3xl" : "max-w-2xl")}>{block.description}</p>
+                <p
+                  className={cn(
+                    "text-lg md:text-xl text-muted-foreground",
+                    block.alignment === "center"
+                      ? "mx-auto max-w-3xl"
+                      : "max-w-2xl",
+                  )}
+                >
+                  {block.description}
+                </p>
               ) : null}
             </div>
 
@@ -94,14 +129,23 @@ export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
               <div
                 className={cn(
                   "flex flex-wrap gap-3",
-                  block.alignment === "center" ? "justify-center" : "justify-start",
+                  styleAlignValue === "center"
+                    ? "justify-center"
+                    : styleAlignValue === "end"
+                      ? "justify-end"
+                      : block.alignment === "center"
+                        ? "justify-center"
+                        : "justify-start",
                 )}
               >
                 {block.primaryAction ? (
                   <ActionLink action={block.primaryAction} />
                 ) : null}
                 {block.secondaryAction ? (
-                  <ActionLink action={block.secondaryAction} variant={block.secondaryAction.variant ?? "secondary"} />
+                  <ActionLink
+                    action={block.secondaryAction}
+                    variant={block.secondaryAction.variant ?? "secondary"}
+                  />
                 ) : null}
               </div>
             ) : null}
@@ -138,8 +182,8 @@ export function HeroBlock({ block }: { block: BlockValue<"hero"> }) {
               )}
             </div>
           ) : null}
-        </div>
-      </div>
-    </section>
+        </>
+      )}
+    </BlockSurface>
   );
 }
