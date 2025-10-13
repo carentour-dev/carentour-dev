@@ -1,4 +1,4 @@
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -7,7 +7,7 @@ import { resolveIcon } from "./utils";
 export function FeatureGridBlock({
   block,
 }: {
-  block: BlockValue<"featureGrid">;
+  block: BlockInstance<"featureGrid">;
 }) {
   const hasHeader = block.eyebrow || block.heading || block.description;
   const styleAlignValue = getFirstDefinedResponsiveValue(
