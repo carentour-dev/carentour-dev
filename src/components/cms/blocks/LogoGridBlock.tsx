@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -13,7 +13,7 @@ const columnClasses: Record<number, string> = {
   6: "grid-cols-3 md:grid-cols-6",
 };
 
-export function LogoGridBlock({ block }: { block: BlockValue<"logoGrid"> }) {
+export function LogoGridBlock({ block }: { block: BlockInstance<"logoGrid"> }) {
   const gridClass = columnClasses[block.columns] ?? columnClasses[5];
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
