@@ -4,7 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ function renderColumn(items: BlockValue<"faq">["items"], prefix: string) {
   );
 }
 
-export function FaqBlock({ block }: { block: BlockValue<"faq"> }) {
+export function FaqBlock({ block }: { block: BlockInstance<"faq"> }) {
   const mid = Math.ceil(block.items.length / 2);
   const firstColumn = block.items.slice(
     0,
