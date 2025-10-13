@@ -1,10 +1,10 @@
 import Image from "next/image";
-import type { BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 
-export function QuoteBlock({ block }: { block: BlockValue<"quote"> }) {
+export function QuoteBlock({ block }: { block: BlockInstance<"quote"> }) {
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
   );
