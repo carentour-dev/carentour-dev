@@ -35,11 +35,14 @@ export function ImageFeatureBlock({
   const imageSrc = block.image?.src;
   const imageAlt = block.image?.alt ?? "";
   const imageRounded = block.image?.rounded ?? true;
+  const styleBackgroundVariant = block.style?.background?.variant;
+  const useDefaultBackgroundClass =
+    styleBackgroundVariant === undefined || styleBackgroundVariant === "none";
 
   return (
     <BlockSurface
       block={block}
-      className="bg-muted/20"
+      className={useDefaultBackgroundClass ? "bg-muted/20" : undefined}
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
       contentClassName={cn(
         "grid items-center gap-12 lg:grid-cols-2",
