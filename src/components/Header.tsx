@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchNavigationLinks,
+  getFallbackNavigationLinks,
+  isNavigationVisible,
+  mergeWithFallback,
+  type NavigationLink,
+} from "@/lib/navigation";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,7 +24,8 @@ const Header = () => {
   const { profile } = useUserProfile();
   const { resolvedTheme } = useTheme();
 
-  const [cmsNavigation, setCmsNavigation] = useState<Array<{ name: string; href: string }>>([]);
+  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>([]);
+  const [loadingNavigation, setLoadingNavigation] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -27,43 +34,12 @@ const Header = () => {
   useEffect(() => {
     let isSubscribed = true;
     const loadNavigation = async () => {
-      const excludedSlugs = new Set([
-        "",
-        "home",
-        "about",
-        "treatments",
-        "doctors",
-        "stories",
-        "plan",
-        "travel-info",
-        "concierge",
-        "blog",
-        "faq",
-        "contact",
-        "cms",
-        "admin",
-        "auth",
-        "consultation",
-        "dashboard",
-        "patients",
-        "start-journey",
-        "start",
-        "api",
-      ]);
-
-      const { data, error } = await supabase
-        .from("cms_pages")
-        .select("title, slug")
-        .eq("status", "published")
-        .order("title", { ascending: true });
-
-      if (!isSubscribed || error || !data) return;
-
-      const additional = data
-        .filter((page) => page?.slug && !excludedSlugs.has(page.slug))
-        .map((page) => ({ name: page.title ?? page.slug, href: `/${page.slug}` }));
-
-      setCmsNavigation(additional);
+      setLoadingNavigation(true);
+      const result = await fetchNavigationLinks();
+      if (!isSubscribed) return;
+      const merged = mergeWithFallback(result.links);
+      setNavigationLinks(merged.filter(isNavigationVisible));
+      setLoadingNavigation(false);
     };
 
     loadNavigation();
@@ -72,28 +48,6 @@ const Header = () => {
       isSubscribed = false;
     };
   }, []);
-
-  const baseNavigation = useMemo(
-    () => [
-      { name: "Home", href: "/" },
-      { name: "About Us", href: "/about" },
-      { name: "Treatments", href: "/treatments" },
-      { name: "Our Doctors", href: "/doctors" },
-      { name: "Patient Stories", href: "/stories" },
-      { name: "Plan Your Trip", href: "/plan" },
-      { name: "Travel Info", href: "/travel-info" },
-      { name: "Concierge", href: "/concierge" },
-      { name: "Blog", href: "/blog" },
-      { name: "FAQ", href: "/faq" },
-      { name: "Contact", href: "/contact" },
-    ],
-    [],
-  );
-
-  const currentNavigation = useMemo(
-    () => [...baseNavigation, ...cmsNavigation],
-    [baseNavigation, cmsNavigation],
-  );
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -118,7 +72,7 @@ const Header = () => {
                   href="/dashboard"
                   className="text-sm text-muted-foreground hidden sm:inline hover:text-primary transition-smooth"
                 >
-                  Welcome, {profile?.displayName || 'User'}
+                  Welcome, {profile?.displayName || "User"}
                 </Link>
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" />
@@ -144,7 +98,11 @@ const Header = () => {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <Image
-                src={mounted && resolvedTheme === 'dark' ? "/care-n-tour-logo-light.png" : "/care-n-tour-logo-dark.png"}
+                src={
+                  mounted && resolvedTheme === "dark"
+                    ? "/care-n-tour-logo-light.png"
+                    : "/care-n-tour-logo-dark.png"
+                }
                 alt="Care N Tour"
                 width={160}
                 height={56}
@@ -156,13 +114,16 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex flex-1 flex-nowrap items-center justify-center gap-3 md:gap-4 lg:gap-6 xl:gap-8 ml-10">
-            {currentNavigation.map((item) => (
+            {(loadingNavigation
+              ? getFallbackNavigationLinks()
+              : navigationLinks
+            ).map((item) => (
               <Link
-                key={item.name}
+                key={item.id}
                 href={item.href}
                 className="text-xs md:text-sm lg:text-[15px] font-medium whitespace-nowrap text-foreground hover:text-primary transition-smooth"
               >
-                {item.name}
+                {item.label}
               </Link>
             ))}
           </nav>
@@ -185,14 +146,17 @@ const Header = () => {
         {isMenuOpen && (
           <nav className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-            {currentNavigation.map((item) => (
+              {(loadingNavigation
+                ? getFallbackNavigationLinks()
+                : navigationLinks
+              ).map((item) => (
                 <Link
-                  key={item.name}
+                  key={item.id}
                   href={item.href}
                   className="text-foreground hover:text-primary transition-smooth font-medium py-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {item.name}
+                  {item.label}
                 </Link>
               ))}
               {user ? (
