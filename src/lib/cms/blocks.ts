@@ -1,7 +1,13 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-const breakpointOrder = ["base", "mobile", "tablet", "desktop"] as const;
+const breakpointOrder = [
+  "base",
+  "mobile",
+  "tablet",
+  "desktop",
+  "full",
+] as const;
 const spacingScale = [
   "none",
   "xs",
@@ -60,6 +66,7 @@ const responsiveSchema = <TSchema extends z.ZodTypeAny>(schema: TSchema) =>
       mobile: schema.optional(),
       tablet: schema.optional(),
       desktop: schema.optional(),
+      full: schema.optional(),
     })
     .optional();
 
