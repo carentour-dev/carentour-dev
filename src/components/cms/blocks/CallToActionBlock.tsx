@@ -5,14 +5,36 @@ import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 
-const backgroundClasses: Record<
-  BlockValue<"callToAction">["background"],
-  string
+const backgroundPresets: Record<
+  Exclude<BlockValue<"callToAction">["background"], "none">,
+  {
+    section: string;
+    text?: string;
+    description?: string;
+    secondaryButton?: string;
+  }
 > = {
-  muted: "bg-muted/40 text-foreground",
-  accent: "bg-primary/10 text-primary",
-  dark: "bg-slate-900 text-slate-50",
-  image: "relative overflow-hidden text-white",
+  muted: {
+    section: "bg-muted/40",
+    text: "text-foreground",
+    description: "text-muted-foreground",
+  },
+  accent: {
+    section: "bg-primary/10",
+    text: "text-primary",
+    description: "text-primary/80",
+  },
+  dark: {
+    section: "bg-slate-900",
+    text: "text-slate-50",
+    description: "text-white/80",
+    secondaryButton: "border border-white/40 bg-transparent",
+  },
+  image: {
+    section: "relative overflow-hidden",
+    text: "text-white",
+    description: "text-white/80",
+  },
 };
 
 export function CallToActionBlock({
@@ -21,10 +43,6 @@ export function CallToActionBlock({
   block: BlockInstance<"callToAction">;
 }) {
   const actions = block.actions ?? [];
-  const descriptionClass =
-    block.background === "dark" || block.background === "image"
-      ? "text-white/80"
-      : "text-muted-foreground";
   const derivedBackground =
     !block.style?.background && block.background === "image" && block.image?.src
       ? ({
@@ -49,9 +67,21 @@ export function CallToActionBlock({
         },
       }
     : block;
-  const customBackgroundVariant = blockWithStyle.style?.background?.variant;
-  const useDefaultBackgroundClass =
-    !customBackgroundVariant || customBackgroundVariant === "none";
+  const styleBackgroundVariant = blockWithStyle.style?.background?.variant;
+  const backgroundChoice =
+    block.background === "none" ? undefined : block.background;
+  const styleExplicitNone = styleBackgroundVariant === "none";
+  const styleOverridesPreset =
+    styleBackgroundVariant !== undefined &&
+    styleBackgroundVariant !== "none" &&
+    !(derivedBackground && styleBackgroundVariant === "image");
+  const shouldApplyPreset =
+    backgroundChoice && !styleExplicitNone && !styleOverridesPreset;
+  const appliedPreset = shouldApplyPreset
+    ? backgroundPresets[backgroundChoice]
+    : undefined;
+  const descriptionClass =
+    appliedPreset?.description ?? "text-muted-foreground";
   const styleAlignValue = getFirstDefinedResponsiveValue(
     blockWithStyle.style?.layout?.horizontalAlign,
   );
@@ -73,14 +103,7 @@ export function CallToActionBlock({
   return (
     <BlockSurface
       block={blockWithStyle}
-      className={cn(
-        useDefaultBackgroundClass
-          ? backgroundClasses[block.background]
-          : undefined,
-        block.background === "image" && useDefaultBackgroundClass
-          ? "text-white"
-          : undefined,
-      )}
+      className={cn(appliedPreset?.section, appliedPreset?.text)}
       defaultPadding={{ top: "4rem", bottom: "4rem" }}
       contentClassName={cn(
         "grid items-center gap-8",
@@ -126,8 +149,8 @@ export function CallToActionBlock({
                   }
                   size="lg"
                   className={cn(
-                    block.background === "dark" && index > 0
-                      ? "border border-white/40 bg-transparent"
+                    appliedPreset?.secondaryButton && index > 0
+                      ? appliedPreset.secondaryButton
                       : undefined,
                   )}
                 >
