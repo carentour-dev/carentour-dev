@@ -3651,6 +3651,7 @@ function CallToActionBlockFields({
                   <SelectItem value="accent">Accent</SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
                   <SelectItem value="image">Background image</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                 </SelectContent>
               </Select>
             </FormItem>
