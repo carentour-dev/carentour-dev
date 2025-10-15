@@ -8,10 +8,11 @@ export function QuoteBlock({ block }: { block: BlockInstance<"quote"> }) {
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
   );
+  const resolvedAlign = styleAlignValue ?? "center";
   const alignmentClass =
-    styleAlignValue === "center"
+    resolvedAlign === "center"
       ? "text-center"
-      : styleAlignValue === "end"
+      : resolvedAlign === "end"
         ? "text-right"
         : "text-left";
   const attributionAlign =
@@ -20,12 +21,19 @@ export function QuoteBlock({ block }: { block: BlockInstance<"quote"> }) {
       : alignmentClass === "text-center"
         ? "items-center text-center"
         : "items-start text-left";
+  const surfaceContentClass = cn(
+    "max-w-4xl",
+    resolvedAlign === "center" && "mx-auto",
+    resolvedAlign === "end" && "ml-auto",
+  );
+  const customBackgroundVariant = block.style?.background?.variant;
+  const useDefaultBackgroundClass = customBackgroundVariant === undefined;
   return (
     <BlockSurface
       block={block}
-      className="bg-muted/30"
+      className={useDefaultBackgroundClass ? "bg-muted/30" : undefined}
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
-      contentClassName="max-w-4xl"
+      contentClassName={surfaceContentClass}
     >
       {() => (
         <div
