@@ -54,7 +54,7 @@ import {
   blockSummary,
 } from "./BlockInspector";
 
-type PreviewDevice = "responsive" | "desktop" | "tablet" | "mobile";
+type PreviewDevice = "responsive" | "desktop" | "tablet" | "mobile" | "full";
 
 const PREVIEW_DEVICE_STORAGE_KEY = "cms.preview.device";
 const previewWidths: Record<PreviewDevice, number | "100%"> = {
@@ -62,6 +62,7 @@ const previewWidths: Record<PreviewDevice, number | "100%"> = {
   desktop: 1280,
   tablet: 834,
   mobile: 375,
+  full: 1440,
 };
 
 interface PageBuilderProps {
@@ -86,7 +87,8 @@ export function PageBuilder({
     return stored === "desktop" ||
       stored === "tablet" ||
       stored === "mobile" ||
-      stored === "responsive"
+      stored === "responsive" ||
+      stored === "full"
       ? (stored as PreviewDevice)
       : "responsive";
   });
@@ -345,6 +347,9 @@ export function PageBuilder({
           >
             <ToggleGroupItem value="responsive" aria-label="Responsive width">
               Auto
+            </ToggleGroupItem>
+            <ToggleGroupItem value="full" aria-label="Full width">
+              Full
             </ToggleGroupItem>
             <ToggleGroupItem value="desktop" aria-label="Desktop width">
               <Monitor className="h-4 w-4" />
