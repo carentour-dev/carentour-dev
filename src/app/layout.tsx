@@ -17,7 +17,6 @@ export const metadata: Metadata = {
   keywords:
     "medical tourism, Egypt healthcare, medical procedures, cosmetic surgery, cardiac surgery, dental care, LASIK, affordable healthcare",
   authors: [{ name: "Care N Tour" }],
-  metadataBase: new URL("https://www.carentour.com"),
   openGraph: {
     title: "Care N Tour | World-Class Medical Care",
     description:
@@ -32,7 +31,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/icon.png", type: "image/png", sizes: "192x192" },
     ],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
