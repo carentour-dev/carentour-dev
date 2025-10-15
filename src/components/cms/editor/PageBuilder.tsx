@@ -193,10 +193,12 @@ export function PageBuilder({
 
   const renderStructureCard = () => (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-wrap items-center justify-between gap-3 border-none bg-transparent pb-0">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base font-semibold">Structure</CardTitle>
-          <Badge variant="outline">{blocks.length} blocks</Badge>
+          <Badge variant="outline" className="px-3">
+            {blocks.length} block{blocks.length === 1 ? "" : "s"}
+          </Badge>
         </div>
         <Button
           variant="ghost"
@@ -374,7 +376,7 @@ export function PageBuilder({
       <CardContent className="flex-1 overflow-hidden p-0">
         {previewBlocks.length ? (
           <div className="h-full overflow-auto p-4 sm:p-6">
-            <div className="mx-auto w-full max-w-full rounded-lg border border-border/60 bg-background shadow-sm">
+            <div className="mx-auto w-full max-w-full rounded-xl border border-border/60 bg-background shadow-sm">
               <div className="flex justify-center bg-muted/20 p-4 sm:p-6">
                 <div className="w-full max-w-full" style={previewFrameStyle}>
                   <BlockPreviewRenderer
