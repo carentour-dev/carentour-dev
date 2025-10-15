@@ -291,12 +291,16 @@ const imageFeatureBlockSchema = z
         }),
       )
       .optional(),
-    image: z.object({
-      src: z.string().min(1, "Image source is required"),
-      alt: z.string().optional(),
-      aspectRatio: z.string().optional(),
-      rounded: z.boolean().default(true),
-    }),
+    image: z
+      .object({
+        src: z.string().min(1, "Image source is required"),
+        alt: z.string().optional(),
+        aspectRatio: z.string().optional(),
+        rounded: z.boolean().default(true),
+      })
+      .nullable()
+      .transform((value) => value ?? undefined)
+      .optional(),
     actions: z.array(actionSchema).max(2).optional(),
   })
   .extend(blockMetaShape);
@@ -348,7 +352,9 @@ const callToActionBlockSchema = z
     heading: z.string().min(1, "Heading is required"),
     description: z.string().optional(),
     layout: z.enum(["centered", "split"]).default("centered"),
-    background: z.enum(["muted", "accent", "dark", "image"]).default("muted"),
+    background: z
+      .enum(["muted", "accent", "dark", "image", "none"])
+      .default("muted"),
     image: z
       .object({
         src: z.string().min(1),
