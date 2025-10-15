@@ -40,19 +40,19 @@ EXECUTE FUNCTION public.navigation_links_set_updated_at();
 
 ALTER TABLE public.navigation_links ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS read_navigation_links
+ON public.navigation_links;
 DROP POLICY IF EXISTS read_published_navigation_links
 ON public.navigation_links;
-CREATE POLICY read_published_navigation_links
-ON public.navigation_links
-FOR SELECT
-USING (status = 'published');
-
 DROP POLICY IF EXISTS admin_editor_read_navigation_links
 ON public.navigation_links;
-CREATE POLICY admin_editor_read_navigation_links
+CREATE POLICY read_navigation_links
 ON public.navigation_links
 FOR SELECT
-USING (public.is_admin_or_editor());
+USING (
+    status = 'published'
+    OR public.is_admin_or_editor()
+);
 
 DROP POLICY IF EXISTS admin_editor_insert_navigation_links
 ON public.navigation_links;
