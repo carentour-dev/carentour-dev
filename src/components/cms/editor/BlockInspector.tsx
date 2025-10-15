@@ -1104,7 +1104,7 @@ function StyleBackgroundSection({
             >
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select layout" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
@@ -2817,7 +2817,7 @@ function ImageFeatureBlockFields({
             <Select value={field.value} onValueChange={field.onChange}>
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select layout" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
@@ -4256,10 +4256,18 @@ function TreatmentsBlockFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Layout</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                onOpenChange={(open) => {
+                  if (open && !field.value) {
+                    field.onChange("grid");
+                  }
+                }}
+              >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select layout" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -4415,10 +4423,18 @@ function DoctorsBlockFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Layout</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                onOpenChange={(open) => {
+                  if (open && !field.value) {
+                    field.onChange("grid");
+                  }
+                }}
+              >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select layout" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
