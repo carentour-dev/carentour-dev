@@ -69,6 +69,7 @@ const breakpointLabels: Record<BreakpointKey, string> = {
   mobile: "Mobile",
   tablet: "Tablet",
   desktop: "Desktop",
+  full: "Full",
 };
 
 const breakpointOptions: BreakpointOption[] = blockBreakpoints.map((bp) => ({
