@@ -36,13 +36,17 @@ export function ImageFeatureBlock({
   const imageAlt = block.image?.alt ?? "";
   const imageRounded = block.image?.rounded ?? true;
   const styleBackgroundVariant = block.style?.background?.variant;
-  const useDefaultBackgroundClass =
-    styleBackgroundVariant === undefined || styleBackgroundVariant === "none";
+  const usesDefaultBackground = styleBackgroundVariant === undefined;
+  const hasExplicitNoneBackground = styleBackgroundVariant === "none";
 
   return (
     <BlockSurface
       block={block}
-      className={useDefaultBackgroundClass ? "bg-muted/20" : undefined}
+      className={
+        usesDefaultBackground || hasExplicitNoneBackground
+          ? undefined
+          : "bg-muted/20"
+      }
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
       contentClassName={cn(
         "grid items-center gap-12 lg:grid-cols-2",
