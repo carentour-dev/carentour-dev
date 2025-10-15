@@ -13,7 +13,9 @@ export function ImageFeatureBlock({
   block: BlockInstance<"imageFeature">;
 }) {
   const isImageLeft = block.layout === "imageLeft";
-  const actions = block.actions ?? [];
+  const actions = (block.actions ?? []).filter(
+    (action) => typeof action.href === "string" && action.href.length > 0,
+  );
   const hasItems = (block.items?.length ?? 0) > 0;
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
@@ -30,6 +32,9 @@ export function ImageFeatureBlock({
       : styleAlignValue === "end"
         ? "justify-end"
         : "justify-start";
+  const imageSrc = block.image?.src;
+  const imageAlt = block.image?.alt ?? "";
+  const imageRounded = block.image?.rounded ?? true;
 
   return (
     <BlockSurface
@@ -126,20 +131,22 @@ export function ImageFeatureBlock({
           <div
             className={cn("order-1", isImageLeft ? "lg:order-2" : "lg:order-1")}
           >
-            <div className="relative overflow-hidden rounded-2xl shadow-elegant">
-              <Image
-                src={block.image.src}
-                alt={block.image.alt ?? ""}
-                width={1200}
-                height={900}
-                className={cn(
-                  "h-full w-full object-cover",
-                  block.image.rounded ? "rounded-2xl" : "",
-                )}
-                priority={false}
-                unoptimized={block.image.src.startsWith("http")}
-              />
-            </div>
+            {imageSrc ? (
+              <div className="relative overflow-hidden rounded-2xl shadow-elegant">
+                <Image
+                  src={imageSrc}
+                  alt={imageAlt}
+                  width={1200}
+                  height={900}
+                  className={cn(
+                    "h-full w-full object-cover",
+                    imageRounded ? "rounded-2xl" : "",
+                  )}
+                  priority={false}
+                  unoptimized={imageSrc.startsWith("http")}
+                />
+              </div>
+            ) : null}
           </div>
         </>
       )}
