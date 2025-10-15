@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTheme } from "next-themes";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ActivitySquare,
   Building2,
@@ -51,7 +52,11 @@ const NAV_ITEMS = [
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
   { label: "Testimonials", href: "/admin/testimonials", icon: Sparkles },
-  { label: "Service Providers", href: "/admin/service-providers", icon: Building2 },
+  {
+    label: "Service Providers",
+    href: "/admin/service-providers",
+    icon: Building2,
+  },
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
 ];
 
@@ -83,19 +88,27 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Admin access required</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Admin access required
+          </h2>
           <p className="text-sm text-muted-foreground">
-            You&apos;re signed in, but your account doesn&apos;t have admin privileges.
+            You&apos;re signed in, but your account doesn&apos;t have admin
+            privileges.
           </p>
         </div>
-        <Button onClick={() => router.replace("/dashboard")}>Return to dashboard</Button>
+        <Button onClick={() => router.replace("/dashboard")}>
+          Return to dashboard
+        </Button>
       </div>
     );
   }
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon" className="bg-sidebar text-sidebar-foreground">
+      <Sidebar
+        collapsible="icon"
+        className="bg-sidebar text-sidebar-foreground"
+      >
         <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
           <AdminBranding />
         </SidebarHeader>
@@ -112,7 +125,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.label}
+                      >
                         <Link href={item.href}>
                           <Icon className="h-4 w-4" />
                           <span>{item.label}</span>
@@ -131,13 +148,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Users className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium">{profile?.displayName ?? "Admin"}</span>
+              <span className="text-sm font-medium">
+                {profile?.displayName ?? "Admin"}
+              </span>
               <Badge variant="outline" className="w-fit text-xs">
                 {profile?.role ?? "admin"}
               </Badge>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleSignOut}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={handleSignOut}
+          >
             <LogOut className="h-4 w-4" />
             Sign out
           </Button>
@@ -159,12 +183,21 @@ function AdminTopbar() {
 
   return (
     <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur lg:h-16 lg:px-8">
-      {/* Mobile trigger keeps sidebar accessible on smaller screens. */}
-      <SidebarTrigger className="lg:hidden" onClick={toggleSidebar} />
-      <SidebarSeparator className="lg:hidden" />
-      <div className="flex flex-col">
-        <span className="text-sm font-medium text-muted-foreground">Care N Tour Admin</span>
-        <span className="text-lg font-semibold tracking-tight">Operations Console</span>
+      <div className="flex flex-1 items-center gap-4">
+        {/* Mobile trigger keeps sidebar accessible on smaller screens. */}
+        <SidebarTrigger className="lg:hidden" onClick={toggleSidebar} />
+        <SidebarSeparator className="lg:hidden" />
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-muted-foreground">
+            Care N Tour Admin
+          </span>
+          <span className="text-lg font-semibold tracking-tight">
+            Operations Console
+          </span>
+        </div>
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
       </div>
     </header>
   );
@@ -179,7 +212,10 @@ function AdminBranding() {
     setMounted(true);
   }, []);
 
-  const logoSrc = mounted && resolvedTheme === "dark" ? "/care-n-tour-logo-light.png" : "/care-n-tour-logo-dark.png";
+  const logoSrc =
+    mounted && resolvedTheme === "dark"
+      ? "/care-n-tour-logo-light.png"
+      : "/care-n-tour-logo-dark.png";
   const isCollapsed = state === "collapsed";
 
   if (isCollapsed) {
