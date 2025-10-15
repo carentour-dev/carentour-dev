@@ -57,10 +57,15 @@ const maxWidthValueMap: Record<string, string> = {
   full: "100%",
 };
 
+const responsiveBreakpoints = blockBreakpoints.filter(
+  (bp): bp is Exclude<BreakpointKey, "base"> => bp !== "base",
+);
+
 const breakpointMediaQuery: Record<Exclude<BreakpointKey, "base">, string> = {
   mobile: "@media (min-width: 640px)",
   tablet: "@media (min-width: 768px)",
   desktop: "@media (min-width: 1024px)",
+  full: "@media (min-width: 1400px)",
 };
 
 function spacingTokenToRem(
@@ -140,7 +145,7 @@ export function buildSpacingCss(
     `#${domId}{padding-top:${baseTop};padding-bottom:${baseBottom};}`,
   ];
 
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const topValue = responsiveValueForBreakpoint(top, bp);
     const bottomValue = responsiveValueForBreakpoint(bottom, bp);
     if (!topValue && !bottomValue) return;
@@ -172,7 +177,7 @@ export function buildInnerLayoutCss(
     if (base) {
       css.push(`#${domId} ${selector}{max-width:${base};}`);
     }
-    (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+    responsiveBreakpoints.forEach((bp) => {
       const value = maxWidth[bp];
       if (!value) return;
       const candidate = maxWidthValueMap[value] ?? value;
@@ -197,7 +202,7 @@ export function buildInnerLayoutCss(
         `#${domId} ${selector}{margin:${baseAlign.margin};text-align:${baseAlign.textAlign};}`,
       );
     }
-    (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+    responsiveBreakpoints.forEach((bp) => {
       const value = align[bp];
       if (!value) return;
       const config = alignmentStyles[value];
@@ -232,7 +237,7 @@ export function buildTypographyCss(
     }
   }
 
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const value = scale?.[bp];
     if (!value) return;
     const values = typographyScaleMap[value];
@@ -246,7 +251,7 @@ export function buildTypographyCss(
     const fontWeight = fontWeightValueMap[weight.base] ?? 400;
     css.push(`#${domId}{font-weight:${fontWeight};}`);
   }
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const value = weight?.[bp];
     if (!value) return;
     const fontWeight = fontWeightValueMap[value] ?? 400;
@@ -259,7 +264,7 @@ export function buildTypographyCss(
     const spacing = letterSpacingValueMap[letterSpacing.base] ?? "0";
     css.push(`#${domId}{letter-spacing:${spacing};}`);
   }
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const value = letterSpacing?.[bp];
     if (!value) return;
     const spacing = letterSpacingValueMap[value] ?? "0";
@@ -281,7 +286,7 @@ export function buildTypographyCss(
     );
   }
 
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const value = textColor?.[bp];
     if (!value) return;
     css.push(
@@ -340,6 +345,7 @@ export function buildBackgroundStyles(
     mobile?: number;
     tablet?: number;
     desktop?: number;
+    full?: number;
   } | null;
   backgroundVideo?: BlockVideo;
 } {
@@ -378,9 +384,10 @@ export function buildBackgroundStyles(
         background.color?.base ??
           background.color?.mobile ??
           background.color?.tablet ??
-          background.color?.desktop,
+          background.color?.desktop ??
+          background.color?.full,
       );
-      (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+      responsiveBreakpoints.forEach((bp) => {
         const value = background.color?.[bp];
         if (!value) return;
         cssParts.push(
@@ -401,7 +408,8 @@ export function buildBackgroundStyles(
         resolveMediaForBreakpoint(background.image, "base") ??
         resolveMediaForBreakpoint(background.image, "mobile") ??
         resolveMediaForBreakpoint(background.image, "tablet") ??
-        resolveMediaForBreakpoint(background.image, "desktop");
+        resolveMediaForBreakpoint(background.image, "desktop") ??
+        resolveMediaForBreakpoint(background.image, "full");
       if (baseMedia?.src) {
         setBaseBackgroundImage(baseMedia.src);
         const { focalPoint, fit } = baseMedia;
@@ -412,7 +420,7 @@ export function buildBackgroundStyles(
           inlineStyle.backgroundSize = fit === "contain" ? "contain" : "cover";
         }
       }
-      (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+      responsiveBreakpoints.forEach((bp) => {
         const media = background.image?.[bp];
         if (!media?.src) return;
         const position = media.focalPoint
@@ -430,7 +438,8 @@ export function buildBackgroundStyles(
         resolveVideoForBreakpoint(background.video, "base") ??
         resolveVideoForBreakpoint(background.video, "mobile") ??
         resolveVideoForBreakpoint(background.video, "tablet") ??
-        resolveVideoForBreakpoint(background.video, "desktop");
+        resolveVideoForBreakpoint(background.video, "desktop") ??
+        resolveVideoForBreakpoint(background.video, "full");
       if (baseVideo) {
         backgroundVideo = baseVideo;
       }
@@ -446,6 +455,7 @@ export function buildBackgroundStyles(
         mobile: overlay.mobile,
         tablet: overlay.tablet,
         desktop: overlay.desktop,
+        full: overlay.full,
       }
     : null;
 
@@ -466,7 +476,7 @@ export function buildOverlayCss(
   const css: string[] = [];
   const baseOpacity = overlay.base ?? 0;
   css.push(`#${domId} .cms-block__overlay{opacity:${baseOpacity};}`);
-  (["mobile", "tablet", "desktop"] as const).forEach((bp) => {
+  responsiveBreakpoints.forEach((bp) => {
     const value = overlay[bp];
     if (value === undefined) return;
     css.push(
