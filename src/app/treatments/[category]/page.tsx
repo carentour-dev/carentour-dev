@@ -51,7 +51,11 @@ export default function TreatmentDetails() {
     if (!slug || treatments.length === 0) return null;
     return (
       treatments.find((treatment) => {
-        const treatmentSlug = (treatment.slug || treatment.category || "").toLowerCase();
+        const treatmentSlug = (
+          treatment.slug ||
+          treatment.category ||
+          ""
+        ).toLowerCase();
         return treatmentSlug === slug;
       }) || null
     );
@@ -78,10 +82,17 @@ export default function TreatmentDetails() {
           dynamicTreatment.description ||
           dynamicTreatment.summary ||
           "Our medical coordinators will tailor the procedure details to your case.",
-        duration: duration ? `${duration} day${duration === 1 ? "" : "s"}` : "Varies",
-        recovery: recovery ? `${recovery} day${recovery === 1 ? "" : "s"}` : "Varies",
+        duration: duration
+          ? `${duration} day${duration === 1 ? "" : "s"}`
+          : "Varies",
+        recovery: recovery
+          ? `${recovery} day${recovery === 1 ? "" : "s"}`
+          : "Varies",
         price: priceLabel ?? "Contact us for pricing",
-        egyptPrice: typeof dynamicTreatment.base_price === "number" ? dynamicTreatment.base_price : undefined,
+        egyptPrice:
+          typeof dynamicTreatment.base_price === "number"
+            ? dynamicTreatment.base_price
+            : undefined,
         internationalPrices: [],
         success_rate: success ? `${success}%` : "Available on request",
         candidateRequirements: [],
@@ -97,27 +108,35 @@ export default function TreatmentDetails() {
 
     return {
       ...normalized,
-      procedures: normalized.procedures.length > 0 ? normalized.procedures : fallbackProcedures,
+      procedures:
+        normalized.procedures.length > 0
+          ? normalized.procedures
+          : fallbackProcedures,
     };
   }, [dynamicTreatment, fallbackProcedures]);
 
-  const treatmentId = normalizedTreatment?.id ?? dynamicTreatment?.id ?? undefined;
-  const treatmentSlugValue = normalizedTreatment?.slug ?? dynamicTreatment?.slug ?? undefined;
+  const treatmentId =
+    normalizedTreatment?.id ?? dynamicTreatment?.id ?? undefined;
+  const treatmentSlugValue =
+    normalizedTreatment?.slug ?? dynamicTreatment?.slug ?? undefined;
 
-  const rawDoctorCategory = normalizedTreatment?.category ?? dynamicTreatment?.category ?? undefined;
+  const rawDoctorCategory =
+    normalizedTreatment?.category ?? dynamicTreatment?.category ?? undefined;
   const doctorCategorySlug = rawDoctorCategory
     ? rawDoctorCategory.trim().toLowerCase()
     : undefined;
 
   const { doctors, loading: doctorsLoading } = useDoctors(doctorCategorySlug);
-  const { reviews: patientReviews, loading: patientReviewsLoading } = usePatientReviews({
-    treatmentId,
-    treatmentSlug: treatmentSlugValue,
-  });
-  const { stories: patientStories, loading: patientStoriesLoading } = usePatientStories({
-    treatmentId,
-    treatmentSlug: treatmentSlugValue,
-  });
+  const { reviews: patientReviews, loading: patientReviewsLoading } =
+    usePatientReviews({
+      treatmentId,
+      treatmentSlug: treatmentSlugValue,
+    });
+  const { stories: patientStories, loading: patientStoriesLoading } =
+    usePatientStories({
+      treatmentId,
+      treatmentSlug: treatmentSlugValue,
+    });
 
   const treatment = useMemo(() => {
     if (!normalizedTreatment) return null;
@@ -146,7 +165,9 @@ export default function TreatmentDetails() {
 
   const quickFacts = useMemo(() => {
     if (normalizedTreatment) {
-      const primaryProcedure = getPrimaryProcedure(normalizedTreatment.procedures);
+      const primaryProcedure = getPrimaryProcedure(
+        normalizedTreatment.procedures,
+      );
 
       const durationLabel = normalizedTreatment.duration_days
         ? `${normalizedTreatment.duration_days} day${normalizedTreatment.duration_days === 1 ? "" : "s"}`
@@ -157,10 +178,13 @@ export default function TreatmentDetails() {
         : primaryProcedure?.recovery;
 
       const priceValue =
-        normalizedTreatment.base_price ?? primaryProcedure?.egyptPrice ?? undefined;
+        normalizedTreatment.base_price ??
+        primaryProcedure?.egyptPrice ??
+        undefined;
 
       const successRateLabel =
-        normalizedTreatment.success_rate !== undefined && normalizedTreatment.success_rate !== null
+        normalizedTreatment.success_rate !== undefined &&
+        normalizedTreatment.success_rate !== null
           ? `${normalizedTreatment.success_rate}%`
           : primaryProcedure?.success_rate;
 
@@ -181,7 +205,8 @@ export default function TreatmentDetails() {
     Boolean(
       quickFacts.durationLabel ||
         quickFacts.recoveryLabel ||
-        (typeof quickFacts.priceValue === "number" && !Number.isNaN(quickFacts.priceValue)) ||
+        (typeof quickFacts.priceValue === "number" &&
+          !Number.isNaN(quickFacts.priceValue)) ||
         quickFacts.successRateLabel,
     );
 
@@ -205,8 +230,12 @@ export default function TreatmentDetails() {
         <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-4">Treatment Not Found</h1>
-            <p className="text-muted-foreground mb-8">The requested treatment category could not be found.</p>
+            <h1 className="text-3xl font-bold text-foreground mb-4">
+              Treatment Not Found
+            </h1>
+            <p className="text-muted-foreground mb-8">
+              The requested treatment category could not be found.
+            </p>
             <Button onClick={() => router.push("/treatments")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Treatments
@@ -221,7 +250,7 @@ export default function TreatmentDetails() {
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <main>
         {/* Breadcrumb Navigation */}
         <section className="py-8 bg-muted/30">
@@ -233,24 +262,18 @@ export default function TreatmentDetails() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to All Treatments
             </button>
-            
+
             <div className="max-w-4xl">
-              <Badge variant="outline" className="mb-4">{treatment.title}</Badge>
+              <Badge variant="outline" className="mb-4">
+                {treatment.title}
+              </Badge>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
                 {treatment.title}
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 {treatment.description}
               </p>
-              <div className="mt-6 flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto"
-                  onClick={() => router.push("/consultation")}
-                >
-                  Book Now
-                </Button>
-              </div>
+              <div className="mt-6 flex flex-wrap gap-4" />
             </div>
           </div>
         </section>
@@ -260,43 +283,58 @@ export default function TreatmentDetails() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               <div className="lg:col-span-2">
-                <h2 className="text-3xl font-bold text-foreground mb-6">Treatment Overview</h2>
+                <h2 className="text-3xl font-bold text-foreground mb-6">
+                  Treatment Overview
+                </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                   {treatment.overview}
                 </p>
-                
+
                 <div className="bg-gradient-card rounded-lg p-6 border border-border/50">
-                  <h3 className="text-xl font-semibold text-foreground mb-4">Ideal Candidates</h3>
+                  <h3 className="text-xl font-semibold text-foreground mb-4">
+                    Ideal Candidates
+                  </h3>
                   {treatment.idealCandidates.length > 0 ? (
                     <ul className="space-y-3">
-                      {treatment.idealCandidates.map((candidate: string, index: number) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">{candidate}</span>
-                        </li>
-                      ))}
+                      {treatment.idealCandidates.map(
+                        (candidate: string, index: number) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                            <span className="text-muted-foreground">
+                              {candidate}
+                            </span>
+                          </li>
+                        ),
+                      )}
                     </ul>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Candidate suitability is confirmed during your consultation to ensure the treatment matches your
-                      health profile.
+                      Candidate suitability is confirmed during your
+                      consultation to ensure the treatment matches your health
+                      profile.
                     </p>
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <Card className="border-primary/20 bg-gradient-card">
                   <CardHeader>
-                    <CardTitle className="text-xl text-foreground">Quick Facts</CardTitle>
+                    <CardTitle className="text-xl text-foreground">
+                      Quick Facts
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {quickFacts?.durationLabel ? (
                       <div className="flex items-center gap-3">
                         <Clock className="h-5 w-5 text-primary" />
                         <div>
-                          <div className="font-medium text-foreground">Treatment duration</div>
-                          <div className="text-sm text-muted-foreground">{quickFacts.durationLabel}</div>
+                          <div className="font-medium text-foreground">
+                            Treatment duration
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {quickFacts.durationLabel}
+                          </div>
                         </div>
                       </div>
                     ) : null}
@@ -305,8 +343,12 @@ export default function TreatmentDetails() {
                       <div className="flex items-center gap-3">
                         <Heart className="h-5 w-5 text-primary" />
                         <div>
-                          <div className="font-medium text-foreground">Recovery timeline</div>
-                          <div className="text-sm text-muted-foreground">{quickFacts.recoveryLabel}</div>
+                          <div className="font-medium text-foreground">
+                            Recovery timeline
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {quickFacts.recoveryLabel}
+                          </div>
                         </div>
                       </div>
                     ) : null}
@@ -315,9 +357,14 @@ export default function TreatmentDetails() {
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />
                         <div>
-                          <div className="font-medium text-foreground">Estimated cost</div>
+                          <div className="font-medium text-foreground">
+                            Estimated cost
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            {formatCurrency(quickFacts.priceValue, quickFacts.currency)}
+                            {formatCurrency(
+                              quickFacts.priceValue,
+                              quickFacts.currency,
+                            )}
                           </div>
                         </div>
                       </div>
@@ -327,8 +374,12 @@ export default function TreatmentDetails() {
                       <div className="flex items-center gap-3">
                         <Star className="h-5 w-5 text-primary" />
                         <div>
-                          <div className="font-medium text-foreground">Success rate</div>
-                          <div className="text-sm text-muted-foreground">{quickFacts.successRateLabel}</div>
+                          <div className="font-medium text-foreground">
+                            Success rate
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {quickFacts.successRateLabel}
+                          </div>
                         </div>
                       </div>
                     ) : null}
@@ -337,10 +388,12 @@ export default function TreatmentDetails() {
                       <div className="flex items-start gap-3 rounded-md border border-border/60 px-3 py-2">
                         <Users className="h-5 w-5 text-primary mt-0.5" />
                         <div>
-                          <div className="font-medium text-foreground">Personalized consultation</div>
+                          <div className="font-medium text-foreground">
+                            Personalized consultation
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            Our medical coordinators finalize pricing, duration, and recovery timelines based on your
-                            unique case.
+                            Our medical coordinators finalize pricing, duration,
+                            and recovery timelines based on your unique case.
                           </div>
                         </div>
                       </div>
@@ -360,40 +413,64 @@ export default function TreatmentDetails() {
                 Available Procedures
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Comprehensive information about each procedure including recovery details and candidate requirements
+                Comprehensive information about each procedure including
+                recovery details and candidate requirements
               </p>
             </div>
 
             <div className="space-y-12">
               {treatment.procedures && treatment.procedures.length > 0 ? (
                 treatment.procedures.map((procedure: any, index: number) => (
-                  <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring">
+                  <Card
+                    key={index}
+                    className="border-border/50 hover:shadow-card-hover transition-spring"
+                  >
                     <CardHeader>
-                      <CardTitle className="text-2xl">{procedure.name}</CardTitle>
-                      <p className="text-muted-foreground text-lg">{procedure.description}</p>
+                      <CardTitle className="text-2xl">
+                        {procedure.name}
+                      </CardTitle>
+                      <p className="text-muted-foreground text-lg">
+                        {procedure.description}
+                      </p>
                     </CardHeader>
                     <CardContent>
                       {/* Basic Info Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">Duration</div>
-                          <div className="text-sm text-muted-foreground">{procedure.duration}</div>
+                          <div className="text-sm font-medium text-foreground">
+                            Duration
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {procedure.duration}
+                          </div>
                         </div>
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <Heart className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">Recovery</div>
-                          <div className="text-sm text-muted-foreground">{procedure.recovery}</div>
+                          <div className="text-sm font-medium text-foreground">
+                            Recovery
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {procedure.recovery}
+                          </div>
                         </div>
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <DollarSign className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">Price</div>
-                          <div className="text-sm text-muted-foreground">{procedure.price}</div>
+                          <div className="text-sm font-medium text-foreground">
+                            Price
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {procedure.price}
+                          </div>
                         </div>
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <Star className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">Success Rate</div>
-                          <div className="text-sm text-muted-foreground">{procedure.success_rate}</div>
+                          <div className="text-sm font-medium text-foreground">
+                            Success Rate
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {procedure.success_rate}
+                          </div>
                         </div>
                       </div>
 
@@ -404,17 +481,26 @@ export default function TreatmentDetails() {
                           Candidate Requirements
                         </h4>
                         <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {procedure.candidateRequirements.map((req: string, reqIndex: number) => (
-                            <li key={reqIndex} className="flex items-start gap-2">
-                              <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                              <span className="text-muted-foreground">{req}</span>
-                            </li>
-                          ))}
+                          {procedure.candidateRequirements.map(
+                            (req: string, reqIndex: number) => (
+                              <li
+                                key={reqIndex}
+                                className="flex items-start gap-2"
+                              >
+                                <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                                <span className="text-muted-foreground">
+                                  {req}
+                                </span>
+                              </li>
+                            ),
+                          )}
                         </ul>
                       </div>
 
                       {/* Price Comparison */}
-                      {procedure.internationalPrices && procedure.internationalPrices.length > 0 && procedure.egyptPrice ? (
+                      {procedure.internationalPrices &&
+                      procedure.internationalPrices.length > 0 &&
+                      procedure.egyptPrice ? (
                         <div className="mb-8">
                           <PriceComparison
                             treatment={procedure.name}
@@ -431,12 +517,21 @@ export default function TreatmentDetails() {
                           Recovery Timeline
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {procedure.recoveryStages.map((stage: any, stageIndex: number) => (
-                            <div key={stageIndex} className="p-4 border border-border rounded-lg">
-                              <div className="text-sm font-medium text-primary mb-2">{stage.stage}</div>
-                              <div className="text-sm text-muted-foreground">{stage.description}</div>
-                            </div>
-                          ))}
+                          {procedure.recoveryStages.map(
+                            (stage: any, stageIndex: number) => (
+                              <div
+                                key={stageIndex}
+                                className="p-4 border border-border rounded-lg"
+                              >
+                                <div className="text-sm font-medium text-primary mb-2">
+                                  {stage.stage}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {stage.description}
+                                </div>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -444,7 +539,8 @@ export default function TreatmentDetails() {
                 ))
               ) : (
                 <div className="text-center text-muted-foreground">
-                  Detailed procedure information for this treatment will be provided during your consultation.
+                  Detailed procedure information for this treatment will be
+                  provided during your consultation.
                 </div>
               )}
             </div>
@@ -455,10 +551,13 @@ export default function TreatmentDetails() {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Our Specialist Doctors</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4">
+                Our Specialist Doctors
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Meet our internationally trained specialists who combine years of experience with 
-                cutting-edge techniques to deliver exceptional results.
+                Meet our internationally trained specialists who combine years
+                of experience with cutting-edge techniques to deliver
+                exceptional results.
               </p>
             </div>
 
@@ -478,7 +577,9 @@ export default function TreatmentDetails() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No specialists found for this treatment category.</p>
+                <p className="text-muted-foreground">
+                  No specialists found for this treatment category.
+                </p>
               </div>
             )}
           </div>
@@ -503,9 +604,12 @@ export default function TreatmentDetails() {
               />
             ) : (
               <div className="text-center py-16">
-                <h3 className="text-2xl font-semibold text-foreground mb-2">Patient Reviews</h3>
+                <h3 className="text-2xl font-semibold text-foreground mb-2">
+                  Patient Reviews
+                </h3>
                 <p className="text-muted-foreground">
-                  Testimonials for this treatment will appear here as soon as patients publish their stories.
+                  Testimonials for this treatment will appear here as soon as
+                  patients publish their stories.
                 </p>
               </div>
             )}
@@ -516,9 +620,12 @@ export default function TreatmentDetails() {
         <section className="py-20 bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Patient Stories</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4">
+                Patient Stories
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Follow the journeys of patients who travelled with Care N Tour for this treatment.
+                Follow the journeys of patients who travelled with Care N Tour
+                for this treatment.
               </p>
             </div>
 
@@ -531,12 +638,19 @@ export default function TreatmentDetails() {
                 {patientStories.map((story) => (
                   <Card key={story.id} className="border-border/50 shadow-sm">
                     <CardHeader>
-                          <Badge variant="secondary" className="w-fit mb-2 uppercase tracking-wide">
-                            {story.locale?.toUpperCase() ?? "EN"}
-                          </Badge>
-                      <CardTitle className="text-2xl text-foreground">{story.headline}</CardTitle>
+                      <Badge
+                        variant="secondary"
+                        className="w-fit mb-2 uppercase tracking-wide"
+                      >
+                        {story.locale?.toUpperCase() ?? "EN"}
+                      </Badge>
+                      <CardTitle className="text-2xl text-foreground">
+                        {story.headline}
+                      </CardTitle>
                       {story.excerpt && (
-                        <p className="text-muted-foreground text-sm leading-relaxed">{story.excerpt}</p>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          {story.excerpt}
+                        </p>
                       )}
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -549,7 +663,9 @@ export default function TreatmentDetails() {
                             Featured success
                           </span>
                         )}
-                        <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(story.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
@@ -557,7 +673,8 @@ export default function TreatmentDetails() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-16">
-                No patient stories published yet. Check back soon for real-case journeys.
+                No patient stories published yet. Check back soon for real-case
+                journeys.
               </div>
             )}
           </div>
@@ -570,13 +687,16 @@ export default function TreatmentDetails() {
               Ready to Start Your {treatment.title} Journey?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Get a personalized treatment plan and cost estimate from our medical experts
+              Get a personalized treatment plan and cost estimate from our
+              medical experts
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 variant="accent"
-                onClick={() => router.push(`/start-journey?treatment=${category}`)}
+                onClick={() =>
+                  router.push(`/start-journey?treatment=${category}`)
+                }
               >
                 Start Your Journey
               </Button>
@@ -595,4 +715,4 @@ export default function TreatmentDetails() {
       <Footer />
     </div>
   );
-};
+}
