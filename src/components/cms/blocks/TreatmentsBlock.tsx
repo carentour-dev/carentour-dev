@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
+import type { BlockInstance } from "@/lib/cms/blocks";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
 import { getPrimaryProcedure } from "@/lib/treatments";
 import { BlockSurface } from "./BlockSurface";
@@ -45,49 +45,81 @@ export async function TreatmentsBlock({
     return null;
   }
 
-  const layoutClass =
-    block.layout === "carousel"
-      ? "flex gap-4 overflow-x-auto pb-4"
+  const isCarousel = block.layout === "carousel";
+  const shouldCenterStatic = isCarousel && treatments.length <= 3;
+  const layoutClass = shouldCenterStatic
+    ? "flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden md:gap-6 md:overflow-visible md:snap-none md:justify-center"
+    : isCarousel
+      ? "flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
       : "grid gap-6 md:grid-cols-2 xl:grid-cols-3";
+  const layoutStyle =
+    !shouldCenterStatic && isCarousel
+      ? ({ scrollPaddingLeft: "1rem", scrollPaddingRight: "1rem" } as const)
+      : undefined;
+  const edgeSpacerClass =
+    !shouldCenterStatic && isCarousel ? "flex-none w-4 sm:w-6" : undefined;
+  const cardOuterClass = isCarousel
+    ? "snap-start flex-none w-[280px] sm:w-[320px] lg:w-[360px]"
+    : undefined;
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
   );
-  const headerAlignClass = (() => {
-    switch (styleAlignValue) {
-      case "center":
-        return "text-center";
-      case "end":
-        return "text-right ml-auto";
-      case "start":
-        return "text-left";
-      default:
-        return "text-left";
-    }
-  })();
+  const resolvedAlign = styleAlignValue ?? "center";
+  const headerContainerClass = cn(
+    "max-w-3xl",
+    resolvedAlign === "center" && "mx-auto text-center",
+    resolvedAlign === "end" && "ml-auto text-right",
+    resolvedAlign === "start" && "text-left",
+  );
+  const labelAlignmentClass =
+    resolvedAlign === "end"
+      ? "justify-end"
+      : resolvedAlign === "center"
+        ? "justify-center"
+        : "justify-start";
+  const textAlignClass =
+    resolvedAlign === "end"
+      ? "text-right"
+      : resolvedAlign === "center"
+        ? "text-center"
+        : "text-left";
+  const layoutAlignmentClass = isCarousel
+    ? shouldCenterStatic
+      ? "md:justify-center"
+      : undefined
+    : resolvedAlign === "end"
+      ? "justify-items-end"
+      : resolvedAlign === "center"
+        ? "justify-items-center"
+        : "justify-items-start";
+  const layoutPositionClass = !isCarousel
+    ? resolvedAlign === "end"
+      ? "ml-auto"
+      : resolvedAlign === "center"
+        ? "mx-auto"
+        : undefined
+    : undefined;
 
   return (
     <BlockSurface
       block={block}
       defaultPadding={{ top: "4rem", bottom: "4rem" }}
+      containerClassName={
+        resolvedAlign === "end"
+          ? "ml-auto"
+          : resolvedAlign === "center"
+            ? "mx-auto"
+            : undefined
+      }
       contentClassName="space-y-10"
     >
       {() => (
         <>
-          <div
-            className={cn(
-              "max-w-3xl",
-              headerAlignClass,
-              headerAlignClass.includes("text-right") ? "ml-auto" : undefined,
-            )}
-          >
+          <div className={headerContainerClass}>
             <div
               className={cn(
                 "flex items-center gap-2 text-sm text-primary",
-                headerAlignClass.includes("text-right")
-                  ? "justify-end"
-                  : headerAlignClass.includes("text-center")
-                    ? "justify-center"
-                    : "justify-start",
+                labelAlignmentClass,
               )}
             >
               <Badge variant="outline">Treatments</Badge>
@@ -96,33 +128,30 @@ export async function TreatmentsBlock({
               <h2
                 className={cn(
                   "mt-4 text-3xl font-semibold text-foreground",
-                  headerAlignClass.includes("text-right")
-                    ? "text-right"
-                    : headerAlignClass.includes("text-center")
-                      ? "text-center"
-                      : "text-left",
+                  textAlignClass,
                 )}
               >
                 {block.title}
               </h2>
             ) : null}
             {block.description ? (
-              <p
-                className={cn(
-                  "mt-2 text-muted-foreground",
-                  headerAlignClass.includes("text-right")
-                    ? "text-right"
-                    : headerAlignClass.includes("text-center")
-                      ? "text-center"
-                      : "text-left",
-                )}
-              >
+              <p className={cn("mt-2 text-muted-foreground", textAlignClass)}>
                 {block.description}
               </p>
             ) : null}
           </div>
 
-          <div className={layoutClass}>
+          <div
+            className={cn(
+              layoutClass,
+              layoutAlignmentClass,
+              layoutPositionClass,
+            )}
+            style={layoutStyle}
+          >
+            {edgeSpacerClass ? (
+              <div className={edgeSpacerClass} aria-hidden />
+            ) : null}
             {treatments.map((treatment) => {
               const primaryProcedure = getPrimaryProcedure(
                 treatment.procedures,
@@ -151,7 +180,10 @@ export async function TreatmentsBlock({
               return (
                 <Card
                   key={treatment.id}
-                  className="border-border/60 bg-card/90 shadow-sm transition hover:shadow-card-hover"
+                  className={cn(
+                    "border-border/60 bg-card/90 shadow-sm transition hover:shadow-card-hover",
+                    cardOuterClass,
+                  )}
                 >
                   <CardHeader>
                     <CardTitle className="text-xl text-foreground">
@@ -211,6 +243,9 @@ export async function TreatmentsBlock({
                 </Card>
               );
             })}
+            {edgeSpacerClass ? (
+              <div className={edgeSpacerClass} aria-hidden />
+            ) : null}
           </div>
         </>
       )}
