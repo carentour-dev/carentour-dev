@@ -149,30 +149,38 @@ export default function CmsIndexPage() {
     <div className="space-y-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
-          <Card className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <Card className="relative overflow-hidden border border-primary/25 bg-gradient-to-br from-primary/10 via-background to-background">
+            <CardHeader className="flex flex-col gap-6 border-none bg-transparent pb-0 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
-                <Badge className="bg-primary text-primary-foreground">
-                  Content Studio
-                </Badge>
-                <CardTitle className="text-3xl font-semibold">
+                <Badge className="px-3 py-1 text-[11px]">Content Studio</Badge>
+                <CardTitle className="text-3xl">
                   Welcome back to Care N Tour CMS
                 </CardTitle>
-                <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+                <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
                   Craft new experiences, keep pages fresh, and monitor what
                   needs attention all from this command center.
                 </p>
               </div>
-              <Button asChild size="lg">
-                <Link href="/cms/new">
-                  <Plus className="mr-2 h-4 w-4" /> Start a New Page
-                </Link>
-              </Button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button asChild size="lg" className="shadow-card sm:w-auto">
+                  <Link href="/cms/new">
+                    <Plus className="mr-2 h-4 w-4" /> Start a New Page
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="sm:w-auto"
+                >
+                  <Link href="/cms/navigation">Manage navigation</Link>
+                </Button>
+              </div>
             </CardHeader>
-            <CardFooter className="pt-0">
-              <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />{" "}
+            <CardFooter className="border-none bg-transparent pt-0">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground md:text-sm">
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
                   Drag-and-drop blocks, reusable templates, and instant
                   previews.
                 </span>
@@ -211,7 +219,7 @@ export default function CmsIndexPage() {
           </div>
 
           <Card>
-            <CardHeader className="space-y-4">
+            <CardHeader className="space-y-6 border-none bg-transparent pb-0">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="text-xl">Page Library</CardTitle>
@@ -219,7 +227,7 @@ export default function CmsIndexPage() {
                     Search, filter, and jump directly into editing.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -241,8 +249,8 @@ export default function CmsIndexPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="relative w-full max-w-md">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative w-full max-w-lg">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={searchTerm}
@@ -255,9 +263,13 @@ export default function CmsIndexPage() {
                   value={statusFilter}
                   onValueChange={setStatusFilter as (value: string) => void}
                 >
-                  <TabsList>
+                  <TabsList className="rounded-full bg-muted/40 p-1">
                     {statusFilters.map((filter) => (
-                      <TabsTrigger key={filter.value} value={filter.value}>
+                      <TabsTrigger
+                        key={filter.value}
+                        value={filter.value}
+                        className="rounded-full px-4 py-1 text-sm"
+                      >
                         {filter.label}
                       </TabsTrigger>
                     ))}
@@ -265,11 +277,11 @@ export default function CmsIndexPage() {
                 </Tabs>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <Skeleton key={index} className="h-40 rounded-xl" />
+                    <Skeleton key={index} className="h-44 rounded-xl" />
                   ))}
                 </div>
               ) : error ? (
@@ -277,7 +289,7 @@ export default function CmsIndexPage() {
                   Could not load pages. Please try again.
                 </div>
               ) : filteredPages.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-muted p-10 text-center">
+                <div className="rounded-lg border border-dashed border-muted/60 bg-muted/10 p-10 text-center">
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                     <Wand2 className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -300,7 +312,7 @@ export default function CmsIndexPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
                   {filteredPages.map((page) => (
                     <PageCard key={page.id} page={page} onDeleted={refetch} />
                   ))}
@@ -312,7 +324,7 @@ export default function CmsIndexPage() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="border-none bg-transparent pb-0">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Sparkles className="h-4 w-4 text-primary" /> Templates &
                 accelerators
@@ -326,7 +338,7 @@ export default function CmsIndexPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="border-none bg-transparent pb-0">
               <CardTitle className="text-lg">Recent activity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -365,7 +377,7 @@ export default function CmsIndexPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="border-none bg-transparent pb-0">
               <CardTitle className="text-lg">
                 Tips to elevate your pages
               </CardTitle>
@@ -402,7 +414,7 @@ type InsightCardProps = {
 };
 
 function InsightCard({ title, value, icon, helper, tone }: InsightCardProps) {
-  let toneClasses = "border-border/70 bg-card/90 dark:bg-card/50";
+  let toneClasses = "border-border/70 bg-card/95 dark:bg-card/60";
   if (tone === "success") {
     toneClasses =
       "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-100";
@@ -416,15 +428,15 @@ function InsightCard({ title, value, icon, helper, tone }: InsightCardProps) {
 
   return (
     <Card className={`border ${toneClasses}`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 border-none bg-transparent pb-1">
+        <CardTitle className="text-sm font-semibold text-muted-foreground">
           {title}
         </CardTitle>
-        <div className="rounded-full bg-muted/40 dark:bg-muted/20 p-2 text-muted-foreground">
+        <div className="rounded-full bg-muted/40 p-2 text-muted-foreground dark:bg-muted/20">
           {icon}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-3">
         <div className="text-3xl font-semibold text-foreground">{value}</div>
         <p className="text-xs text-muted-foreground">{helper}</p>
       </CardContent>
@@ -498,8 +510,8 @@ function PageCard({ page, onDeleted }: PageCardProps) {
   };
 
   return (
-    <Card className="h-full border border-border/60">
-      <CardHeader className="space-y-3">
+    <Card className="flex h-full flex-col border border-border/50 shadow-sm">
+      <CardHeader className="space-y-4 border-none bg-transparent pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="text-lg leading-tight text-foreground">
@@ -538,7 +550,7 @@ function PageCard({ page, onDeleted }: PageCardProps) {
           ))}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm text-muted-foreground">
+      <CardContent className="space-y-4 border-none bg-transparent pb-0 text-sm text-muted-foreground">
         <div className="flex items-center justify-between text-xs">
           <span>Last updated</span>
           <span className="text-foreground">
@@ -550,13 +562,18 @@ function PageCard({ page, onDeleted }: PageCardProps) {
           </span>
         </div>
       </CardContent>
-      <CardFooter className="flex items-center justify-between gap-2">
-        <Button asChild size="sm" variant="secondary">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-none bg-transparent pt-4">
+        <Button
+          asChild
+          size="sm"
+          variant="secondary"
+          className="w-full sm:w-auto"
+        >
           <Link href={`/cms/${page.slug}/edit`}>
             <Edit3 className="mr-2 h-4 w-4" /> Edit
           </Link>
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {page.status === "published" && (
             <Button asChild size="sm" variant="outline">
               <Link
@@ -641,54 +658,58 @@ function TemplateCard({
   );
 
   return (
-    <div className="rounded-lg border border-border/60 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            {template.name}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {template.description}
-          </p>
+    <Card className="border-border/70">
+      <CardHeader className="border-none bg-transparent pb-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5">
+            <CardTitle className="text-base font-semibold">
+              {template.name}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {template.description}
+            </p>
+          </div>
+          <div className="flex gap-2 whitespace-nowrap">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  Preview
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>{template.name}</DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[75vh] overflow-y-auto rounded-lg border border-border/60 bg-background p-4">
+                  <BlockPreviewRenderer blocks={template.blocks} />
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button size="sm" variant="secondary" asChild>
+              <Link
+                href={`/cms/new?template=${encodeURIComponent(template.slug)}`}
+              >
+                Use template
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline">
-                Preview
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>{template.name}</DialogTitle>
-              </DialogHeader>
-              <div className="max-h-[75vh] overflow-y-auto rounded-lg border border-border/60 bg-background p-4">
-                <BlockPreviewRenderer blocks={template.blocks} />
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="secondary" asChild>
-            <Link
-              href={`/cms/new?template=${encodeURIComponent(template.slug)}`}
+      </CardHeader>
+      <CardContent className="space-y-4 text-xs text-muted-foreground">
+        <TemplatePreview blocks={template.blocks} />
+        <div className="flex flex-wrap gap-2">
+          {blockTypes.map((type) => (
+            <Badge
+              key={type}
+              variant="outline"
+              className="text-[11px] uppercase tracking-wide"
             >
-              Use template
-            </Link>
-          </Button>
+              {type.replace(/([a-z])([A-Z])/g, "$1 $2")}
+            </Badge>
+          ))}
         </div>
-      </div>
-      <TemplatePreview blocks={template.blocks} />
-      <div className="flex flex-wrap gap-2">
-        {blockTypes.map((type) => (
-          <Badge
-            key={type}
-            variant="outline"
-            className="text-[11px] capitalize"
-          >
-            {type.replace(/([a-z])([A-Z])/g, "$1 $2")}
-          </Badge>
-        ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -701,7 +722,7 @@ function TemplatePreview({ blocks }: { blocks: BlockValue[] }) {
   if (!sample.length) return null;
 
   return (
-    <div className="relative h-32 overflow-hidden rounded-md border border-border/60 bg-muted/20">
+    <div className="relative h-32 overflow-hidden rounded-lg border border-border/50 bg-muted/20">
       <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.55] transform">
         <div className="min-h-full min-w-full">
           <BlockPreviewRenderer blocks={sample} />
