@@ -27,25 +27,84 @@ export async function DoctorsBlock({
     return null;
   }
 
-  const layoutClass =
-    block.layout === "carousel"
-      ? "flex gap-4 overflow-x-auto pb-4"
+  const isCarousel = block.layout === "carousel";
+  const shouldCenterStatic = isCarousel && doctors.length <= 3;
+  const layoutClass = shouldCenterStatic
+    ? "flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden md:gap-6 md:overflow-visible md:snap-none md:justify-center"
+    : isCarousel
+      ? "flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
       : "grid gap-6 md:grid-cols-2 xl:grid-cols-3";
+  const layoutStyle =
+    !shouldCenterStatic && isCarousel
+      ? ({ scrollPaddingLeft: "1rem", scrollPaddingRight: "1rem" } as const)
+      : undefined;
+  const edgeSpacerClass =
+    !shouldCenterStatic && isCarousel ? "flex-none w-4 sm:w-6" : undefined;
   const styleAlignValue = getFirstDefinedResponsiveValue(
     block.style?.layout?.horizontalAlign,
   );
-  const headerAlignClass = (() => {
-    switch (styleAlignValue) {
-      case "center":
-        return "text-center";
-      case "end":
-        return "text-right ml-auto";
-      case "start":
-        return "text-left";
-      default:
-        return "text-left";
-    }
-  })();
+  const resolvedAlign = styleAlignValue ?? "center";
+  const headerContainerClass = cn(
+    "max-w-3xl",
+    resolvedAlign === "start" && "text-left",
+    resolvedAlign === "center" && "text-center mx-auto",
+    resolvedAlign === "end" && "text-right ml-auto",
+  );
+  const textAlignClass =
+    resolvedAlign === "end"
+      ? "text-right"
+      : resolvedAlign === "center"
+        ? "text-center"
+        : "text-left";
+  const badgeAlignClass =
+    resolvedAlign === "end"
+      ? "ml-auto"
+      : resolvedAlign === "center"
+        ? "mx-auto"
+        : undefined;
+  const layoutAlignmentClass = isCarousel
+    ? shouldCenterStatic
+      ? "md:justify-center"
+      : undefined
+    : resolvedAlign === "end"
+      ? "justify-items-end"
+      : resolvedAlign === "center"
+        ? "justify-items-center"
+        : "justify-items-start";
+  const layoutPositionClass = isCarousel
+    ? undefined
+    : resolvedAlign === "end"
+      ? "ml-auto"
+      : resolvedAlign === "center"
+        ? "mx-auto"
+        : undefined;
+  const cardWrapperClass = isCarousel
+    ? "snap-start flex-none w-[280px] sm:w-[320px] lg:w-[340px]"
+    : undefined;
+  const cardHeaderClass = cn(
+    "flex flex-col space-y-1.5 p-6",
+    resolvedAlign === "center" && "items-center text-center",
+    resolvedAlign === "end" && "items-end text-right",
+    resolvedAlign === "start" && "items-start text-left",
+  );
+  const cardHeaderInnerClass = cn(
+    "flex w-full gap-3",
+    resolvedAlign === "center" && "flex-col items-center text-center",
+    resolvedAlign === "end" && "flex-row-reverse items-center text-right",
+    resolvedAlign === "start" && "items-center text-left",
+  );
+  const cardBodyAlignClass =
+    resolvedAlign === "end"
+      ? "items-end text-right"
+      : resolvedAlign === "center"
+        ? "items-center text-center"
+        : "items-start text-left";
+  const inlineListAlignment =
+    resolvedAlign === "end"
+      ? "justify-end"
+      : resolvedAlign === "center"
+        ? "justify-center"
+        : undefined;
 
   return (
     <BlockSurface
@@ -55,23 +114,10 @@ export async function DoctorsBlock({
     >
       {() => (
         <>
-          <div
-            className={cn(
-              "max-w-3xl",
-              headerAlignClass,
-              headerAlignClass.includes("ml-auto") ? "ml-auto" : undefined,
-            )}
-          >
+          <div className={headerContainerClass}>
             <Badge
               variant="outline"
-              className={cn(
-                "text-xs uppercase tracking-wide",
-                headerAlignClass.includes("text-right")
-                  ? "ml-auto"
-                  : headerAlignClass.includes("text-center")
-                    ? "mx-auto"
-                    : "",
-              )}
+              className={cn("text-xs uppercase tracking-wide", badgeAlignClass)}
             >
               Doctors
             </Badge>
@@ -79,62 +125,90 @@ export async function DoctorsBlock({
               <h2
                 className={cn(
                   "mt-4 text-3xl font-semibold text-foreground",
-                  headerAlignClass.includes("text-right")
-                    ? "text-right"
-                    : headerAlignClass.includes("text-center")
-                      ? "text-center"
-                      : "text-left",
+                  textAlignClass,
                 )}
               >
                 {block.title}
               </h2>
             ) : null}
             {block.description ? (
-              <p
-                className={cn(
-                  "mt-2 text-muted-foreground",
-                  headerAlignClass.includes("text-right")
-                    ? "text-right"
-                    : headerAlignClass.includes("text-center")
-                      ? "text-center"
-                      : "text-left",
-                )}
-              >
+              <p className={cn("mt-2 text-muted-foreground", textAlignClass)}>
                 {block.description}
               </p>
             ) : null}
           </div>
 
-          <div className={layoutClass}>
+          <div
+            className={cn(
+              layoutClass,
+              layoutAlignmentClass,
+              layoutPositionClass,
+            )}
+            style={layoutStyle}
+          >
+            {edgeSpacerClass ? (
+              <div className={edgeSpacerClass} aria-hidden />
+            ) : null}
             {doctors.map((doctor) => (
               <Card
                 key={doctor.id}
-                className="min-w-[260px] border-border/60 bg-card/90 shadow-sm hover:shadow-card-hover"
+                className={cn(
+                  "min-w-[260px] border-border/60 bg-card/90 shadow-sm hover:shadow-card-hover",
+                  cardWrapperClass,
+                )}
               >
-                <CardHeader className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border border-primary/30">
-                    <AvatarImage
-                      src={doctor.avatar_url ?? undefined}
-                      alt={doctor.name}
-                    />
-                    <AvatarFallback>{initials(doctor.name)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg text-foreground">
-                      {doctor.name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {doctor.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {doctor.specialization}
-                    </p>
+                <CardHeader className={cardHeaderClass}>
+                  <div className={cardHeaderInnerClass}>
+                    <Avatar className="h-12 w-12 border border-primary/30">
+                      <AvatarImage
+                        src={doctor.avatar_url ?? undefined}
+                        alt={doctor.name}
+                      />
+                      <AvatarFallback>{initials(doctor.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className={cardBodyAlignClass}>
+                      <CardTitle
+                        className={cn(
+                          "text-lg text-foreground",
+                          textAlignClass,
+                        )}
+                      >
+                        {doctor.name}
+                      </CardTitle>
+                      <p
+                        className={cn(
+                          "text-xs text-muted-foreground",
+                          textAlignClass,
+                        )}
+                      >
+                        {doctor.title}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-xs text-muted-foreground capitalize",
+                          textAlignClass,
+                        )}
+                      >
+                        {doctor.specialization}
+                      </p>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-4">
+                <CardContent
+                  className={cn(
+                    "space-y-3 text-xs text-muted-foreground",
+                    resolvedAlign === "center" && "text-center",
+                    resolvedAlign === "end" && "text-right",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex items-center gap-4",
+                      inlineListAlignment,
+                    )}
+                  >
                     {typeof doctor.patient_rating === "number" ? (
-                      <div>
+                      <div className={textAlignClass}>
                         <span className="font-semibold text-foreground">
                           {doctor.patient_rating.toFixed(1)}
                         </span>
@@ -149,7 +223,12 @@ export async function DoctorsBlock({
                     ) : null}
                   </div>
                   {doctor.languages && doctor.languages.length ? (
-                    <div className="flex flex-wrap gap-1">
+                    <div
+                      className={cn(
+                        "flex flex-wrap gap-1",
+                        inlineListAlignment,
+                      )}
+                    >
                       {doctor.languages.slice(0, 4).map((language) => (
                         <Badge
                           key={language}
@@ -161,7 +240,7 @@ export async function DoctorsBlock({
                       ))}
                     </div>
                   ) : null}
-                  <div className="flex gap-2 pt-2">
+                  <div className={cn("flex gap-2 pt-2", inlineListAlignment)}>
                     <Button asChild size="sm" className="flex-1">
                       <Link href={`/doctors/${doctor.id}`}>View profile</Link>
                     </Button>
@@ -179,6 +258,9 @@ export async function DoctorsBlock({
                 </CardContent>
               </Card>
             ))}
+            {edgeSpacerClass ? (
+              <div className={edgeSpacerClass} aria-hidden />
+            ) : null}
           </div>
         </>
       )}
