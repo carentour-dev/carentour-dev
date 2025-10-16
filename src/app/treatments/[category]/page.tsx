@@ -14,7 +14,7 @@ import PriceComparison from "@/components/PriceComparison";
 import { useDoctors } from "@/hooks/useDoctors";
 import { useTreatments } from "@/hooks/useTreatments";
 import { usePatientReviews, usePatientStories } from "@/hooks/useTestimonials";
-import { normalizeTreatment, getPrimaryProcedure } from "@/lib/treatments";
+import { selectPrimaryProcedure } from "@/lib/treatments";
 import {
   ArrowLeft,
   Clock,
@@ -61,67 +61,14 @@ export default function TreatmentDetails() {
     );
   }, [slug, treatments]);
 
-  const fallbackProcedures = useMemo(() => {
-    if (!dynamicTreatment) return [];
-
-    const duration = dynamicTreatment.duration_days;
-    const recovery = dynamicTreatment.recovery_time_days;
-    const success = dynamicTreatment.success_rate;
-
-    const priceLabel =
-      typeof dynamicTreatment.base_price === "number"
-        ? (dynamicTreatment.currency ?? "USD") +
-          " " +
-          dynamicTreatment.base_price.toLocaleString()
-        : undefined;
-
-    return [
-      {
-        name: dynamicTreatment.name,
-        description:
-          dynamicTreatment.description ||
-          dynamicTreatment.summary ||
-          "Our medical coordinators will tailor the procedure details to your case.",
-        duration: duration
-          ? `${duration} day${duration === 1 ? "" : "s"}`
-          : "Varies",
-        recovery: recovery
-          ? `${recovery} day${recovery === 1 ? "" : "s"}`
-          : "Varies",
-        price: priceLabel ?? "Contact us for pricing",
-        egyptPrice:
-          typeof dynamicTreatment.base_price === "number"
-            ? dynamicTreatment.base_price
-            : undefined,
-        internationalPrices: [],
-        success_rate: success ? `${success}%` : "Available on request",
-        candidateRequirements: [],
-        recoveryStages: [],
-      },
-    ];
-  }, [dynamicTreatment]);
-
-  const normalizedTreatment = useMemo(() => {
-    if (!dynamicTreatment) return null;
-
-    const normalized = normalizeTreatment(dynamicTreatment);
-
-    return {
-      ...normalized,
-      procedures:
-        normalized.procedures.length > 0
-          ? normalized.procedures
-          : fallbackProcedures,
-    };
-  }, [dynamicTreatment, fallbackProcedures]);
+  const normalizedTreatment = dynamicTreatment;
 
   const treatmentId =
     normalizedTreatment?.id ?? dynamicTreatment?.id ?? undefined;
   const treatmentSlugValue =
     normalizedTreatment?.slug ?? dynamicTreatment?.slug ?? undefined;
 
-  const rawDoctorCategory =
-    normalizedTreatment?.category ?? dynamicTreatment?.category ?? undefined;
+  const rawDoctorCategory = normalizedTreatment?.category ?? undefined;
   const doctorCategorySlug = rawDoctorCategory
     ? rawDoctorCategory.trim().toLowerCase()
     : undefined;
@@ -154,39 +101,39 @@ export default function TreatmentDetails() {
       idealCandidates: normalizedTreatment.idealCandidates,
       procedures: normalizedTreatment.procedures,
       quickFacts: {
-        duration: normalizedTreatment.duration_days,
-        recovery: normalizedTreatment.recovery_time_days,
-        price: normalizedTreatment.base_price,
+        duration: normalizedTreatment.durationDays,
+        recovery: normalizedTreatment.recoveryTimeDays,
+        price: normalizedTreatment.basePrice,
         currency: normalizedTreatment.currency,
-        successRate: normalizedTreatment.success_rate,
+        successRate: normalizedTreatment.successRate,
       },
     };
   }, [normalizedTreatment]);
 
   const quickFacts = useMemo(() => {
     if (normalizedTreatment) {
-      const primaryProcedure = getPrimaryProcedure(
+      const primaryProcedure = selectPrimaryProcedure(
         normalizedTreatment.procedures,
       );
 
-      const durationLabel = normalizedTreatment.duration_days
-        ? `${normalizedTreatment.duration_days} day${normalizedTreatment.duration_days === 1 ? "" : "s"}`
+      const durationLabel = normalizedTreatment.durationDays
+        ? `${normalizedTreatment.durationDays} day${normalizedTreatment.durationDays === 1 ? "" : "s"}`
         : primaryProcedure?.duration;
 
-      const recoveryLabel = normalizedTreatment.recovery_time_days
-        ? `${normalizedTreatment.recovery_time_days} day${normalizedTreatment.recovery_time_days === 1 ? "" : "s"}`
+      const recoveryLabel = normalizedTreatment.recoveryTimeDays
+        ? `${normalizedTreatment.recoveryTimeDays} day${normalizedTreatment.recoveryTimeDays === 1 ? "" : "s"}`
         : primaryProcedure?.recovery;
 
       const priceValue =
-        normalizedTreatment.base_price ??
+        normalizedTreatment.basePrice ??
         primaryProcedure?.egyptPrice ??
         undefined;
 
       const successRateLabel =
-        normalizedTreatment.success_rate !== undefined &&
-        normalizedTreatment.success_rate !== null
-          ? `${normalizedTreatment.success_rate}%`
-          : primaryProcedure?.success_rate;
+        normalizedTreatment.successRate !== undefined &&
+        normalizedTreatment.successRate !== null
+          ? `${normalizedTreatment.successRate}%`
+          : primaryProcedure?.successRate;
 
       return {
         durationLabel,
@@ -420,7 +367,7 @@ export default function TreatmentDetails() {
 
             <div className="space-y-12">
               {treatment.procedures && treatment.procedures.length > 0 ? (
-                treatment.procedures.map((procedure: any, index: number) => (
+                treatment.procedures.map((procedure, index) => (
                   <Card
                     key={index}
                     className="border-border/50 hover:shadow-card-hover transition-spring"
@@ -469,7 +416,7 @@ export default function TreatmentDetails() {
                             Success Rate
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {procedure.success_rate}
+                            {procedure.successRate}
                           </div>
                         </div>
                       </div>
