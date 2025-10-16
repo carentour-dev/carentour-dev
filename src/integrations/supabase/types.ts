@@ -568,6 +568,68 @@ export type Database = {
           },
         ];
       };
+      treatment_procedures: {
+        Row: {
+          candidate_requirements: string[] | null;
+          created_at: string;
+          description: string | null;
+          display_order: number;
+          egypt_price: number | null;
+          id: string;
+          international_prices: Json | null;
+          name: string;
+          price: string | null;
+          recovery: string | null;
+          recovery_stages: Json | null;
+          success_rate: string | null;
+          treatment_id: string;
+          duration: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          candidate_requirements?: string[] | null;
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          egypt_price?: number | null;
+          id?: string;
+          international_prices?: Json | null;
+          name: string;
+          price?: string | null;
+          recovery?: string | null;
+          recovery_stages?: Json | null;
+          success_rate?: string | null;
+          treatment_id: string;
+          duration?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          candidate_requirements?: string[] | null;
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          egypt_price?: number | null;
+          id?: string;
+          international_prices?: Json | null;
+          name?: string;
+          price?: string | null;
+          recovery?: string | null;
+          recovery_stages?: Json | null;
+          success_rate?: string | null;
+          treatment_id?: string;
+          duration?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "treatment_procedures_treatment_id_fkey";
+            columns: ["treatment_id"];
+            isOneToOne: false;
+            referencedRelation: "treatments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       treatments: {
         Row: {
           base_price: number | null;
@@ -582,7 +644,6 @@ export type Database = {
           is_active: boolean | null;
           name: string;
           overview: string | null;
-          procedures: Json | null;
           recovery_time_days: number | null;
           slug: string;
           success_rate: number | null;
@@ -602,7 +663,6 @@ export type Database = {
           is_active?: boolean | null;
           name: string;
           overview?: string | null;
-          procedures?: Json | null;
           recovery_time_days?: number | null;
           slug: string;
           success_rate?: number | null;
@@ -622,7 +682,6 @@ export type Database = {
           is_active?: boolean | null;
           name?: string;
           overview?: string | null;
-          procedures?: Json | null;
           recovery_time_days?: number | null;
           slug?: string;
           success_rate?: number | null;
