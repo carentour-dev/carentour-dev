@@ -1,0 +1,53 @@
+{
+  "Row": {
+    "id": "uuid",
+    "treatment_id": "uuid",
+    "name": "text",
+    "description": "text",
+    "duration": "text",
+    "recovery": "text",
+    "price": "text",
+    "egypt_price": "numeric",
+    "success_rate": "text",
+    "candidate_requirements": "text[]",
+    "recovery_stages": "jsonb",
+    "international_prices": "jsonb",
+    "display_order": "int4",
+    "created_at": "timestamp with time zone",
+    "updated_at": "timestamp with time zone"
+  },
+  "Insert": {
+    "id": "uuid",
+    "treatment_id": "uuid",
+    "name": "text",
+    "description": "text",
+    "duration": "text",
+    "recovery": "text",
+    "price": "text",
+    "egypt_price": "numeric",
+    "success_rate": "text",
+    "candidate_requirements": "text[]",
+    "recovery_stages": "jsonb",
+    "international_prices": "jsonb",
+    "display_order": "int4",
+    "created_at": "timestamp with time zone",
+    "updated_at": "timestamp with time zone"
+  },
+  "Update": {
+    "id": "uuid",
+    "treatment_id": "uuid",
+    "name": "text",
+    "description": "text",
+    "duration": "text",
+    "recovery": "text",
+    "price": "text",
+    "egypt_price": "numeric",
+    "success_rate": "text",
+    "candidate_requirements": "text[]",
+    "recovery_stages": "jsonb",
+    "international_prices": "jsonb",
+    "display_order": "int4",
+    "created_at": "timestamp with time zone",
+    "updated_at": "timestamp with time zone"
+  }
+}
