@@ -7,6 +7,10 @@ import {
 } from "@/lib/cms/blocks";
 import { normalizeTreatment } from "@/lib/treatments";
 
+type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
+type TreatmentProcedureRow =
+  Database["public"]["Tables"]["treatment_procedures"]["Row"];
+
 export type CmsPage = {
   id: string;
   slug: string;
@@ -43,11 +47,10 @@ export async function getPublishedPageBySlug(
   };
 }
 
-type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 
 const TREATMENT_SELECT =
-  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, procedures, ideal_candidates";
+  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, ideal_candidates, treatment_procedures:treatment_procedures(*)";
 const DOCTOR_SELECT =
   "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
@@ -68,14 +71,18 @@ export async function getTreatmentsForBlock(config: BlockValue<"treatments">) {
       return [];
     }
 
-    const rows = (data ?? []) as TreatmentRow[];
+    const rows = (data ?? []) as (TreatmentRow & {
+      treatment_procedures: TreatmentProcedureRow[];
+    })[];
     const orderMap = new Map(manual.map((slug, index) => [slug, index]));
     const sorted = rows.sort((a, b) => {
       const rankA = orderMap.get(a.slug ?? a.id) ?? Number.MAX_SAFE_INTEGER;
       const rankB = orderMap.get(b.slug ?? b.id) ?? Number.MAX_SAFE_INTEGER;
       return rankA - rankB;
     });
-    return sorted.slice(0, config.limit).map((row) => normalizeTreatment(row));
+    return sorted
+      .slice(0, config.limit)
+      .map((row) => normalizeTreatment(row, row.treatment_procedures ?? []));
   }
 
   let query = supabase
@@ -101,7 +108,12 @@ export async function getTreatmentsForBlock(config: BlockValue<"treatments">) {
     return [];
   }
 
-  return (data ?? []).map((row) => normalizeTreatment(row as TreatmentRow));
+  return (data ?? []).map((row) => {
+    const record = row as TreatmentRow & {
+      treatment_procedures?: TreatmentProcedureRow[];
+    };
+    return normalizeTreatment(record, record.treatment_procedures ?? []);
+  });
 }
 
 export async function getDoctorsForBlock(config: BlockValue<"doctors">) {
