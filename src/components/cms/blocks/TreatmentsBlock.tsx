@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
-import { getPrimaryProcedure } from "@/lib/treatments";
+import { selectPrimaryProcedure } from "@/lib/treatments";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 import { cn } from "@/lib/utils";
@@ -153,11 +153,11 @@ export async function TreatmentsBlock({
               <div className={edgeSpacerClass} aria-hidden />
             ) : null}
             {treatments.map((treatment) => {
-              const primaryProcedure = getPrimaryProcedure(
+              const primaryProcedure = selectPrimaryProcedure(
                 treatment.procedures,
               );
-              const stay = formatDuration(treatment.duration_days);
-              const recovery = formatDuration(treatment.recovery_time_days);
+              const stay = formatDuration(treatment.durationDays);
+              const recovery = formatDuration(treatment.recoveryTimeDays);
               let durationLabel =
                 primaryProcedure?.duration ?? "Personalized itinerary";
               if (stay && recovery) {
@@ -169,8 +169,8 @@ export async function TreatmentsBlock({
               }
 
               const priceCandidate =
-                typeof treatment.base_price === "number"
-                  ? treatment.base_price
+                typeof treatment.basePrice === "number"
+                  ? treatment.basePrice
                   : (primaryProcedure?.egyptPrice ?? null);
               const priceLabel =
                 typeof priceCandidate === "number"
@@ -208,11 +208,11 @@ export async function TreatmentsBlock({
                       <span>Itinerary</span>
                       <span className="text-foreground">{durationLabel}</span>
                     </div>
-                    {primaryProcedure?.success_rate ? (
+                    {primaryProcedure?.successRate ? (
                       <div className="flex items-center justify-between text-xs">
                         <span>Success rate</span>
                         <span className="text-foreground">
-                          {primaryProcedure.success_rate}
+                          {primaryProcedure.successRate}
                         </span>
                       </div>
                     ) : null}
