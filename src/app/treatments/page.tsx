@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { normalizeTreatment, getPriceComparison, getPrimaryProcedure } from "@/lib/treatments";
+import { buildPriceComparison, selectPrimaryProcedure } from "@/lib/treatments";
 import {
   Activity,
   ChevronDown,
@@ -30,7 +30,7 @@ import {
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   "cardiac-surgery": Heart,
   "heart surgery": Heart,
-  "cardiology": Heart,
+  cardiology: Heart,
   "eye-surgery": Eye,
   ophthalmology: Eye,
   "dental-care": Smile,
@@ -60,38 +60,39 @@ export default function Treatments() {
   const router = useRouter();
   const { treatments, loading, error } = useTreatments();
   const { doctors } = useDoctors();
-  const [expandedComparison, setExpandedComparison] = useState<string | null>(null);
+  const [expandedComparison, setExpandedComparison] = useState<string | null>(
+    null,
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
   const cards = useMemo(() => {
     return treatments.map((treatment) => {
-      const normalized = normalizeTreatment(treatment);
-      const key = normalized.slug || normalized.category || normalized.name;
-      const iconKey = normalized.slug || normalized.category || "";
+      const key = treatment.slug || treatment.category || treatment.name;
+      const iconKey = treatment.slug || treatment.category || "";
       const Icon = iconMap[iconKey.toLowerCase()] || Stethoscope;
 
-      const dbComparison = getPriceComparison(normalized.procedures);
+      const dbComparison = buildPriceComparison(treatment.procedures);
       const comparison = dbComparison ?? null;
 
-      const primaryProcedure = getPrimaryProcedure(normalized.procedures);
+      const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
 
       const basePriceValue =
-        typeof normalized.base_price === "number"
-          ? normalized.base_price
-          : primaryProcedure?.egyptPrice ?? null;
+        typeof treatment.basePrice === "number"
+          ? treatment.basePrice
+          : (primaryProcedure?.egyptPrice ?? null);
 
       return {
-        id: normalized.slug,
-        title: normalized.name,
+        id: treatment.slug || treatment.id,
+        title: treatment.name,
         icon: Icon,
         summary:
-          normalized.summary ||
-          normalized.description ||
+          treatment.summary ||
+          treatment.description ||
           "World-class treatment delivered by accredited specialists.",
-        description: normalized.overview || normalized.description || undefined,
+        description: treatment.overview || treatment.description || undefined,
         basePrice: basePriceValue,
-        currency: normalized.currency || "USD",
-        isActive: normalized.is_active !== false,
+        currency: treatment.currency || "USD",
+        isActive: treatment.isActive !== false,
         comparison,
       };
     });
@@ -105,7 +106,10 @@ export default function Treatments() {
     }
 
     return cards.filter((card) => {
-      const haystack = [card.title, card.summary, card.description].filter(Boolean).join(" ").toLowerCase();
+      const haystack = [card.title, card.summary, card.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(query);
     });
   }, [cards, searchTerm]);
@@ -133,7 +137,9 @@ export default function Treatments() {
         <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <p className="text-destructive mb-4">Error loading treatments: {error}</p>
+            <p className="text-destructive mb-4">
+              Error loading treatments: {error}
+            </p>
             <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </div>
@@ -160,7 +166,9 @@ export default function Treatments() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Discover our full range of medical treatments performed by certified specialists in state-of-the-art service providers across Egypt.
+                Discover our full range of medical treatments performed by
+                certified specialists in state-of-the-art service providers
+                across Egypt.
               </p>
             </div>
           </div>
@@ -173,7 +181,8 @@ export default function Treatments() {
                 Our Medical Specialties
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                World-class medical care across multiple specialties with significant cost savings.
+                World-class medical care across multiple specialties with
+                significant cost savings.
               </p>
             </div>
 
@@ -203,7 +212,11 @@ export default function Treatments() {
                     : "Treatments will appear here once they are published in the admin dashboard."}
                 </p>
                 {searchTerm ? (
-                  <Button variant="outline" className="mt-4" onClick={() => setSearchTerm("")}>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setSearchTerm("")}
+                  >
                     Clear Search
                   </Button>
                 ) : null}
@@ -218,13 +231,18 @@ export default function Treatments() {
                       : "Contact us for pricing";
 
                   return (
-                    <Card key={category.id} className="border-border/50 hover:shadow-card-hover transition-spring group">
+                    <Card
+                      key={category.id}
+                      className="border-border/50 hover:shadow-card-hover transition-spring group"
+                    >
                       <CardHeader className="text-center">
                         <Icon className="h-10 w-10 text-primary mx-auto mb-4" />
                         <CardTitle className="text-xl font-bold text-foreground">
                           {category.title}
                         </CardTitle>
-                        <p className="text-muted-foreground mt-2">{category.summary}</p>
+                        <p className="text-muted-foreground mt-2">
+                          {category.summary}
+                        </p>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
@@ -235,15 +253,21 @@ export default function Treatments() {
                           ) : null}
 
                           <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center">
-                            <p className="text-sm font-medium text-primary mb-1">Starting at</p>
-                            <p className="text-2xl font-bold text-primary">{basePriceLabel}</p>
+                            <p className="text-sm font-medium text-primary mb-1">
+                              Starting at
+                            </p>
+                            <p className="text-2xl font-bold text-primary">
+                              {basePriceLabel}
+                            </p>
                           </div>
 
                           <div className="grid grid-cols-1 gap-3">
                             <Button
                               className="w-full"
                               variant="outline"
-                              onClick={() => router.push(`/treatments/${category.id}`)}
+                              onClick={() =>
+                                router.push(`/treatments/${category.id}`)
+                              }
                             >
                               Learn More
                             </Button>
@@ -255,7 +279,9 @@ export default function Treatments() {
                                 size="sm"
                                 onClick={() =>
                                   setExpandedComparison(
-                                    expandedComparison === category.id ? null : category.id,
+                                    expandedComparison === category.id
+                                      ? null
+                                      : category.id,
                                   )
                                 }
                               >
@@ -274,12 +300,15 @@ export default function Treatments() {
                             ) : null}
                           </div>
 
-                          {expandedComparison === category.id && category.comparison && (
+                          {expandedComparison === category.id &&
+                            category.comparison && (
                               <div className="mt-4">
                                 <PriceComparison
                                   treatment={category.title}
                                   egyptPrice={category.comparison.egyptPrice}
-                                  internationalPrices={category.comparison.internationalPrices}
+                                  internationalPrices={
+                                    category.comparison.internationalPrices
+                                  }
                                 />
                               </div>
                             )}
@@ -300,8 +329,9 @@ export default function Treatments() {
                 Why Choose Egypt for Your Medical Treatment?
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Experience world-class healthcare at a fraction of international costs. Our patients save an average of
-                70-85% compared to Western countries.
+                Experience world-class healthcare at a fraction of international
+                costs. Our patients save an average of 70-85% compared to
+                Western countries.
               </p>
             </div>
 
@@ -318,26 +348,45 @@ export default function Treatments() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground">
-                Dynamic price comparisons will appear once treatments include pricing data.
+                Dynamic price comparisons will appear once treatments include
+                pricing data.
               </div>
             )}
 
             <div className="text-center mt-12">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
-                  <div className="text-3xl font-bold text-primary mb-2">75%</div>
-                  <div className="text-foreground font-semibold mb-1">Average Savings</div>
-                  <div className="text-sm text-muted-foreground">Compared to US prices</div>
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    75%
+                  </div>
+                  <div className="text-foreground font-semibold mb-1">
+                    Average Savings
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Compared to US prices
+                  </div>
                 </div>
                 <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
-                  <div className="text-3xl font-bold text-primary mb-2">$15K+</div>
-                  <div className="text-foreground font-semibold mb-1">Money Saved</div>
-                  <div className="text-sm text-muted-foreground">Average per procedure</div>
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    $15K+
+                  </div>
+                  <div className="text-foreground font-semibold mb-1">
+                    Money Saved
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Average per procedure
+                  </div>
                 </div>
                 <div className="p-6 bg-background rounded-lg border border-border/50 shadow-sm">
-                  <div className="text-3xl font-bold text-primary mb-2">5000+</div>
-                  <div className="text-foreground font-semibold mb-1">Happy Patients</div>
-                  <div className="text-sm text-muted-foreground">From around the world</div>
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    5000+
+                  </div>
+                  <div className="text-foreground font-semibold mb-1">
+                    Happy Patients
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    From around the world
+                  </div>
                 </div>
               </div>
             </div>
@@ -351,7 +400,8 @@ export default function Treatments() {
                 Meet Our Specialists
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Connect with our experienced doctors who specialize in your treatment area.
+                Connect with our experienced doctors who specialize in your
+                treatment area.
               </p>
             </div>
 
@@ -375,7 +425,8 @@ export default function Treatments() {
               Ready to Start Your Treatment Journey?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Get a personalized treatment plan and cost estimate from our medical experts.
+              Get a personalized treatment plan and cost estimate from our
+              medical experts.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
