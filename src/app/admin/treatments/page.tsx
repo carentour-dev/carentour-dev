@@ -144,8 +144,12 @@ type TreatmentPayload = {
   procedures: ProcedureFormValues[];
 };
 
+type TreatmentProcedureRecord =
+  Database["public"]["Tables"]["treatment_procedures"]["Row"];
+
 type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"] & {
   grade: TreatmentGrade;
+  procedures: TreatmentProcedureRecord[];
 };
 
 type DoctorAssignment = {
