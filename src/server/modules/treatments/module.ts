@@ -18,6 +18,7 @@ const internationalPriceSchema = z.object({
   country: z.string().min(1),
   currency: z.string().min(1),
   price: z.coerce.number().min(0),
+  flag: z.string().min(1).optional(),
 });
 
 const recoveryStageSchema = z.object({
