@@ -1653,7 +1653,7 @@ function ProcedureFields({
         />
         <FormField
           control={form.control}
-          name={`procedures.${index}.success_rate`}
+          name={`procedures.${index}.successRate`}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Success rate label</FormLabel>
