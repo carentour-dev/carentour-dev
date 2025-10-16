@@ -5,11 +5,25 @@ import type { ComponentType, MouseEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Heart, Eye, Smile, Scissors, Stethoscope, Activity } from "lucide-react";
+import {
+  ArrowRight,
+  Heart,
+  Eye,
+  Smile,
+  Scissors,
+  Stethoscope,
+  Activity,
+} from "lucide-react";
 import { useTreatments } from "@/hooks/useTreatments";
-import { normalizeTreatment, getPrimaryProcedure } from "@/lib/treatments";
+import { selectPrimaryProcedure } from "@/lib/treatments";
 
 type TreatmentPresentation = {
   image: string;
@@ -63,7 +77,10 @@ const formatCurrency = (value: number, currency?: string | null) => {
   }
 };
 
-const getPresentation = (slug?: string | null, category?: string | null): TreatmentPresentation => {
+const getPresentation = (
+  slug?: string | null,
+  category?: string | null,
+): TreatmentPresentation => {
   const slugKey = slug?.toLowerCase();
   if (slugKey && TREATMENT_PRESENTATION[slugKey]) {
     return TREATMENT_PRESENTATION[slugKey];
@@ -86,9 +103,10 @@ const FeaturedTreatments = () => {
       return [];
     }
 
-    const normalized = treatments
-      .map((treatment) => normalizeTreatment(treatment))
-      .filter((treatment) => treatment.is_active !== false && treatment.is_featured === true);
+    const normalized = treatments.filter(
+      (treatment) =>
+        treatment.isActive !== false && treatment.isFeatured === true,
+    );
 
     const prepared = normalized.reduce<
       (FeaturedTreatmentCard & { priceValue: number | null })[]
@@ -98,21 +116,23 @@ const FeaturedTreatments = () => {
       }
 
       const presentation = getPresentation(treatment.slug, treatment.category);
-      const primaryProcedure = getPrimaryProcedure(treatment.procedures);
+      const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
 
       const basePriceCandidate =
-        typeof treatment.base_price === "number"
-          ? treatment.base_price
-          : primaryProcedure?.egyptPrice ?? null;
+        typeof treatment.basePrice === "number"
+          ? treatment.basePrice
+          : (primaryProcedure?.egyptPrice ?? null);
 
       const stay =
-        typeof treatment.duration_days === "number" && Number.isFinite(treatment.duration_days)
-          ? `${treatment.duration_days} day${treatment.duration_days === 1 ? "" : "s"}`
+        typeof treatment.durationDays === "number" &&
+        Number.isFinite(treatment.durationDays)
+          ? `${treatment.durationDays} day${treatment.durationDays === 1 ? "" : "s"}`
           : null;
 
       const recovery =
-        typeof treatment.recovery_time_days === "number" && Number.isFinite(treatment.recovery_time_days)
-          ? `${treatment.recovery_time_days} day${treatment.recovery_time_days === 1 ? "" : "s"} recovery`
+        typeof treatment.recoveryTimeDays === "number" &&
+        Number.isFinite(treatment.recoveryTimeDays)
+          ? `${treatment.recoveryTimeDays} day${treatment.recoveryTimeDays === 1 ? "" : "s"} recovery`
           : null;
 
       let durationLabel = "Personalized itinerary";
@@ -142,7 +162,8 @@ const FeaturedTreatments = () => {
         image: presentation.image,
         Icon: presentation.Icon,
         isFeatured: true,
-        priceValue: typeof basePriceCandidate === "number" ? basePriceCandidate : null,
+        priceValue:
+          typeof basePriceCandidate === "number" ? basePriceCandidate : null,
       });
 
       return acc;
@@ -190,14 +211,22 @@ const FeaturedTreatments = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Featured <span className="bg-gradient-hero bg-clip-text text-transparent">Treatments</span>
+            Featured{" "}
+            <span className="bg-gradient-hero bg-clip-text text-transparent">
+              Treatments
+            </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Discover our most popular medical procedures, performed by internationally certified specialists
+            Discover our most popular medical procedures, performed by
+            internationally certified specialists
           </p>
         </div>
 
-        <div className={featuredTreatments.length > 4 ? "overflow-x-auto pb-4" : ""}>
+        <div
+          className={
+            featuredTreatments.length > 4 ? "overflow-x-auto pb-4" : ""
+          }
+        >
           <div
             className={
               featuredTreatments.length > 4
@@ -207,7 +236,10 @@ const FeaturedTreatments = () => {
           >
             {loading
               ? Array.from({ length: 4 }).map((_, index) => (
-                  <Card key={`featured-skeleton-${index}`} className="border-border/50 overflow-hidden">
+                  <Card
+                    key={`featured-skeleton-${index}`}
+                    className="border-border/50 overflow-hidden"
+                  >
                     <div className="h-48 bg-muted animate-pulse" />
                     <CardHeader>
                       <div className="h-6 bg-muted animate-pulse rounded w-2/3 mb-3" />
@@ -231,7 +263,10 @@ const FeaturedTreatments = () => {
                     >
                       {treatment.isFeatured && (
                         <div className="absolute top-4 right-4 z-10">
-                          <Badge variant="secondary" className="bg-accent text-accent-foreground text-center">
+                          <Badge
+                            variant="secondary"
+                            className="bg-accent text-accent-foreground text-center"
+                          >
                             Featured
                           </Badge>
                         </div>
@@ -263,13 +298,22 @@ const FeaturedTreatments = () => {
                       <CardContent>
                         <div className="flex justify-between items-center mb-4">
                           <div>
-                            <p className="text-2xl font-bold text-primary">{treatment.priceLabel}</p>
-                            <p className="text-sm text-muted-foreground">{treatment.durationLabel}</p>
+                            <p className="text-2xl font-bold text-primary">
+                              {treatment.priceLabel}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {treatment.durationLabel}
+                            </p>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Button className="w-full" onClick={(event) => handleStartJourney(event, treatment.slug)}>
+                          <Button
+                            className="w-full"
+                            onClick={(event) =>
+                              handleStartJourney(event, treatment.slug)
+                            }
+                          >
                             Start Your Journey
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
@@ -277,7 +321,9 @@ const FeaturedTreatments = () => {
                           <Button
                             variant="outline"
                             className="w-full hover:bg-primary hover:text-primary-foreground transition-smooth"
-                            onClick={(event) => handleLearnMore(event, treatment.slug)}
+                            onClick={(event) =>
+                              handleLearnMore(event, treatment.slug)
+                            }
                           >
                             Learn More
                           </Button>
@@ -291,13 +337,15 @@ const FeaturedTreatments = () => {
 
         {error ? (
           <p className="text-center text-destructive mt-10">
-            Unable to load featured treatments right now. Please try again shortly.
+            Unable to load featured treatments right now. Please try again
+            shortly.
           </p>
         ) : null}
 
         {showEmptyState ? (
           <p className="text-center text-muted-foreground mt-10">
-            Mark treatments as featured in the admin dashboard to spotlight them here.
+            Mark treatments as featured in the admin dashboard to spotlight them
+            here.
           </p>
         ) : null}
 
