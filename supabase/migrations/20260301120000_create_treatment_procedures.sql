@@ -40,6 +40,14 @@ ON public.treatment_procedures TO service_role;
 
 -- Public should only read active treatments via joins.
 -- Expose procedures to everyone for now.
+DO $do$
+BEGIN
+    EXECUTE format(
+        'DROP POLICY IF EXISTS %I ON public.treatment_procedures',
+        'Public can read treatment procedures'
+    );
+END;
+$do$;
 DROP POLICY IF EXISTS public_can_read_treatment_procedures
 ON public.treatment_procedures;
 CREATE POLICY public_can_read_treatment_procedures
@@ -98,7 +106,10 @@ BEGIN
                     procedure_row.elem ->> 'recovery' AS recovery,
                     procedure_row.elem ->> 'price' AS price,
                     nullif(
-                        trim(procedure_row.elem ->> 'success_rate'),
+                        coalesce(
+                            trim(procedure_row.elem ->> 'successRate'),
+                            trim(procedure_row.elem ->> 'success_rate')
+                        ),
                         ''
                     ) AS success_rate,
                     CASE
