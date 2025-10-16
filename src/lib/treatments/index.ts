@@ -109,6 +109,9 @@ const normalizeProcedureRow = (
         )
     : [];
 
+  const rawSuccessRate =
+    typeof row.success_rate === "string" ? row.success_rate.trim() : null;
+
   return {
     id: row.id,
     name: row.name,
@@ -120,7 +123,8 @@ const normalizeProcedureRow = (
       typeof row.egypt_price === "number" && Number.isFinite(row.egypt_price)
         ? row.egypt_price
         : null,
-    successRate: row.success_rate ?? undefined,
+    successRate:
+      rawSuccessRate && rawSuccessRate.length > 0 ? rawSuccessRate : undefined,
     candidateRequirements,
     recoveryStages: recoveryStagesArray,
     internationalPrices: internationalPricesArray,
