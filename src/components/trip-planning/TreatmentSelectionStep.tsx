@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Eye, Circle, Scissors, Stethoscope, Brain, Bone, Baby } from "lucide-react";
+import { Baby, Scissors, Stethoscope, Circle } from "lucide-react";
 import { TripPlanData } from "../TripPlanningWizard";
 
 interface TreatmentSelectionStepProps {
@@ -9,75 +9,46 @@ interface TreatmentSelectionStepProps {
   onUpdate: (data: Partial<TripPlanData>) => void;
 }
 
-const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps) => {
+const TreatmentSelectionStep = ({
+  data,
+  onUpdate,
+}: TreatmentSelectionStepProps) => {
   const treatments = [
     {
-      id: "cardiac-surgery",
-      name: "Cardiac Surgery",
-      icon: Heart,
-      description: "Heart surgery and cardiac procedures",
+      id: "ivf-fertility-treatments",
+      name: "IVF & Fertility Treatments",
+      icon: Baby,
+      description: "Comprehensive IVF cycles and fertility preservation",
       recoveryDays: 14,
       popular: true,
     },
     {
-      id: "cosmetic-surgery",
-      name: "Cosmetic Surgery",
+      id: "bariatric-sleeve-surgery",
+      name: "Bariatric (Sleeve) Surgery",
+      icon: Stethoscope,
+      description: "Gastric sleeve surgery with metabolic support",
+      recoveryDays: 21,
+      popular: true,
+    },
+    {
+      id: "cosmetic-plastic-surgery",
+      name: "Cosmetic & Plastic Surgery",
       icon: Scissors,
-      description: "Aesthetic and reconstructive procedures",
+      description: "360 body contouring, rhinoplasty, and aesthetic surgery",
+      recoveryDays: 21,
+      popular: true,
+    },
+    {
+      id: "advanced-dental-care",
+      name: "Advanced Dental Care",
+      icon: Circle,
+      description: "Digital smile design, veneers, and full-mouth implants",
       recoveryDays: 10,
       popular: true,
     },
-    {
-      id: "eye-surgery",
-      name: "Eye Surgery",
-      icon: Eye,
-      description: "LASIK, cataract, and vision correction",
-      recoveryDays: 3,
-      popular: false,
-    },
-    {
-      id: "dental-treatment",
-      name: "Dental Treatment",
-      icon: Circle,
-      description: "Dental implants, veneers, and oral surgery",
-      recoveryDays: 7,
-      popular: true,
-    },
-    {
-      id: "general-surgery",
-      name: "General Surgery",
-      icon: Stethoscope,
-      description: "Various surgical procedures",
-      recoveryDays: 12,
-      popular: false,
-    },
-    {
-      id: "neurosurgery",
-      name: "Neurosurgery",
-      icon: Brain,
-      description: "Brain and nervous system surgery",
-      recoveryDays: 21,
-      popular: false,
-    },
-    {
-      id: "orthopedic",
-      name: "Orthopedic Surgery",
-      icon: Bone,
-      description: "Joint replacement and bone surgery",
-      recoveryDays: 15,
-      popular: false,
-    },
-    {
-      id: "fertility",
-      name: "Fertility Treatment",
-      icon: Baby,
-      description: "IVF and reproductive medicine",
-      recoveryDays: 5,
-      popular: false,
-    },
   ];
 
-  const handleTreatmentSelect = (treatment: typeof treatments[0]) => {
+  const handleTreatmentSelect = (treatment: (typeof treatments)[0]) => {
     onUpdate({
       treatmentType: treatment.id,
       recoveryTimeline: treatment.recoveryDays,
@@ -91,7 +62,8 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
           What type of treatment are you seeking?
         </h3>
         <p className="text-muted-foreground">
-          Select the treatment that best matches your medical needs. This will help us customize your trip plan.
+          Select the treatment that best matches your medical needs. This will
+          help us customize your trip plan.
         </p>
       </div>
 
@@ -99,7 +71,7 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
         {treatments.map((treatment) => {
           const Icon = treatment.icon;
           const isSelected = data.treatmentType === treatment.id;
-          
+
           return (
             <Card
               key={treatment.id}
@@ -113,15 +85,23 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      isSelected ? "bg-primary text-background" : "bg-secondary text-secondary-foreground"
-                    }`}>
+                    <div
+                      className={`p-2 rounded-lg ${
+                        isSelected
+                          ? "bg-primary text-background"
+                          : "bg-secondary text-secondary-foreground"
+                      }`}
+                    >
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{treatment.name}</CardTitle>
+                      <CardTitle className="text-base">
+                        {treatment.name}
+                      </CardTitle>
                       {treatment.popular && (
-                        <Badge variant="secondary" className="text-xs mt-1">Popular</Badge>
+                        <Badge variant="secondary" className="text-xs mt-1">
+                          Popular
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -136,7 +116,9 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
                     Recovery: {treatment.recoveryDays} days
                   </span>
                   {isSelected && (
-                    <Badge variant="default" className="text-xs">Selected</Badge>
+                    <Badge variant="default" className="text-xs">
+                      Selected
+                    </Badge>
                   )}
                 </div>
               </CardContent>
@@ -150,13 +132,18 @@ const TreatmentSelectionStep = ({ data, onUpdate }: TreatmentSelectionStepProps)
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <Heart className="w-4 h-4 text-background" />
+                <Baby className="w-4 h-4 text-background" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Treatment Selected</p>
+                <p className="font-medium text-foreground">
+                  Treatment Selected
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  We&apos;ll customize your trip plan based on your {" "}
-                  {treatments.find(t => t.id === data.treatmentType)?.name.toLowerCase()} requirements.
+                  We&apos;ll customize your trip plan based on your{" "}
+                  {treatments
+                    .find((t) => t.id === data.treatmentType)
+                    ?.name.toLowerCase()}{" "}
+                  requirements.
                 </p>
               </div>
             </div>
