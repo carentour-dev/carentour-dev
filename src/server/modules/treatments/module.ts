@@ -6,6 +6,9 @@ import type { Database } from "@/integrations/supabase/types";
 
 const treatmentsService = new CrudService("treatments", "treatment");
 
+type TreatmentInsert = Database["public"]["Tables"]["treatments"]["Insert"];
+type TreatmentUpdate = Database["public"]["Tables"]["treatments"]["Update"];
+
 const METADATA_TABLE = "treatment_metadata";
 const DEFAULT_GRADE: Database["public"]["Enums"]["treatment_grade"] = "grade_c";
 
