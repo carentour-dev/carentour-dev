@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { normalizeTreatment, type NormalizedTreatment } from "@/lib/treatments";
 
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
+type TreatmentProceduresRow =
+  Database["public"]["Tables"]["treatment_procedures"]["Row"];
 
-const fetchTreatments = async (): Promise<TreatmentRow[]> => {
+type SupabaseTreatment = TreatmentRow & {
+  treatment_procedures: TreatmentProceduresRow[];
+};
+
+const fetchTreatments = async (): Promise<NormalizedTreatment[]> => {
   const { data, error } = await supabase
     .from("treatments")
-    .select("*")
+    .select("*, treatment_procedures:treatment_procedures(*)")
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
     .order("name", { ascending: true });
@@ -16,7 +23,10 @@ const fetchTreatments = async (): Promise<TreatmentRow[]> => {
     throw error;
   }
 
-  return data ?? [];
+  const rows = (data ?? []) as SupabaseTreatment[];
+  return rows.map((row) =>
+    normalizeTreatment(row, row.treatment_procedures ?? []),
+  );
 };
 
 export const useTreatments = () => {
