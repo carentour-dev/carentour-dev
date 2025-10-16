@@ -20,6 +20,7 @@ export type TreatmentProcedure = {
   }[];
   internationalPrices: {
     country: string;
+    flag?: string;
     price: number;
     currency: string;
   }[];
@@ -89,6 +90,9 @@ const normalizeProcedureRow = (
           const currency = isNonEmptyString(value.currency)
             ? value.currency.trim()
             : "";
+          const flag = isNonEmptyString(value.flag)
+            ? value.flag.trim()
+            : undefined;
           const rawPrice = value.price;
           const priceNumber =
             typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
@@ -99,13 +103,18 @@ const normalizeProcedureRow = (
             country,
             currency,
             price: priceNumber,
+            ...(flag ? { flag } : {}),
           };
         })
         .filter(
           (
             entry,
-          ): entry is { country: string; currency: string; price: number } =>
-            Boolean(entry),
+          ): entry is {
+            country: string;
+            currency: string;
+            price: number;
+            flag?: string;
+          } => Boolean(entry),
         )
     : [];
 
