@@ -43,9 +43,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -66,20 +76,26 @@ const recoveryStageSchema = z.object({
 });
 
 const procedureSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(2),
   description: z.string().optional(),
   duration: z.string().optional(),
   recovery: z.string().optional(),
   price: z.string().optional(),
   egyptPrice: z.coerce.number().min(0).optional(),
-  success_rate: z.string().optional(),
+  successRate: z.string().optional(),
+  displayOrder: z.coerce.number().int().min(0).optional(),
   internationalPrices: z.array(internationalPriceSchema).default([]),
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
 });
 
 type TreatmentGrade = Database["public"]["Enums"]["treatment_grade"];
-const gradeValues = ["grade_a", "grade_b", "grade_c"] as const satisfies readonly TreatmentGrade[];
+const gradeValues = [
+  "grade_a",
+  "grade_b",
+  "grade_c",
+] as const satisfies readonly TreatmentGrade[];
 const gradeSchema = z.enum(gradeValues);
 const gradeLabels: Record<TreatmentGrade, string> = {
   grade_a: "Grade A",
@@ -143,13 +159,15 @@ type DoctorAssignment = {
 };
 
 const createEmptyProcedure = (): ProcedureFormValues => ({
+  id: undefined,
   name: "",
   description: "",
   duration: "",
   recovery: "",
   price: "",
   egyptPrice: undefined,
-  success_rate: "",
+  successRate: "",
+  displayOrder: undefined,
   internationalPrices: [],
   candidateRequirements: [],
   recoveryStages: [],
@@ -178,7 +196,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
-const ensurePrimaryId = (selectedIds: string[], currentPrimary: string | null) => {
+const ensurePrimaryId = (
+  selectedIds: string[],
+  currentPrimary: string | null,
+) => {
   if (currentPrimary && selectedIds.includes(currentPrimary)) {
     return currentPrimary;
   }
@@ -205,42 +226,73 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
     return createEmptyProcedure();
   }
 
-  const candidateRequirements = Array.isArray(value.candidateRequirements)
-    ? value.candidateRequirements.filter((entry): entry is string => typeof entry === "string")
-    : [];
+  const id = typeof value.id === "string" ? value.id : undefined;
 
-  const recoveryStages = Array.isArray(value.recoveryStages)
+  const candidateSource = Array.isArray(value.candidateRequirements)
+    ? value.candidateRequirements
+    : Array.isArray(value.candidate_requirements)
+      ? value.candidate_requirements
+      : [];
+  const candidateRequirements = candidateSource
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  const recoverySource = Array.isArray(value.recoveryStages)
     ? value.recoveryStages
-        .filter(isRecord)
-        .map((stage) => ({
-          stage: typeof stage.stage === "string" ? stage.stage : "",
-          description: typeof stage.description === "string" ? stage.description : "",
-        }))
-        .filter((stage) => stage.stage || stage.description)
-    : [];
+    : Array.isArray(value.recovery_stages)
+      ? value.recovery_stages
+      : [];
+  const recoveryStages = recoverySource
+    .filter(isRecord)
+    .map((stage) => ({
+      stage: typeof stage.stage === "string" ? stage.stage : "",
+      description:
+        typeof stage.description === "string" ? stage.description : "",
+    }))
+    .filter(
+      (stage) =>
+        stage.stage.trim().length > 0 && stage.description.trim().length > 0,
+    )
+    .map((stage) => ({
+      stage: stage.stage.trim(),
+      description: stage.description.trim(),
+    }));
 
-  const internationalPrices = Array.isArray(value.internationalPrices)
+  const pricesSource = Array.isArray(value.internationalPrices)
     ? value.internationalPrices
-        .filter(isRecord)
-        .map((price) => ({
-          country: typeof price.country === "string" ? price.country : "",
-          flag: typeof price.flag === "string" ? price.flag : undefined,
-          price: parseNumber(price.price) ?? 0,
-          currency: typeof price.currency === "string" ? price.currency : "",
-        }))
-        .filter((price) => price.country && price.currency)
-    : [];
+    : Array.isArray(value.international_prices)
+      ? value.international_prices
+      : [];
+  const internationalPrices = pricesSource
+    .filter(isRecord)
+    .map((price) => ({
+      country: typeof price.country === "string" ? price.country.trim() : "",
+      flag: typeof price.flag === "string" ? price.flag : undefined,
+      price: parseNumber(price.price) ?? 0,
+      currency: typeof price.currency === "string" ? price.currency.trim() : "",
+    }))
+    .filter((price) => price.country.length > 0 && price.currency.length > 0);
 
-  const egyptPrice = parseNumber(value.egyptPrice);
+  const egyptPrice = parseNumber(value.egyptPrice ?? value.egypt_price);
+  const displayOrder = parseNumber(value.displayOrder ?? value.display_order);
+  const rawSuccess =
+    typeof value.successRate === "string"
+      ? value.successRate
+      : typeof value.success_rate === "string"
+        ? value.success_rate
+        : "";
 
   return {
+    id,
     name: typeof value.name === "string" ? value.name : "",
     description: typeof value.description === "string" ? value.description : "",
     duration: typeof value.duration === "string" ? value.duration : "",
     recovery: typeof value.recovery === "string" ? value.recovery : "",
     price: typeof value.price === "string" ? value.price : "",
     egyptPrice,
-    success_rate: typeof value.success_rate === "string" ? value.success_rate : "",
+    successRate: rawSuccess.trim(),
+    displayOrder: typeof displayOrder === "number" ? displayOrder : undefined,
     internationalPrices,
     candidateRequirements,
     recoveryStages,
@@ -261,7 +313,9 @@ const mapProceduresFromRecord = (
   return sanitized.length > 0 ? sanitized : [createEmptyProcedure()];
 };
 
-const mapRecordToFormValues = (treatment: TreatmentRecord): TreatmentFormValues => {
+const mapRecordToFormValues = (
+  treatment: TreatmentRecord,
+): TreatmentFormValues => {
   const defaults = createDefaultFormValues();
   return {
     ...defaults,
@@ -280,7 +334,9 @@ const mapRecordToFormValues = (treatment: TreatmentRecord): TreatmentFormValues 
     is_active: treatment.is_active ?? true,
     grade: treatment.grade ?? "grade_c",
     ideal_candidates: Array.isArray(treatment.ideal_candidates)
-      ? treatment.ideal_candidates.filter((entry): entry is string => typeof entry === "string")
+      ? treatment.ideal_candidates.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
       : [],
     procedures: mapProceduresFromRecord(treatment.procedures),
   };
@@ -295,7 +351,9 @@ const trimString = (value?: string | null): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload => {
+const buildPayloadFromValues = (
+  values: TreatmentFormValues,
+): TreatmentPayload => {
   const idealCandidates = values.ideal_candidates
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
@@ -310,7 +368,9 @@ const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload =
         stage: stage.stage.trim(),
         description: stage.description.trim(),
       }))
-      .filter((stage) => stage.stage.length > 0 && stage.description.length > 0);
+      .filter(
+        (stage) => stage.stage.length > 0 && stage.description.length > 0,
+      );
 
     const internationalPrices = procedure.internationalPrices
       .map((price) => ({
@@ -328,7 +388,8 @@ const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload =
       );
 
     const cleanedEgyptPrice =
-      typeof procedure.egyptPrice === "number" && !Number.isNaN(procedure.egyptPrice)
+      typeof procedure.egyptPrice === "number" &&
+      !Number.isNaN(procedure.egyptPrice)
         ? procedure.egyptPrice
         : undefined;
 
@@ -341,10 +402,15 @@ const buildPayloadFromValues = (values: TreatmentFormValues): TreatmentPayload =
       recovery: trimString(procedure.recovery) ?? undefined,
       price: trimString(procedure.price) ?? undefined,
       egyptPrice: cleanedEgyptPrice,
-      success_rate: cleanedSuccessRate,
+      successRate: cleanedSuccessRate,
+      displayOrder:
+        typeof procedure.displayOrder === "number"
+          ? procedure.displayOrder
+          : undefined,
       internationalPrices,
       candidateRequirements,
       recoveryStages,
+      id: procedure.id,
     } satisfies ProcedureFormValues;
   });
 
@@ -399,9 +465,11 @@ export default function AdminTreatmentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTreatment, setEditingTreatment] = useState<TreatmentRecord | null>(null);
+  const [editingTreatment, setEditingTreatment] =
+    useState<TreatmentRecord | null>(null);
   const [specialistsDialogOpen, setSpecialistsDialogOpen] = useState(false);
-  const [specialistsTreatment, setSpecialistsTreatment] = useState<TreatmentRecord | null>(null);
+  const [specialistsTreatment, setSpecialistsTreatment] =
+    useState<TreatmentRecord | null>(null);
   const [specialists, setSpecialists] = useState<DoctorAssignment[]>([]);
   const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
   const [primaryDoctorId, setPrimaryDoctorId] = useState<string | null>(null);
@@ -435,36 +503,41 @@ export default function AdminTreatmentsPage() {
     setSavingSpecialists(false);
   }, []);
 
-  const loadSpecialists = useCallback(async (category: string) => {
-    setSpecialistsLoading(true);
-    try {
-      const result = await adminFetch<{ doctors: DoctorAssignment[] }>(
-        `/api/admin/doctor-treatments?category=${encodeURIComponent(category)}`,
-      );
+  const loadSpecialists = useCallback(
+    async (category: string) => {
+      setSpecialistsLoading(true);
+      try {
+        const result = await adminFetch<{ doctors: DoctorAssignment[] }>(
+          `/api/admin/doctor-treatments?category=${encodeURIComponent(category)}`,
+        );
 
-      const doctors = result.doctors ?? [];
-      setSpecialists(doctors);
+        const doctors = result.doctors ?? [];
+        setSpecialists(doctors);
 
-      const assignedIds = doctors.filter((doctor) => doctor.isAssigned).map((doctor) => doctor.id);
-      setSelectedDoctorIds(assignedIds);
-      setPrimaryDoctorId(() => {
-        const primary = doctors.find((doctor) => doctor.isPrimary);
-        return primary ? primary.id : null;
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setSpecialists([]);
-      setSelectedDoctorIds([]);
-      setPrimaryDoctorId(null);
-      toast({
-        title: "Failed to load specialists",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setSpecialistsLoading(false);
-    }
-  }, [toast]);
+        const assignedIds = doctors
+          .filter((doctor) => doctor.isAssigned)
+          .map((doctor) => doctor.id);
+        setSelectedDoctorIds(assignedIds);
+        setPrimaryDoctorId(() => {
+          const primary = doctors.find((doctor) => doctor.isPrimary);
+          return primary ? primary.id : null;
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setSpecialists([]);
+        setSelectedDoctorIds([]);
+        setPrimaryDoctorId(null);
+        toast({
+          title: "Failed to load specialists",
+          description: message,
+          variant: "destructive",
+        });
+      } finally {
+        setSpecialistsLoading(false);
+      }
+    },
+    [toast],
+  );
 
   const createTreatment = useMutation({
     mutationFn: (payload: TreatmentPayload) =>
@@ -548,11 +621,14 @@ export default function AdminTreatmentsPage() {
     if (!treatmentsQuery.data) return [] as TreatmentRecord[];
 
     return treatmentsQuery.data.filter((treatment) => {
-      const matchesSearch =
-        [treatment.name, treatment.slug, treatment.category ?? ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
+      const matchesSearch = [
+        treatment.name,
+        treatment.slug,
+        treatment.category ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -562,7 +638,8 @@ export default function AdminTreatmentsPage() {
 
       const matchesCategory =
         categoryFilter === "all" ||
-        (treatment.category ?? "").toLowerCase() === categoryFilter.toLowerCase();
+        (treatment.category ?? "").toLowerCase() ===
+          categoryFilter.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesCategory;
     });
@@ -651,7 +728,9 @@ export default function AdminTreatmentsPage() {
 
     setSavingSpecialists(true);
     try {
-      const normalizedCategory = specialistsTreatment.category.trim().toLowerCase();
+      const normalizedCategory = specialistsTreatment.category
+        .trim()
+        .toLowerCase();
       const payload = {
         category: normalizedCategory,
         doctorIds: selectedDoctorIds,
@@ -685,9 +764,12 @@ export default function AdminTreatmentsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Treatments</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Treatments
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Curate medical offerings, pricing, and clinical expectations for Care N Tour packages.
+            Curate medical offerings, pricing, and clinical expectations for
+            Care N Tour packages.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -699,13 +781,19 @@ export default function AdminTreatmentsPage() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingTreatment ? "Edit Treatment" : "Add Treatment"}</DialogTitle>
+              <DialogTitle>
+                {editingTreatment ? "Edit Treatment" : "Add Treatment"}
+              </DialogTitle>
               <DialogDescription>
-                Maintain consistent treatment information for pricing comparisons and concierge planning.
+                Maintain consistent treatment information for pricing
+                comparisons and concierge planning.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -713,7 +801,10 @@ export default function AdminTreatmentsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Name</FormLabel>
-                        <Input placeholder="Full Mouth Dental Rejuvenation" {...field} />
+                        <Input
+                          placeholder="Full Mouth Dental Rejuvenation"
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -750,7 +841,10 @@ export default function AdminTreatmentsPage() {
                     <FormItem>
                       <FormLabel>Internal grade</FormLabel>
                       <FormControl>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select grade" />
                           </SelectTrigger>
@@ -764,7 +858,8 @@ export default function AdminTreatmentsPage() {
                         </Select>
                       </FormControl>
                       <FormDescription>
-                        Guides internal prioritization. Patients never see this label.
+                        Guides internal prioritization. Patients never see this
+                        label.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -777,7 +872,11 @@ export default function AdminTreatmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Summary</FormLabel>
-                      <Textarea rows={3} placeholder="Short overview for listings." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Short overview for listings."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -789,7 +888,11 @@ export default function AdminTreatmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Detailed description</FormLabel>
-                      <Textarea rows={4} placeholder="Long-form content for detail pages." {...field} />
+                      <Textarea
+                        rows={4}
+                        placeholder="Long-form content for detail pages."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -823,7 +926,9 @@ export default function AdminTreatmentsPage() {
                           min={0}
                           step="0.01"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -852,7 +957,9 @@ export default function AdminTreatmentsPage() {
                           max={100}
                           step="0.1"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -871,7 +978,9 @@ export default function AdminTreatmentsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -887,7 +996,9 @@ export default function AdminTreatmentsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -897,7 +1008,10 @@ export default function AdminTreatmentsPage() {
 
                 <IdealCandidatesFields form={form} />
 
-                <ProceduresSection form={form} fieldArray={proceduresFieldArray} />
+                <ProceduresSection
+                  form={form}
+                  fieldArray={proceduresFieldArray}
+                />
 
                 <FormField
                   control={form.control}
@@ -907,13 +1021,16 @@ export default function AdminTreatmentsPage() {
                       <div className="space-y-1">
                         <FormLabel>Homepage spotlight</FormLabel>
                         <FormDescription>
-                          Display this treatment in the Featured Treatments section on the home page.
+                          Display this treatment in the Featured Treatments
+                          section on the home page.
                         </FormDescription>
                       </div>
                       <FormControl>
                         <Checkbox
                           checked={field.value ?? false}
-                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
                         />
                       </FormControl>
                     </FormItem>
@@ -928,7 +1045,9 @@ export default function AdminTreatmentsPage() {
                       <FormLabel>Status</FormLabel>
                       <Select
                         value={(field.value ?? true) ? "active" : "inactive"}
-                        onValueChange={(value) => field.onChange(value === "active")}
+                        onValueChange={(value) =>
+                          field.onChange(value === "active")
+                        }
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -949,8 +1068,14 @@ export default function AdminTreatmentsPage() {
                   <Button type="button" variant="ghost" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createTreatment.isPending || updateTreatment.isPending}>
-                    {(createTreatment.isPending || updateTreatment.isPending) && (
+                  <Button
+                    type="submit"
+                    disabled={
+                      createTreatment.isPending || updateTreatment.isPending
+                    }
+                  >
+                    {(createTreatment.isPending ||
+                      updateTreatment.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     {editingTreatment ? "Save changes" : "Create treatment"}
@@ -1022,13 +1147,19 @@ export default function AdminTreatmentsPage() {
                   <TableRow key={treatment.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{treatment.name}</span>
-                        <span className="text-xs text-muted-foreground">{treatment.slug}</span>
+                        <span className="font-medium text-foreground">
+                          {treatment.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {treatment.slug}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{treatment.category || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{gradeLabels[treatment.grade]}</Badge>
+                      <Badge variant="outline">
+                        {gradeLabels[treatment.grade]}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {typeof treatment.base_price === "number"
@@ -1042,16 +1173,26 @@ export default function AdminTreatmentsPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>{treatment.is_active === false ? "Inactive" : "Active"}</TableCell>
+                    <TableCell>
+                      {treatment.is_active === false ? "Inactive" : "Active"}
+                    </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => openSpecialistsDialog(treatment)}>
-                      <Users className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(treatment)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openSpecialistsDialog(treatment)}
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(treatment)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive"
                         disabled={deleteTreatment.isPending}
@@ -1063,13 +1204,18 @@ export default function AdminTreatmentsPage() {
                   </TableRow>
                 ))}
 
-                {filteredTreatments.length === 0 && !treatmentsQuery.isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                      No treatments found. Adjust filters or create a new treatment.
-                    </TableCell>
-                  </TableRow>
-                )}
+                {filteredTreatments.length === 0 &&
+                  !treatmentsQuery.isLoading && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No treatments found. Adjust filters or create a new
+                        treatment.
+                      </TableCell>
+                    </TableRow>
+                  )}
               </TableBody>
             </Table>
           )}
@@ -1150,7 +1296,11 @@ function SpecialistsDialog({
           </div>
         ) : (
           <ScrollArea className="max-h-[420px] pr-4">
-            <RadioGroup value={primaryDoctorId ?? ""} onValueChange={onPrimaryChange} className="space-y-4">
+            <RadioGroup
+              value={primaryDoctorId ?? ""}
+              onValueChange={onPrimaryChange}
+              className="space-y-4"
+            >
               {doctors.map((doctor) => {
                 const assigned = selectedDoctorIds.includes(doctor.id);
                 return (
@@ -1165,14 +1315,19 @@ function SpecialistsDialog({
                         id={`doctor-${doctor.id}`}
                       />
                       <div className="flex-1">
-                        <Label htmlFor={`doctor-${doctor.id}`} className="font-medium text-foreground">
+                        <Label
+                          htmlFor={`doctor-${doctor.id}`}
+                          className="font-medium text-foreground"
+                        >
                           {doctor.name}
                         </Label>
                         <div className="text-sm text-muted-foreground">
                           {doctor.title} · {doctor.specialization}
                         </div>
                         {doctor.isActive ? null : (
-                          <p className="text-xs text-orange-600">Doctor marked inactive.</p>
+                          <p className="text-xs text-orange-600">
+                            Doctor marked inactive.
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1182,7 +1337,10 @@ function SpecialistsDialog({
                         id={`primary-${doctor.id}`}
                         disabled={!assigned}
                       />
-                      <Label htmlFor={`primary-${doctor.id}`} className="text-sm text-muted-foreground">
+                      <Label
+                        htmlFor={`primary-${doctor.id}`}
+                        className="text-sm text-muted-foreground"
+                      >
                         Set as primary specialist
                       </Label>
                     </div>
@@ -1194,10 +1352,18 @@ function SpecialistsDialog({
         )}
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button type="button" disabled={loading || saving || !treatment} onClick={onSave}>
+          <Button
+            type="button"
+            disabled={loading || saving || !treatment}
+            onClick={onSave}
+          >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save specialists
           </Button>
@@ -1207,33 +1373,47 @@ function SpecialistsDialog({
   );
 }
 
-function IdealCandidatesFields({ form }: { form: UseFormReturn<TreatmentFormValues> }) {
+function IdealCandidatesFields({
+  form,
+}: {
+  form: UseFormReturn<TreatmentFormValues>;
+}) {
   const idealCandidates = form.watch("ideal_candidates") ?? [];
 
   const addCandidate = () => {
-    form.setValue(
-      "ideal_candidates",
-      [...idealCandidates, ""],
-      { shouldDirty: true, shouldTouch: true },
-    );
+    form.setValue("ideal_candidates", [...idealCandidates, ""], {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
 
   const removeCandidate = (index: number) => {
     const updated = idealCandidates.filter((_, idx) => idx !== index);
-    form.setValue("ideal_candidates", updated, { shouldDirty: true, shouldTouch: true });
+    form.setValue("ideal_candidates", updated, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
 
   return (
     <div className="space-y-3 rounded-lg border border-dashed border-border/60 p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-semibold text-foreground">Ideal candidates</span>
-        <Button type="button" size="sm" variant="outline" onClick={addCandidate}>
+        <span className="text-sm font-semibold text-foreground">
+          Ideal candidates
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={addCandidate}
+        >
           <PlusCircle className="mr-2 h-4 w-4" />
           Add candidate
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        Bullet points shown in the “Ideal Candidates” section on the customer detail page.
+        Bullet points shown in the “Ideal Candidates” section on the customer
+        detail page.
       </p>
       <div className="space-y-3">
         {idealCandidates.map((_, index) => (
@@ -1245,7 +1425,10 @@ function IdealCandidatesFields({ form }: { form: UseFormReturn<TreatmentFormValu
               <FormItem>
                 <div className="flex items-start gap-2">
                   <FormControl>
-                    <Input placeholder="Patients with coronary artery disease" {...field} />
+                    <Input
+                      placeholder="Patients with coronary artery disease"
+                      {...field}
+                    />
                   </FormControl>
                   <Button
                     type="button"
@@ -1283,19 +1466,29 @@ function ProceduresSection({
     fieldArray.append(createEmptyProcedure());
   };
 
-  const proceduresError = getArrayErrorMessage(form.formState.errors.procedures);
+  const proceduresError = getArrayErrorMessage(
+    form.formState.errors.procedures,
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-semibold text-foreground">Procedure details</span>
-        <Button type="button" size="sm" variant="outline" onClick={addProcedure}>
+        <span className="text-sm font-semibold text-foreground">
+          Procedure details
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={addProcedure}
+        >
           <PlusCircle className="mr-2 h-4 w-4" />
           Add procedure
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        Configure the detailed steps, savings, and recovery timeline used by the public site.
+        Configure the detailed steps, savings, and recovery timeline used by the
+        public site.
       </p>
       <div className="space-y-4">
         {fieldArray.fields.map((field, index) => (
@@ -1308,7 +1501,9 @@ function ProceduresSection({
           />
         ))}
       </div>
-      {proceduresError && <p className="text-sm text-destructive">{proceduresError}</p>}
+      {proceduresError && (
+        <p className="text-sm text-destructive">{proceduresError}</p>
+      )}
     </div>
   );
 }
@@ -1326,7 +1521,10 @@ function ProcedureFields({
 }) {
   const internationalPrices = useFieldArray<
     TreatmentFormValues,
-    FieldArrayPathByValue<TreatmentFormValues, ProcedureFormValues["internationalPrices"]>
+    FieldArrayPathByValue<
+      TreatmentFormValues,
+      ProcedureFormValues["internationalPrices"]
+    >
   >({
     control: form.control,
     name: `procedures.${index}.internationalPrices` as FieldArrayPathByValue<
@@ -1337,7 +1535,10 @@ function ProcedureFields({
 
   const candidateRequirements = useFieldArray<
     TreatmentFormValues,
-    FieldArrayPathByValue<TreatmentFormValues, ProcedureFormValues["candidateRequirements"]>
+    FieldArrayPathByValue<
+      TreatmentFormValues,
+      ProcedureFormValues["candidateRequirements"]
+    >
   >({
     control: form.control,
     name: `procedures.${index}.candidateRequirements` as FieldArrayPathByValue<
@@ -1348,7 +1549,10 @@ function ProcedureFields({
 
   const recoveryStages = useFieldArray<
     TreatmentFormValues,
-    FieldArrayPathByValue<TreatmentFormValues, ProcedureFormValues["recoveryStages"]>
+    FieldArrayPathByValue<
+      TreatmentFormValues,
+      ProcedureFormValues["recoveryStages"]
+    >
   >({
     control: form.control,
     name: `procedures.${index}.recoveryStages` as FieldArrayPathByValue<
@@ -1361,8 +1565,12 @@ function ProcedureFields({
     <div className="space-y-5 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-foreground">Procedure {index + 1}</h4>
-          <p className="text-xs text-muted-foreground">Displayed as an expandable card on the treatment page.</p>
+          <h4 className="text-sm font-semibold text-foreground">
+            Procedure {index + 1}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            Displayed as an expandable card on the treatment page.
+          </p>
         </div>
         <Button
           type="button"
@@ -1406,7 +1614,11 @@ function ProcedureFields({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Description</FormLabel>
-            <Textarea rows={3} placeholder="High-level explanation of the procedure." {...field} />
+            <Textarea
+              rows={3}
+              placeholder="High-level explanation of the procedure."
+              {...field}
+            />
             <FormMessage />
           </FormItem>
         )}
@@ -1471,7 +1683,9 @@ function ProcedureFields({
 
       <div className="space-y-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm font-medium text-foreground">Candidate requirements</span>
+          <span className="text-sm font-medium text-foreground">
+            Candidate requirements
+          </span>
           <Button
             type="button"
             size="sm"
@@ -1509,20 +1723,29 @@ function ProcedureFields({
             />
           ))}
           {candidateRequirements.fields.length === 0 && (
-            <p className="text-xs text-muted-foreground">No specific requirements listed.</p>
+            <p className="text-xs text-muted-foreground">
+              No specific requirements listed.
+            </p>
           )}
         </div>
       </div>
 
       <div className="space-y-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm font-medium text-foreground">International price benchmarks</span>
+          <span className="text-sm font-medium text-foreground">
+            International price benchmarks
+          </span>
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() =>
-              internationalPrices.append({ country: "", flag: "", price: 0, currency: "" })
+              internationalPrices.append({
+                country: "",
+                flag: "",
+                price: 0,
+                currency: "",
+              })
             }
           >
             Add market price
@@ -1567,7 +1790,9 @@ function ProcedureFields({
                       min={0}
                       step="0.01"
                       {...field}
-                      onChange={(event) => field.onChange(Number(event.target.value))}
+                      onChange={(event) =>
+                        field.onChange(Number(event.target.value))
+                      }
                     />
                     <FormMessage />
                   </FormItem>
@@ -1607,21 +1832,30 @@ function ProcedureFields({
 
       <div className="space-y-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm font-medium text-foreground">Recovery timeline</span>
+          <span className="text-sm font-medium text-foreground">
+            Recovery timeline
+          </span>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => recoveryStages.append({ stage: "", description: "" })}
+            onClick={() =>
+              recoveryStages.append({ stage: "", description: "" })
+            }
           >
             Add recovery stage
           </Button>
         </div>
         <div className="space-y-3">
           {recoveryStages.fields.map((fieldItem, stageIndex) => (
-            <div key={fieldItem.id} className="space-y-3 rounded-md border border-border/70 p-3">
+            <div
+              key={fieldItem.id}
+              className="space-y-3 rounded-md border border-border/70 p-3"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">Stage {stageIndex + 1}</span>
+                <span className="text-sm font-medium text-foreground">
+                  Stage {stageIndex + 1}
+                </span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -1649,7 +1883,11 @@ function ProcedureFields({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
-                    <Textarea rows={2} placeholder="ICU monitoring, pain management" {...field} />
+                    <Textarea
+                      rows={2}
+                      placeholder="ICU monitoring, pain management"
+                      {...field}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1657,7 +1895,9 @@ function ProcedureFields({
             </div>
           ))}
           {recoveryStages.fields.length === 0 && (
-            <p className="text-xs text-muted-foreground">No recovery milestones added yet.</p>
+            <p className="text-xs text-muted-foreground">
+              No recovery milestones added yet.
+            </p>
           )}
         </div>
       </div>
