@@ -397,7 +397,7 @@ const buildPayloadFromValues = (
         ? procedure.egyptPrice
         : undefined;
 
-    const cleanedSuccessRate = trimString(procedure.success_rate);
+    const cleanedSuccessRate = trimString(procedure.successRate);
 
     return {
       name: procedure.name.trim(),
