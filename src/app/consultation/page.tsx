@@ -22,7 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -43,7 +47,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTreatments } from "@/hooks/useTreatments";
-import { normalizeTreatment } from "@/lib/treatments";
 import { COUNTRY_OPTIONS } from "@/constants/countries";
 
 const consultationSchema = z.object({
@@ -70,7 +73,8 @@ const TRAVEL_HINTS = [
   {
     icon: CalendarDays,
     title: "Flexible travel planning",
-    description: "Tell us your ideal timeline so coordinators can hold surgery dates that match.",
+    description:
+      "Tell us your ideal timeline so coordinators can hold surgery dates that match.",
   },
   {
     icon: HeartPulse,
@@ -81,7 +85,8 @@ const TRAVEL_HINTS = [
   {
     icon: Users,
     title: "Travel companions welcome",
-    description: "Share if family is traveling so we manage accommodation and recovery plans.",
+    description:
+      "Share if family is traveling so we manage accommodation and recovery plans.",
   },
 ];
 
@@ -129,15 +134,10 @@ export default function ConsultationPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const {
-    treatments: treatmentRows,
-    loading: treatmentsLoading,
-  } = useTreatments();
+  const { treatments: treatmentRows, loading: treatmentsLoading } =
+    useTreatments();
 
-  const treatments = useMemo(
-    () => treatmentRows.map((row) => normalizeTreatment(row)),
-    [treatmentRows],
-  );
+  const treatments = useMemo(() => treatmentRows, [treatmentRows]);
 
   const selectedTreatmentId = form.watch("treatmentId");
 
@@ -163,7 +163,8 @@ export default function ConsultationPage() {
 
     try {
       const selectedTreatmentName =
-        treatments.find((treatment) => treatment.id === values.treatmentId)?.name ?? "";
+        treatments.find((treatment) => treatment.id === values.treatmentId)
+          ?.name ?? "";
 
       const combinedTreatment = [selectedTreatmentName, values.procedure]
         .filter((part) => part && part.length > 0)
@@ -178,7 +179,9 @@ export default function ConsultationPage() {
         treatment: combinedTreatment || selectedTreatmentName || procedure,
         travelWindow: travelWindow.toISOString(),
       };
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
       }
@@ -191,11 +194,18 @@ export default function ConsultationPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.error ?? "Failed to submit consultation request");
+        throw new Error(
+          result?.error ?? "Failed to submit consultation request",
+        );
       }
 
       const { firstName, lastName } = splitFullName(values.fullName);
-      console.log("Consultation request stored for:", firstName, lastName, result.consultationRequestId);
+      console.log(
+        "Consultation request stored for:",
+        firstName,
+        lastName,
+        result.consultationRequestId,
+      );
 
       toast({
         title: "Consultation Request Submitted",
@@ -209,7 +219,8 @@ export default function ConsultationPage() {
       console.error("Failed to submit consultation request", error);
       toast({
         title: "Something went wrong",
-        description: "We could not process your request. Please try again or call our hotline.",
+        description:
+          "We could not process your request. Please try again or call our hotline.",
         variant: "destructive",
       });
     } finally {
@@ -229,8 +240,9 @@ export default function ConsultationPage() {
                 Plan Your Global Treatment With Our Medical Coordinators
               </h1>
               <p className="text-lg text-muted-foreground md:text-xl">
-                Share your medical goals, preferred treatment, and travel plans. Our Care N Tour team
-                pairs you with accredited clinics, handles travel logistics, and follows up within hours.
+                Share your medical goals, preferred treatment, and travel plans.
+                Our Care N Tour team pairs you with accredited clinics, handles
+                travel logistics, and follows up within hours.
               </p>
               <div className="grid gap-4 md:grid-cols-3">
                 {TRAVEL_HINTS.map(({ icon: Icon, title, description }) => (
@@ -241,8 +253,12 @@ export default function ConsultationPage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" aria-hidden />
                     </div>
-                    <p className="text-sm font-semibold text-foreground">{title}</p>
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {title}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -255,15 +271,20 @@ export default function ConsultationPage() {
             <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr]">
               <Card className="border-border/50 shadow-card-hover">
                 <CardHeader>
-                  <CardTitle className="text-2xl">Free Consultation Request</CardTitle>
+                  <CardTitle className="text-2xl">
+                    Free Consultation Request
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Provide as much detail as you can so our medical team can respond with a tailored
-                    treatment and travel plan.
+                    Provide as much detail as you can so our medical team can
+                    respond with a tailored treatment and travel plan.
                   </p>
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
-                    <form className="space-y-8" onSubmit={form.handleSubmit(handleSubmit)}>
+                    <form
+                      className="space-y-8"
+                      onSubmit={form.handleSubmit(handleSubmit)}
+                    >
                       <div className="grid gap-6 md:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -285,7 +306,11 @@ export default function ConsultationPage() {
                             <FormItem>
                               <FormLabel>Email *</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="jane@example.com" {...field} />
+                                <Input
+                                  type="email"
+                                  placeholder="jane@example.com"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -298,7 +323,10 @@ export default function ConsultationPage() {
                             <FormItem>
                               <FormLabel>Primary Phone or WhatsApp *</FormLabel>
                               <FormControl>
-                                <Input placeholder="+1 202 555 0182" {...field} />
+                                <Input
+                                  placeholder="+1 202 555 0182"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -310,7 +338,10 @@ export default function ConsultationPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Country of Residence *</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select your country" />
@@ -340,7 +371,9 @@ export default function ConsultationPage() {
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
-                                disabled={treatmentsLoading || treatments.length === 0}
+                                disabled={
+                                  treatmentsLoading || treatments.length === 0
+                                }
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -357,7 +390,10 @@ export default function ConsultationPage() {
                                 </FormControl>
                                 <SelectContent>
                                   {treatments.map((treatment) => (
-                                    <SelectItem key={treatment.id} value={treatment.id}>
+                                    <SelectItem
+                                      key={treatment.id}
+                                      value={treatment.id}
+                                    >
                                       {treatment.name}
                                     </SelectItem>
                                   ))}
@@ -380,7 +416,8 @@ export default function ConsultationPage() {
                                 }}
                                 value={field.value}
                                 disabled={
-                                  !selectedTreatment || procedureOptions.length === 0
+                                  !selectedTreatment ||
+                                  procedureOptions.length === 0
                                 }
                               >
                                 <FormControl>
@@ -430,10 +467,15 @@ export default function ConsultationPage() {
                                   )}
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? format(field.value, "PPP") : "Select a date"}
+                                  {field.value
+                                    ? format(field.value, "PPP")
+                                    : "Select a date"}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent
+                                className="w-auto p-0"
+                                align="start"
+                              >
                                 <Calendar
                                   mode="single"
                                   selected={field.value}
@@ -453,7 +495,9 @@ export default function ConsultationPage() {
                         name="healthBackground"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Health Goals / Current Diagnosis *</FormLabel>
+                            <FormLabel>
+                              Health Goals / Current Diagnosis *
+                            </FormLabel>
                             <FormControl>
                               <Textarea
                                 rows={5}
@@ -474,7 +518,10 @@ export default function ConsultationPage() {
                             <FormItem>
                               <FormLabel>Budget Guidance (optional)</FormLabel>
                               <FormControl>
-                                <Input placeholder="Example: $6,000 - $8,000" {...field} />
+                                <Input
+                                  placeholder="Example: $6,000 - $8,000"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -485,9 +532,14 @@ export default function ConsultationPage() {
                           name="companions"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Travel Companions (optional)</FormLabel>
+                              <FormLabel>
+                                Travel Companions (optional)
+                              </FormLabel>
                               <FormControl>
-                                <Input placeholder="Example: One spouse travelling" {...field} />
+                                <Input
+                                  placeholder="Example: One spouse travelling"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -500,7 +552,9 @@ export default function ConsultationPage() {
                         name="medicalReports"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Existing Medical Reports (optional)</FormLabel>
+                            <FormLabel>
+                              Existing Medical Reports (optional)
+                            </FormLabel>
                             <FormControl>
                               <Textarea
                                 rows={3}
@@ -519,9 +573,14 @@ export default function ConsultationPage() {
                           name="contactPreference"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Preferred Communication Channel (optional)</FormLabel>
+                              <FormLabel>
+                                Preferred Communication Channel (optional)
+                              </FormLabel>
                               <FormControl>
-                                <Input placeholder="Example: WhatsApp or Email" {...field} />
+                                <Input
+                                  placeholder="Example: WhatsApp or Email"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -533,9 +592,14 @@ export default function ConsultationPage() {
                           name="additionalQuestions"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Additional Questions (optional)</FormLabel>
+                              <FormLabel>
+                                Additional Questions (optional)
+                              </FormLabel>
                               <FormControl>
-                                <Input placeholder="Anything else you'd like to ask?" {...field} />
+                                <Input
+                                  placeholder="Anything else you'd like to ask?"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -543,8 +607,15 @@ export default function ConsultationPage() {
                         />
                       </div>
 
-                      <Button type="submit" size="lg" className="w-full md:w-auto" disabled={isSubmitting}>
-                        {isSubmitting ? "Submitting..." : "Submit Consultation Request"}
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full md:w-auto"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting
+                          ? "Submitting..."
+                          : "Submit Consultation Request"}
                       </Button>
                     </form>
                   </Form>
@@ -556,32 +627,49 @@ export default function ConsultationPage() {
                   <CardTitle className="text-xl">What happens next?</CardTitle>
                   <div className="space-y-4 text-sm text-muted-foreground">
                     <div className="flex items-start gap-3">
-                      <Stethoscope className="mt-1 h-5 w-5 text-primary" aria-hidden />
+                      <Stethoscope
+                        className="mt-1 h-5 w-5 text-primary"
+                        aria-hidden
+                      />
                       <div>
-                        <p className="font-medium text-foreground">Medical review in under 2 hours</p>
+                        <p className="font-medium text-foreground">
+                          Medical review in under 2 hours
+                        </p>
                         <p>
-                          Your request is triaged by our medical concierge team who confirm treatment
-                          eligibility and clinic availability.
+                          Your request is triaged by our medical concierge team
+                          who confirm treatment eligibility and clinic
+                          availability.
                         </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <MapPin className="mt-1 h-5 w-5 text-primary" aria-hidden />
+                      <MapPin
+                        className="mt-1 h-5 w-5 text-primary"
+                        aria-hidden
+                      />
                       <div>
-                        <p className="font-medium text-foreground">Destination matching</p>
+                        <p className="font-medium text-foreground">
+                          Destination matching
+                        </p>
                         <p>
-                          We shortlist clinics in your preferred location and prepare a cost breakdown that
-                          aligns with your budget guidance.
+                          We shortlist clinics in your preferred location and
+                          prepare a cost breakdown that aligns with your budget
+                          guidance.
                         </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Globe2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
+                      <Globe2
+                        className="mt-1 h-5 w-5 text-primary"
+                        aria-hidden
+                      />
                       <div>
-                        <p className="font-medium text-foreground">Travel coordination</p>
+                        <p className="font-medium text-foreground">
+                          Travel coordination
+                        </p>
                         <p>
-                          From flights to recovery hotels, our team handles logistics and can arrange
-                          companion travel if needed.
+                          From flights to recovery hotels, our team handles
+                          logistics and can arrange companion travel if needed.
                         </p>
                       </div>
                     </div>
