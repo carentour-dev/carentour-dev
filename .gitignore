@@ -55,3 +55,4 @@ bun.lockb
 gitleaks-report.json
 .husky/
 scripts/
+/.cursor/plans
