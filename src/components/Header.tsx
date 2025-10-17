@@ -1,7 +1,6 @@
 "use client";
 
-import type { TouchEvent as ReactTouchEvent } from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +9,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   fetchNavigationLinks,
   getFallbackNavigationLinks,
@@ -24,10 +29,6 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
   const { resolvedTheme } = useTheme();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const menuScrollRef = useRef<HTMLDivElement>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const touchCurrentYRef = useRef<number | null>(null);
   const logoSrc =
     mounted && resolvedTheme === "dark"
       ? "/care-n-tour-logo-light.png"
@@ -57,74 +58,6 @@ const Header = () => {
       isSubscribed = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMenuOpen]);
-
-  useEffect(() => {
-    if (!isMenuOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    closeButtonRef.current?.focus();
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isMenuOpen]);
-
-  const handleMenuTouchStart = (
-    event: ReactTouchEvent<HTMLDivElement>,
-  ): void => {
-    const touchY = event.touches[0]?.clientY ?? null;
-    touchStartYRef.current = touchY;
-    touchCurrentYRef.current = touchY;
-  };
-
-  const handleMenuTouchMove = (
-    event: ReactTouchEvent<HTMLDivElement>,
-  ): void => {
-    touchCurrentYRef.current = event.touches[0]?.clientY ?? null;
-  };
-
-  const handleMenuTouchEnd = (): void => {
-    const startY = touchStartYRef.current;
-    const endY = touchCurrentYRef.current;
-    const container = menuScrollRef.current;
-
-    touchStartYRef.current = null;
-    touchCurrentYRef.current = null;
-
-    if (startY === null || endY === null || !container) {
-      return;
-    }
-
-    const deltaY = endY - startY;
-    const isSwipeUp = deltaY < -80;
-    const atBottom =
-      container.scrollTop + container.clientHeight >=
-      container.scrollHeight - 2;
-
-    if (isSwipeUp && atBottom) {
-      setIsMenuOpen(false);
-    }
-  };
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -205,120 +138,116 @@ const Header = () => {
             <div className="md:hidden">
               <ThemeToggle />
             </div>
-            {/* Mobile menu button */}
-            <button
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label="Toggle menu"
+            {/* Mobile menu */}
+            <Drawer
+              open={isMenuOpen}
+              onOpenChange={setIsMenuOpen}
+              shouldScaleBackground={false}
             >
-              {isMenuOpen ? (
-                <X className="h-6 w-6 text-foreground" />
-              ) : (
-                <Menu className="h-6 w-6 text-foreground" />
-              )}
-            </button>
+              <DrawerTrigger asChild>
+                <button className="md:hidden" aria-label="Toggle menu">
+                  {isMenuOpen ? (
+                    <X className="h-6 w-6 text-foreground" />
+                  ) : (
+                    <Menu className="h-6 w-6 text-foreground" />
+                  )}
+                </button>
+              </DrawerTrigger>
+              <DrawerContent className="md:hidden h-[96vh] max-h-[96vh] overflow-hidden border-t border-border bg-background">
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center justify-between px-5 pb-3 pt-5">
+                    <DrawerClose asChild>
+                      <Link href="/">
+                        <Image
+                          src={logoSrc}
+                          alt="Care N Tour"
+                          width={140}
+                          height={48}
+                          className="h-12 w-auto"
+                        />
+                      </Link>
+                    </DrawerClose>
+                    <DrawerClose asChild>
+                      <button
+                        aria-label="Close menu"
+                        className="rounded-md p-2 hover:bg-muted transition-smooth"
+                      >
+                        <X className="h-6 w-6 text-foreground" />
+                      </button>
+                    </DrawerClose>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-5 pb-6">
+                    <div className="space-y-2">
+                      {(loadingNavigation
+                        ? getFallbackNavigationLinks()
+                        : navigationLinks
+                      ).map((item) => (
+                        <DrawerClose asChild key={item.id}>
+                          <Link
+                            href={item.href}
+                            className="block py-3 text-lg font-medium text-foreground hover:text-primary transition-smooth"
+                          >
+                            {item.label}
+                          </Link>
+                        </DrawerClose>
+                      ))}
+                    </div>
+                    <div className="space-y-3 border-t border-border/50 pt-4 mt-6">
+                      {user ? (
+                        <DrawerClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="justify-start"
+                            onClick={signOut}
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign Out
+                          </Button>
+                        </DrawerClose>
+                      ) : (
+                        <DrawerClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="justify-start"
+                            asChild
+                          >
+                            <Link href="/auth">
+                              <User className="h-4 w-4 mr-2" />
+                              Sign In
+                            </Link>
+                          </Button>
+                        </DrawerClose>
+                      )}
+                      <DrawerClose asChild>
+                        <Button variant="accent" className="w-full" asChild>
+                          <Link href="/consultation">
+                            Get Free Consultation
+                          </Link>
+                        </Button>
+                      </DrawerClose>
+                    </div>
+                    <div className="space-y-3 border-t border-border/50 pt-4 mt-6 text-sm text-muted-foreground">
+                      <a
+                        href="tel:+201001741666"
+                        className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
+                      >
+                        <Phone className="h-5 w-5 text-primary" />
+                        +20 100 1741666
+                      </a>
+                      <a
+                        href="mailto:info@carentour.com"
+                        className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
+                      >
+                        <Mail className="h-5 w-5 text-primary" />
+                        info@carentour.com
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </DrawerContent>
+            </Drawer>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="fixed inset-0 z-[60] flex flex-col bg-background md:hidden supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md">
-            <div className="flex h-full min-h-screen sm:min-h-dvh flex-col overflow-hidden pb-[max(env(safe-area-inset-bottom),1.5rem)]">
-              <div className="flex shrink-0 items-center justify-between border-b border-border bg-background/95 px-4 py-3">
-                <Link
-                  href="/"
-                  className="flex items-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Image
-                    src={logoSrc}
-                    alt="Care N Tour"
-                    width={140}
-                    height={48}
-                    className="h-12 w-auto"
-                  />
-                </Link>
-                <button
-                  ref={closeButtonRef}
-                  onClick={() => setIsMenuOpen(false)}
-                  aria-label="Close menu"
-                  className="rounded-md p-2 hover:bg-muted transition-smooth"
-                >
-                  <X className="h-6 w-6 text-foreground" />
-                </button>
-              </div>
-              <div
-                ref={menuScrollRef}
-                className="flex-1 overflow-y-auto bg-background px-4 py-6 space-y-6"
-                onTouchStart={handleMenuTouchStart}
-                onTouchMove={handleMenuTouchMove}
-                onTouchEnd={handleMenuTouchEnd}
-              >
-                <div className="space-y-2">
-                  {(loadingNavigation
-                    ? getFallbackNavigationLinks()
-                    : navigationLinks
-                  ).map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className="block py-2 text-lg font-medium text-foreground hover:text-primary transition-smooth"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-                <div className="space-y-3 border-t border-border/50 pt-4">
-                  {user ? (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        signOut();
-                      }}
-                      className="justify-start"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" className="justify-start" asChild>
-                      <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
-                        <User className="h-4 w-4 mr-2" />
-                        Sign In
-                      </Link>
-                    </Button>
-                  )}
-                  <Button variant="accent" className="w-full" asChild>
-                    <Link
-                      href="/consultation"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Get Free Consultation
-                    </Link>
-                  </Button>
-                </div>
-                <div className="space-y-3 border-t border-border/50 pt-4 text-sm text-muted-foreground">
-                  <a
-                    href="tel:+201001741666"
-                    className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
-                  >
-                    <Phone className="h-5 w-5 text-primary" />
-                    +20 100 1741666
-                  </a>
-                  <a
-                    href="mailto:info@carentour.com"
-                    className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
-                  >
-                    <Mail className="h-5 w-5 text-primary" />
-                    info@carentour.com
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );
