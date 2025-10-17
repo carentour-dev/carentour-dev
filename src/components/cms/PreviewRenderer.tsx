@@ -68,9 +68,11 @@ function getBlockKey(block: BlockInstance): string {
 export function BlockPreviewRenderer({
   blocks,
   className,
+  disableAnimations,
 }: {
   blocks: unknown;
   className?: string;
+  disableAnimations?: boolean;
 }) {
   const parsedBlocks = ensureBlockInstances(blocks);
 
@@ -116,7 +118,7 @@ export function BlockPreviewRenderer({
           }
         })}
       </div>
-      <AnimationController />
+      {disableAnimations ? null : <AnimationController />}
     </>
   );
 }
