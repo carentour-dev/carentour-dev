@@ -27,6 +27,7 @@ const Header = () => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuScrollRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const touchCurrentYRef = useRef<number | null>(null);
   const logoSrc =
     mounted && resolvedTheme === "dark"
       ? "/care-n-tour-logo-light.png"
@@ -91,38 +92,38 @@ const Header = () => {
   const handleMenuTouchStart = (
     event: ReactTouchEvent<HTMLDivElement>,
   ): void => {
-    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    const touchY = event.touches[0]?.clientY ?? null;
+    touchStartYRef.current = touchY;
+    touchCurrentYRef.current = touchY;
   };
 
   const handleMenuTouchMove = (
     event: ReactTouchEvent<HTMLDivElement>,
   ): void => {
-    const startY = touchStartYRef.current;
-    const container = menuScrollRef.current;
-    const currentY = event.touches[0]?.clientY ?? null;
+    touchCurrentYRef.current = event.touches[0]?.clientY ?? null;
+  };
 
-    if (
-      startY === null ||
-      currentY === null ||
-      !container ||
-      container.scrollHeight <= container.clientHeight
-    ) {
+  const handleMenuTouchEnd = (): void => {
+    const startY = touchStartYRef.current;
+    const endY = touchCurrentYRef.current;
+    const container = menuScrollRef.current;
+
+    touchStartYRef.current = null;
+    touchCurrentYRef.current = null;
+
+    if (startY === null || endY === null || !container) {
       return;
     }
 
-    const deltaY = currentY - startY;
-    const isSwipeUp = deltaY < -40;
+    const deltaY = endY - startY;
+    const isSwipeUp = deltaY < -80;
     const atBottom =
       container.scrollTop + container.clientHeight >=
-      container.scrollHeight - 1;
+      container.scrollHeight - 2;
 
     if (isSwipeUp && atBottom) {
       setIsMenuOpen(false);
     }
-  };
-
-  const handleMenuTouchEnd = (): void => {
-    touchStartYRef.current = null;
   };
 
   return (
