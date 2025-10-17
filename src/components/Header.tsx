@@ -154,7 +154,12 @@ const Header = () => {
                 </button>
               </DrawerTrigger>
               <DrawerContent className="md:hidden h-[96vh] max-h-[96vh] overflow-hidden border-t border-border bg-background">
-                <div className="flex h-full flex-col">
+                <div
+                  className="flex h-full flex-col pt-6"
+                  style={{
+                    paddingTop: "calc(env(safe-area-inset-top) + 1.5rem)",
+                  }}
+                >
                   <div className="flex items-center justify-between px-5 pb-3 pt-5">
                     <DrawerClose asChild>
                       <Link href="/">
