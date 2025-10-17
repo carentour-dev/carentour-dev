@@ -1,5 +1,6 @@
 "use client";
 
+import type { TouchEvent as ReactTouchEvent } from "react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
@@ -24,6 +25,8 @@ const Header = () => {
   const { profile } = useUserProfile();
   const { resolvedTheme } = useTheme();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const menuScrollRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
   const logoSrc =
     mounted && resolvedTheme === "dark"
       ? "/care-n-tour-logo-light.png"
@@ -84,6 +87,43 @@ const Header = () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isMenuOpen]);
+
+  const handleMenuTouchStart = (
+    event: ReactTouchEvent<HTMLDivElement>,
+  ): void => {
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const handleMenuTouchMove = (
+    event: ReactTouchEvent<HTMLDivElement>,
+  ): void => {
+    const startY = touchStartYRef.current;
+    const container = menuScrollRef.current;
+    const currentY = event.touches[0]?.clientY ?? null;
+
+    if (
+      startY === null ||
+      currentY === null ||
+      !container ||
+      container.scrollHeight <= container.clientHeight
+    ) {
+      return;
+    }
+
+    const deltaY = currentY - startY;
+    const isSwipeUp = deltaY < -40;
+    const atBottom =
+      container.scrollTop + container.clientHeight >=
+      container.scrollHeight - 1;
+
+    if (isSwipeUp && atBottom) {
+      setIsMenuOpen(false);
+    }
+  };
+
+  const handleMenuTouchEnd = (): void => {
+    touchStartYRef.current = null;
+  };
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -206,7 +246,13 @@ const Header = () => {
                   <X className="h-6 w-6 text-foreground" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto bg-background px-4 py-6 space-y-6">
+              <div
+                ref={menuScrollRef}
+                className="flex-1 overflow-y-auto bg-background px-4 py-6 space-y-6"
+                onTouchStart={handleMenuTouchStart}
+                onTouchMove={handleMenuTouchMove}
+                onTouchEnd={handleMenuTouchEnd}
+              >
                 <div className="space-y-2">
                   {(loadingNavigation
                     ? getFallbackNavigationLinks()
@@ -267,10 +313,6 @@ const Header = () => {
                     <Mail className="h-5 w-5 text-primary" />
                     info@carentour.com
                   </a>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">Theme</span>
-                    <ThemeToggle />
-                  </div>
                 </div>
               </div>
             </div>
