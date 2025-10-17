@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -714,18 +714,102 @@ function TemplateCard({
 }
 
 function TemplatePreview({ blocks }: { blocks: BlockValue[] }) {
-  const sample = useMemo(
+  const sampleBlocks = useMemo(
     () => blocks.slice(0, Math.min(2, blocks.length)),
     [blocks],
   );
 
-  if (!sample.length) return null;
+  const previewWrapperRef = useRef<HTMLDivElement | null>(null);
+  const previewContentRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const hasBlocks = sampleBlocks.length > 0;
+
+  useEffect(() => {
+    if (!hasBlocks) {
+      setContainerWidth(0);
+      return;
+    }
+    const wrapper = previewWrapperRef.current;
+    if (!wrapper || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      setContainerWidth((previous) =>
+        Math.abs(previous - width) < 0.5 ? previous : width,
+      );
+    });
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [hasBlocks]);
+
+  useEffect(() => {
+    if (!hasBlocks) {
+      setContentHeight(0);
+      return;
+    }
+    const content = previewContentRef.current;
+    if (!content || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const height = entry.contentRect.height;
+      setContentHeight((previous) =>
+        Math.abs(previous - height) < 0.5 ? previous : height,
+      );
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [hasBlocks, sampleBlocks]);
+
+  const desktopWidth = 1280;
+  const maxPreviewHeight = 170;
+  const scale = useMemo(() => {
+    if (!containerWidth) return 0.3;
+    return Math.min(containerWidth / desktopWidth, 0.6);
+  }, [containerWidth]);
+  const scaledHeight =
+    contentHeight && scale
+      ? Math.min(contentHeight * scale, maxPreviewHeight)
+      : maxPreviewHeight;
+
+  if (!hasBlocks) {
+    return null;
+  }
 
   return (
-    <div className="relative h-32 overflow-hidden rounded-lg border border-border/50 bg-muted/20">
-      <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.55] transform">
-        <div className="min-h-full min-w-full">
-          <BlockPreviewRenderer blocks={sample} />
+    <div
+      ref={previewWrapperRef}
+      className="cms-template-thumbnail relative overflow-hidden rounded-lg border border-border/50 bg-muted/20"
+      style={{ height: scaledHeight }}
+    >
+      <style>
+        {`
+          .cms-template-thumbnail .container {
+            max-width: none !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+        `}
+      </style>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="flex h-full w-full items-start justify-center">
+          <div
+            className="origin-top"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
+            }}
+          >
+            <div ref={previewContentRef} className="w-[1280px]">
+              <BlockPreviewRenderer
+                className="space-y-0"
+                blocks={sampleBlocks}
+                disableAnimations
+              />
+            </div>
+          </div>
         </div>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/40 to-transparent" />
