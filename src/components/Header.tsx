@@ -157,7 +157,7 @@ const Header = () => {
                 <div
                   className="flex h-full flex-col"
                   style={{
-                    paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.75rem)",
+                    paddingTop: "calc(env(safe-area-inset-top, 0px) + 2rem)",
                   }}
                 >
                   <div className="flex items-center justify-between px-5 pb-3 pt-5">
