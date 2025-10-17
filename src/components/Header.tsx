@@ -181,9 +181,9 @@ const Header = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm md:hidden">
-            <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm md:hidden overflow-y-auto">
+            <div className="flex min-h-dvh flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]">
+              <div className="sticky top-0 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3">
                 <Link
                   href="/"
                   className="flex items-center"
@@ -206,7 +206,7 @@ const Header = () => {
                   <X className="h-6 w-6 text-foreground" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+              <div className="flex-1 px-4 py-6 space-y-6">
                 <div className="space-y-2">
                   {(loadingNavigation
                     ? getFallbackNavigationLinks()
