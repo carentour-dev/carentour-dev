@@ -3,9 +3,10 @@
 <div align="center">
   <img src="public/care-n-tour-logo-light.png" alt="Care N Tour Logo" width="300"/>
 
-  **World-Class Medical Care in Egypt**
+**World-Class Medical Care in Egypt**
 
-  A comprehensive medical tourism platform connecting international patients with premium healthcare service providers in Egypt.
+A comprehensive medical tourism platform connecting international patients with premium healthcare service providers in Egypt.
+
 </div>
 
 ---
@@ -22,6 +23,7 @@
 - [Key Components](#key-components)
 - [Performance Optimizations](#performance-optimizations)
 - [Deployment](#deployment)
+- [WhatsApp Widget Verification](#whatsapp-widget-verification)
 - [Contributing](#contributing)
 
 ---
@@ -47,6 +49,7 @@ Care N Tour is a Next.js-based medical tourism platform designed to facilitate i
 ## ✨ Features
 
 ### Patient Features
+
 - **Treatment Discovery**: Browse 8+ medical specialties with detailed pricing
 - **Doctor Selection**: Filter by specialization, language, and rating
 - **Patient Journey**: 6-step guided onboarding process
@@ -61,12 +64,14 @@ Care N Tour is a Next.js-based medical tourism platform designed to facilitate i
 - **Blog & Stories**: Patient testimonials and medical tourism insights
 
 ### Administrative Features
+
 - **Doctor Management**: Comprehensive doctor profiles with specializations
 - **Review System**: Patient feedback and ratings
 - **Security Logging**: Track authentication events and suspicious activity
 - **Newsletter**: Email subscription management
 
 ### Platform Features
+
 - **Responsive Design**: Mobile-first approach with Tailwind CSS
 - **SEO Optimized**: Meta tags, Open Graph, Twitter Cards
 - **Accessibility**: ARIA labels, keyboard navigation
@@ -77,20 +82,24 @@ Care N Tour is a Next.js-based medical tourism platform designed to facilitate i
 ## 🛠 Tech Stack
 
 ### Core Framework
+
 - **[Next.js 14](https://nextjs.org/)** - React framework with App Router
 - **[React 18](https://react.dev/)** - UI library
 - **[TypeScript](https://www.typescriptlang.org/)** - Type safety
 
 ### Backend & Database
+
 - **[Supabase](https://supabase.com/)** - PostgreSQL database, authentication, and real-time subscriptions
 - **[Supabase Auth](https://supabase.com/docs/guides/auth)** - User authentication with rate limiting
 
 ### State Management & Data Fetching
+
 - **[TanStack React Query](https://tanstack.com/query)** - Server state management with caching
 - **[React Hook Form](https://react-hook-form.com/)** - Form validation
 - **[Zod](https://zod.dev/)** - Schema validation
 
 ### UI & Styling
+
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
 - **[shadcn/ui](https://ui.shadcn.com/)** - Re-usable component library
 - **[Radix UI](https://www.radix-ui.com/)** - Unstyled, accessible components
@@ -98,6 +107,7 @@ Care N Tour is a Next.js-based medical tourism platform designed to facilitate i
 - **[next-themes](https://github.com/pacocoursey/next-themes)** - Dark mode support
 
 ### Forms & Interactions
+
 - **[Embla Carousel](https://www.embla-carousel.com/)** - Carousel/slider
 - **[Recharts](https://recharts.org/)** - Data visualization
 - **[Sonner](https://sonner.emilkowal.ski/)** - Toast notifications
@@ -205,12 +215,14 @@ carentour-dev/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <your-repo-url>
    cd carentour-dev
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -222,6 +234,7 @@ carentour-dev/
 3. **Set up environment variables**
 
    Create a `.env.local` file in the root directory:
+
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
@@ -229,6 +242,7 @@ carentour-dev/
    ```
 
 4. **Run the development server**
+
    ```bash
    npm run dev
    ```
@@ -248,12 +262,12 @@ npm run start
 
 ## 🔐 Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key | ✅ |
-| `NEXT_PUBLIC_SUPABASE_PROJECT_ID` | Supabase project ID | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server only, required for admin APIs) | ✅* |
+| Variable                               | Description                                                      | Required |
+| -------------------------------------- | ---------------------------------------------------------------- | -------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                        | ✅       |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                         | ✅       |
+| `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                              | ✅       |
+| `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs) | ✅\*     |
 
 > **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
 
@@ -264,6 +278,7 @@ npm run start
 ### Core Tables
 
 #### `doctors`
+
 - `id` (uuid, primary key)
 - `name` (text)
 - `specialization` (text)
@@ -278,6 +293,7 @@ npm run start
 - `created_at` (timestamp)
 
 #### `doctor_reviews`
+
 - `id` (uuid, primary key)
 - `doctor_id` (uuid, foreign key → doctors)
 - `patient_name` (text)
@@ -287,6 +303,7 @@ npm run start
 - `created_at` (timestamp)
 
 #### `profiles`
+
 - `id` (uuid, primary key, foreign key → auth.users)
 - `username` (text, unique)
 - `full_name` (text)
@@ -295,6 +312,7 @@ npm run start
 - `updated_at` (timestamp)
 
 #### `security_logs`
+
 - `id` (uuid, primary key)
 - `user_id` (uuid, foreign key → auth.users, nullable)
 - `event_type` (text) - e.g., 'login_success', 'login_failed', 'rate_limit_exceeded'
@@ -304,6 +322,7 @@ npm run start
 - `created_at` (timestamp)
 
 #### `login_attempts`
+
 - `id` (uuid, primary key)
 - `email` (text)
 - `ip_address` (text)
@@ -312,12 +331,14 @@ npm run start
 - `blocked_until` (timestamp, nullable)
 
 #### `newsletter_subscriptions`
+
 - `id` (uuid, primary key)
 - `email` (text, unique)
 - `subscribed_at` (timestamp)
 - `preferences` (jsonb)
 
 #### `patients`
+
 - `id` (uuid, primary key)
 - `user_id` (uuid, foreign key → auth.users, nullable)
 - `full_name` (text)
@@ -332,6 +353,7 @@ npm run start
 - `created_at` / `updated_at`
 
 #### `treatments`
+
 - `id` (uuid, primary key)
 - `name` (text)
 - `slug` (text, unique)
@@ -346,6 +368,7 @@ npm run start
 - `created_at` / `updated_at`
 
 #### `service_providers`
+
 - `id` (uuid, primary key)
 - `name` (text)
 - `slug` (text, unique)
@@ -361,6 +384,7 @@ npm run start
 - `created_at` / `updated_at`
 
 #### `hotels`
+
 - `id` (uuid, primary key)
 - `name` (text)
 - `slug` (text, unique)
@@ -395,6 +419,7 @@ npm run start
 ## 🧩 Key Components
 
 ### Authentication Flow (`src/contexts/AuthContext.tsx`)
+
 - **Sign Up**: Email/password with username
 - **Sign In**: Rate-limited authentication (5 attempts per 15 minutes)
 - **Password Reset**: Email-based reset flow
@@ -402,31 +427,37 @@ npm run start
 - **Session Management**: Persistent sessions with auto-refresh
 
 ### Doctor Discovery (`src/hooks/useDoctors.ts`)
+
 - **React Query Integration**: Cached doctor data (5-minute stale time)
 - **Filtering**: By treatment category
 - **Optimized Performance**: Reduces duplicate API calls by 60%
 
 ### Treatment Catalogue (`src/app/treatments/page.tsx` + `src/hooks/useTreatments.ts`)
+
 - **Dynamic Data**: Pulls active treatments directly from Supabase
 - **Price Comparisons**: Reuses `PriceComparison` with slug-based presets
 - **Graceful Fallbacks**: Handles missing pricing or descriptions gracefully
 
 ### Service Providers (`src/components/PartnerHospitals.tsx` + `src/hooks/useServiceProviders.ts`)
+
 - **Supabase-backed**: Highlights featured service providers marked as partners
 - **Structured Metadata**: Maps JSON address/amenity fields into UI-friendly badges
 - **Shared Loading/Error states**: Provides consistent feedback while data loads
 
 ### Recovery Accommodations (`src/hooks/useHotels.ts`)
+
 - **Single Source**: Fetches partner hotels with star ratings and medical amenities
 - **Flexible Filters**: Optional limit parameter for spotlight sections or planners
 
 ### Patient Journey (`src/app/start-journey/page.tsx`)
+
 - **6-Step Wizard**: Progressive form with validation
 - **Document Upload**: File validation (PDF, JPG, PNG, max 10MB)
 - **Pre-population**: Treatment type from URL parameters
 - **Suspense Boundaries**: Proper loading states for `useSearchParams()`
 
 ### Trip Planning (`src/app/plan/page.tsx`)
+
 - **Interactive Wizard**: Multi-step form with progress tracking
 - **Budget Calculator**: Dynamic cost estimation
 - **Customization**: Accommodation, companions, dietary requirements
@@ -438,11 +469,13 @@ npm run start
 The platform has been extensively optimized for performance:
 
 ### React Query Caching
+
 - **Doctor Data**: 5-minute stale time, 10-minute cache time
 - **Review Data**: 5-minute stale time, 10-minute cache time
 - **Result**: 60% reduction in API calls
 
 ### Memoization
+
 - **useMemo**: Expensive filtering/sorting operations (70% faster)
   - Doctor specialization lists
   - Filtered doctor results
@@ -451,18 +484,22 @@ The platform has been extensively optimized for performance:
   - `signIn`, `signUp`, `signOut`, `resetPassword`, `updatePassword`
 
 ### Code Splitting
+
 - **Lazy Loading**: Routes wrapped in `Suspense` boundaries
 - **Dynamic Imports**: Heavy components loaded on demand
 
 ### Hook Optimization
+
 - **Dependency Arrays**: Precise dependencies to avoid unnecessary effects
 - **Example**: `useUserProfile` depends on `user?.id` instead of entire `user` object
 
 ### Static Data Extraction
+
 - **Treatment Data**: Moved outside components to prevent recreation
 - **Icons**: Statically defined, not recreated on each render
 
 ### Expected Performance Gains
+
 - **40-50% faster initial load**
 - **Smoother runtime performance** with fewer re-renders
 - **Better UX** with React Query's stale-while-revalidate strategy
@@ -480,6 +517,7 @@ The platform has been extensively optimized for performance:
 ### Other Platforms
 
 The project can be deployed to any platform that supports Next.js:
+
 - **Netlify**
 - **AWS Amplify**
 - **Railway**
@@ -494,6 +532,26 @@ The project can be deployed to any platform that supports Next.js:
   "output": "standalone"
 }
 ```
+
+---
+
+## ✅ WhatsApp Widget Verification
+
+Follow these steps after installing dependencies (`npm install`) to confirm the widget works across breakpoints.
+
+### Desktop
+
+1. Start the dev server with `npm run dev` and open `http://localhost:3000`.
+2. Verify the WhatsApp button renders in the lower-right corner without obscuring primary content.
+3. Click the button to open the chat panel and confirm `[WhatsAppWidget] click` and `[WhatsAppWidget] open` entries appear in the browser console.
+4. Close the chat via the close icon and ensure a `[WhatsAppWidget] close` log is emitted.
+
+### Mobile (Responsive Emulation)
+
+1. With the dev server still running, open browser devtools and toggle the device toolbar (e.g., Chrome: `Cmd+Shift+M`).
+2. Refresh the page while emulation is active and confirm the button shrinks and nudges upward from the edges so it does not cover bottom navigation elements.
+3. Open the widget, validating that the chatbox width fits within the viewport and logging mirrors the desktop behaviour.
+4. Close the widget to ensure the `[WhatsAppWidget] close` log fires again.
 
 ---
 
@@ -525,6 +583,7 @@ This project is proprietary and confidential.
 ## 📞 Support
 
 For questions or support, please contact:
+
 - **Email**: info@carentour.com
 - **Phone**: +20 100 1741666
 
@@ -533,5 +592,6 @@ For questions or support, please contact:
 <div align="center">
   Made with ❤️ by the Care N Tour Team
 
-  **Bringing World-Class Medical Care Within Reach**
+**Bringing World-Class Medical Care Within Reach**
+
 </div>
