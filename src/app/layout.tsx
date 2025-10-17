@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import QueryProvider from "@/components/QueryProvider";
-import WhatsAppWidget from "@/components/WhatsAppWidget";
+import WhatsAppWidgetGate from "@/components/WhatsAppWidgetGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -54,7 +54,7 @@ export default function RootLayout({
                 <Toaster />
                 <Sonner />
                 {children}
-                <WhatsAppWidget />
+                <WhatsAppWidgetGate />
               </TooltipProvider>
             </AuthProvider>
           </QueryProvider>
