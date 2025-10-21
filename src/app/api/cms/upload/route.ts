@@ -11,10 +11,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
   }
 
-  const fileName = `${Date.now()}_${file.name}`
-    .replace(/[^a-zA-Z0-9_.-]/g, "_")
-    .replace(/^_+/, "");
-  const storagePath = `cms/${fileName}`;
+  const originalFileName =
+    file.name.split("/").pop()?.split("\\").pop() ?? file.name;
+  if (!originalFileName) {
+    return NextResponse.json(
+      { error: "file name is invalid" },
+      { status: 400 },
+    );
+  }
+  const storagePath = `cms/${originalFileName}`;
 
   const supabase = getSupabaseAdmin();
 
