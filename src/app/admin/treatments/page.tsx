@@ -56,6 +56,7 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import { Loader2, Pencil, PlusCircle, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -85,6 +86,8 @@ const procedureSchema = z.object({
   egyptPrice: z.coerce.number().min(0).optional(),
   successRate: z.string().optional(),
   displayOrder: z.coerce.number().int().min(0).optional(),
+  pdfUrl: z.string().optional(),
+  additionalNotes: z.string().optional(),
   internationalPrices: z.array(internationalPriceSchema).default([]),
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
@@ -110,6 +113,7 @@ const treatmentSchema = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
+  download_url: z.string().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
@@ -132,6 +136,7 @@ type TreatmentPayload = {
   summary?: string;
   description?: string;
   overview?: string;
+  download_url?: string;
   base_price?: number;
   currency?: string;
   duration_days?: number;
@@ -145,9 +150,13 @@ type TreatmentPayload = {
 };
 
 type TreatmentProcedureRecord =
-  Database["public"]["Tables"]["treatment_procedures"]["Row"];
+  Database["public"]["Tables"]["treatment_procedures"]["Row"] & {
+    pdf_url?: string | null;
+    additional_notes?: string | null;
+  };
 
 type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"] & {
+  download_url?: string | null;
   grade: TreatmentGrade;
   procedures: TreatmentProcedureRecord[];
 };
@@ -172,6 +181,8 @@ const createEmptyProcedure = (): ProcedureFormValues => ({
   egyptPrice: undefined,
   successRate: "",
   displayOrder: undefined,
+  pdfUrl: "",
+  additionalNotes: "",
   internationalPrices: [],
   candidateRequirements: [],
   recoveryStages: [],
@@ -184,6 +195,7 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   summary: "",
   description: "",
   overview: "",
+  download_url: "",
   base_price: undefined,
   currency: "USD",
   duration_days: undefined,
@@ -286,6 +298,20 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
       : typeof value.success_rate === "string"
         ? value.success_rate
         : "";
+  const rawPdfUrl =
+    typeof value.pdfUrl === "string"
+      ? value.pdfUrl
+      : typeof value.pdf_url === "string"
+        ? value.pdf_url
+        : "";
+  const rawAdditionalNotes =
+    typeof value.additionalNotes === "string"
+      ? value.additionalNotes
+      : typeof value.additional_notes === "string"
+        ? value.additional_notes
+        : "";
+  const pdfUrl = trimString(rawPdfUrl) ?? "";
+  const additionalNotes = trimString(rawAdditionalNotes) ?? "";
 
   return {
     id,
@@ -300,6 +326,8 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
     internationalPrices,
     candidateRequirements,
     recoveryStages,
+    pdfUrl,
+    additionalNotes,
   };
 };
 
@@ -329,6 +357,7 @@ const mapRecordToFormValues = (
     summary: treatment.summary ?? "",
     description: treatment.description ?? "",
     overview: treatment.overview ?? "",
+    download_url: treatment.download_url ?? "",
     base_price: treatment.base_price ?? undefined,
     currency: treatment.currency ?? "USD",
     duration_days: treatment.duration_days ?? undefined,
@@ -398,6 +427,8 @@ const buildPayloadFromValues = (
         : undefined;
 
     const cleanedSuccessRate = trimString(procedure.successRate);
+    const pdfUrl = trimString(procedure.pdfUrl);
+    const additionalNotes = trimString(procedure.additionalNotes);
 
     return {
       name: procedure.name.trim(),
@@ -414,6 +445,8 @@ const buildPayloadFromValues = (
       internationalPrices,
       candidateRequirements,
       recoveryStages,
+      pdfUrl: pdfUrl ?? undefined,
+      additionalNotes: additionalNotes ?? undefined,
       id: procedure.id,
     } satisfies ProcedureFormValues;
   });
@@ -425,6 +458,7 @@ const buildPayloadFromValues = (
     summary: trimString(values.summary),
     description: trimString(values.description),
     overview: trimString(values.overview),
+    download_url: trimString(values.download_url),
     base_price: values.base_price ?? undefined,
     currency: trimString(values.currency),
     duration_days: values.duration_days ?? undefined,
@@ -913,6 +947,28 @@ export default function AdminTreatmentsPage() {
                         placeholder="Narrative overview shown near the top of the detail page."
                         {...field}
                       />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="download_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ImageUploader
+                          label="Treatment PDF"
+                          description="Optional download shared with patients for deeper guidance."
+                          value={field.value ? field.value : null}
+                          onChange={(value) => field.onChange(value ?? "")}
+                          accept="application/pdf"
+                          mode="file"
+                          emptyStateTitle="Upload treatment PDF"
+                          emptyStateDescription="PDF files up to 10MB"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1684,6 +1740,45 @@ function ProcedureFields({
           </FormItem>
         )}
       />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.pdfUrl`}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <ImageUploader
+                  label="Procedure PDF"
+                  description="Optional patient download for this procedure."
+                  value={field.value ? field.value : null}
+                  onChange={(value) => field.onChange(value ?? "")}
+                  accept="application/pdf"
+                  mode="file"
+                  emptyStateTitle="Upload procedure PDF"
+                  emptyStateDescription="PDF files up to 10MB"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.additionalNotes`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Additional notes</FormLabel>
+              <Textarea
+                rows={4}
+                placeholder="Optional guidance, preparation tips, or aftercare notes."
+                {...field}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       <div className="space-y-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
