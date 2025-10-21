@@ -197,6 +197,8 @@ const stripMarkdown = (value: string) =>
 const truncate = (value: string, limit = 260) =>
   value.length <= limit ? value : `${value.slice(0, limit).trim()}…`;
 
+const OPTIONAL_SELECT_NONE = "__none__";
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -399,10 +401,12 @@ export default function DashboardPage() {
         );
       }
 
+      const doctorId = values.doctor_id?.trim() ?? "";
+
       const { error } = await supabase.from("patient_stories").insert([
         {
           patient_id: patient.id,
-          doctor_id: values.doctor_id ?? null,
+          doctor_id: doctorId.length > 0 ? doctorId : null,
           treatment_id: values.treatment_id,
           headline: values.headline.trim(),
           excerpt: values.excerpt?.trim() ? values.excerpt.trim() : null,
@@ -1561,7 +1565,11 @@ export default function DashboardPage() {
                     <FormLabel>Lead doctor (optional)</FormLabel>
                     <Select
                       value={field.value ?? ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) =>
+                        field.onChange(
+                          value === OPTIONAL_SELECT_NONE ? "" : value,
+                        )
+                      }
                       disabled={doctorsLoading || storySubmitting}
                     >
                       <FormControl>
@@ -1576,7 +1584,9 @@ export default function DashboardPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No specific doctor</SelectItem>
+                        <SelectItem value={OPTIONAL_SELECT_NONE}>
+                          No specific doctor
+                        </SelectItem>
                         {doctorOptions.length === 0 && !doctorsLoading ? (
                           <SelectItem value="no-doctors" disabled>
                             No doctors found
