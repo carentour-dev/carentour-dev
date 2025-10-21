@@ -11,14 +11,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
   }
 
-  const fileName = `${Date.now()}_${file.name}`.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  const fileName = `${Date.now()}_${file.name}`
+    .replace(/[^a-zA-Z0-9_.-]/g, "_")
+    .replace(/^_+/, "");
+  const storagePath = `cms/${fileName}`;
 
   const supabase = getSupabaseAdmin();
 
   const arrayBuffer = await file.arrayBuffer();
   const { data, error } = await supabase.storage
-    .from("cms-assets")
-    .upload(fileName, Buffer.from(arrayBuffer), {
+    .from("media")
+    .upload(storagePath, Buffer.from(arrayBuffer), {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
@@ -27,8 +30,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: publicUrl } = supabase.storage.from("cms-assets").getPublicUrl(data.path);
-  return NextResponse.json({ url: publicUrl.publicUrl, path: data.path }, { status: 201 });
+  const { data: publicUrl } = supabase.storage
+    .from("media")
+    .getPublicUrl(data.path);
+  return NextResponse.json(
+    { url: publicUrl.publicUrl, path: data.path },
+    { status: 201 },
+  );
 }
-
-
