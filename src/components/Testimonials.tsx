@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Quote, Loader2, ExternalLink } from "lucide-react";
 import { usePatientReviews } from "@/hooks/useTestimonials";
+import { cn } from "@/lib/utils";
 
 const MAX_TESTIMONIALS = 3;
 
@@ -15,15 +16,27 @@ const Testimonials = () => {
 
   const testimonials = reviews.slice(0, MAX_TESTIMONIALS);
 
+  const gridClassName = cn(
+    "grid grid-cols-1 gap-8",
+    testimonials.length === 1 && "max-w-xl mx-auto",
+    testimonials.length === 2 &&
+      "md:grid-cols-2 max-w-4xl xl:max-w-5xl mx-auto",
+    testimonials.length >= 3 && "md:grid-cols-3",
+  );
+
   return (
     <section className="py-20 bg-gradient-to-b from-muted/30 to-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            What Our <span className="bg-gradient-hero bg-clip-text text-transparent">Patients Say</span>
+            What Our{" "}
+            <span className="bg-gradient-hero bg-clip-text text-transparent">
+              Patients Say
+            </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Real stories from patients who trusted us with their health and wellness journey
+            Real stories from patients who trusted us with their health and
+            wellness journey
           </p>
         </div>
 
@@ -32,9 +45,12 @@ const Testimonials = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : testimonials.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className={gridClassName}>
             {testimonials.map((testimonial) => (
-              <Card key={testimonial.id} className="group hover:shadow-elegant transition-spring border-border/50 overflow-hidden">
+              <Card
+                key={testimonial.id}
+                className="group hover:shadow-elegant transition-spring border-border/50 overflow-hidden"
+              >
                 <CardContent className="p-8">
                   {/* Quote Icon */}
                   <div className="flex justify-center mb-6">
@@ -46,7 +62,10 @@ const Testimonials = () => {
                   {/* Rating */}
                   <div className="flex justify-center space-x-1 mb-6">
                     {[...Array(Math.round(testimonial.rating))].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-accent fill-current" />
+                      <Star
+                        key={i}
+                        className="h-5 w-5 text-accent fill-current"
+                      />
                     ))}
                   </div>
 
@@ -57,12 +76,16 @@ const Testimonials = () => {
 
                   {/* Patient Info */}
                   <div className="text-center border-t border-border pt-6">
-                    <h4 className="font-semibold text-foreground text-lg">{testimonial.patient_name}</h4>
+                    <h4 className="font-semibold text-foreground text-lg">
+                      {testimonial.patient_name}
+                    </h4>
                     <p className="text-muted-foreground text-sm">
                       {testimonial.patient_country ?? "International Patient"}
                     </p>
                     {testimonial.treatment_slug && (
-                      <p className="text-primary text-sm font-medium capitalize">{testimonial.treatment_slug.replace(/-/g, ' ')}</p>
+                      <p className="text-primary text-sm font-medium capitalize">
+                        {testimonial.treatment_slug.replace(/-/g, " ")}
+                      </p>
                     )}
                     {testimonial.patient_id && (
                       <Link
@@ -79,9 +102,13 @@ const Testimonials = () => {
             ))}
           </div>
         ) : error ? (
-          <div className="text-center text-sm text-destructive">Failed to load testimonials.</div>
+          <div className="text-center text-sm text-destructive">
+            Failed to load testimonials.
+          </div>
         ) : (
-          <div className="text-center text-muted-foreground">Testimonials will appear here soon.</div>
+          <div className="text-center text-muted-foreground">
+            Testimonials will appear here soon.
+          </div>
         )}
       </div>
     </section>
