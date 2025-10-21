@@ -37,6 +37,7 @@ export function ImageUploader({
   emptyStateDescription = "PNG, JPG up to 5MB",
 }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sanitizeFileName = (name: string) => {
@@ -47,10 +48,71 @@ export function ImageUploader({
       .replace(/^-|-$/g, "");
   };
 
+  const extractStoragePath = (url: string | null) => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      const prefix = `/storage/v1/object/public/${bucket}/`;
+      if (!parsed.pathname.startsWith(prefix)) {
+        return null;
+      }
+      const relativePath = parsed.pathname.slice(prefix.length);
+      return decodeURIComponent(relativePath);
+    } catch {
+      return null;
+    }
+  };
+
+  const deleteFromStorage = async (
+    url: string | null,
+    { suppressError = false }: { suppressError?: boolean } = {},
+  ) => {
+    const path = extractStoragePath(url);
+    if (!path) return true;
+    try {
+      const { error: storageError } = await supabase.storage
+        .from(bucket)
+        .remove([path]);
+      if (storageError) {
+        console.error("Failed to delete storage object:", storageError);
+        if (!suppressError) {
+          setError("Failed to delete the file. Please try again.");
+        }
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Error deleting storage object:", err);
+      if (!suppressError) {
+        setError("Failed to delete the file. Please try again.");
+      }
+      return false;
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!value) {
+      onChange(null);
+      return;
+    }
+    setError(null);
+    setDeleting(true);
+    try {
+      const deleted = await deleteFromStorage(value);
+      if (deleted) {
+        onChange(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Upload the selected file to Supabase Storage and surface a public URL.
   const uploadFile = async (file: File) => {
+    if (uploading || deleting) return;
     setError(null);
     setUploading(true);
+    const previousValue = value ?? null;
 
     const isStorageConflictError = (
       error: unknown,
@@ -97,6 +159,9 @@ export function ImageUploader({
       } = supabase.storage.from(bucket).getPublicUrl(data.path);
 
       onChange(publicUrl);
+      if (previousValue) {
+        void deleteFromStorage(previousValue, { suppressError: true });
+      }
     } catch (err) {
       console.error(err);
       setError("File upload failed. Please try again.");
@@ -122,8 +187,11 @@ export function ImageUploader({
                 variant="secondary"
                 size="icon"
                 className="absolute right-2 top-2 h-8 w-8 rounded-full shadow"
-                onClick={() => onChange(null)}
+                onClick={() => {
+                  void handleRemove();
+                }}
                 type="button"
+                disabled={uploading || deleting}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -151,8 +219,11 @@ export function ImageUploader({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onChange(null)}
+                onClick={() => {
+                  void handleRemove();
+                }}
                 type="button"
+                disabled={uploading || deleting}
               >
                 Remove
               </Button>
@@ -161,7 +232,7 @@ export function ImageUploader({
         ) : (
           <div className="flex h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-muted-foreground/60 bg-background text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              {uploading ? (
+              {uploading || deleting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <UploadCloud className="h-5 w-5" />
@@ -181,7 +252,7 @@ export function ImageUploader({
         <Input
           type="file"
           accept={accept}
-          disabled={uploading}
+          disabled={uploading || deleting}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
