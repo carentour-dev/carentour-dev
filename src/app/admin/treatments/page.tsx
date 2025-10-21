@@ -86,7 +86,7 @@ const procedureSchema = z.object({
   egyptPrice: z.coerce.number().min(0).optional(),
   successRate: z.string().optional(),
   displayOrder: z.coerce.number().int().min(0).optional(),
-  pdfUrl: z.string().optional(),
+  pdfUrl: z.string().nullable().optional(),
   additionalNotes: z.string().optional(),
   internationalPrices: z.array(internationalPriceSchema).default([]),
   candidateRequirements: z.array(z.string().min(1)).default([]),
@@ -113,7 +113,7 @@ const treatmentSchema = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
-  download_url: z.string().optional(),
+  download_url: z.string().nullable().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
@@ -136,7 +136,7 @@ type TreatmentPayload = {
   summary?: string;
   description?: string;
   overview?: string;
-  download_url?: string;
+  download_url?: string | null;
   base_price?: number;
   currency?: string;
   duration_days?: number;
@@ -181,7 +181,7 @@ const createEmptyProcedure = (): ProcedureFormValues => ({
   egyptPrice: undefined,
   successRate: "",
   displayOrder: undefined,
-  pdfUrl: "",
+  pdfUrl: null,
   additionalNotes: "",
   internationalPrices: [],
   candidateRequirements: [],
@@ -195,7 +195,7 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   summary: "",
   description: "",
   overview: "",
-  download_url: "",
+  download_url: null,
   base_price: undefined,
   currency: "USD",
   duration_days: undefined,
@@ -298,19 +298,27 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
       : typeof value.success_rate === "string"
         ? value.success_rate
         : "";
-  const rawPdfUrl =
-    typeof value.pdfUrl === "string"
-      ? value.pdfUrl
-      : typeof value.pdf_url === "string"
-        ? value.pdf_url
-        : "";
+  const pdfUrlPrimary = value["pdfUrl"];
+  const pdfUrlLegacy = value["pdf_url"];
+  let rawPdfUrl: string | null | undefined;
+  if (typeof pdfUrlPrimary === "string") {
+    rawPdfUrl = pdfUrlPrimary;
+  } else if (pdfUrlPrimary === null) {
+    rawPdfUrl = null;
+  } else if (typeof pdfUrlLegacy === "string") {
+    rawPdfUrl = pdfUrlLegacy;
+  } else if (pdfUrlLegacy === null) {
+    rawPdfUrl = null;
+  } else {
+    rawPdfUrl = undefined;
+  }
   const rawAdditionalNotes =
     typeof value.additionalNotes === "string"
       ? value.additionalNotes
       : typeof value.additional_notes === "string"
         ? value.additional_notes
         : "";
-  const pdfUrl = trimString(rawPdfUrl) ?? "";
+  const pdfUrl = normalizeUploadValue(rawPdfUrl);
   const additionalNotes = trimString(rawAdditionalNotes) ?? "";
 
   return {
@@ -357,7 +365,7 @@ const mapRecordToFormValues = (
     summary: treatment.summary ?? "",
     description: treatment.description ?? "",
     overview: treatment.overview ?? "",
-    download_url: treatment.download_url ?? "",
+    download_url: treatment.download_url ?? null,
     base_price: treatment.base_price ?? undefined,
     currency: treatment.currency ?? "USD",
     duration_days: treatment.duration_days ?? undefined,
@@ -384,12 +392,23 @@ const trimString = (value?: string | null): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const normalizeUploadValue = (
+  value: string | null | undefined,
+): string | null | undefined => {
+  if (value === null) {
+    return null;
+  }
+  return trimString(value ?? undefined);
+};
+
 const buildPayloadFromValues = (
   values: TreatmentFormValues,
 ): TreatmentPayload => {
   const idealCandidates = values.ideal_candidates
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
+
+  const downloadUrl = normalizeUploadValue(values.download_url);
 
   const procedures = values.procedures.map((procedure) => {
     const candidateRequirements = procedure.candidateRequirements
@@ -427,7 +446,7 @@ const buildPayloadFromValues = (
         : undefined;
 
     const cleanedSuccessRate = trimString(procedure.successRate);
-    const pdfUrl = trimString(procedure.pdfUrl);
+    const pdfUrl = normalizeUploadValue(procedure.pdfUrl);
     const additionalNotes = trimString(procedure.additionalNotes);
 
     return {
@@ -445,7 +464,7 @@ const buildPayloadFromValues = (
       internationalPrices,
       candidateRequirements,
       recoveryStages,
-      pdfUrl: pdfUrl ?? undefined,
+      pdfUrl: pdfUrl === undefined ? undefined : pdfUrl,
       additionalNotes: additionalNotes ?? undefined,
       id: procedure.id,
     } satisfies ProcedureFormValues;
@@ -458,7 +477,7 @@ const buildPayloadFromValues = (
     summary: trimString(values.summary),
     description: trimString(values.description),
     overview: trimString(values.overview),
-    download_url: trimString(values.download_url),
+    download_url: downloadUrl === undefined ? undefined : downloadUrl,
     base_price: values.base_price ?? undefined,
     currency: trimString(values.currency),
     duration_days: values.duration_days ?? undefined,
@@ -961,8 +980,8 @@ export default function AdminTreatmentsPage() {
                         <ImageUploader
                           label="Treatment PDF"
                           description="Optional download shared with patients for deeper guidance."
-                          value={field.value ? field.value : null}
-                          onChange={(value) => field.onChange(value ?? "")}
+                          value={field.value ?? null}
+                          onChange={(value) => field.onChange(value)}
                           accept="application/pdf"
                           mode="file"
                           emptyStateTitle="Upload treatment PDF"
@@ -1751,8 +1770,8 @@ function ProcedureFields({
                 <ImageUploader
                   label="Procedure PDF"
                   description="Optional patient download for this procedure."
-                  value={field.value ? field.value : null}
-                  onChange={(value) => field.onChange(value ?? "")}
+                  value={field.value ?? null}
+                  onChange={(value) => field.onChange(value)}
                   accept="application/pdf"
                   mode="file"
                   emptyStateTitle="Upload procedure PDF"
