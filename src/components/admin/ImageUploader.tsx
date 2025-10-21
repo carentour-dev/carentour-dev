@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 import { cn } from "@/lib/utils";
 import { FileText, Loader2, UploadCloud, X } from "lucide-react";
 
@@ -70,16 +71,10 @@ export function ImageUploader({
     const path = extractStoragePath(url);
     if (!path) return true;
     try {
-      const { error: storageError } = await supabase.storage
-        .from(bucket)
-        .remove([path]);
-      if (storageError) {
-        console.error("Failed to delete storage object:", storageError);
-        if (!suppressError) {
-          setError("Failed to delete the file. Please try again.");
-        }
-        return false;
-      }
+      await adminFetch<{ success: boolean }>("/api/admin/storage/delete", {
+        method: "POST",
+        body: JSON.stringify({ bucket, path }),
+      });
       return true;
     } catch (err) {
       console.error("Error deleting storage object:", err);
