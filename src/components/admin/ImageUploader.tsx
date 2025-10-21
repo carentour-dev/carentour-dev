@@ -52,6 +52,22 @@ export function ImageUploader({
     setError(null);
     setUploading(true);
 
+    const isStorageConflictError = (
+      error: unknown,
+    ): error is { status?: number; statusCode?: string } => {
+      if (typeof error !== "object" || error === null) {
+        return false;
+      }
+
+      const status = (error as { status?: unknown }).status;
+      if (typeof status === "number" && status === 409) {
+        return true;
+      }
+
+      const statusCode = (error as { statusCode?: unknown }).statusCode;
+      return typeof statusCode === "string" && statusCode === "409";
+    };
+
     try {
       const segments = file.name.split(".");
       const extension =
@@ -67,7 +83,7 @@ export function ImageUploader({
         .upload(fileName, file, { upsert: false });
 
       if (uploadError) {
-        if (uploadError.status === 409) {
+        if (isStorageConflictError(uploadError)) {
           setError(
             "A file with this name already exists. Rename the file and try again.",
           );
