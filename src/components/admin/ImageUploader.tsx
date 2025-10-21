@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Loader2, UploadCloud, X } from "lucide-react";
+import { FileText, Loader2, UploadCloud, X } from "lucide-react";
 
 type ImageUploaderProps = {
   label: string;
@@ -18,6 +18,9 @@ type ImageUploaderProps = {
   folder?: string;
   accept?: string;
   className?: string;
+  mode?: "image" | "file";
+  emptyStateTitle?: string;
+  emptyStateDescription?: string;
 };
 
 export function ImageUploader({
@@ -29,9 +32,20 @@ export function ImageUploader({
   folder = "admin",
   accept = "image/*",
   className,
+  mode = "image",
+  emptyStateTitle = "Drag & drop or click to upload",
+  emptyStateDescription = "PNG, JPG up to 5MB",
 }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const sanitizeFileName = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  };
 
   // Upload the selected file to Supabase Storage and surface a public URL.
   const uploadFile = async (file: File) => {
@@ -39,13 +53,26 @@ export function ImageUploader({
     setUploading(true);
 
     try {
-      const extension = file.name.split(".").pop();
-      const fileName = `${folder}/${crypto.randomUUID()}.${extension}`;
+      const segments = file.name.split(".");
+      const extension =
+        segments.length > 1 ? segments.pop()?.toLowerCase() : undefined;
+      const rawBaseName = segments.join(".");
+      const sanitizedBase = sanitizeFileName(rawBaseName);
+      const finalExtension = extension ? `.${extension}` : "";
+      const basePart =
+        sanitizedBase.length > 0 ? sanitizedBase : crypto.randomUUID();
+      const fileName = `${folder}/${basePart}${finalExtension}`;
       const { data, error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(fileName, file, { upsert: false });
 
       if (uploadError) {
+        if (uploadError.status === 409) {
+          setError(
+            "A file with this name already exists. Rename the file and try again.",
+          );
+          return;
+        }
         throw uploadError;
       }
 
@@ -56,7 +83,7 @@ export function ImageUploader({
       onChange(publicUrl);
     } catch (err) {
       console.error(err);
-      setError("Image upload failed. Please try again.");
+      setError("File upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -67,26 +94,70 @@ export function ImageUploader({
       <Label className="text-sm font-medium text-foreground">{label}</Label>
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-muted-foreground/40 bg-muted/40 p-4">
         {value ? (
-          <div className="relative h-40 w-full overflow-hidden rounded-md bg-background ring-1 ring-border">
-            <Image src={value} alt="Uploaded preview" fill className="object-cover" />
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-2 top-2 h-8 w-8 rounded-full shadow"
-              onClick={() => onChange(null)}
-              type="button"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          mode === "image" ? (
+            <div className="relative h-40 w-full overflow-hidden rounded-md bg-background ring-1 ring-border">
+              <Image
+                src={value}
+                alt="Uploaded preview"
+                fill
+                className="object-cover"
+              />
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute right-2 top-2 h-8 w-8 rounded-full shadow"
+                onClick={() => onChange(null)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-background p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="space-y-1 text-left">
+                  <p className="text-sm font-medium text-foreground">
+                    Uploaded file
+                  </p>
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-primary underline-offset-4 hover:underline"
+                  >
+                    View document
+                  </a>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onChange(null)}
+                type="button"
+              >
+                Remove
+              </Button>
+            </div>
+          )
         ) : (
           <div className="flex h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-muted-foreground/60 bg-background text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <UploadCloud className="h-5 w-5" />}
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <UploadCloud className="h-5 w-5" />
+              )}
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Drag & drop or click to upload</p>
-              <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+              <p className="text-sm font-medium text-foreground">
+                {emptyStateTitle}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {emptyStateDescription}
+              </p>
             </div>
           </div>
         )}
@@ -103,7 +174,9 @@ export function ImageUploader({
           }}
         />
       </div>
-      {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      {description ? (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
