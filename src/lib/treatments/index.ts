@@ -3,6 +3,13 @@ import type { Database } from "@/integrations/supabase/types";
 export type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
 export type TreatmentProcedureRow =
   Database["public"]["Tables"]["treatment_procedures"]["Row"];
+type RawTreatmentRow = TreatmentRow & {
+  download_url?: string | null;
+};
+type RawTreatmentProcedureRow = TreatmentProcedureRow & {
+  pdf_url?: string | null;
+  additional_notes?: string | null;
+};
 
 export type TreatmentProcedure = {
   id: string;
@@ -13,6 +20,8 @@ export type TreatmentProcedure = {
   price?: string;
   egyptPrice?: number | null;
   successRate?: string;
+  pdfUrl?: string;
+  additionalNotes?: string;
   candidateRequirements: string[];
   recoveryStages: {
     stage: string;
@@ -43,6 +52,7 @@ export type NormalizedTreatment = {
   isFeatured?: boolean | null;
   isActive?: boolean | null;
   idealCandidates: string[];
+  downloadUrl?: string | null;
   procedures: TreatmentProcedure[];
 };
 
@@ -50,7 +60,7 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
 const normalizeProcedureRow = (
-  row: TreatmentProcedureRow,
+  row: RawTreatmentProcedureRow,
 ): TreatmentProcedure => {
   const recoveryStagesArray = Array.isArray(row.recovery_stages)
     ? (row.recovery_stages as unknown[])
@@ -120,6 +130,15 @@ const normalizeProcedureRow = (
 
   const rawSuccessRate =
     typeof row.success_rate === "string" ? row.success_rate.trim() : null;
+  const pdfUrl =
+    typeof row.pdf_url === "string" && row.pdf_url.trim().length > 0
+      ? row.pdf_url.trim()
+      : undefined;
+  const additionalNotes =
+    typeof row.additional_notes === "string" &&
+    row.additional_notes.trim().length > 0
+      ? row.additional_notes.trim()
+      : undefined;
 
   return {
     id: row.id,
@@ -134,6 +153,8 @@ const normalizeProcedureRow = (
         : null,
     successRate:
       rawSuccessRate && rawSuccessRate.length > 0 ? rawSuccessRate : undefined,
+    pdfUrl,
+    additionalNotes,
     candidateRequirements,
     recoveryStages: recoveryStagesArray,
     internationalPrices: internationalPricesArray,
@@ -142,8 +163,8 @@ const normalizeProcedureRow = (
 };
 
 export const normalizeTreatment = (
-  treatment: TreatmentRow,
-  procedureRows: TreatmentProcedureRow[] = [],
+  treatment: RawTreatmentRow,
+  procedureRows: RawTreatmentProcedureRow[] = [],
 ): NormalizedTreatment => {
   const idealCandidates = Array.isArray(treatment.ideal_candidates)
     ? treatment.ideal_candidates
@@ -154,6 +175,11 @@ export const normalizeTreatment = (
   const procedures = procedureRows
     .map((row) => normalizeProcedureRow(row))
     .sort((a, b) => a.displayOrder - b.displayOrder);
+  const downloadUrl =
+    typeof treatment.download_url === "string" &&
+    treatment.download_url.trim().length > 0
+      ? treatment.download_url.trim()
+      : null;
 
   return {
     id: treatment.id,
@@ -171,6 +197,7 @@ export const normalizeTreatment = (
     isFeatured: treatment.is_featured,
     isActive: treatment.is_active,
     idealCandidates,
+    downloadUrl,
     procedures,
   };
 };
