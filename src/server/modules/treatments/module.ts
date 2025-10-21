@@ -6,8 +6,17 @@ import type { Database } from "@/integrations/supabase/types";
 
 const treatmentsService = new CrudService("treatments", "treatment");
 
-type TreatmentInsert = Database["public"]["Tables"]["treatments"]["Insert"];
-type TreatmentUpdate = Database["public"]["Tables"]["treatments"]["Update"];
+type TreatmentInsert = Database["public"]["Tables"]["treatments"]["Insert"] & {
+  download_url?: string | null;
+};
+type TreatmentUpdate = Database["public"]["Tables"]["treatments"]["Update"] & {
+  download_url?: string | null;
+};
+type TreatmentProcedureInsert =
+  Database["public"]["Tables"]["treatment_procedures"]["Insert"] & {
+    pdf_url?: string | null;
+    additional_notes?: string | null;
+  };
 
 const METADATA_TABLE = "treatment_metadata";
 const DEFAULT_GRADE: Database["public"]["Enums"]["treatment_grade"] = "grade_c";
@@ -39,6 +48,8 @@ const procedureSchema = z.object({
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
   internationalPrices: z.array(internationalPriceSchema).default([]),
+  pdfUrl: z.string().optional(),
+  additionalNotes: z.string().optional(),
 });
 
 const baseTreatmentSchema = z.object({
@@ -48,6 +59,7 @@ const baseTreatmentSchema = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
+  download_url: z.string().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
@@ -168,20 +180,37 @@ const upsertProcedures = async (
     throw new ApiError(400, "Treatments must include at least one procedure");
   }
 
-  const payload = procedures.map((procedure, index) => ({
-    treatment_id: treatmentId,
-    name: procedure.name,
-    description: procedure.description ?? null,
-    duration: procedure.duration ?? null,
-    recovery: procedure.recovery ?? null,
-    price: procedure.price ?? null,
-    egypt_price: procedure.egyptPrice ?? null,
-    success_rate: procedure.successRate ?? null,
-    candidate_requirements: procedure.candidateRequirements,
-    recovery_stages: procedure.recoveryStages,
-    international_prices: procedure.internationalPrices,
-    display_order: procedure.displayOrder ?? index,
-  }));
+  const payload: TreatmentProcedureInsert[] = procedures.map(
+    (procedure, index) => {
+      const pdfUrl =
+        typeof procedure.pdfUrl === "string" &&
+        procedure.pdfUrl.trim().length > 0
+          ? procedure.pdfUrl.trim()
+          : null;
+      const additionalNotes =
+        typeof procedure.additionalNotes === "string" &&
+        procedure.additionalNotes.trim().length > 0
+          ? procedure.additionalNotes.trim()
+          : null;
+
+      return {
+        treatment_id: treatmentId,
+        name: procedure.name,
+        description: procedure.description ?? null,
+        duration: procedure.duration ?? null,
+        recovery: procedure.recovery ?? null,
+        price: procedure.price ?? null,
+        egypt_price: procedure.egyptPrice ?? null,
+        success_rate: procedure.successRate ?? null,
+        candidate_requirements: procedure.candidateRequirements,
+        recovery_stages: procedure.recoveryStages,
+        international_prices: procedure.internationalPrices,
+        display_order: procedure.displayOrder ?? index,
+        pdf_url: pdfUrl,
+        additional_notes: additionalNotes,
+      };
+    },
+  );
 
   const { error } = await supabase.from("treatment_procedures").insert(payload);
 
@@ -278,6 +307,7 @@ export const treatmentController = {
       summary: parsed.summary ?? null,
       description: parsed.description ?? null,
       overview: parsed.overview ?? null,
+      download_url: parsed.download_url ?? null,
       base_price: parsed.base_price ?? null,
       currency: parsed.currency ?? null,
       duration_days: parsed.duration_days ?? null,
@@ -324,6 +354,8 @@ export const treatmentController = {
       updatePayload.description = parsed.description ?? null;
     if (parsed.overview !== undefined)
       updatePayload.overview = parsed.overview ?? null;
+    if (parsed.download_url !== undefined)
+      updatePayload.download_url = parsed.download_url ?? null;
     if (parsed.base_price !== undefined)
       updatePayload.base_price = parsed.base_price ?? null;
     if (parsed.currency !== undefined)
