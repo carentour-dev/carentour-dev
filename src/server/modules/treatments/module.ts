@@ -48,7 +48,7 @@ const procedureSchema = z.object({
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
   internationalPrices: z.array(internationalPriceSchema).default([]),
-  pdfUrl: z.string().optional(),
+  pdfUrl: z.string().nullable().optional(),
   additionalNotes: z.string().optional(),
 });
 
@@ -59,7 +59,7 @@ const baseTreatmentSchema = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
-  download_url: z.string().optional(),
+  download_url: z.string().nullable().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
