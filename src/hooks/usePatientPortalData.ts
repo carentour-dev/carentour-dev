@@ -6,26 +6,45 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
-type ContactRequestRow = Database["public"]["Tables"]["contact_requests"]["Row"];
-type ConsultationRow = Database["public"]["Tables"]["patient_consultations"]["Row"];
-type AppointmentRow = Database["public"]["Tables"]["patient_appointments"]["Row"];
+type ContactRequestRow =
+  Database["public"]["Tables"]["contact_requests"]["Row"];
+type ConsultationRow =
+  Database["public"]["Tables"]["patient_consultations"]["Row"];
+type AppointmentRow =
+  Database["public"]["Tables"]["patient_appointments"]["Row"];
 type DoctorReviewRow = Database["public"]["Tables"]["doctor_reviews"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
-type ServiceProviderRow = Database["public"]["Tables"]["service_providers"]["Row"];
+type ServiceProviderRow =
+  Database["public"]["Tables"]["service_providers"]["Row"];
+type PatientStoryRow = Database["public"]["Tables"]["patient_stories"]["Row"];
 
 export type PatientConsultation = ConsultationRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
-  contact_requests?: Pick<ContactRequestRow, "id" | "status" | "request_type" | "origin"> | null;
+  contact_requests?: Pick<
+    ContactRequestRow,
+    "id" | "status" | "request_type" | "origin"
+  > | null;
 };
 
 export type PatientAppointment = AppointmentRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
-  service_provider?: Pick<ServiceProviderRow, "id" | "name" | "facility_type"> | null;
-  patient_consultations?: Pick<ConsultationRow, "id" | "scheduled_at" | "status"> | null;
+  service_provider?: Pick<
+    ServiceProviderRow,
+    "id" | "name" | "facility_type"
+  > | null;
+  patient_consultations?: Pick<
+    ConsultationRow,
+    "id" | "scheduled_at" | "status"
+  > | null;
 };
 
 export type PatientReview = DoctorReviewRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
+};
+
+export type PatientStory = PatientStoryRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
   treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
 };
@@ -36,14 +55,17 @@ export interface PatientPortalSnapshot {
   consultations: PatientConsultation[];
   appointments: PatientAppointment[];
   reviews: PatientReview[];
+  stories: PatientStory[];
 }
 
 const buildFallbackName = (user: ReturnType<typeof useAuth>["user"]) => {
   if (!user) return "Care N Tour Patient";
   const raw =
-    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim().length > 0
+    (typeof user.user_metadata?.full_name === "string" &&
+    user.user_metadata.full_name.trim().length > 0
       ? user.user_metadata.full_name
-      : typeof user.user_metadata?.username === "string" && user.user_metadata.username.trim().length > 0
+      : typeof user.user_metadata?.username === "string" &&
+          user.user_metadata.username.trim().length > 0
         ? user.user_metadata.username
         : typeof user.email === "string"
           ? user.email.split("@")[0]
@@ -63,7 +85,9 @@ const fetchPatientRecord = async (userId: string) => {
     .maybeSingle();
 };
 
-const ensurePatientRecord = async (user: NonNullable<ReturnType<typeof useAuth>["user"]>): Promise<PatientRow> => {
+const ensurePatientRecord = async (
+  user: NonNullable<ReturnType<typeof useAuth>["user"]>,
+): Promise<PatientRow> => {
   const { data, error } = await fetchPatientRecord(user.id);
 
   if (error && error.code !== "PGRST116") {
@@ -93,7 +117,9 @@ const ensurePatientRecord = async (user: NonNullable<ReturnType<typeof useAuth>[
       // Another request created the record concurrently. Re-fetch.
       const retry = await fetchPatientRecord(user.id);
       if (retry.error) {
-        throw new Error(retry.error.message ?? "Failed to fetch existing patient record");
+        throw new Error(
+          retry.error.message ?? "Failed to fetch existing patient record",
+        );
       }
       if (!retry.data) {
         throw new Error("Patient record exists but could not be loaded");
@@ -117,39 +143,49 @@ const ensurePatientRecord = async (user: NonNullable<ReturnType<typeof useAuth>[
   return inserted;
 };
 
-const fetchPatientPortalSnapshot = async (user: NonNullable<ReturnType<typeof useAuth>["user"]>) => {
+const fetchPatientPortalSnapshot = async (
+  user: NonNullable<ReturnType<typeof useAuth>["user"]>,
+) => {
   const patient = await ensurePatientRecord(user);
 
-  const [requests, consultations, appointments, reviews] = await Promise.all([
-    supabase
-      .from("contact_requests")
-      .select(
-        "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, created_at, updated_at, resolved_at",
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("patient_consultations")
-      .select(
-        "id, patient_id, user_id, contact_request_id, doctor_id, status, scheduled_at, duration_minutes, timezone, location, meeting_url, notes, created_at, updated_at, doctors(id, name, title, avatar_url), contact_requests(id, status, request_type, origin)",
-      )
-      .eq("patient_id", patient.id)
-      .order("scheduled_at", { ascending: true }),
-    supabase
-      .from("patient_appointments")
-      .select(
-        "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), service_provider:service_providers(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
-      )
-      .eq("patient_id", patient.id)
-      .order("starts_at", { ascending: true }),
-    supabase
-      .from("doctor_reviews")
-      .select(
-        "id, doctor_id, treatment_id, patient_id, rating, review_text, recovery_time, is_verified, published, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
-      )
-      .eq("patient_id", patient.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [requests, consultations, appointments, reviews, stories] =
+    await Promise.all([
+      supabase
+        .from("contact_requests")
+        .select(
+          "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, created_at, updated_at, resolved_at",
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("patient_consultations")
+        .select(
+          "id, patient_id, user_id, contact_request_id, doctor_id, status, scheduled_at, duration_minutes, timezone, location, meeting_url, notes, created_at, updated_at, doctors(id, name, title, avatar_url), contact_requests(id, status, request_type, origin)",
+        )
+        .eq("patient_id", patient.id)
+        .order("scheduled_at", { ascending: true }),
+      supabase
+        .from("patient_appointments")
+        .select(
+          "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), service_provider:service_providers(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
+        )
+        .eq("patient_id", patient.id)
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("doctor_reviews")
+        .select(
+          "id, doctor_id, treatment_id, patient_id, rating, review_text, recovery_time, is_verified, published, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
+        )
+        .eq("patient_id", patient.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("patient_stories")
+        .select(
+          "id, patient_id, doctor_id, treatment_id, headline, excerpt, body_markdown, hero_image, locale, published, featured, display_order, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
+        )
+        .eq("patient_id", patient.id)
+        .order("created_at", { ascending: false }),
+    ]);
 
   const requestError = requests.error;
   if (requestError) {
@@ -158,7 +194,9 @@ const fetchPatientPortalSnapshot = async (user: NonNullable<ReturnType<typeof us
 
   const consultationsError = consultations.error;
   if (consultationsError) {
-    throw new Error(consultationsError.message ?? "Failed to load consultations");
+    throw new Error(
+      consultationsError.message ?? "Failed to load consultations",
+    );
   }
 
   const appointmentsError = appointments.error;
@@ -171,12 +209,18 @@ const fetchPatientPortalSnapshot = async (user: NonNullable<ReturnType<typeof us
     throw new Error(reviewsError.message ?? "Failed to load reviews");
   }
 
+  const storiesError = stories.error;
+  if (storiesError) {
+    throw new Error(storiesError.message ?? "Failed to load stories");
+  }
+
   return {
     patient,
     requests: requests.data ?? [],
     consultations: (consultations.data ?? []) as PatientConsultation[],
     appointments: (appointments.data ?? []) as PatientAppointment[],
     reviews: (reviews.data ?? []) as PatientReview[],
+    stories: (stories.data ?? []) as PatientStory[],
   };
 };
 
@@ -199,6 +243,7 @@ export const usePatientPortalData = () => {
     consultations: snapshot?.consultations ?? [],
     appointments: snapshot?.appointments ?? [],
     reviews: snapshot?.reviews ?? [],
+    stories: snapshot?.stories ?? [],
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error: query.error instanceof Error ? query.error.message : null,
