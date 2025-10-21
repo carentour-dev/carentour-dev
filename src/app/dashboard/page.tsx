@@ -814,14 +814,6 @@ export default function DashboardPage() {
                       <Star className="mr-2 h-4 w-4" />
                       Share review
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push("/concierge")}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Talk with concierge
-                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -915,14 +907,6 @@ export default function DashboardPage() {
                     <Button size="sm" onClick={() => setStoryDialogOpen(true)}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       Share story
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => scrollToSection("requests")}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Need help?
                     </Button>
                   </div>
                 </CardHeader>
