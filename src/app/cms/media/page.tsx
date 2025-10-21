@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 
 type FileItem = {
   name: string;
@@ -112,11 +113,23 @@ export default function CmsMediaPage() {
     }
   };
 
-  const onDelete = async (name: string) => {
-    const confirmed = confirm(`Delete ${name}?`);
+  const onDelete = async (path: string) => {
+    const confirmed = confirm(`Delete ${path}?`);
     if (!confirmed) return;
-    await supabase.storage.from(MEDIA_BUCKET).remove([name]);
-    await load();
+    try {
+      await adminFetch<{ success: boolean }>("/api/admin/storage/delete", {
+        method: "POST",
+        body: JSON.stringify({ bucket: MEDIA_BUCKET, path }),
+      });
+      await load();
+    } catch (error) {
+      console.error("Failed to delete media asset", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while deleting the file.";
+      alert(message);
+    }
   };
 
   const publicUrlFor = (path: string) =>
