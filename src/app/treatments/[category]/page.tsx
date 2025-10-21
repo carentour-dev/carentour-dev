@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ComponentType } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -25,6 +25,7 @@ import {
   Heart,
   CheckCircle,
   Loader2,
+  FileDown,
 } from "lucide-react";
 
 export default function TreatmentDetails() {
@@ -100,6 +101,7 @@ export default function TreatmentDetails() {
         "Our medical experts craft individualized treatment plans combining top specialists and service providers.",
       idealCandidates: normalizedTreatment.idealCandidates,
       procedures: normalizedTreatment.procedures,
+      downloadUrl: normalizedTreatment.downloadUrl ?? null,
       quickFacts: {
         duration: normalizedTreatment.durationDays,
         recovery: normalizedTreatment.recoveryTimeDays,
@@ -116,24 +118,36 @@ export default function TreatmentDetails() {
         normalizedTreatment.procedures,
       );
 
+      const fallbackDuration =
+        typeof primaryProcedure?.duration === "string"
+          ? primaryProcedure.duration.trim()
+          : "";
       const durationLabel = normalizedTreatment.durationDays
         ? `${normalizedTreatment.durationDays} day${normalizedTreatment.durationDays === 1 ? "" : "s"}`
-        : primaryProcedure?.duration;
+        : fallbackDuration || undefined;
 
+      const fallbackRecovery =
+        typeof primaryProcedure?.recovery === "string"
+          ? primaryProcedure.recovery.trim()
+          : "";
       const recoveryLabel = normalizedTreatment.recoveryTimeDays
         ? `${normalizedTreatment.recoveryTimeDays} day${normalizedTreatment.recoveryTimeDays === 1 ? "" : "s"}`
-        : primaryProcedure?.recovery;
+        : fallbackRecovery || undefined;
 
       const priceValue =
         normalizedTreatment.basePrice ??
         primaryProcedure?.egyptPrice ??
         undefined;
 
+      const fallbackSuccess =
+        typeof primaryProcedure?.successRate === "string"
+          ? primaryProcedure.successRate.trim()
+          : "";
       const successRateLabel =
         normalizedTreatment.successRate !== undefined &&
         normalizedTreatment.successRate !== null
           ? `${normalizedTreatment.successRate}%`
-          : primaryProcedure?.successRate;
+          : fallbackSuccess || undefined;
 
       return {
         durationLabel,
@@ -147,7 +161,7 @@ export default function TreatmentDetails() {
     return null;
   }, [normalizedTreatment]);
 
-  const hasQuickFacts =
+  const quickFactsHasContent =
     !!quickFacts &&
     Boolean(
       quickFacts.durationLabel ||
@@ -156,6 +170,7 @@ export default function TreatmentDetails() {
           !Number.isNaN(quickFacts.priceValue)) ||
         quickFacts.successRateLabel,
     );
+  const hasQuickFacts = quickFactsHasContent || Boolean(treatment?.downloadUrl);
 
   if (treatmentsLoading && !treatment) {
     return (
@@ -331,6 +346,25 @@ export default function TreatmentDetails() {
                       </div>
                     ) : null}
 
+                    {treatment?.downloadUrl ? (
+                      <div className="flex items-center gap-3">
+                        <FileDown className="h-5 w-5 text-primary" />
+                        <div>
+                          <div className="font-medium text-foreground">
+                            Treatment PDF
+                          </div>
+                          <a
+                            href={treatment.downloadUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-primary underline-offset-4 hover:underline"
+                          >
+                            Download overview
+                          </a>
+                        </div>
+                      </div>
+                    ) : null}
+
                     {!hasQuickFacts && (
                       <div className="flex items-start gap-3 rounded-md border border-border/60 px-3 py-2">
                         <Users className="h-5 w-5 text-primary mt-0.5" />
@@ -367,123 +401,204 @@ export default function TreatmentDetails() {
 
             <div className="space-y-12">
               {treatment.procedures && treatment.procedures.length > 0 ? (
-                treatment.procedures.map((procedure, index) => (
-                  <Card
-                    key={index}
-                    className="border-border/50 hover:shadow-card-hover transition-spring"
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-2xl">
-                        {procedure.name}
-                      </CardTitle>
-                      <p className="text-muted-foreground text-lg">
-                        {procedure.description}
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      {/* Basic Info Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                        <div className="text-center p-4 bg-muted/50 rounded-lg">
-                          <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">
-                            Duration
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {procedure.duration}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-muted/50 rounded-lg">
-                          <Heart className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">
-                            Recovery
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {procedure.recovery}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-muted/50 rounded-lg">
-                          <DollarSign className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">
-                            Price
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {procedure.price}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-muted/50 rounded-lg">
-                          <Star className="h-6 w-6 text-primary mx-auto mb-2" />
-                          <div className="text-sm font-medium text-foreground">
-                            Success Rate
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {procedure.successRate}
-                          </div>
-                        </div>
-                      </div>
+                treatment.procedures.map((procedure, index) => {
+                  const detailItems: {
+                    label: string;
+                    value: string | undefined;
+                    icon: ComponentType<{ className?: string }>;
+                  }[] = [
+                    {
+                      label: "Duration",
+                      value: procedure.duration?.trim(),
+                      icon: Clock,
+                    },
+                    {
+                      label: "Recovery",
+                      value: procedure.recovery?.trim(),
+                      icon: Heart,
+                    },
+                    {
+                      label: "Price",
+                      value: procedure.price?.trim(),
+                      icon: DollarSign,
+                    },
+                    {
+                      label: "Success Rate",
+                      value: procedure.successRate?.trim(),
+                      icon: Star,
+                    },
+                  ];
+                  const visibleDetails = detailItems.filter(
+                    (
+                      detail,
+                    ): detail is {
+                      label: string;
+                      value: string;
+                      icon: ComponentType<{ className?: string }>;
+                    } => Boolean(detail.value),
+                  );
+                  const hasProcedureSummary =
+                    visibleDetails.length > 0 || Boolean(procedure.pdfUrl);
+                  const hasCandidateRequirements =
+                    Array.isArray(procedure.candidateRequirements) &&
+                    procedure.candidateRequirements.length > 0;
 
-                      {/* Candidate Requirements */}
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-primary" />
-                          Candidate Requirements
-                        </h4>
-                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {procedure.candidateRequirements.map(
-                            (req: string, reqIndex: number) => (
-                              <li
-                                key={reqIndex}
-                                className="flex items-start gap-2"
-                              >
-                                <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                                <span className="text-muted-foreground">
-                                  {req}
-                                </span>
-                              </li>
-                            ),
-                          )}
-                        </ul>
-                      </div>
-
-                      {/* Price Comparison */}
-                      {procedure.internationalPrices &&
-                      procedure.internationalPrices.length > 0 &&
-                      procedure.egyptPrice ? (
-                        <div className="mb-8">
-                          <PriceComparison
-                            treatment={procedure.name}
-                            egyptPrice={procedure.egyptPrice}
-                            internationalPrices={procedure.internationalPrices}
-                          />
-                        </div>
-                      ) : null}
-
-                      {/* Recovery Timeline */}
-                      <div>
-                        <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <Clock className="h-5 w-5 text-primary" />
-                          Recovery Timeline
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {procedure.recoveryStages.map(
-                            (stage: any, stageIndex: number) => (
-                              <div
-                                key={stageIndex}
-                                className="p-4 border border-border rounded-lg"
-                              >
-                                <div className="text-sm font-medium text-primary mb-2">
-                                  {stage.stage}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {stage.description}
-                                </div>
+                  return (
+                    <Card
+                      key={index}
+                      className="border-border/50 hover:shadow-card-hover transition-spring"
+                    >
+                      <CardHeader>
+                        <CardTitle className="text-2xl">
+                          {procedure.name}
+                        </CardTitle>
+                        <p className="text-muted-foreground text-lg">
+                          {procedure.description}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {hasProcedureSummary ? (
+                          <div className="mb-8 space-y-6">
+                            {visibleDetails.length > 0 ? (
+                              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                                {visibleDetails.map((detail) => {
+                                  const Icon = detail.icon;
+                                  return (
+                                    <div
+                                      key={detail.label}
+                                      className="text-center p-4 bg-muted/50 rounded-lg"
+                                    >
+                                      <Icon className="h-6 w-6 text-primary mx-auto mb-2" />
+                                      <div className="text-sm font-medium text-foreground">
+                                        {detail.label}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {detail.value}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            ),
+                            ) : null}
+                            {procedure.pdfUrl ? (
+                              <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <FileDown className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      Procedure PDF
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Download a detailed overview for this
+                                      procedure.
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button asChild variant="outline" size="sm">
+                                  <a
+                                    href={procedure.pdfUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    Download
+                                  </a>
+                                </Button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        {/* Candidate Requirements */}
+                        <div className="mb-8">
+                          <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-primary" />
+                            Candidate Requirements
+                          </h4>
+                          {hasCandidateRequirements ? (
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {procedure.candidateRequirements.map(
+                                (req: string, reqIndex: number) => (
+                                  <li
+                                    key={reqIndex}
+                                    className="flex items-start gap-2"
+                                  >
+                                    <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                                    <span className="text-muted-foreground">
+                                      {req}
+                                    </span>
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Candidate suitability is confirmed during your
+                              consultation to ensure the treatment matches your
+                              health profile.
+                            </p>
                           )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+
+                        {/* Additional Notes */}
+                        {procedure.additionalNotes ? (
+                          <div className="mb-8 rounded-lg border border-border/60 bg-muted/40 p-4 text-left">
+                            <h4 className="text-lg font-semibold text-foreground">
+                              Additional Notes
+                            </h4>
+                            <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                              {procedure.additionalNotes}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {/* Recovery Timeline */}
+                        {procedure.recoveryStages &&
+                        procedure.recoveryStages.length > 0 ? (
+                          <div className="mb-8">
+                            <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                              <Clock className="h-5 w-5 text-primary" />
+                              Recovery Timeline
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                              {procedure.recoveryStages.map(
+                                (stage: any, stageIndex: number) => (
+                                  <div
+                                    key={stageIndex}
+                                    className="p-4 border border-border rounded-lg"
+                                  >
+                                    <div className="text-sm font-medium text-primary mb-2">
+                                      {stage.stage}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {stage.description}
+                                    </div>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* Price Comparison */}
+                        {procedure.internationalPrices &&
+                        procedure.internationalPrices.length > 0 &&
+                        procedure.egyptPrice ? (
+                          <div className="mb-8">
+                            <PriceComparison
+                              treatment={procedure.name}
+                              egyptPrice={procedure.egyptPrice}
+                              internationalPrices={
+                                procedure.internationalPrices
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  );
+                })
               ) : (
                 <div className="text-center text-muted-foreground">
                   Detailed procedure information for this treatment will be
