@@ -955,11 +955,13 @@ export type Database = {
           created_at: string;
           email: string | null;
           id: string;
+          job_title: string | null;
           nationality: string | null;
           phone: string | null;
           sex: string | null;
           updated_at: string;
           user_id: string;
+          language: string | null;
           username: string | null;
         };
         Insert: {
@@ -968,11 +970,13 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
+          job_title?: string | null;
           nationality?: string | null;
           phone?: string | null;
           sex?: string | null;
           updated_at?: string;
           user_id: string;
+          language?: string | null;
           username?: string | null;
         };
         Update: {
@@ -981,11 +985,13 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
+          job_title?: string | null;
           nationality?: string | null;
           phone?: string | null;
           sex?: string | null;
           updated_at?: string;
           user_id?: string;
+          language?: string | null;
           username?: string | null;
         };
         Relationships: [];
