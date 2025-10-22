@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resendApiKey = Deno.env.get("RESEND_API_KEY")?.trim();
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -138,6 +139,27 @@ const handler = async (req: Request) => {
       staffName: staffName || email.split("@")[0],
       roles,
     });
+
+    if (!resend) {
+      console.error(
+        "RESEND_API_KEY is not configured for the send-staff-invite function.",
+      );
+
+      return new Response(
+        JSON.stringify({
+          error:
+            "Email service is not configured. Add RESEND_API_KEY via Supabase secrets.",
+          success: false,
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        },
+      );
+    }
 
     const { data, error } = await resend.emails.send({
       from: "Care N Tour Team <info@carentour.com>",
