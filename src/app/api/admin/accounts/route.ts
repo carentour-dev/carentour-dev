@@ -35,6 +35,93 @@ type ProfileRoleRecord = {
   role?: RoleRecord | null;
 };
 
+function resolveInviteRedirectUrl(): string | null {
+  const explicit = process.env.TEAM_ACCOUNT_INVITE_REDIRECT_URL?.trim() ?? "";
+  if (explicit.length > 0) {
+    return explicit;
+  }
+
+  const adminConsoleBase = process.env.ADMIN_CONSOLE_URL?.trim() ?? "";
+  if (adminConsoleBase.length === 0) {
+    return null;
+  }
+
+  const normalizedBase = adminConsoleBase.replace(/\/+$/, "");
+  if (/\/staff\/onboarding$/i.test(normalizedBase)) {
+    return normalizedBase;
+  }
+
+  return `${normalizedBase}/staff/onboarding`;
+}
+
+function extractFunctionsErrorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+
+    const contextBody = (error as { context?: { body?: unknown } }).context
+      ?.body;
+    if (contextBody) {
+      try {
+        const parsed =
+          typeof contextBody === "string"
+            ? JSON.parse(contextBody)
+            : contextBody;
+
+        if (parsed && typeof parsed === "object") {
+          const parsedError = (parsed as { error?: unknown }).error;
+          if (
+            typeof parsedError === "string" &&
+            parsedError.trim().length > 0
+          ) {
+            return parsedError;
+          }
+
+          if (parsedError && typeof parsedError === "object") {
+            const nestedMessage = (parsedError as { message?: unknown })
+              .message;
+            if (
+              typeof nestedMessage === "string" &&
+              nestedMessage.trim().length > 0
+            ) {
+              return nestedMessage;
+            }
+          }
+
+          const parsedMessage = (parsed as { message?: unknown }).message;
+          if (
+            typeof parsedMessage === "string" &&
+            parsedMessage.trim().length > 0
+          ) {
+            return parsedMessage;
+          }
+
+          if (parsedMessage && typeof parsedMessage === "object") {
+            const nestedMessage = (parsedMessage as { message?: unknown })
+              .message;
+            if (
+              typeof nestedMessage === "string" &&
+              nestedMessage.trim().length > 0
+            ) {
+              return nestedMessage;
+            }
+          }
+        }
+      } catch {
+        // Ignore JSON parsing errors and fall back to generic message
+      }
+    }
+  }
+
+  return "Unknown email service error.";
+}
+
 export async function GET() {
   try {
     await requireRole(["admin"]);
@@ -195,15 +282,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const inviteRedirectUrl =
-      process.env.TEAM_ACCOUNT_INVITE_REDIRECT_URL ??
-      process.env.ADMIN_CONSOLE_URL ??
-      null;
+    const inviteRedirectUrl = resolveInviteRedirectUrl();
 
     if (!inviteRedirectUrl) {
       throw new ApiError(
         500,
-        "TEAM_ACCOUNT_INVITE_REDIRECT_URL is not configured. Set it to your staff onboarding URL before inviting team members.",
+        "TEAM_ACCOUNT_INVITE_REDIRECT_URL or ADMIN_CONSOLE_URL must be configured. Set one of them so invites can redirect staff to the onboarding experience.",
       );
     }
 
@@ -294,10 +378,7 @@ export async function POST(request: Request) {
       console.error("Failed to send staff invite email:", emailError);
       // Rollback: delete the user if email fails
       await supabaseAdmin.auth.admin.deleteUser(newUserId).catch(() => {});
-      const emailErrorMessage =
-        typeof emailError === "string"
-          ? emailError
-          : (emailError.message ?? "Unknown email service error.");
+      const emailErrorMessage = extractFunctionsErrorMessage(emailError);
       throw new ApiError(
         500,
         "Failed to send invitation email.",
