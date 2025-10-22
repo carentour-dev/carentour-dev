@@ -32,14 +32,6 @@ import {
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Loader2, Pencil, ShieldPlus, UserPlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -523,8 +515,8 @@ export default function AdminAccountsPage() {
               Existing team members
             </CardTitle>
             <CardDescription>
-              Keep team records current by editing personal details directly in
-              the table below. Role changes still live inside Access for now.
+              Keep team records current by editing personal details directly
+              below. Role changes still live inside Access for now.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -544,126 +536,121 @@ export default function AdminAccountsPage() {
                 with their assigned roles.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead className="hidden lg:table-cell">
-                        Details
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Created
-                      </TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {accounts.map((account) => {
-                      const resolvedSex =
-                        account.sex &&
-                        sexOptions.includes(account.sex as SexOption)
-                          ? sexOptionLabels[account.sex as SexOption]
-                          : (account.sex ?? "—");
-                      const displayName =
-                        account.username ?? account.email ?? "Team member";
-                      const initials =
-                        displayName
-                          .split(/\s+/)
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .map((part) => part.charAt(0).toUpperCase())
-                          .join("") || "ST";
+              <div className="space-y-4">
+                {accounts.map((account) => {
+                  const resolvedSex =
+                    account.sex && sexOptions.includes(account.sex as SexOption)
+                      ? sexOptionLabels[account.sex as SexOption]
+                      : (account.sex ?? "—");
+                  const displayName =
+                    account.username ?? account.email ?? "Team member";
+                  const initials =
+                    displayName
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part.charAt(0).toUpperCase())
+                      .join("") || "ST";
 
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="min-w-[200px] font-medium">
-                            <div className="flex items-start gap-3">
-                              <Avatar className="mt-1 h-10 w-10 border border-border/60">
-                                <AvatarImage
-                                  src={account.avatar_url ?? undefined}
-                                  alt={displayName}
-                                />
-                                <AvatarFallback>{initials}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col">
-                                <span>{account.username ?? "—"}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {account.job_title ?? "—"}
-                                </span>
+                  const metadata: Array<{ label: string; value: string }> = [
+                    {
+                      label: "DOB",
+                      value: formatDate(account.date_of_birth),
+                    },
+                    {
+                      label: "Nationality",
+                      value: account.nationality ?? "—",
+                    },
+                    {
+                      label: "Language",
+                      value: account.language ?? "—",
+                    },
+                    {
+                      label: "Phone",
+                      value: account.phone ?? "—",
+                    },
+                    {
+                      label: "Sex",
+                      value: resolvedSex,
+                    },
+                    {
+                      label: "Created",
+                      value: new Date(account.created_at).toLocaleDateString(),
+                    },
+                  ];
+
+                  return (
+                    <Card
+                      key={account.id}
+                      className="border border-border/60 bg-background"
+                    >
+                      <CardContent className="flex flex-col gap-5 p-6">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-12 w-12 border border-border/60">
+                              <AvatarImage
+                                src={account.avatar_url ?? undefined}
+                                alt={displayName}
+                              />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-foreground">
+                                {account.username ?? "—"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {account.job_title ?? "—"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {account.email ?? "—"}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell>{account.email ?? "—"}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {account.roles.map((role) => (
-                                <Badge
-                                  key={role}
-                                  variant="outline"
-                                  className="capitalize"
-                                >
-                                  {role.replace(/[-_]/g, " ")}
-                                </Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden align-top text-sm text-muted-foreground lg:table-cell">
-                            <div className="flex flex-col gap-1">
-                              <span>
-                                <span className="font-medium text-foreground">
-                                  DOB:
-                                </span>{" "}
-                                {formatDate(account.date_of_birth)}
-                              </span>
-                              <span>
-                                <span className="font-medium text-foreground">
-                                  Nationality:
-                                </span>{" "}
-                                {account.nationality ?? "—"}
-                              </span>
-                              <span>
-                                <span className="font-medium text-foreground">
-                                  Language:
-                                </span>{" "}
-                                {account.language ?? "—"}
-                              </span>
-                              <span>
-                                <span className="font-medium text-foreground">
-                                  Phone:
-                                </span>{" "}
-                                {account.phone ?? "—"}
-                              </span>
-                              <span>
-                                <span className="font-medium text-foreground">
-                                  Sex:
-                                </span>{" "}
-                                {resolvedSex}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                            {new Date(account.created_at).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingAccount(account)}
-                              disabled={isSavingDetails}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {account.roles.map((role) => (
+                              <Badge
+                                key={role}
+                                variant="outline"
+                                className="capitalize"
+                              >
+                                {role.replace(/[-_]/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {metadata.map((item) => (
+                            <div
+                              key={item.label}
+                              className="flex flex-col gap-1 rounded-md border border-border/50 bg-muted/10 px-3 py-2"
                             >
-                              <Pencil className="mr-1 h-4 w-4" />
-                              Edit details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                              <span className="text-xs font-semibold uppercase text-muted-foreground">
+                                {item.label}
+                              </span>
+                              <span className="text-sm text-foreground">
+                                {item.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingAccount(account)}
+                            disabled={isSavingDetails}
+                          >
+                            <Pencil className="mr-1 h-4 w-4" />
+                            Edit details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </CardContent>
