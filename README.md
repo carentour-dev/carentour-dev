@@ -411,7 +411,7 @@ npm run start
   - `20251002132000_create_treatments.sql`
   - `20251002134000_create_facilities.sql`
   - `20251002135000_create_hotels.sql`
-- Create or invite an admin user via Supabase Auth, then set `profiles.role = 'admin'` for that `user_id`.
+- Create or invite an admin user via Supabase Auth, then assign the `admin` role either through `/admin/access` or by inserting into `profile_roles` for that `profile_id`.
 - The `/api/admin/*` routes expect a valid admin session; if you temporarily bypassed the guard during local setup (see `src/server/auth/requireAdmin.ts`), revert the helper once roles are configured.
 
 ---
