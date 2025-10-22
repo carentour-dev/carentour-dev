@@ -951,27 +951,39 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null;
+          date_of_birth: string | null;
           created_at: string;
           email: string | null;
           id: string;
+          nationality: string | null;
+          phone: string | null;
+          sex: string | null;
           updated_at: string;
           user_id: string;
           username: string | null;
         };
         Insert: {
           avatar_url?: string | null;
+          date_of_birth?: string | null;
           created_at?: string;
           email?: string | null;
           id?: string;
+          nationality?: string | null;
+          phone?: string | null;
+          sex?: string | null;
           updated_at?: string;
           user_id: string;
           username?: string | null;
         };
         Update: {
           avatar_url?: string | null;
+          date_of_birth?: string | null;
           created_at?: string;
           email?: string | null;
           id?: string;
+          nationality?: string | null;
+          phone?: string | null;
+          sex?: string | null;
           updated_at?: string;
           user_id?: string;
           username?: string | null;
