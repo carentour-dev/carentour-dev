@@ -36,12 +36,16 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
         router.push("/auth");
         return;
       }
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      setAuthorized(!!data && ["admin", "editor"].includes((data as any).role));
+      const { data: roles, error } = await supabase.rpc("current_user_roles");
+      if (error) {
+        console.error("Failed to resolve CMS roles", error);
+        setAuthorized(false);
+        return;
+      }
+      const normalizedRoles = Array.isArray(roles) ? roles : [];
+      setAuthorized(
+        normalizedRoles.some((role) => ["admin", "editor"].includes(role)),
+      );
     };
     check();
   }, [router]);
