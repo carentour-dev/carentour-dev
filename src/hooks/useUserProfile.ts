@@ -17,6 +17,8 @@ type ProfileState = {
   sex: string | null;
   nationality: string | null;
   phone: string | null;
+  job_title: string | null;
+  language: string | null;
   roles: RoleSlug[];
   primaryRole: RoleSlug | null;
   permissions: string[];
@@ -49,7 +51,7 @@ export const useUserProfile = () => {
           supabase
             .from("profiles")
             .select(
-              "username, avatar_url, date_of_birth, sex, nationality, phone",
+              "username, avatar_url, date_of_birth, sex, nationality, phone, job_title, language",
             )
             .eq("user_id", user.id)
             .maybeSingle(),
@@ -94,6 +96,8 @@ export const useUserProfile = () => {
         sex: profileResult.data?.sex ?? null,
         nationality: profileResult.data?.nationality ?? null,
         phone: profileResult.data?.phone ?? null,
+        job_title: profileResult.data?.job_title ?? null,
+        language: profileResult.data?.language ?? null,
         roles,
         primaryRole: pickPrimaryRole(roles),
         permissions,
