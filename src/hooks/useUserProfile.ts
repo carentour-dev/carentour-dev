@@ -1,57 +1,97 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useMemo } from "react";
 
-interface UserProfile {
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  normalizeRoles,
+  pickPrimaryRole,
+  RoleSlug,
+  hasAnyRole,
+  hasRole,
+} from "@/lib/auth/roles";
+
+type ProfileState = {
   username: string | null;
   avatar_url: string | null;
-  role: string | null;
+  roles: RoleSlug[];
+  primaryRole: RoleSlug | null;
+  permissions: string[];
   displayName: string;
   initials: string;
-}
+};
+
+export type UserProfile = ProfileState & {
+  hasRole: (role: RoleSlug) => boolean;
+  hasAnyRole: (roles: RoleSlug[]) => boolean;
+  hasPermission: (permission: string) => boolean;
+};
 
 export const useUserProfile = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) {
-      setProfile(null);
+      setProfileState(null);
       setLoading(false);
       return;
     }
 
     const fetchProfile = async () => {
       try {
-        // Fetch profile data without email exposure
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username, avatar_url, role')
-          .eq('user_id', user.id)
-          .single();
+        const [profileResult, rolesResult, permissionsResult] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select("username, avatar_url")
+              .eq("user_id", user.id)
+              .maybeSingle(),
+            supabase.rpc("current_user_roles"),
+            supabase.rpc("current_user_permissions"),
+          ]);
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-          setProfile(null);
+        if (profileResult.error && profileResult.error.code !== "PGRST116") {
+          console.error("Error fetching profile:", profileResult.error);
+          setProfileState(null);
           return;
         }
 
-        // Create safe display information
-        const username = data?.username || user.user_metadata?.username;
-        const displayName = username || 'User';
+        if (rolesResult.error) {
+          console.error("Error fetching roles:", rolesResult.error);
+          setProfileState(null);
+          return;
+        }
+
+        if (permissionsResult.error) {
+          console.error("Error fetching permissions:", permissionsResult.error);
+        }
+
+        const rawRoles = normalizeRoles(
+          Array.isArray(rolesResult.data) ? rolesResult.data : [],
+        );
+        const roles = rawRoles.length ? rawRoles : ["user"];
+        const permissions = Array.isArray(permissionsResult.data)
+          ? Array.from(new Set(permissionsResult.data))
+          : [];
+
+        const username =
+          profileResult.data?.username || user.user_metadata?.username;
+        const displayName = username || "User";
         const initials = displayName.charAt(0).toUpperCase();
 
-        setProfile({
-          username: data?.username || null,
-          avatar_url: data?.avatar_url || null,
-          role: data?.role || 'user',
+        setProfileState({
+          username: profileResult.data?.username || null,
+          avatar_url: profileResult.data?.avatar_url || null,
+          roles,
+          primaryRole: pickPrimaryRole(roles),
+          permissions,
           displayName,
-          initials
+          initials,
         });
       } catch (error) {
-        console.error('Error in useUserProfile:', error);
-        setProfile(null);
+        console.error("Error in useUserProfile:", error);
+        setProfileState(null);
       } finally {
         setLoading(false);
       }
@@ -59,6 +99,21 @@ export const useUserProfile = () => {
 
     fetchProfile();
   }, [user?.id, user?.user_metadata?.username]);
+
+  const profile = useMemo<UserProfile | null>(() => {
+    if (!profileState) {
+      return null;
+    }
+
+    const { roles, permissions } = profileState;
+
+    return {
+      ...profileState,
+      hasRole: (role: RoleSlug) => hasRole(roles, role),
+      hasAnyRole: (allowed: RoleSlug[]) => hasAnyRole(roles, allowed),
+      hasPermission: (permission: string) => permissions.includes(permission),
+    };
+  }, [profileState]);
 
   return { profile, loading };
 };
