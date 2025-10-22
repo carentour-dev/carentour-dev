@@ -29,11 +29,12 @@ const normalizePermissionSlugs = (value: unknown): string[] => {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: RouteParams },
+  { params }: { params?: Promise<RouteParams> },
 ) {
   await requireRole(["admin"]);
 
-  const roleId = params?.roleId;
+  const routeParams = params ? await params : undefined;
+  const roleId = routeParams?.roleId;
   if (!roleId) {
     return NextResponse.json({ error: "Missing role id" }, { status: 400 });
   }
@@ -133,7 +134,7 @@ export async function PUT(
 
     const { error: insertError } = await supabaseAdmin
       .from("role_permissions")
-      .insert(insertPayload, { returning: "minimal" });
+      .insert(insertPayload);
 
     if (insertError) {
       return NextResponse.json(
