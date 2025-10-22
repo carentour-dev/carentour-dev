@@ -3,6 +3,11 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resendApiKey = Deno.env.get("RESEND_API_KEY")?.trim();
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const fallbackFromAddress = "Care N Tour Team <contact@carentour.com>";
+const resendFromAddress =
+  Deno.env.get("RESEND_STAFF_INVITE_FROM")?.trim() ||
+  Deno.env.get("RESEND_FROM_ADDRESS")?.trim() ||
+  fallbackFromAddress;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +20,35 @@ interface StaffInviteParams {
   inviterName: string;
   staffName?: string;
   roles: string[];
+}
+
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+
+    if (message && typeof message === "object") {
+      const nestedMessage = (message as { message?: unknown }).message;
+      if (
+        typeof nestedMessage === "string" &&
+        nestedMessage.trim().length > 0
+      ) {
+        return nestedMessage;
+      }
+    }
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  return "Unknown error occurred";
 }
 
 function createStaffInviteHTML(params: StaffInviteParams): string {
@@ -162,7 +196,7 @@ const handler = async (req: Request) => {
     }
 
     const { data, error } = await resend.emails.send({
-      from: "Care N Tour Team <info@carentour.com>",
+      from: resendFromAddress,
       to: [email],
       subject: "You've been invited to Care N Tour Staff",
       html,
@@ -192,8 +226,7 @@ const handler = async (req: Request) => {
   } catch (error) {
     console.error("Error in send-staff-invite function:", error);
 
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage = extractErrorMessage(error);
 
     return new Response(
       JSON.stringify({
