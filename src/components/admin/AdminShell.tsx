@@ -40,6 +40,7 @@ import {
   Sparkles,
   Stethoscope,
   Users,
+  ShieldCheck,
 } from "lucide-react";
 
 // Admin navigation configuration keeps sidebar items in one place.
@@ -58,6 +59,7 @@ const NAV_ITEMS = [
     icon: Building2,
   },
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
+  { label: "Access", href: "/admin/access", icon: ShieldCheck },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -67,7 +69,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { profile, loading: profileLoading } = useUserProfile();
 
   const isCheckingAccess = authLoading || profileLoading;
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = profile?.hasRole("admin");
 
   // Reuse existing auth provider to fully sign out admins.
   const handleSignOut = async () => {
@@ -151,9 +153,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span className="text-sm font-medium">
                 {profile?.displayName ?? "Admin"}
               </span>
-              <Badge variant="outline" className="w-fit text-xs">
-                {profile?.role ?? "admin"}
-              </Badge>
+              <div className="flex flex-wrap gap-1">
+                {(profile?.roles ?? ["user"]).map((role) => (
+                  <Badge
+                    key={role}
+                    variant="outline"
+                    className="w-fit text-xs capitalize"
+                  >
+                    {role.replace(/[-_]/g, " ")}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
           <Button
