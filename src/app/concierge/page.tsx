@@ -27,7 +27,7 @@ import {
   Star,
   CheckCircle,
   ArrowRight,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 export default function ConciergeServices() {
@@ -35,47 +35,57 @@ export default function ConciergeServices() {
     {
       category: "Medical Coordination",
       icon: Heart,
-      description: "Complete medical journey management from consultation to recovery",
+      description:
+        "Complete medical journey management from consultation to recovery",
       services: [
         "Pre-arrival medical consultation scheduling",
-        "Medical records translation and transfer", 
+        "Medical records translation and transfer",
         "Appointment coordination with specialists",
         "Real-time updates to family members",
         "Post-treatment follow-up arrangements",
-        "Medical insurance claim assistance"
+        "Medical insurance claim assistance",
       ],
       availability: "24/7 during treatment period",
-      languages: ["English", "Arabic", "French", "German", "Spanish", "Italian"]
+      languages: [
+        "English",
+        "Arabic",
+        "French",
+        "German",
+        "Spanish",
+        "Italian",
+      ],
     },
     {
       category: "Travel & Transportation",
       icon: Car,
-      description: "Seamless transportation services throughout your medical journey",
+      description:
+        "Seamless transportation services throughout your medical journey",
       services: [
         "Airport pickup and drop-off service",
         "Daily transportation to medical appointments",
         "Private driver for sightseeing tours",
         "Emergency transportation availability",
         "Family member transport coordination",
-        "Wheelchair accessible vehicles when needed"
+        "Wheelchair accessible vehicles when needed",
       ],
       availability: "24/7 on-call service",
-      languages: ["English", "Arabic", "German", "Russian"]
+      languages: ["English", "Arabic", "German", "Russian"],
     },
     {
       category: "Accommodation Services",
       icon: Hotel,
-      description: "Comfortable lodging arrangements tailored to medical tourists",
+      description:
+        "Comfortable lodging arrangements tailored to medical tourists",
       services: [
         "Hotel booking and confirmation",
         "Room upgrades and special requests",
         "Extended stay arrangements",
         "Family accommodation coordination",
         "Recovery-friendly room setups",
-        "Housekeeping and meal arrangements"
+        "Housekeeping and meal arrangements",
       ],
       availability: "Business hours with emergency support",
-      languages: ["English", "Arabic", "French", "Spanish"]
+      languages: ["English", "Arabic", "French", "Spanish"],
     },
     {
       category: "Personal Assistant",
@@ -87,41 +97,43 @@ export default function ConciergeServices() {
         "Banking and currency exchange help",
         "Local SIM card and communication setup",
         "Cultural orientation and etiquette guidance",
-        "Emergency contact coordination"
+        "Emergency contact coordination",
       ],
       availability: "9 AM - 6 PM daily",
-      languages: ["English", "Arabic", "Italian", "Portuguese"]
+      languages: ["English", "Arabic", "Italian", "Portuguese"],
     },
     {
       category: "Family Support",
       icon: Shield,
-      description: "Comprehensive support services for accompanying family members",
+      description:
+        "Comprehensive support services for accompanying family members",
       services: [
         "Separate accommodation arrangements",
         "Tourist activities and sightseeing tours",
         "Childcare services coordination",
         "Restaurant reservations and dining recommendations",
         "Shopping and entertainment guidance",
-        "Regular updates about patient progress"
+        "Regular updates about patient progress",
       ],
       availability: "9 AM - 8 PM daily",
-      languages: ["English", "Arabic", "French", "German"]
+      languages: ["English", "Arabic", "French", "German"],
     },
     {
       category: "Cultural & Tourism",
       icon: MapPin,
-      description: "Explore Egypt&apos;s rich heritage during your recovery period",
+      description:
+        "Explore Egypt&apos;s rich heritage during your recovery period",
       services: [
         "Guided tours to pyramids and historical sites",
         "Nile River cruise arrangements",
         "Cultural experience planning",
         "Photography services at landmarks",
         "Souvenir shopping assistance",
-        "Traditional Egyptian cuisine experiences"
+        "Traditional Egyptian cuisine experiences",
       ],
       availability: "Daily tours based on recovery schedule",
-      languages: ["English", "Arabic", "French", "German", "Spanish"]
-    }
+      languages: ["English", "Arabic", "French", "German", "Spanish"],
+    },
   ];
 
   const packages = [
@@ -135,15 +147,16 @@ export default function ConciergeServices() {
         "Medical appointment coordination",
         "Basic translation services",
         "Emergency contact support",
-        "Local orientation session"
+        "Local orientation session",
       ],
-      recommended: false
+      recommended: false,
     },
     {
       name: "Complete Care Package",
-      price: "$350", 
+      price: "$350",
       duration: "Per week",
-      description: "Comprehensive support for the full medical tourism experience",
+      description:
+        "Comprehensive support for the full medical tourism experience",
       features: [
         "All Essential Care services",
         "Daily transportation service",
@@ -151,15 +164,16 @@ export default function ConciergeServices() {
         "Family coordination services",
         "Cultural tour arrangements",
         "24/7 emergency support",
-        "Medication management help"
+        "Medication management help",
       ],
-      recommended: true
+      recommended: true,
     },
     {
       name: "VIP Premium Package",
       price: "$500",
-      duration: "Per week", 
-      description: "Luxury concierge services with dedicated personal assistant",
+      duration: "Per week",
+      description:
+        "Luxury concierge services with dedicated personal assistant",
       features: [
         "All Complete Care services",
         "Dedicated personal assistant",
@@ -168,27 +182,30 @@ export default function ConciergeServices() {
         "Private guided tours",
         "Luxury spa and wellness services",
         "Premium accommodation upgrades",
-        "Express medical services"
+        "Express medical services",
       ],
-      recommended: false
-    }
+      recommended: false,
+    },
   ];
 
-  const { reviews: conciergeReviews, loading: conciergeReviewsLoading } = usePatientReviews({
-    highlightOnly: true,
-    limit: 3,
-  });
+  const { reviews: conciergeReviews, loading: conciergeReviewsLoading } =
+    usePatientReviews({
+      highlightOnly: true,
+      limit: 3,
+    });
 
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <main>
         {/* Hero Section */}
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Concierge Services</Badge>
+              <Badge variant="outline" className="mb-6">
+                Concierge Services
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Premium Concierge Services for
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -196,8 +213,9 @@ export default function ConciergeServices() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Dedicated personal assistance ensuring your comfort, convenience, and peace of mind 
-                throughout your entire medical tourism journey in Egypt.
+                Dedicated personal assistance ensuring your comfort,
+                convenience, and peace of mind throughout your entire medical
+                tourism journey in Egypt.
               </p>
             </div>
           </div>
@@ -212,26 +230,43 @@ export default function ConciergeServices() {
                   Your Personal Support Team in Egypt
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                  Our professional concierge team understands the unique needs of medical tourists. 
-                  We provide comprehensive support services that go beyond medical care, ensuring 
-                  your stay in Egypt is comfortable, stress-free, and memorable.
+                  Our professional concierge team understands the unique needs
+                  of medical tourists. We provide comprehensive support services
+                  that go beyond medical care, ensuring your stay in Egypt is
+                  comfortable, stress-free, and memorable.
                 </p>
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">24/7</div>
-                    <div className="text-sm text-muted-foreground">Support Available</div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      24/7
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Support Available
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">12+</div>
-                    <div className="text-sm text-muted-foreground">Languages Spoken</div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      12+
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Languages Spoken
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">500+</div>
-                    <div className="text-sm text-muted-foreground">Satisfied Families</div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      500+
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Satisfied Families
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">99%</div>
-                    <div className="text-sm text-muted-foreground">Satisfaction Rate</div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      99%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Satisfaction Rate
+                    </div>
                   </div>
                 </div>
                 <div className="text-center">
@@ -264,7 +299,8 @@ export default function ConciergeServices() {
                 Comprehensive Concierge Services
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                From medical coordination to cultural experiences, we handle every detail of your journey
+                From medical coordination to cultural experiences, we handle
+                every detail of your journey
               </p>
             </div>
 
@@ -272,36 +308,55 @@ export default function ConciergeServices() {
               {services.map((service, index) => {
                 const Icon = service.icon;
                 return (
-                  <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring h-full">
+                  <Card
+                    key={index}
+                    className="border-border/50 hover:shadow-card-hover transition-spring h-full"
+                  >
                     <CardHeader>
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
                           <Icon className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{service.category}</CardTitle>
-                          <Badge variant="outline" className="text-xs mt-1">{service.availability}</Badge>
+                          <CardTitle className="text-lg">
+                            {service.category}
+                          </CardTitle>
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {service.availability}
+                          </Badge>
                         </div>
                       </div>
-                      <p className="text-muted-foreground text-sm">{service.description}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {service.description}
+                      </p>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-foreground mb-3">Included Services:</h4>
+                        <h4 className="font-semibold text-foreground mb-3">
+                          Included Services:
+                        </h4>
                         <ul className="space-y-2 mb-4">
                           {service.services.map((item, idx) => (
                             <li key={idx} className="flex items-start gap-2">
                               <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-muted-foreground">{item}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {item}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       </div>
                       <div className="mt-4 pt-4 border-t border-border">
-                        <p className="text-xs text-muted-foreground mb-2">Languages Available:</p>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Languages Available:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {service.languages.map((language, langIdx) => (
-                            <Badge key={langIdx} variant="secondary" className="text-xs">
+                            <Badge
+                              key={langIdx}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {language}
                             </Badge>
                           ))}
@@ -329,9 +384,12 @@ export default function ConciergeServices() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {packages.map((pkg, index) => (
-                <Card key={index} className={`border-border/50 hover:shadow-card-hover transition-spring relative ${
-                  pkg.recommended ? 'ring-2 ring-primary' : ''
-                }`}>
+                <Card
+                  key={index}
+                  className={`overflow-visible border-border/50 hover:shadow-card-hover transition-spring relative ${
+                    pkg.recommended ? "ring-2 ring-primary" : ""
+                  }`}
+                >
                   {pkg.recommended && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <Badge className="bg-primary text-primary-foreground">
@@ -343,22 +401,30 @@ export default function ConciergeServices() {
                   <CardHeader className="text-center">
                     <CardTitle className="text-xl">{pkg.name}</CardTitle>
                     <div className="mt-2">
-                      <span className="text-3xl font-bold text-primary">{pkg.price}</span>
-                      <span className="text-muted-foreground">/{pkg.duration}</span>
+                      <span className="text-3xl font-bold text-primary">
+                        {pkg.price}
+                      </span>
+                      <span className="text-muted-foreground">
+                        /{pkg.duration}
+                      </span>
                     </div>
-                    <p className="text-muted-foreground text-sm mt-2">{pkg.description}</p>
+                    <p className="text-muted-foreground text-sm mt-2">
+                      {pkg.description}
+                    </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <ul className="space-y-3">
                       {pkg.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-muted-foreground">{feature}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {feature}
+                          </span>
                         </li>
                       ))}
                     </ul>
-                    <Button 
-                      className="w-full mt-6" 
+                    <Button
+                      className="w-full mt-6"
                       variant={pkg.recommended ? "default" : "outline"}
                     >
                       {pkg.recommended ? "Get Started" : "Choose Package"}
@@ -375,7 +441,9 @@ export default function ConciergeServices() {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">What Our Clients Say</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4">
+                What Our Clients Say
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Real experiences from families who used our concierge services
               </p>
@@ -386,13 +454,19 @@ export default function ConciergeServices() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : conciergeReviews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
                 {conciergeReviews.map((review) => (
-                  <Card key={review.id} className="border-border/50">
+                  <Card
+                    key={review.id}
+                    className="border-border/50 w-full sm:w-[22rem]"
+                  >
                     <CardContent className="p-6">
                       <div className="flex items-center gap-1 mb-4">
                         {[...Array(Math.round(review.rating))].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
+                          <Star
+                            key={i}
+                            className="h-4 w-4 text-yellow-500 fill-current"
+                          />
                         ))}
                       </div>
 
@@ -403,14 +477,20 @@ export default function ConciergeServices() {
                       <div className="border-t border-border pt-4">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="font-semibold text-foreground">{review.patient_name}</p>
+                            <p className="font-semibold text-foreground">
+                              {review.patient_name}
+                            </p>
                             <p className="text-sm text-muted-foreground">
-                              {review.patient_country ?? "International Patient"}
+                              {review.patient_country ??
+                                "International Patient"}
                             </p>
                           </div>
                           {review.treatment_slug && (
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {review.treatment_slug.replace(/-/g, ' ')}
+                            <Badge
+                              variant="outline"
+                              className="text-xs capitalize"
+                            >
+                              {review.treatment_slug.replace(/-/g, " ")}
                             </Badge>
                           )}
                         </div>
@@ -420,7 +500,9 @@ export default function ConciergeServices() {
                 ))}
               </div>
             ) : (
-              <div className="text-center text-muted-foreground">Add patient testimonials to showcase concierge outcomes.</div>
+              <div className="text-center text-muted-foreground">
+                Add patient testimonials to showcase concierge outcomes.
+              </div>
             )}
           </div>
         </section>
@@ -432,7 +514,8 @@ export default function ConciergeServices() {
               Ready for Premium Support?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Let our experienced concierge team take care of every detail while you focus on your health and recovery
+              Let our experienced concierge team take care of every detail while
+              you focus on your health and recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
@@ -453,4 +536,4 @@ export default function ConciergeServices() {
       <Footer />
     </div>
   );
-};
+}
