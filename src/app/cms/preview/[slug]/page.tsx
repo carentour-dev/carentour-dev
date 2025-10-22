@@ -9,7 +9,10 @@ type PreviewProps = {
 
 export const dynamic = "force-dynamic";
 
-export default async function CmsPreviewPage({ params, searchParams }: PreviewProps) {
+export default async function CmsPreviewPage({
+  params,
+  searchParams,
+}: PreviewProps) {
   const { slug } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const headerStore = await headers();
@@ -29,15 +32,21 @@ export default async function CmsPreviewPage({ params, searchParams }: PreviewPr
   const admin = getSupabaseAdmin();
   const { data: user } = await admin.auth.getUser(token);
   if (!user?.user) {
-    return (
-      <main className="container mx-auto px-4 py-8">Unauthorized</main>
-    );
+    return <main className="container mx-auto px-4 py-8">Unauthorized</main>;
   }
-  const { data: profile } = await admin.from("profiles").select("role").eq("user_id", user.user.id).maybeSingle();
-  if (!profile || !["admin", "editor"].includes((profile as any).role)) {
-    return (
-      <main className="container mx-auto px-4 py-8">Forbidden</main>
-    );
+  const { data: roles, error: rolesError } = await admin.rpc("user_roles", {
+    p_user_id: user.user.id,
+  });
+
+  if (rolesError) {
+    console.error("Failed to load preview roles", rolesError);
+    return <main className="container mx-auto px-4 py-8">Forbidden</main>;
+  }
+
+  const normalizedRoles = Array.isArray(roles) ? roles : [];
+
+  if (!normalizedRoles.some((role) => role === "admin" || role === "editor")) {
+    return <main className="container mx-auto px-4 py-8">Forbidden</main>;
   }
   const { data } = await admin
     .from("cms_pages")
@@ -46,7 +55,9 @@ export default async function CmsPreviewPage({ params, searchParams }: PreviewPr
     .maybeSingle();
 
   if (!data?.content) {
-    return <main className="container mx-auto px-4 py-8">No preview available</main>;
+    return (
+      <main className="container mx-auto px-4 py-8">No preview available</main>
+    );
   }
 
   return (
