@@ -40,6 +40,7 @@ import {
   Sparkles,
   Stethoscope,
   Users,
+  UserPlus,
   ShieldCheck,
 } from "lucide-react";
 
@@ -59,6 +60,7 @@ const NAV_ITEMS = [
     icon: Building2,
   },
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
+  { label: "Team Accounts", href: "/admin/accounts", icon: UserPlus },
   { label: "Access", href: "/admin/access", icon: ShieldCheck },
 ];
 

@@ -49,8 +49,17 @@ export type PatientStory = PatientStoryRow & {
   treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
 };
 
+const STAFF_ROLE_SLUGS = new Set([
+  "admin",
+  "coordinator",
+  "doctor",
+  "management",
+  "employee",
+  "editor",
+]);
+
 export interface PatientPortalSnapshot {
-  patient: PatientRow;
+  patient: PatientRow | null;
   requests: ContactRequestRow[];
   consultations: PatientConsultation[];
   appointments: PatientAppointment[];
@@ -121,6 +130,11 @@ const fetchPatientRecord = async (userId: string) => {
 const ensurePatientRecord = async (
   user: NonNullable<ReturnType<typeof useAuth>["user"]>,
 ): Promise<PatientRow> => {
+  const accountType =
+    typeof user.user_metadata?.account_type === "string"
+      ? user.user_metadata.account_type.toLowerCase()
+      : null;
+
   const { data, error } = await fetchPatientRecord(user.id);
 
   if (error && error.code !== "PGRST116") {
@@ -203,6 +217,38 @@ const ensurePatientRecord = async (
 const fetchPatientPortalSnapshot = async (
   user: NonNullable<ReturnType<typeof useAuth>["user"]>,
 ) => {
+  const accountType =
+    typeof user.user_metadata?.account_type === "string"
+      ? user.user_metadata.account_type.toLowerCase()
+      : null;
+
+  if (accountType === "staff") {
+    return {
+      patient: null,
+      requests: [],
+      consultations: [],
+      appointments: [],
+      reviews: [],
+      stories: [],
+    };
+  }
+
+  const { data: rolesResult } = await supabase.rpc("current_user_roles");
+  const roleSlugs = Array.isArray(rolesResult)
+    ? (rolesResult as string[]).map((role) => role.toLowerCase())
+    : [];
+
+  if (roleSlugs.some((slug) => STAFF_ROLE_SLUGS.has(slug))) {
+    return {
+      patient: null,
+      requests: [],
+      consultations: [],
+      appointments: [],
+      reviews: [],
+      stories: [],
+    };
+  }
+
   const patient = await ensurePatientRecord(user);
 
   const [requests, consultations, appointments, reviews, stories] =
@@ -281,17 +327,23 @@ const fetchPatientPortalSnapshot = async (
   };
 };
 
-export const usePatientPortalData = () => {
+type UsePatientPortalOptions = {
+  enabled?: boolean;
+};
+
+export const usePatientPortalData = (options?: UsePatientPortalOptions) => {
   const { user } = useAuth();
+
+  const isEnabled = (options?.enabled ?? true) && Boolean(user?.id);
 
   const query = useQuery({
     queryKey: ["patient-portal", user?.id],
-    enabled: !!user?.id,
+    enabled: isEnabled,
     queryFn: () => fetchPatientPortalSnapshot(user!),
     staleTime: 60 * 1000,
   });
 
-  const snapshot = query.data;
+  const snapshot = isEnabled ? (query.data ?? null) : null;
 
   return {
     data: snapshot,
@@ -301,9 +353,10 @@ export const usePatientPortalData = () => {
     appointments: snapshot?.appointments ?? [],
     reviews: snapshot?.reviews ?? [],
     stories: snapshot?.stories ?? [],
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    error: query.error instanceof Error ? query.error.message : null,
+    isLoading: isEnabled ? query.isLoading : false,
+    isFetching: isEnabled ? query.isFetching : false,
+    error:
+      isEnabled && query.error instanceof Error ? query.error.message : null,
     refetch: query.refetch,
   };
 };

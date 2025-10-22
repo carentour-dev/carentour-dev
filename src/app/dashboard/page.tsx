@@ -236,6 +236,14 @@ const truncate = (value: string, limit = 260) =>
 
 const OPTIONAL_SELECT_NONE = "__none__";
 const DEFAULT_SEX_OPTION: SexOptionValue = "prefer_not_to_say";
+const STAFF_ROLES = [
+  "admin",
+  "coordinator",
+  "doctor",
+  "management",
+  "employee",
+  "editor",
+];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -245,6 +253,29 @@ export default function DashboardPage() {
     loading: profileLoading,
     refresh: refreshProfile,
   } = useUserProfile();
+  const isStaffAccount = useMemo(() => {
+    if (profile && profile.hasAnyRole(STAFF_ROLES)) {
+      return true;
+    }
+    const metadataType =
+      typeof user?.user_metadata?.account_type === "string"
+        ? user.user_metadata.account_type.toLowerCase()
+        : null;
+    if (metadataType === "staff") {
+      return true;
+    }
+    const rawRoles = Array.isArray(user?.user_metadata?.staff_roles)
+      ? (user?.user_metadata?.staff_roles as string[])
+      : [];
+    return rawRoles.some((role) => STAFF_ROLES.includes(role.toLowerCase()));
+  }, [profile, user?.user_metadata]);
+
+  useEffect(() => {
+    if (!authLoading && !profileLoading && isStaffAccount) {
+      router.replace("/admin");
+    }
+  }, [authLoading, profileLoading, isStaffAccount, router]);
+
   const {
     patient,
     requests,
@@ -255,7 +286,7 @@ export default function DashboardPage() {
     isLoading: portalLoading,
     error,
     refetch,
-  } = usePatientPortalData();
+  } = usePatientPortalData({ enabled: !profileLoading && !isStaffAccount });
   const { toast } = useToast();
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
@@ -766,6 +797,17 @@ export default function DashboardPage() {
 
   if (!user) {
     return null;
+  }
+
+  if (!authLoading && !profileLoading && isStaffAccount) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Redirecting you to the admin console…
+        </p>
+      </div>
+    );
   }
 
   return (

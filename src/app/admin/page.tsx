@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, Hotel, Inbox, Stethoscope, Users, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Hotel,
+  Inbox,
+  Stethoscope,
+  Users,
+  Sparkles,
+  UserPlus,
+} from "lucide-react";
 
 // Surface the main admin areas for quick navigation.
 const quickLinks = [
@@ -43,16 +52,24 @@ const quickLinks = [
     description: "Update recovery-friendly accommodations and perks.",
     icon: Hotel,
   },
+  {
+    title: "Team Accounts",
+    href: "/admin/accounts",
+    description: "Invite staff and assign roles without touching patient data.",
+    icon: UserPlus,
+  },
 ];
 
 export default function AdminOverviewPage() {
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Admin Overview</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          Admin Overview
+        </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Centralize operations for Care N Tour’s doctors, patients, and travel partners. Use the quick
-          links below to jump into each domain.
+          Centralize operations for Care N Tour’s doctors, patients, and travel
+          partners. Use the quick links below to jump into each domain.
         </p>
       </header>
 
@@ -73,7 +90,9 @@ export default function AdminOverviewPage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.description}
+                </p>
               </CardContent>
             </Card>
           );
