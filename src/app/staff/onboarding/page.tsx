@@ -55,6 +55,7 @@ type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 type StatusState = "checking" | "ready" | "saving" | "success" | "error";
 
 const STAFF_ACCOUNT_TYPE = "staff";
+const ALLOWED_FLOW_TYPES = new Set(["invite", "magiclink"]);
 
 function parseHashParams(): URLSearchParams | null {
   if (typeof window === "undefined") {
@@ -105,7 +106,7 @@ export default function StaffOnboardingPage() {
         return;
       }
 
-      if (flowType && flowType !== "invite") {
+      if (flowType && !ALLOWED_FLOW_TYPES.has(flowType)) {
         setErrorMessage(
           "This link is not a staff invitation. Please use the invitation email we sent you.",
         );
