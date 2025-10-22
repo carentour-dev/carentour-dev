@@ -954,7 +954,6 @@ export type Database = {
           created_at: string;
           email: string | null;
           id: string;
-          role: string | null;
           updated_at: string;
           user_id: string;
           username: string | null;
@@ -964,7 +963,6 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
-          role?: string | null;
           updated_at?: string;
           user_id: string;
           username?: string | null;
@@ -974,10 +972,141 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
-          role?: string | null;
           updated_at?: string;
           user_id?: string;
           username?: string | null;
+        };
+        Relationships: [];
+      };
+      profile_roles: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string | null;
+          id: string;
+          profile_id: string;
+          role_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by?: string | null;
+          id?: string;
+          profile_id: string;
+          role_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string | null;
+          id?: string;
+          profile_id?: string;
+          role_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_roles_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_roles_role_id_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      role_permissions: {
+        Row: {
+          created_at: string;
+          id: string;
+          permission_id: string;
+          role_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          permission_id: string;
+          role_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          permission_id?: string;
+          role_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey";
+            columns: ["permission_id"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roles: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_superuser: boolean;
+          name: string;
+          slug: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_superuser?: boolean;
+          name: string;
+          slug: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_superuser?: boolean;
+          name?: string;
+          slug?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      permissions: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          slug: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          slug: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          slug?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -1416,6 +1545,38 @@ export type Database = {
       record_login_attempt: {
         Args: { p_email: string; p_ip_address: unknown; p_success: boolean };
         Returns: undefined;
+      };
+      current_user_has_permission: {
+        Args: { p_permission: string };
+        Returns: boolean;
+      };
+      current_user_permissions: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
+      current_user_roles: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
+      has_any_role: {
+        Args: { p_roles: string[]; p_user_id: string };
+        Returns: boolean;
+      };
+      has_permission: {
+        Args: { p_permission: string; p_user_id: string };
+        Returns: boolean;
+      };
+      has_role: {
+        Args: { p_role: string; p_user_id: string };
+        Returns: boolean;
+      };
+      user_permissions: {
+        Args: { p_user_id: string };
+        Returns: string[];
+      };
+      user_roles: {
+        Args: { p_user_id: string };
+        Returns: string[];
       };
     };
     Enums: {
