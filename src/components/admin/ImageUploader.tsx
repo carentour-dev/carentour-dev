@@ -41,14 +41,6 @@ export function ImageUploader({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sanitizeFileName = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9._-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-  };
-
   const extractStoragePath = (url: string | null) => {
     if (!url) return null;
     try {
@@ -126,15 +118,23 @@ export function ImageUploader({
     };
 
     try {
-      const segments = file.name.split(".");
-      const extension =
-        segments.length > 1 ? segments.pop()?.toLowerCase() : undefined;
-      const rawBaseName = segments.join(".");
-      const sanitizedBase = sanitizeFileName(rawBaseName);
-      const finalExtension = extension ? `.${extension}` : "";
-      const basePart =
-        sanitizedBase.length > 0 ? sanitizedBase : crypto.randomUUID();
-      const fileName = `${folder}/${basePart}${finalExtension}`;
+      const originalName = (() => {
+        const candidate = file.name.split(/[/\\]/).pop()?.trim() ?? "";
+        if (candidate.length > 0) {
+          return candidate;
+        }
+        const inferredExtension =
+          file.type && file.type.includes("/")
+            ? `.${file.type.split("/").pop() ?? ""}`
+            : "";
+        return `file-${Date.now()}${inferredExtension}`;
+      })();
+      const randomSegment =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2, 10);
+      const folderPrefix = folder ? `${folder}/` : "";
+      const fileName = `${folderPrefix}${randomSegment}/${originalName}`;
       const { data, error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(fileName, file, { upsert: false });
