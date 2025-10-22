@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { User } from "@supabase/supabase-js";
@@ -21,6 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Lock, ShieldCheck, User as UserIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AvatarUploader } from "@/components/profile/AvatarUploader";
 
 const passwordSchema = z
   .string()
@@ -30,6 +38,14 @@ const passwordSchema = z
   .regex(/[0-9]/, "Include at least one number.")
   .regex(/[^A-Za-z0-9]/, "Include at least one symbol.");
 
+const sexOptions = [
+  "female",
+  "male",
+  "non-binary",
+  "prefer_not_to_say",
+] as const;
+const phoneRegex = /^[+0-9()[\]\s-]{6,}$/;
+
 const onboardingSchema = z
   .object({
     displayName: z
@@ -37,6 +53,51 @@ const onboardingSchema = z
       .trim()
       .min(2, "Name must be at least 2 characters.")
       .max(120, "Name must be at most 120 characters."),
+    avatarUrl: z
+      .string()
+      .url("Upload a valid image.")
+      .max(2048, "Avatar URL is too long.")
+      .optional()
+      .nullable(),
+    dateOfBirth: z
+      .string()
+      .trim()
+      .min(1, "Date of birth is required.")
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date in YYYY-MM-DD format.")
+      .refine(
+        (value) => {
+          const parsed = new Date(value);
+          return !Number.isNaN(parsed.getTime());
+        },
+        { message: "Enter a valid date." },
+      ),
+    nationality: z
+      .string()
+      .trim()
+      .min(2, "Nationality must be at least 2 characters.")
+      .max(120, "Nationality must be at most 120 characters."),
+    jobTitle: z
+      .string()
+      .trim()
+      .min(2, "Job title must be at least 2 characters.")
+      .max(180, "Job title must be at most 180 characters."),
+    phone: z
+      .string()
+      .trim()
+      .min(6, "Phone number must be at least 6 characters long.")
+      .max(40, "Phone number must be at most 40 characters long.")
+      .regex(
+        phoneRegex,
+        "Phone number can only include digits, spaces, parentheses, dashes, or '+'",
+      ),
+    sex: z.enum(sexOptions, {
+      required_error: "Select the option that best matches your sex.",
+    }),
+    language: z
+      .string()
+      .trim()
+      .min(2, "Preferred language must be at least 2 characters.")
+      .max(80, "Preferred language must be at most 80 characters."),
     password: passwordSchema,
     confirmPassword: z.string(),
   })
@@ -56,6 +117,12 @@ type StatusState = "checking" | "ready" | "saving" | "success" | "error";
 
 const STAFF_ACCOUNT_TYPE = "staff";
 const ALLOWED_FLOW_TYPES = new Set(["invite", "magiclink"]);
+const sexOptionLabels: Record<(typeof sexOptions)[number], string> = {
+  female: "Female",
+  male: "Male",
+  "non-binary": "Non-binary",
+  prefer_not_to_say: "Prefer not to say",
+};
 
 function parseHashParams(): URLSearchParams | null {
   if (typeof window === "undefined") {
@@ -81,6 +148,13 @@ export default function StaffOnboardingPage() {
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       displayName: "",
+      avatarUrl: null,
+      dateOfBirth: "",
+      nationality: "",
+      jobTitle: "",
+      phone: "",
+      sex: "prefer_not_to_say",
+      language: "",
       password: "",
       confirmPassword: "",
     },
@@ -159,24 +233,85 @@ export default function StaffOnboardingPage() {
 
       setUser(userResult.user);
 
-      const existingName =
-        typeof metadata.username === "string" &&
-        metadata.username.trim().length > 0
-          ? metadata.username.trim()
-          : typeof metadata.full_name === "string" &&
-              metadata.full_name.trim().length > 0
-            ? metadata.full_name.trim()
-            : typeof userResult.user.email === "string"
-              ? (userResult.user.email.split("@")[0] ?? "").replace(/\./g, " ")
-              : "";
+      const metadataString = (key: string): string | null => {
+        const value = metadata[key];
+        return typeof value === "string" && value.trim().length > 0
+          ? value.trim()
+          : null;
+      };
 
-      if (existingName.length > 0) {
-        form.reset({
-          displayName: existingName,
-          password: "",
-          confirmPassword: "",
-        });
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "username, avatar_url, date_of_birth, nationality, phone, sex, job_title, language",
+        )
+        .eq("user_id", userResult.user.id)
+        .maybeSingle();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error(
+          "Failed to load staff profile for onboarding:",
+          profileError,
+        );
       }
+
+      const profileUsername =
+        typeof profileData?.username === "string" &&
+        profileData.username.trim().length > 0
+          ? profileData.username.trim()
+          : null;
+
+      const existingName =
+        metadataString("username") ??
+        metadataString("full_name") ??
+        profileUsername ??
+        (typeof userResult.user.email === "string"
+          ? (userResult.user.email.split("@")[0] ?? "").replace(/\./g, " ")
+          : "");
+
+      const existingDateOfBirth =
+        metadataString("date_of_birth") ?? profileData?.date_of_birth ?? "";
+      const existingNationality =
+        metadataString("nationality") ?? profileData?.nationality ?? "";
+      const existingJobTitle =
+        metadataString("job_title") ??
+        metadataString("job") ??
+        profileData?.job_title ??
+        "";
+      const existingPhone = metadataString("phone") ?? profileData?.phone ?? "";
+
+      const existingSexMetadata = metadataString("sex");
+      const existingProfileSex = profileData?.sex ?? "";
+      const resolvedSex =
+        existingSexMetadata &&
+        sexOptions.includes(existingSexMetadata as (typeof sexOptions)[number])
+          ? (existingSexMetadata as (typeof sexOptions)[number])
+          : sexOptions.includes(
+                existingProfileSex as (typeof sexOptions)[number],
+              )
+            ? (existingProfileSex as (typeof sexOptions)[number])
+            : "prefer_not_to_say";
+
+      const existingLanguage =
+        metadataString("language") ??
+        metadataString("preferred_language") ??
+        profileData?.language ??
+        "";
+      const existingAvatar =
+        metadataString("avatar_url") ?? profileData?.avatar_url ?? null;
+
+      form.reset({
+        displayName: existingName ?? "",
+        avatarUrl: existingAvatar,
+        dateOfBirth: existingDateOfBirth ?? "",
+        nationality: existingNationality ?? "",
+        jobTitle: existingJobTitle ?? "",
+        phone: existingPhone ?? "",
+        sex: resolvedSex,
+        language: existingLanguage ?? "",
+        password: "",
+        confirmPassword: "",
+      });
 
       setStatus("ready");
     };
@@ -206,10 +341,24 @@ export default function StaffOnboardingPage() {
     setErrorMessage(null);
 
     const displayName = values.displayName.trim();
+    const dateOfBirth = values.dateOfBirth.trim();
+    const nationality = values.nationality.trim();
+    const jobTitle = values.jobTitle.trim();
+    const phone = values.phone.trim();
+    const language = values.language.trim();
+    const sex = values.sex;
+    const avatarUrl = values.avatarUrl ?? null;
 
     const metadataUpdates: Record<string, unknown> = {
       username: displayName,
       full_name: displayName,
+      date_of_birth: dateOfBirth,
+      nationality,
+      job_title: jobTitle,
+      phone,
+      language,
+      sex,
+      avatar_url: avatarUrl,
       staff_onboarding_completed: true,
     };
 
@@ -229,7 +378,16 @@ export default function StaffOnboardingPage() {
 
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ username: displayName })
+      .update({
+        username: displayName,
+        date_of_birth: dateOfBirth || null,
+        nationality: nationality || null,
+        job_title: jobTitle || null,
+        phone: phone || null,
+        language: language || null,
+        sex,
+        avatar_url: avatarUrl,
+      })
       .eq("user_id", user.id);
 
     if (profileError) {
@@ -239,8 +397,8 @@ export default function StaffOnboardingPage() {
 
     setStatus("success");
     toast({
-      title: "Account secured",
-      description: "Your password is set. Redirecting to the admin console…",
+      title: "Staff profile saved",
+      description: "Your details are secure. Redirecting to the admin console…",
     });
 
     setTimeout(() => {
@@ -292,12 +450,39 @@ export default function StaffOnboardingPage() {
                 Secure your account
               </CardTitle>
               <CardDescription>
-                Choose a strong password and confirm your display name. You can
-                update these later from the Access console.
+                Secure your account and confirm the staff details we use across
+                the Access console. You can refine them later from the admin
+                area.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <form className="space-y-5" onSubmit={handleSubmit}>
+                <Controller
+                  control={form.control}
+                  name="avatarUrl"
+                  render={({ field }) => (
+                    <div className="space-y-2">
+                      <AvatarUploader
+                        label="Profile photo"
+                        description="PNG or JPG up to 5MB"
+                        value={field.value ?? null}
+                        onChange={(next) => field.onChange(next ?? null)}
+                        disabled={isSaving}
+                        userId={user?.id ?? null}
+                      />
+                      {form.formState.errors.avatarUrl ? (
+                        <p className="text-sm text-destructive">
+                          {form.formState.errors.avatarUrl.message}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          We use this in the admin console and internal tools.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                />
+
                 <div className="space-y-2">
                   <Label
                     htmlFor="displayName"
@@ -320,6 +505,154 @@ export default function StaffOnboardingPage() {
                       {form.formState.errors.displayName.message}
                     </p>
                   ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth" className="text-sm font-medium">
+                    Date of birth
+                  </Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    {...form.register("dateOfBirth")}
+                    disabled={isSaving}
+                  />
+                  {form.formState.errors.dateOfBirth ? (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.dateOfBirth.message}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      We keep this private and only use it for staff records.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-5 sm:flex-row">
+                  <div className="flex-1 space-y-2">
+                    <Label
+                      htmlFor="nationality"
+                      className="text-sm font-medium"
+                    >
+                      Nationality
+                    </Label>
+                    <Input
+                      id="nationality"
+                      placeholder="e.g. Egyptian"
+                      {...form.register("nationality")}
+                      disabled={isSaving}
+                    />
+                    {form.formState.errors.nationality ? (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.nationality.message}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Used for travel compliance and HR documentation.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="jobTitle" className="text-sm font-medium">
+                      Job title
+                    </Label>
+                    <Input
+                      id="jobTitle"
+                      placeholder="e.g. Patient Coordinator"
+                      {...form.register("jobTitle")}
+                      disabled={isSaving}
+                    />
+                    {form.formState.errors.jobTitle ? (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.jobTitle.message}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-5 sm:flex-row">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-medium">
+                      Phone number
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="e.g. +20 10 1234 5678"
+                      {...form.register("phone")}
+                      disabled={isSaving}
+                    />
+                    {form.formState.errors.phone ? (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.phone.message}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Shared internally for urgent coordination only.
+                      </p>
+                    )}
+                  </div>
+                  <Controller
+                    control={form.control}
+                    name="sex"
+                    render={({ field }) => {
+                      const fieldError = form.formState.errors.sex;
+                      return (
+                        <div className="flex-1 space-y-2">
+                          <Label htmlFor="sex" className="text-sm font-medium">
+                            Sex
+                          </Label>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={isSaving}
+                          >
+                            <SelectTrigger id="sex">
+                              <SelectValue placeholder="Select an option" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sexOptions.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {sexOptionLabels[option]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {fieldError ? (
+                            <p className="text-sm text-destructive">
+                              {fieldError.message}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Choose the option that best reflects your HR
+                              records.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="language" className="text-sm font-medium">
+                    Preferred language
+                  </Label>
+                  <Input
+                    id="language"
+                    placeholder="e.g. English, Arabic"
+                    {...form.register("language")}
+                    disabled={isSaving}
+                  />
+                  {form.formState.errors.language ? (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.language.message}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Helps us pair you with the right patients and partners.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -376,10 +709,10 @@ export default function StaffOnboardingPage() {
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving your password…
+                      Saving your details…
                     </>
                   ) : (
-                    "Save and continue"
+                    "Save details and continue"
                   )}
                 </Button>
               </form>
