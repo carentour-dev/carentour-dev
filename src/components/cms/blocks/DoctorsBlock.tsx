@@ -153,8 +153,8 @@ export async function DoctorsBlock({
               <Card
                 key={doctor.id}
                 className={cn(
-                  "min-w-[260px] border-border/60 bg-card/90 shadow-sm hover:shadow-card-hover",
-                  cardWrapperClass,
+                  "flex h-full flex-col border-border/60 bg-card/90 shadow-sm hover:shadow-card-hover",
+                  cardWrapperClass ?? "w-full",
                 )}
               >
                 <CardHeader className={cardHeaderClass}>
@@ -196,7 +196,7 @@ export async function DoctorsBlock({
                 </CardHeader>
                 <CardContent
                   className={cn(
-                    "space-y-3 text-xs text-muted-foreground",
+                    "flex flex-1 flex-col gap-3 text-xs text-muted-foreground",
                     resolvedAlign === "center" && "text-center",
                     resolvedAlign === "end" && "text-right",
                   )}
@@ -240,7 +240,12 @@ export async function DoctorsBlock({
                       ))}
                     </div>
                   ) : null}
-                  <div className={cn("flex gap-2 pt-2", inlineListAlignment)}>
+                  <div
+                    className={cn(
+                      "mt-auto flex gap-2 pt-2",
+                      inlineListAlignment,
+                    )}
+                  >
                     <Button asChild size="sm" className="flex-1">
                       <Link href={`/doctors/${doctor.id}`}>View profile</Link>
                     </Button>
