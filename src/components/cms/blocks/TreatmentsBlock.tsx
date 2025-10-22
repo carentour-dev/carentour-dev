@@ -181,7 +181,7 @@ export async function TreatmentsBlock({
                 <Card
                   key={treatment.id}
                   className={cn(
-                    "border-border/60 bg-card/90 shadow-sm transition hover:shadow-card-hover",
+                    "flex h-full w-full flex-col border-border/60 bg-card/90 shadow-sm transition hover:shadow-card-hover",
                     cardOuterClass,
                   )}
                 >
@@ -203,7 +203,7 @@ export async function TreatmentsBlock({
                         "World-class medical care coordinated by our operations team."}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-muted-foreground">
+                  <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center justify-between text-xs">
                       <span>Itinerary</span>
                       <span className="text-foreground">{durationLabel}</span>
@@ -220,7 +220,7 @@ export async function TreatmentsBlock({
                       <span>Investment</span>
                       <span className="text-foreground">{priceLabel}</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="mt-auto flex gap-2 pt-2">
                       <Button asChild size="sm" className="flex-1">
                         <Link href={`/treatments/${treatment.slug}`}>
                           View treatment
