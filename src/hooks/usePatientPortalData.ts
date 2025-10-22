@@ -75,6 +75,39 @@ const buildFallbackName = (user: ReturnType<typeof useAuth>["user"]) => {
   return cleaned.length > 1 ? cleaned : "Care N Tour Patient";
 };
 
+const allowedSexValues = new Set([
+  "female",
+  "male",
+  "non_binary",
+  "prefer_not_to_say",
+]);
+
+const metadataString = (
+  metadata: Record<string, unknown>,
+  key: string,
+): string => {
+  const value = metadata[key];
+  return typeof value === "string" ? value.trim() : "";
+};
+
+const parseDate = (value: string): string | null => {
+  if (value.length === 0) return null;
+  const candidate = new Date(value);
+  if (Number.isNaN(candidate.getTime())) {
+    return null;
+  }
+  return value.includes("T")
+    ? (candidate.toISOString().split("T")[0] ?? null)
+    : value;
+};
+
+const normalizeSex = (value: string): string | null => {
+  if (!allowedSexValues.has(value)) {
+    return null;
+  }
+  return value;
+};
+
 const fetchPatientRecord = async (userId: string) => {
   return supabase
     .from("patients")
@@ -99,13 +132,37 @@ const ensurePatientRecord = async (
   }
 
   const fallbackName = buildFallbackName(user);
+  const userMetadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const metadataFullName = metadataString(userMetadata, "full_name");
+  const metadataNationality = metadataString(userMetadata, "nationality");
+  const metadataPhone = metadataString(userMetadata, "phone");
+  const metadataSex = normalizeSex(metadataString(userMetadata, "sex"));
+  const metadataDateOfBirth = parseDate(
+    metadataString(userMetadata, "date_of_birth"),
+  );
+  const metadataPreferredLanguage = metadataString(
+    userMetadata,
+    "preferred_language",
+  );
+  const metadataPreferredCurrency = metadataString(
+    userMetadata,
+    "preferred_currency",
+  );
 
   const { data: inserted, error: insertError } = await supabase
     .from("patients")
     .insert({
       user_id: user.id,
-      full_name: fallbackName,
+      full_name: metadataFullName.length > 0 ? metadataFullName : fallbackName,
       contact_email: user.email ?? null,
+      contact_phone: metadataPhone.length > 0 ? metadataPhone : null,
+      nationality: metadataNationality.length > 0 ? metadataNationality : null,
+      sex: metadataSex,
+      date_of_birth: metadataDateOfBirth,
+      preferred_language:
+        metadataPreferredLanguage.length > 0 ? metadataPreferredLanguage : null,
+      preferred_currency:
+        metadataPreferredCurrency.length > 0 ? metadataPreferredCurrency : null,
     })
     .select(
       "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, created_at, updated_at",
