@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  UserCircle,
   Sparkles,
   Star,
   Stethoscope,
@@ -26,7 +27,13 @@ import Footer from "@/components/Footer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +70,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
+import {
+  sexOptions,
+  sexOptionValues,
+  SexOptionValue,
+} from "@/constants/profile";
 
 const requestStatusLabels = {
   new: "New",
@@ -95,6 +107,30 @@ type TreatmentOption = Pick<
   "id" | "name" | "slug"
 >;
 
+const profileSchema = z.object({
+  username: z
+    .string()
+    .min(2, "Username must be at least 2 characters")
+    .max(50, "Username cannot exceed 50 characters"),
+  date_of_birth: z
+    .string({ required_error: "Date of birth is required" })
+    .min(1, "Date of birth is required"),
+  sex: z.enum(sexOptionValues, {
+    required_error: "Select the option that best describes your sex",
+  }),
+  nationality: z
+    .string()
+    .min(2, "Nationality is required")
+    .max(80, "Nationality seems too long"),
+  phone: z
+    .string()
+    .min(7, "Phone number is required")
+    .refine(
+      (value) => value.replace(/\D/g, "").length >= 7,
+      "Phone number looks incomplete",
+    ),
+});
+
 const reviewSchema = z.object({
   doctor_id: z.string({ required_error: "Select a doctor" }).uuid(),
   treatment_id: z.string({ required_error: "Select a treatment" }).uuid(),
@@ -123,6 +159,7 @@ const storySchema = z.object({
 });
 
 type StoryFormValues = z.infer<typeof storySchema>;
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return "Not set";
@@ -198,11 +235,16 @@ const truncate = (value: string, limit = 260) =>
   value.length <= limit ? value : `${value.slice(0, limit).trim()}…`;
 
 const OPTIONAL_SELECT_NONE = "__none__";
+const DEFAULT_SEX_OPTION: SexOptionValue = "prefer_not_to_say";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
+  const {
+    profile,
+    loading: profileLoading,
+    refresh: refreshProfile,
+  } = useUserProfile();
   const {
     patient,
     requests,
@@ -313,6 +355,111 @@ export default function DashboardPage() {
     patient.preferred_language.trim().length > 0
       ? patient.preferred_language
       : "en";
+  const maxProfileDob = new Date().toISOString().split("T")[0];
+
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      username: "",
+      date_of_birth: "",
+      sex: DEFAULT_SEX_OPTION,
+      nationality: "",
+      phone: "",
+    },
+  });
+
+  useEffect(() => {
+    if (!profile) {
+      profileForm.reset({
+        username: "",
+        date_of_birth: "",
+        sex: DEFAULT_SEX_OPTION,
+        nationality: "",
+        phone: "",
+      });
+      return;
+    }
+
+    const selectedSex = sexOptionValues.includes(
+      (profile.sex ?? "") as SexOptionValue,
+    )
+      ? (profile.sex as SexOptionValue)
+      : DEFAULT_SEX_OPTION;
+
+    profileForm.reset({
+      username: profile.username ?? "",
+      date_of_birth: profile.date_of_birth ?? "",
+      sex: selectedSex,
+      nationality: profile.nationality ?? "",
+      phone: profile.phone ?? "",
+    });
+  }, [profile, profileForm]);
+
+  const profileMutation = useMutation({
+    mutationFn: async (values: ProfileFormValues) => {
+      if (!user?.id) {
+        throw new Error("You need to be signed in to update your profile.");
+      }
+
+      const payload = {
+        username: values.username.trim(),
+        date_of_birth: values.date_of_birth,
+        sex: values.sex,
+        nationality: values.nationality.trim(),
+        phone: values.phone.trim(),
+      };
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw new Error(error.message ?? "Failed to update profile");
+      }
+
+      try {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: payload,
+        });
+
+        if (metadataError) {
+          console.warn(
+            "Profile updated but metadata sync failed:",
+            metadataError,
+          );
+        }
+      } catch (metadataSyncError) {
+        console.warn(
+          "Unexpected error syncing auth metadata:",
+          metadataSyncError,
+        );
+      }
+    },
+    onSuccess: async (_data, values) => {
+      await refreshProfile();
+
+      profileForm.reset({
+        username: values.username.trim(),
+        date_of_birth: values.date_of_birth,
+        sex: values.sex,
+        nationality: values.nationality.trim(),
+        phone: values.phone.trim(),
+      });
+
+      toast({
+        title: "Profile updated",
+        description: "Your personal details have been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Unable to update profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const reviewForm = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewSchema),
@@ -447,6 +594,9 @@ export default function DashboardPage() {
     },
   });
 
+  const profileSaving = profileMutation.isPending;
+  const isProfileDirty = profileForm.formState.isDirty;
+  const disableProfileFields = profileSaving || profileLoading;
   const reviewSubmitting = reviewMutation.isPending;
   const storySubmitting = storyMutation.isPending;
 
@@ -529,6 +679,33 @@ export default function DashboardPage() {
       ),
     [stories],
   );
+
+  const handleProfileReset = () => {
+    if (profile) {
+      const selectedSex = sexOptionValues.includes(
+        (profile.sex ?? "") as SexOptionValue,
+      )
+        ? (profile.sex as SexOptionValue)
+        : DEFAULT_SEX_OPTION;
+
+      profileForm.reset({
+        username: profile.username ?? "",
+        date_of_birth: profile.date_of_birth ?? "",
+        sex: selectedSex,
+        nationality: profile.nationality ?? "",
+        phone: profile.phone ?? "",
+      });
+      return;
+    }
+
+    profileForm.reset({
+      username: "",
+      date_of_birth: "",
+      sex: DEFAULT_SEX_OPTION,
+      nationality: "",
+      phone: "",
+    });
+  };
 
   const quickActions = [
     {
@@ -654,6 +831,154 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
             <div className="space-y-6 xl:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCircle className="h-5 w-5 text-primary" />
+                    Profile details
+                  </CardTitle>
+                  <CardDescription>
+                    Keep your demographic and contact details current so we can
+                    personalize your care.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...profileForm}>
+                    <form
+                      onSubmit={profileForm.handleSubmit((values) =>
+                        profileMutation.mutate(values),
+                      )}
+                      className="space-y-4"
+                    >
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={profileForm.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Username</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Display name"
+                                  disabled={disableProfileFields}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={profileForm.control}
+                          name="date_of_birth"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date of birth</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  {...field}
+                                  max={maxProfileDob}
+                                  disabled={disableProfileFields}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={profileForm.control}
+                          name="sex"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sex</FormLabel>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                disabled={disableProfileFields}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select an option" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {sexOptions.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={profileForm.control}
+                          name="nationality"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nationality</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="e.g. Egyptian"
+                                  disabled={disableProfileFields}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={profileForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="tel"
+                                {...field}
+                                placeholder="Include country code, e.g. +20 555 123456"
+                                disabled={disableProfileFields}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleProfileReset}
+                          disabled={disableProfileFields || !isProfileDirty}
+                        >
+                          Reset
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={disableProfileFields || !isProfileDirty}
+                        >
+                          {profileSaving ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Save changes
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
