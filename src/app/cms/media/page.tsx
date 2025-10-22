@@ -22,7 +22,7 @@ type FileItem = {
 };
 
 const MEDIA_BUCKET = "media";
-const MEDIA_PREFIX = "cms";
+const MEDIA_PREFIX = "";
 const LIST_LIMIT = 1000;
 
 export default function CmsMediaPage() {
@@ -34,9 +34,10 @@ export default function CmsMediaPage() {
     setLoading(true);
     try {
       const listFolder = async (prefix: string): Promise<FileItem[]> => {
+        const listPath = prefix || undefined;
         const { data, error } = await supabase.storage
           .from(MEDIA_BUCKET)
-          .list(prefix, {
+          .list(listPath, {
             limit: LIST_LIMIT,
             sortBy: { column: "updated_at", order: "desc" },
           });
