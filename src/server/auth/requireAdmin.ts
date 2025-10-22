@@ -1,8 +1,18 @@
 import { headers } from "next/headers";
+import type { User } from "@supabase/supabase-js";
+
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
+import { normalizeRoles, pickPrimaryRole, RoleSlug } from "@/lib/auth/roles";
 
-export async function requireAdmin() {
+export type AuthorizationContext = {
+  user: User;
+  roles: RoleSlug[];
+  permissions: string[];
+  primaryRole: RoleSlug | null;
+};
+
+async function resolveAuthorization(): Promise<AuthorizationContext> {
   const authHeader = (await headers()).get("authorization");
 
   if (!authHeader?.startsWith("Bearer ")) {
@@ -16,63 +26,78 @@ export async function requireAdmin() {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+  const { data: userData, error: userError } =
+    await supabaseAdmin.auth.getUser(accessToken);
 
   if (userError || !userData.user) {
     throw new ApiError(401, "Invalid or expired token", userError?.message);
   }
 
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("user_id", userData.user.id)
-    .maybeSingle();
+  const [rolesResult, permissionsResult] = await Promise.all([
+    supabaseAdmin.rpc("user_roles", { p_user_id: userData.user.id }),
+    supabaseAdmin.rpc("user_permissions", { p_user_id: userData.user.id }),
+  ]);
 
-  if (profileError) {
-    throw new ApiError(500, "Failed to load user profile", profileError.message);
+  if (rolesResult.error) {
+    throw new ApiError(
+      500,
+      "Failed to load user roles",
+      rolesResult.error.message,
+    );
   }
 
-  if (!profile || profile.role !== "admin") {
-    throw new ApiError(403, "Admin privileges required");
+  if (permissionsResult.error) {
+    throw new ApiError(
+      500,
+      "Failed to load user permissions",
+      permissionsResult.error.message,
+    );
   }
 
-  return { user: userData.user, role: profile.role };
+  const roles = normalizeRoles(rolesResult.data);
+  const permissions = Array.isArray(permissionsResult.data)
+    ? [...new Set(permissionsResult.data)]
+    : [];
+
+  const primaryRole = pickPrimaryRole(roles);
+
+  return {
+    user: userData.user,
+    roles,
+    permissions,
+    primaryRole,
+  };
 }
 
-// New helper that authorizes any of the allowed roles
-export async function requireRole(allowed: Array<"admin" | "editor" | "user">) {
-  const authHeader = (await headers()).get("authorization");
+export async function requireAdmin(): Promise<AuthorizationContext> {
+  return requireRole(["admin"]);
+}
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new ApiError(401, "Missing or invalid Authorization header");
-  }
+export async function requireRole(
+  allowed: RoleSlug[],
+): Promise<AuthorizationContext> {
+  const context = await resolveAuthorization();
 
-  const accessToken = authHeader.slice(7).trim();
-
-  if (!accessToken) {
-    throw new ApiError(401, "Missing access token");
-  }
-
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
-
-  if (userError || !userData.user) {
-    throw new ApiError(401, "Invalid or expired token", userError?.message);
-  }
-
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("user_id", userData.user.id)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new ApiError(500, "Failed to load user profile", profileError.message);
-  }
-
-  if (!profile || !allowed.includes(profile.role as any)) {
+  if (!allowed.some((role) => context.roles.includes(role))) {
     throw new ApiError(403, "Insufficient privileges");
   }
 
-  return { user: userData.user, role: profile.role };
+  return context;
+}
+
+export async function requirePermission(
+  permission: string | string[],
+): Promise<AuthorizationContext> {
+  const required = Array.isArray(permission) ? permission : [permission];
+  const context = await resolveAuthorization();
+
+  const hasPermission = required.every((perm) =>
+    context.permissions.includes(perm),
+  );
+
+  if (!hasPermission) {
+    throw new ApiError(403, "Permission denied");
+  }
+
+  return context;
 }
