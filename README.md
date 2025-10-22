@@ -268,8 +268,26 @@ npm run start
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                         | ✅       |
 | `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                              | ✅       |
 | `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs) | ✅\*     |
+| `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email         | ✅\*     |
 
 > **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
+
+### Supabase Edge Function Secrets
+
+Set secrets for deployed Edge Functions via the Supabase CLI:
+
+```bash
+supabase secrets set RESEND_API_KEY=... --project-ref <project-ref> --env prod
+supabase secrets set RESEND_API_KEY=... --project-ref <project-ref> --env preview
+```
+
+After updating secrets, redeploy the function so the new value is loaded:
+
+```bash
+supabase functions deploy send-staff-invite --project-ref <project-ref>
+```
+
+For local development, copy `supabase/functions/send-staff-invite/.env.example` to `.env` in the same directory and add your key so `supabase functions serve` picks it up.
 
 ---
 
