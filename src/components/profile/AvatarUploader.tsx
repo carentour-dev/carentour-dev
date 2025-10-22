@@ -23,6 +23,36 @@ type AvatarUploaderProps = {
 const DEFAULT_BUCKET = "media";
 const DEFAULT_FOLDER = "staff";
 
+const isConflictStorageError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  if (
+    "status" in error &&
+    typeof (error as { status?: unknown }).status === "number" &&
+    (error as { status: number }).status === 409
+  ) {
+    return true;
+  }
+
+  if (!("statusCode" in error)) {
+    return false;
+  }
+
+  const statusCode = (error as { statusCode?: unknown }).statusCode;
+
+  if (typeof statusCode === "number") {
+    return statusCode === 409;
+  }
+
+  if (typeof statusCode === "string") {
+    return statusCode === "409";
+  }
+
+  return false;
+};
+
 export function AvatarUploader({
   label = "Avatar",
   description = "PNG or JPG up to 5MB",
@@ -122,7 +152,7 @@ export function AvatarUploader({
         .upload(storagePath, file, { upsert: false });
 
       if (uploadError) {
-        if (uploadError.status === 409 || uploadError.statusCode === "409") {
+        if (isConflictStorageError(uploadError)) {
           setError(
             "A file with this name already exists. Rename the file and try again.",
           );
