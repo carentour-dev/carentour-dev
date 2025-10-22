@@ -38,12 +38,29 @@ $$;
 GRANT EXECUTE ON FUNCTION public.is_staff_account(UUID)
 TO authenticated, service_role;
 
--- Update the INSERT policy on patients table to block staff accounts
--- This ensures staff members cannot create patient records for themselves
-DROP POLICY IF EXISTS patients_insert_own_record
+DO $policy_drop$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename = 'patients'
+    AND policyname = 'Patients can insert their own record'
+  ) THEN
+    EXECUTE format(
+      'DROP POLICY %I ON %I.%I',
+      'Patients can insert their own record',
+      'public',
+      'patients'
+    );
+  END IF;
+END;
+$policy_drop$;
+
+DROP POLICY IF EXISTS patients_can_insert_own_record
 ON public.patients;
 
-CREATE POLICY patients_insert_own_record
+CREATE POLICY patients_can_insert_own_record
 ON public.patients
 FOR INSERT
 WITH CHECK (
@@ -51,14 +68,41 @@ WITH CHECK (
     AND NOT public.is_staff_account((SELECT auth.uid()))
 );
 
--- Add explanatory comment
-COMMENT ON POLICY patients_insert_own_record
-ON public.patients IS
-'Allows authenticated users to create patient records for themselves '
-'ONLY if they do not have account_type=staff in their user metadata. '
-'Patient signups via /auth have NULL account_type, while staff invites '
-'via admin console have account_type=staff. This separation prevents '
-'staff accounts from populating the public.patients table.';
+-- Service role policy for admin operations on patients table
+DO $policy_drop$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename = 'patients'
+    AND policyname = 'Service role can manage patients'
+  ) THEN
+    EXECUTE format(
+      'DROP POLICY %I ON %I.%I',
+      'Service role can manage patients',
+      'public',
+      'patients'
+    );
+  END IF;
+END;
+$policy_drop$;
+
+DROP POLICY IF EXISTS service_role_manage_patients
+ON public.patients;
+
+CREATE POLICY service_role_manage_patients
+ON public.patients
+FOR ALL
+USING ((SELECT auth.role()) = 'service_role')
+WITH CHECK ((SELECT auth.role()) = 'service_role');
+
+-- Add explanatory comment for the updated policy
+-- Allows authenticated users to create patient records for themselves
+-- ONLY if they do not have account_type=staff in their user metadata.
+-- Patient signups via /auth have NULL account_type, while staff invites
+-- via admin console have account_type=staff. This separation prevents
+-- staff accounts from populating the public.patients table.
 
 COMMENT ON FUNCTION public.is_staff_account(UUID) IS
 'Returns TRUE if the user has account_type=staff in '
