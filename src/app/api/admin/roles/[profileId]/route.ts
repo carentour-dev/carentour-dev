@@ -10,11 +10,12 @@ type RouteParams = {
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: RouteParams },
+  { params }: { params?: Promise<RouteParams> },
 ) {
   const context = await requireRole(["admin"]);
   const supabaseAdmin = getSupabaseAdmin();
-  const profileId = params?.profileId;
+  const routeParams = params ? await params : undefined;
+  const profileId = routeParams?.profileId;
 
   if (!profileId) {
     return NextResponse.json({ error: "Missing profile id" }, { status: 400 });
@@ -110,7 +111,7 @@ export async function PUT(
   if (insertPayload.length) {
     const { error: insertError } = await supabaseAdmin
       .from("profile_roles")
-      .insert(insertPayload, { returning: "minimal" });
+      .insert(insertPayload);
 
     if (insertError) {
       return NextResponse.json(
