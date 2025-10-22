@@ -1,40 +1,63 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PasswordStrength, isPasswordStrong } from '@/components/ui/password-strength';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  PasswordStrength,
+  isPasswordStrong,
+} from "@/components/ui/password-strength";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { sexOptions, SexOptionValue } from "@/constants/profile";
+import { Loader2 } from "lucide-react";
 
 function AuthContent() {
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [sex, setSex] = useState<SexOptionValue | "">("");
+  const [nationality, setNationality] = useState("");
+  const [phone, setPhone] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const { signIn, signUp, resetPassword, updatePassword, user, session } = useAuth();
+  const [resetEmail, setResetEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const { signIn, signUp, resetPassword, updatePassword, user, session } =
+    useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Check if we&apos;re in password reset mode
-  const isPasswordResetMode = searchParams.get('reset') === 'true' && session;
+  const isPasswordResetMode = searchParams.get("reset") === "true" && session;
+  const maxDateOfBirth = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     if (user && !isPasswordResetMode) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [user, router, isPasswordResetMode]);
 
@@ -46,16 +69,16 @@ function AuthContent() {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Success',
-        description: 'Signed in successfully!',
+        title: "Success",
+        description: "Signed in successfully!",
       });
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
 
     setIsLoading(false);
@@ -68,9 +91,9 @@ function AuthContent() {
     // Validate password strength
     if (!isPasswordStrong(password)) {
       toast({
-        title: 'Password too weak',
-        description: 'Please meet all password requirements',
-        variant: 'destructive',
+        title: "Password too weak",
+        description: "Please meet all password requirements",
+        variant: "destructive",
       });
       setIsLoading(false);
       return;
@@ -79,27 +102,116 @@ function AuthContent() {
     // Validate password confirmation
     if (password !== confirmPassword) {
       toast({
-        title: 'Passwords do not match',
-        description: 'Please make sure both passwords are identical',
-        variant: 'destructive',
+        title: "Passwords do not match",
+        description: "Please make sure both passwords are identical",
+        variant: "destructive",
       });
       setIsLoading(false);
       return;
     }
 
-    const { error } = await signUp(email, password, username);
+    if (!dateOfBirth) {
+      toast({
+        title: "Date of birth required",
+        description: "Please provide your date of birth to continue.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const parsedDateOfBirth = new Date(dateOfBirth);
+    const now = new Date();
+    if (Number.isNaN(parsedDateOfBirth.getTime()) || parsedDateOfBirth > now) {
+      toast({
+        title: "Invalid date of birth",
+        description:
+          "Please enter a valid date of birth that is not in the future.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (!sex) {
+      toast({
+        title: "Select option required",
+        description: "Please select the option that best describes your sex.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const trimmedNationality = nationality.trim();
+    if (!trimmedNationality) {
+      toast({
+        title: "Nationality required",
+        description:
+          "Please tell us your nationality so we can better assist your journey.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone) {
+      toast({
+        title: "Phone number required",
+        description:
+          "Please add a phone number so our concierge team can reach you.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const phoneDigits = trimmedPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 7) {
+      toast({
+        title: "Phone number looks incomplete",
+        description:
+          "Please include a full phone number including country code if applicable.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const normalizedEmail = email.trim();
+    const trimmedUsername = username.trim();
+
+    const { error } = await signUp({
+      email: normalizedEmail,
+      password,
+      username: trimmedUsername || undefined,
+      dateOfBirth,
+      sex,
+      nationality: trimmedNationality,
+      phone: trimmedPhone,
+    });
 
     if (error) {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Account Created Successfully!',
-        description: 'Please check your email for a confirmation link. Click the link to verify your account and you\'ll be automatically redirected to your dashboard.',
+        title: "Account Created Successfully!",
+        description:
+          "Please check your email for a confirmation link. Click the link to verify your account and you'll be automatically redirected to your dashboard.",
       });
+      setUsername("");
+      setDateOfBirth("");
+      setSex("");
+      setNationality("");
+      setPhone("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     }
 
     setIsLoading(false);
@@ -113,17 +225,17 @@ function AuthContent() {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Password Reset Email Sent',
-        description: 'Please check your email for password reset instructions.',
+        title: "Password Reset Email Sent",
+        description: "Please check your email for password reset instructions.",
       });
       setShowForgotPassword(false);
-      setResetEmail('');
+      setResetEmail("");
     }
 
     setIsLoading(false);
@@ -136,9 +248,9 @@ function AuthContent() {
     // Validate password strength
     if (!isPasswordStrong(newPassword)) {
       toast({
-        title: 'Password too weak',
-        description: 'Please meet all password requirements',
-        variant: 'destructive',
+        title: "Password too weak",
+        description: "Please meet all password requirements",
+        variant: "destructive",
       });
       setIsLoading(false);
       return;
@@ -147,9 +259,9 @@ function AuthContent() {
     // Validate password confirmation
     if (newPassword !== confirmNewPassword) {
       toast({
-        title: 'Passwords do not match',
-        description: 'Please make sure both passwords are identical',
-        variant: 'destructive',
+        title: "Passwords do not match",
+        description: "Please make sure both passwords are identical",
+        variant: "destructive",
       });
       setIsLoading(false);
       return;
@@ -159,16 +271,17 @@ function AuthContent() {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Password Updated Successfully',
-        description: 'Your password has been changed. You can now sign in with your new password.',
+        title: "Password Updated Successfully",
+        description:
+          "Your password has been changed. You can now sign in with your new password.",
       });
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
 
     setIsLoading(false);
@@ -199,10 +312,10 @@ function AuthContent() {
                   priority
                 />
               </div>
-              <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
-              <CardDescription>
-                Enter your new password below
-              </CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                Reset Your Password
+              </CardTitle>
+              <CardDescription>Enter your new password below</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handlePasswordUpdate} className="space-y-4">
@@ -219,7 +332,9 @@ function AuthContent() {
                   <PasswordStrength password={newPassword} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                  <Label htmlFor="confirm-new-password">
+                    Confirm New Password
+                  </Label>
                   <Input
                     id="confirm-new-password"
                     type="password"
@@ -229,11 +344,15 @@ function AuthContent() {
                     required
                   />
                   {confirmNewPassword && newPassword !== confirmNewPassword && (
-                    <p className="text-sm text-destructive">Passwords do not match</p>
+                    <p className="text-sm text-destructive">
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Update Password
                 </Button>
               </form>
@@ -267,7 +386,9 @@ function AuthContent() {
                 priority
               />
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome to Care N Tour</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Welcome to Care N Tour
+            </CardTitle>
             <CardDescription>
               Access your medical tourism account
             </CardDescription>
@@ -304,7 +425,9 @@ function AuthContent() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     Sign In
                   </Button>
                   <div className="text-center">
@@ -317,7 +440,10 @@ function AuthContent() {
                     </button>
                   </div>
                   <div className="text-center">
-                    <Link href="/" className="text-sm text-primary hover:underline">
+                    <Link
+                      href="/"
+                      className="text-sm text-primary hover:underline"
+                    >
                       Back to Home
                     </Link>
                   </div>
@@ -334,6 +460,57 @@ function AuthContent() {
                       placeholder="Choose a username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-dob">Date of birth</Label>
+                    <Input
+                      id="signup-dob"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      max={maxDateOfBirth}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-sex">Sex</Label>
+                    <Select
+                      value={sex || undefined}
+                      onValueChange={(value) => setSex(value as SexOptionValue)}
+                    >
+                      <SelectTrigger id="signup-sex">
+                        <SelectValue placeholder="Select an option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sexOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-nationality">Nationality</Label>
+                    <Input
+                      id="signup-nationality"
+                      type="text"
+                      placeholder="Enter your nationality"
+                      value={nationality}
+                      onChange={(e) => setNationality(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Phone</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="Include country code, e.g. +20 555 123456"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -370,11 +547,15 @@ function AuthContent() {
                       required
                     />
                     {confirmPassword && password !== confirmPassword && (
-                      <p className="text-sm text-destructive">Passwords do not match</p>
+                      <p className="text-sm text-destructive">
+                        Passwords do not match
+                      </p>
                     )}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     Sign Up
                   </Button>
                 </form>
@@ -390,7 +571,8 @@ function AuthContent() {
               <CardHeader>
                 <CardTitle>Reset Password</CardTitle>
                 <CardDescription>
-                  Enter your email address and we&apos;ll send you a link to reset your password.
+                  Enter your email address and we&apos;ll send you a link to
+                  reset your password.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -407,8 +589,14 @@ function AuthContent() {
                     />
                   </div>
                   <div className="flex space-x-2">
-                    <Button type="submit" disabled={isLoading} className="flex-1">
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      {isLoading && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
                       Send Reset Email
                     </Button>
                     <Button
@@ -416,7 +604,7 @@ function AuthContent() {
                       variant="outline"
                       onClick={() => {
                         setShowForgotPassword(false);
-                        setResetEmail('');
+                        setResetEmail("");
                       }}
                       className="flex-1"
                     >
@@ -435,11 +623,13 @@ function AuthContent() {
 
 export default function Auth() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <AuthContent />
     </Suspense>
   );
