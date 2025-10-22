@@ -262,15 +262,20 @@ npm run start
 
 ## 🔐 Environment Variables
 
-| Variable                               | Description                                                      | Required |
-| -------------------------------------- | ---------------------------------------------------------------- | -------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                        | ✅       |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                         | ✅       |
-| `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                              | ✅       |
-| `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs) | ✅\*     |
-| `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email         | ✅\*     |
+| Variable                               | Description                                                                                         | Required |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------- | -------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                                                           | ✅       |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                                                            | ✅       |
+| `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                                                                 | ✅       |
+| `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs)                                    | ✅\*     |
+| `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email                                            | ✅\*     |
+| `RESEND_FROM_ADDRESS`                  | Optional default sender identity for Resend emails                                                  | Optional |
+| `RESEND_STAFF_INVITE_FROM`             | Optional override for the staff invite sender address                                               | Optional |
+| `TEAM_ACCOUNT_INVITE_REDIRECT_URL`     | Optional: exact URL staff invites should open (defaults to `ADMIN_CONSOLE_URL + /staff/onboarding`) | Optional |
 
 > **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
+> Staff invite links default to `${ADMIN_CONSOLE_URL}/staff/onboarding` when `TEAM_ACCOUNT_INVITE_REDIRECT_URL` is unset, so configure one of those values to control where teammates land after accepting the email.
+> If you have verified only specific sender identities in Resend, set `RESEND_STAFF_INVITE_FROM` (or the shared `RESEND_FROM_ADDRESS`) to one of those identities, for example `Care N Tour Team <contact@carentour.com>`, before deploying the function.
 
 ### Supabase Edge Function Secrets
 
@@ -279,6 +284,9 @@ Set secrets for deployed Edge Functions via the Supabase CLI:
 ```bash
 supabase secrets set RESEND_API_KEY=... --project-ref <project-ref> --env prod
 supabase secrets set RESEND_API_KEY=... --project-ref <project-ref> --env preview
+# Optional: set a verified sender identity if it differs from the default
+supabase secrets set "RESEND_STAFF_INVITE_FROM=Care N Tour Team <contact@carentour.com>" --project-ref <project-ref> --env prod
+supabase secrets set "RESEND_STAFF_INVITE_FROM=Care N Tour Team <contact@carentour.com>" --project-ref <project-ref> --env preview
 ```
 
 After updating secrets, redeploy the function so the new value is loaded:
@@ -288,6 +296,16 @@ supabase functions deploy send-staff-invite --project-ref <project-ref>
 ```
 
 For local development, copy `supabase/functions/send-staff-invite/.env.example` to `.env` in the same directory and add your key so `supabase functions serve` picks it up.
+
+### Vercel configuration
+
+1. Open your project in the Vercel dashboard and navigate to **Settings → Environment Variables**.
+2. Add or update the following variables (all environments you deploy to):
+   - `TEAM_ACCOUNT_INVITE_REDIRECT_URL` → `https://www.carentour.com/staff/onboarding`
+   - `RESEND_STAFF_INVITE_FROM` (if you want your branded sender) → e.g. `Care N Tour Admin <admin@carentour.com>`
+   - Ensure `RESEND_API_KEY` and any other existing secrets are still present.
+3. Save the variables, then trigger a redeploy (either by pressing **Redeploy** on the latest deployment or by pushing a new commit) so the updated values are available to the API route.
+4. After the redeploy, send yourself a new staff invite to confirm the link opens the onboarding flow and the email uses the desired sender.
 
 ---
 
