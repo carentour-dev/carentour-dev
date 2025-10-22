@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import {
   Form,
   FormControl,
@@ -30,6 +31,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -38,8 +40,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, ShieldPlus, UserPlus2 } from "lucide-react";
+import { Loader2, Pencil, ShieldPlus, UserPlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const createAccountSchema = z.object({
   email: z
@@ -59,6 +76,75 @@ const createAccountSchema = z.object({
 
 type CreateAccountValues = z.infer<typeof createAccountSchema>;
 
+const sexOptions = [
+  "female",
+  "male",
+  "non-binary",
+  "prefer_not_to_say",
+] as const;
+type SexOption = (typeof sexOptions)[number];
+const sexOptionLabels: Record<SexOption, string> = {
+  female: "Female",
+  male: "Male",
+  "non-binary": "Non-binary",
+  prefer_not_to_say: "Prefer not to say",
+};
+const phoneRegex = /^[+0-9()[\]\s-]{6,}$/;
+
+const staffDetailsSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters.")
+    .max(120, "Name must be at most 120 characters."),
+  avatarUrl: z
+    .string()
+    .url("Upload a valid image.")
+    .max(2048, "Avatar URL is too long.")
+    .optional()
+    .nullable(),
+  dateOfBirth: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date in YYYY-MM-DD format.")
+    .refine(
+      (value) => {
+        const parsed = new Date(value);
+        return !Number.isNaN(parsed.getTime());
+      },
+      { message: "Enter a valid date." },
+    ),
+  nationality: z
+    .string()
+    .trim()
+    .min(2, "Nationality must be at least 2 characters.")
+    .max(120, "Nationality must be at most 120 characters."),
+  jobTitle: z
+    .string()
+    .trim()
+    .min(2, "Job title must be at least 2 characters.")
+    .max(180, "Job title must be at most 180 characters."),
+  phone: z
+    .string()
+    .trim()
+    .min(6, "Phone number must be at least 6 characters.")
+    .max(40, "Phone number must be at most 40 characters.")
+    .regex(
+      phoneRegex,
+      "Phone number can only include digits, spaces, parentheses, dashes, or '+'",
+    ),
+  sex: z.enum(sexOptions, {
+    required_error: "Select the option that best matches their HR records.",
+  }),
+  language: z
+    .string()
+    .trim()
+    .min(2, "Preferred language must be at least 2 characters.")
+    .max(80, "Preferred language must be at most 80 characters."),
+});
+
+type StaffDetailsValues = z.infer<typeof staffDetailsSchema>;
+
 type RoleRecord = {
   id: string;
   slug: string;
@@ -71,6 +157,13 @@ type TeamAccount = {
   user_id: string;
   username: string | null;
   email: string | null;
+  avatar_url: string | null;
+  date_of_birth: string | null;
+  nationality: string | null;
+  job_title: string | null;
+  phone: string | null;
+  language: string | null;
+  sex: string | null;
   roles: string[];
   primary_role: string | null;
   created_at: string;
@@ -99,6 +192,10 @@ export default function AdminAccountsPage() {
       .sort((a, b) => a.slug.localeCompare(b.slug));
   }, [data?.roles]);
 
+  const [editingAccount, setEditingAccount] = useState<TeamAccount | null>(
+    null,
+  );
+
   const form = useForm<CreateAccountValues>({
     resolver: zodResolver(createAccountSchema),
     defaultValues: {
@@ -107,6 +204,65 @@ export default function AdminAccountsPage() {
       roles: [],
     },
   });
+
+  const editForm = useForm<StaffDetailsValues>({
+    resolver: zodResolver(staffDetailsSchema),
+    defaultValues: {
+      displayName: "",
+      avatarUrl: null,
+      dateOfBirth: "",
+      nationality: "",
+      jobTitle: "",
+      phone: "",
+      sex: "prefer_not_to_say",
+      language: "",
+    },
+  });
+
+  const resolveSex = useCallback(
+    (value: string | null): SexOption =>
+      value && sexOptions.includes(value as SexOption)
+        ? (value as SexOption)
+        : "prefer_not_to_say",
+    [],
+  );
+
+  const formatDate = (value: string | null): string => {
+    if (!value) {
+      return "—";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleDateString();
+  };
+
+  useEffect(() => {
+    if (editingAccount) {
+      editForm.reset({
+        displayName: editingAccount.username ?? "",
+        avatarUrl: editingAccount.avatar_url ?? null,
+        dateOfBirth: editingAccount.date_of_birth ?? "",
+        nationality: editingAccount.nationality ?? "",
+        jobTitle: editingAccount.job_title ?? "",
+        phone: editingAccount.phone ?? "",
+        sex: resolveSex(editingAccount.sex),
+        language: editingAccount.language ?? "",
+      });
+    } else {
+      editForm.reset({
+        displayName: "",
+        avatarUrl: null,
+        dateOfBirth: "",
+        nationality: "",
+        jobTitle: "",
+        phone: "",
+        sex: "prefer_not_to_say",
+        language: "",
+      });
+    }
+  }, [editingAccount, editForm, resolveSex]);
 
   const mutation = useMutation({
     mutationFn: async (values: CreateAccountValues) => {
@@ -141,6 +297,57 @@ export default function AdminAccountsPage() {
       });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: StaffDetailsValues) => {
+      if (!editingAccount) {
+        throw new Error("Select a staff account before saving.");
+      }
+
+      const payload = {
+        displayName: values.displayName.trim(),
+        avatarUrl: values.avatarUrl ?? null,
+        dateOfBirth: values.dateOfBirth,
+        nationality: values.nationality.trim(),
+        jobTitle: values.jobTitle.trim(),
+        phone: values.phone.trim(),
+        sex: values.sex,
+        language: values.language.trim(),
+      };
+
+      return adminFetch<{ account: TeamAccount }>(
+        `/api/admin/accounts/${editingAccount.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+    onSuccess: ({ account }) => {
+      toast({
+        title: "Staff details updated",
+        description: `${account.username ?? account.email ?? "Team member"} is now up to date.`,
+      });
+      setEditingAccount(null);
+      invalidate(["admin", "accounts"]);
+    },
+    onError: (mutationError: unknown) => {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Unable to update the staff profile. Please try again.";
+      toast({
+        title: "Update failed",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditSubmit = editForm.handleSubmit((values) =>
+    updateMutation.mutate(values),
+  );
+  const isSavingDetails = updateMutation.isPending;
 
   const accounts = data?.accounts ?? [];
 
@@ -316,8 +523,8 @@ export default function AdminAccountsPage() {
               Existing team members
             </CardTitle>
             <CardDescription>
-              Staff accounts can also be edited from Access for advanced role
-              management.
+              Keep team records current by editing personal details directly in
+              the table below. Role changes still live inside Access for now.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -344,42 +551,337 @@ export default function AdminAccountsPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Roles</TableHead>
+                      <TableHead className="hidden lg:table-cell">
+                        Details
+                      </TableHead>
                       <TableHead className="hidden md:table-cell">
                         Created
                       </TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {accounts.map((account) => (
-                      <TableRow key={account.id}>
-                        <TableCell className="font-medium">
-                          {account.username ?? "—"}
-                        </TableCell>
-                        <TableCell>{account.email ?? "—"}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {account.roles.map((role) => (
-                              <Badge
-                                key={role}
-                                variant="outline"
-                                className="capitalize"
-                              >
-                                {role.replace(/[-_]/g, " ")}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                          {new Date(account.created_at).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {accounts.map((account) => {
+                      const resolvedSex =
+                        account.sex &&
+                        sexOptions.includes(account.sex as SexOption)
+                          ? sexOptionLabels[account.sex as SexOption]
+                          : (account.sex ?? "—");
+                      const displayName =
+                        account.username ?? account.email ?? "Team member";
+                      const initials =
+                        displayName
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part.charAt(0).toUpperCase())
+                          .join("") || "ST";
+
+                      return (
+                        <TableRow key={account.id}>
+                          <TableCell className="min-w-[200px] font-medium">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="mt-1 h-10 w-10 border border-border/60">
+                                <AvatarImage
+                                  src={account.avatar_url ?? undefined}
+                                  alt={displayName}
+                                />
+                                <AvatarFallback>{initials}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span>{account.username ?? "—"}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {account.job_title ?? "—"}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{account.email ?? "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {account.roles.map((role) => (
+                                <Badge
+                                  key={role}
+                                  variant="outline"
+                                  className="capitalize"
+                                >
+                                  {role.replace(/[-_]/g, " ")}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden align-top text-sm text-muted-foreground lg:table-cell">
+                            <div className="flex flex-col gap-1">
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  DOB:
+                                </span>{" "}
+                                {formatDate(account.date_of_birth)}
+                              </span>
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  Nationality:
+                                </span>{" "}
+                                {account.nationality ?? "—"}
+                              </span>
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  Language:
+                                </span>{" "}
+                                {account.language ?? "—"}
+                              </span>
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  Phone:
+                                </span>{" "}
+                                {account.phone ?? "—"}
+                              </span>
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  Sex:
+                                </span>{" "}
+                                {resolvedSex}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
+                            {new Date(account.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingAccount(account)}
+                              disabled={isSavingDetails}
+                            >
+                              <Pencil className="mr-1 h-4 w-4" />
+                              Edit details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
             )}
           </CardContent>
         </Card>
+        <Dialog
+          open={Boolean(editingAccount)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingAccount(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit staff details</DialogTitle>
+              <DialogDescription>
+                Update the personal information captured during onboarding.
+                These changes sync to the Supabase profile and future invites.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={handleEditSubmit} className="space-y-6">
+                <div className="grid gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="avatarUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <ImageUploader
+                          label="Profile photo"
+                          description="PNG or JPG up to 5MB"
+                          value={field.value ?? null}
+                          onChange={(url) => field.onChange(url ?? null)}
+                          bucket="media"
+                          folder={
+                            editingAccount?.user_id
+                              ? `staff/${editingAccount.user_id}`
+                              : "staff"
+                          }
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editForm.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. Dr. Amira Lewis"
+                            disabled={isSavingDetails}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of birth</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="date"
+                              disabled={isSavingDetails}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone number</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="tel"
+                              placeholder="e.g. +20 10 1234 5678"
+                              disabled={isSavingDetails}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Used internally for urgent coordination only.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="nationality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nationality</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g. Egyptian"
+                              disabled={isSavingDetails}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="language"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred language</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g. English, Arabic"
+                              disabled={isSavingDetails}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Helps match staff to patient language needs.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={editForm.control}
+                    name="jobTitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job title</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. Patient Coordinator"
+                            disabled={isSavingDetails}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editForm.control}
+                    name="sex"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sex</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isSavingDetails}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an option" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {sexOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {sexOptionLabels[option]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Stored securely for HR and roster planning.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingAccount(null)}
+                    disabled={isSavingDetails}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSavingDetails}>
+                    {isSavingDetails ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      "Save changes"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
