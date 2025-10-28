@@ -132,7 +132,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const metadata =
         (session?.user?.user_metadata as Record<string, unknown>) ?? {};
 
-      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+      // Supabase reports a non-typed "USER_DELETED" event in some scenarios.
+      const authEvent = event as string;
+
+      if (event === "SIGNED_OUT" || authEvent === "USER_DELETED") {
         lastKnownUserId.current = null;
         redirectedForCurrentUser.current = false;
         return;
