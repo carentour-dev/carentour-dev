@@ -25,8 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useTheme } from "next-themes";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "next-themes";
 import {
   ActivitySquare,
   Building2,
@@ -226,8 +226,8 @@ function AdminBranding() {
 
   const logoSrc =
     mounted && resolvedTheme === "dark"
-      ? "/care-n-tour-logo-light.png"
-      : "/care-n-tour-logo-dark.png";
+      ? "/carentour-logo-light-alt.png"
+      : "/carentour-logo-dark-alt.png";
   const isCollapsed = state === "collapsed";
 
   if (isCollapsed) {
@@ -236,9 +236,9 @@ function AdminBranding() {
         <Image
           src={logoSrc}
           alt="Care N Tour logo"
-          width={44}
-          height={44}
-          className="h-11 w-11 rounded-md border border-sidebar-border bg-sidebar-accent/30 p-1.5 object-contain"
+          width={64}
+          height={64}
+          className="h-14 w-14 rounded-md border border-sidebar-border bg-sidebar-accent/30 p-1.5 object-contain"
           priority
         />
       </div>
@@ -250,9 +250,9 @@ function AdminBranding() {
       <Image
         src={logoSrc}
         alt="Care N Tour logo"
-        width={160}
-        height={54}
-        className="h-12 w-auto max-w-[160px]"
+        width={240}
+        height={240}
+        className="h-16 w-auto max-w-[240px] object-contain"
         priority
       />
       <span className="text-xs text-muted-foreground">Admin Console</span>
