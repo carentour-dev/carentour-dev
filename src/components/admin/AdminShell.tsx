@@ -209,6 +209,16 @@ function AdminTopbar() {
         </div>
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link
+            href="/"
+            prefetch={false}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Visit site
+          </Link>
+        </Button>
         <ThemeToggle />
       </div>
     </header>
