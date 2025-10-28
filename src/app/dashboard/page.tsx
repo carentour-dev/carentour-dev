@@ -440,7 +440,7 @@ export default function DashboardPage() {
         throw new Error("You need to be signed in to update your profile.");
       }
 
-      const payload = {
+      const profilePayload = {
         username: values.username.trim(),
         date_of_birth: values.date_of_birth,
         sex: values.sex,
@@ -448,18 +448,64 @@ export default function DashboardPage() {
         phone: values.phone.trim(),
       };
 
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
-        .update(payload)
+        .update(profilePayload)
         .eq("user_id", user.id);
 
-      if (error) {
-        throw new Error(error.message ?? "Failed to update profile");
+      if (profileError) {
+        throw new Error(profileError.message ?? "Failed to update profile");
+      }
+
+      const patientPayload = {
+        full_name: profilePayload.username,
+        date_of_birth: profilePayload.date_of_birth,
+        sex: profilePayload.sex,
+        nationality: profilePayload.nationality,
+        contact_phone: profilePayload.phone,
+      };
+
+      let patientUpdate = supabase.from("patients").update(patientPayload);
+
+      if (patient?.id) {
+        patientUpdate = patientUpdate.eq("id", patient.id);
+      } else {
+        patientUpdate = patientUpdate.eq("user_id", user.id);
+      }
+
+      const { data: existingPatient, error: patientError } = await patientUpdate
+        .select("id")
+        .maybeSingle();
+
+      if (patientError) {
+        throw new Error(
+          patientError.message ?? "Failed to sync patient profile",
+        );
+      }
+
+      if (!existingPatient) {
+        const { error: patientInsertError } = await supabase
+          .from("patients")
+          .insert({
+            user_id: user.id,
+            contact_email: user.email ?? null,
+            ...patientPayload,
+          });
+
+        if (patientInsertError) {
+          throw new Error(
+            patientInsertError.message ??
+              "Failed to create patient profile record.",
+          );
+        }
       }
 
       try {
         const { error: metadataError } = await supabase.auth.updateUser({
-          data: payload,
+          data: {
+            ...profilePayload,
+            full_name: profilePayload.username,
+          },
         });
 
         if (metadataError) {
@@ -477,6 +523,7 @@ export default function DashboardPage() {
     },
     onSuccess: async (_data, values) => {
       await refreshProfile();
+      await refetch();
 
       profileForm.reset({
         username: values.username.trim(),
