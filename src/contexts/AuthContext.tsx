@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,16 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const STAFF_ROLE_KEYS = new Set([
+  "admin",
+  "coordinator",
+  "doctor",
+  "management",
+  "employee",
+  "editor",
+  "staff",
+]);
 
 const clearSupabaseAuthStorage = () => {
   if (typeof window === "undefined") {
@@ -68,8 +79,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastKnownUserId = useRef<string | null>(null);
+  const redirectedForCurrentUser = useRef(false);
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
     useSecurity();
+
+  const isStaffAccount = useCallback((metadata: Record<string, unknown>) => {
+    const accountType =
+      typeof metadata.account_type === "string"
+        ? metadata.account_type.toLowerCase()
+        : null;
+
+    if (accountType === "staff") {
+      return true;
+    }
+
+    const staffRolesSource =
+      (Array.isArray(metadata.staff_roles)
+        ? metadata.staff_roles
+        : Array.isArray(metadata.roles)
+          ? metadata.roles
+          : Array.isArray(metadata.role)
+            ? metadata.role
+            : []) ?? [];
+
+    const normalizedRoles = staffRolesSource
+      .filter((role): role is string => typeof role === "string")
+      .map((role) => role.toLowerCase());
+
+    if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+      return true;
+    }
+
+    const primaryRole =
+      typeof metadata.primary_role === "string"
+        ? metadata.primary_role.toLowerCase()
+        : null;
+
+    return primaryRole !== null && STAFF_ROLE_KEYS.has(primaryRole);
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener
@@ -80,25 +128,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Handle email verification redirect
+      const currentUserId = session?.user?.id ?? null;
+      const metadata =
+        (session?.user?.user_metadata as Record<string, unknown>) ?? {};
+
+      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+        lastKnownUserId.current = null;
+        redirectedForCurrentUser.current = false;
+        return;
+      }
+
+      const previousUserId = lastKnownUserId.current;
+      const isNewSignIn =
+        currentUserId !== null &&
+        (previousUserId === null || previousUserId !== currentUserId);
+
       if (
         event === "SIGNED_IN" &&
-        session?.user &&
-        window.location.pathname === "/"
+        isNewSignIn &&
+        typeof window !== "undefined" &&
+        window.location.pathname === "/" &&
+        !redirectedForCurrentUser.current &&
+        !isStaffAccount(metadata)
       ) {
-        window.location.href = "/dashboard";
+        redirectedForCurrentUser.current = true;
+        lastKnownUserId.current = currentUserId;
+        window.location.replace("/dashboard");
+        return;
+      }
+
+      if (currentUserId) {
+        lastKnownUserId.current = currentUserId;
       }
     });
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        lastKnownUserId.current = session?.user?.id ?? null;
+        redirectedForCurrentUser.current = false;
+      })
+      .catch((error) => {
+        console.error("Failed to get initial session:", error);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isStaffAccount]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
