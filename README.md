@@ -1,7 +1,7 @@
 # Care N Tour - Medical Tourism Platform
 
 <div align="center">
-  <img src="public/care-n-tour-logo-light.png" alt="Care N Tour Logo" width="300"/>
+  <img src="public/carentour-logo-light.png" alt="Care N Tour Logo" width="300"/>
 
 **World-Class Medical Care in Egypt**
 
@@ -185,8 +185,10 @@ carentour-dev/
 │   └── index.css                 # Global styles with Tailwind
 │
 ├── public/                       # Static assets
-│   ├── care-n-tour-logo-dark.png
-│   ├── care-n-tour-logo-light.png
+│   ├── carentour-logo-dark.png
+│   ├── carentour-logo-light.png
+│   ├── carentour-logo-dark-alt.png
+│   ├── carentour-logo-light-alt.png
 │   ├── hero-medical-facility.webp
 │   ├── surgery-suite.webp
 │   ├── consultation.webp
