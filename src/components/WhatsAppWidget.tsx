@@ -134,7 +134,7 @@ const formatTimestamp = (value: Date) =>
 export function WhatsAppWidget({
   phoneNumber = DEFAULT_PHONE_NUMBER,
   accountName = DEFAULT_ACCOUNT_NAME,
-  avatar = "/care-n-tour-logo-light.png",
+  avatar = "/carentour-logo-light.png",
   statusMessage = DEFAULT_STATUS,
   chatMessage = DEFAULT_CHAT_MESSAGE,
   placeholder = DEFAULT_PLACEHOLDER,
