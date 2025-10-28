@@ -70,13 +70,13 @@ const Footer = () => {
             <Image
               src={
                 mounted && resolvedTheme === "dark"
-                  ? "/care-n-tour-logo-dark.png"
-                  : "/care-n-tour-logo-light.png"
+                  ? "/carentour-logo-dark.png"
+                  : "/carentour-logo-light.png"
               }
               alt="Care N Tour"
-              width={160}
-              height={48}
-              className="h-12 w-auto mb-4"
+              width={260}
+              height={94}
+              className="mb-4 h-[72px] w-auto max-w-[280px] object-contain"
             />
             <p className="text-background/80 mb-6">
               Your trusted partner for world-class medical treatments in Egypt.
