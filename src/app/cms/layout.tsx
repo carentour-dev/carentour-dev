@@ -54,6 +54,11 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  const logoSrc =
+    mounted && resolvedTheme === "dark"
+      ? "/carentour-logo-light.png"
+      : "/carentour-logo-dark.png";
+
   if (authorized === null) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -93,15 +98,11 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link href="/cms" className="flex items-center gap-3">
             <Image
-              src={
-                mounted && resolvedTheme === "dark"
-                  ? "/care-n-tour-logo-light.png"
-                  : "/care-n-tour-logo-dark.png"
-              }
+              src={logoSrc}
               alt="Care N Tour logo"
-              width={140}
-              height={48}
-              className="h-10 w-auto"
+              width={240}
+              height={90}
+              className="h-12 w-auto max-w-[260px] object-contain"
               priority
             />
             <span className="hidden text-sm font-semibold tracking-wide text-muted-foreground md:inline">
