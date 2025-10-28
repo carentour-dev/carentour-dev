@@ -296,7 +296,7 @@ function AuthContent() {
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
                 <Image
-                  src="/care-n-tour-logo-dark.png"
+                  src="/carentour-logo-dark.png"
                   alt="Care N Tour logo"
                   width={176}
                   height={40}
@@ -304,7 +304,7 @@ function AuthContent() {
                   priority
                 />
                 <Image
-                  src="/care-n-tour-logo-light.png"
+                  src="/carentour-logo-light.png"
                   alt="Care N Tour logo"
                   width={176}
                   height={40}
@@ -370,7 +370,7 @@ function AuthContent() {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <Image
-                src="/care-n-tour-logo-dark.png"
+                src="/carentour-logo-dark.png"
                 alt="Care N Tour logo"
                 width={176}
                 height={40}
@@ -378,7 +378,7 @@ function AuthContent() {
                 priority
               />
               <Image
-                src="/care-n-tour-logo-light.png"
+                src="/carentour-logo-light.png"
                 alt="Care N Tour logo"
                 width={176}
                 height={40}
