@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import { AuthProvider } from "@/contexts/AuthContext";
 import QueryProvider from "@/components/QueryProvider";
 import WhatsAppWidgetGate from "@/components/WhatsAppWidgetGate";
@@ -47,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <MicrosoftClarity />
         <ThemeProvider defaultTheme="system" storageKey="care-n-tour-theme">
           <QueryProvider>
             <AuthProvider>
