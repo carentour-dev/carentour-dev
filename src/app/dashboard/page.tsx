@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Clock,
+  ChevronDown,
   ExternalLink,
   BookOpen,
   Inbox,
@@ -34,6 +35,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -290,6 +296,8 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
+  const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const {
     data: treatmentOptions = [],
@@ -477,6 +485,7 @@ export default function DashboardPage() {
         nationality: values.nationality.trim(),
         phone: values.phone.trim(),
       });
+      setIsEditingProfile(false);
 
       toast({
         title: "Profile updated",
@@ -628,6 +637,44 @@ export default function DashboardPage() {
   const profileSaving = profileMutation.isPending;
   const isProfileDirty = profileForm.formState.isDirty;
   const disableProfileFields = profileSaving || profileLoading;
+  const profileSummaryData = useMemo(() => {
+    const sexLabel =
+      sexOptions.find((option) => option.value === profile?.sex)?.label ??
+      "Not set";
+    const nationality = profile?.nationality?.trim() ?? "";
+    const phone = profile?.phone?.trim() ?? "";
+    const dateOfBirth = profile?.date_of_birth?.trim() ?? "";
+
+    return [
+      {
+        label: "Username",
+        value: profile?.username?.trim() || fallbackPatientName,
+      },
+      {
+        label: "Date of birth",
+        value: dateOfBirth.length > 0 ? dateOfBirth : "Not set",
+      },
+      {
+        label: "Sex",
+        value: sexLabel,
+      },
+      {
+        label: "Nationality",
+        value: nationality.length > 0 ? nationality : "Not set",
+      },
+      {
+        label: "Phone",
+        value: phone.length > 0 ? phone : "Not set",
+      },
+    ];
+  }, [
+    fallbackPatientName,
+    profile?.date_of_birth,
+    profile?.nationality,
+    profile?.phone,
+    profile?.sex,
+    profile?.username,
+  ]);
   const reviewSubmitting = reviewMutation.isPending;
   const storySubmitting = storyMutation.isPending;
 
@@ -873,153 +920,225 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
             <div className="space-y-6 xl:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCircle className="h-5 w-5 text-primary" />
-                    Profile details
-                  </CardTitle>
-                  <CardDescription>
-                    Keep your demographic and contact details current so we can
-                    personalize your care.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...profileForm}>
-                    <form
-                      onSubmit={profileForm.handleSubmit((values) =>
-                        profileMutation.mutate(values),
-                      )}
-                      className="space-y-4"
-                    >
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={profileForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="Display name"
-                                  disabled={disableProfileFields}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="date_of_birth"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Date of birth</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="date"
-                                  {...field}
-                                  max={maxProfileDob}
-                                  disabled={disableProfileFields}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={profileForm.control}
-                          name="sex"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Sex</FormLabel>
-                              <Select
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                disabled={disableProfileFields}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select an option" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {sexOptions.map((option) => (
-                                    <SelectItem
-                                      key={option.value}
-                                      value={option.value}
-                                    >
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="nationality"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nationality</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="e.g. Egyptian"
-                                  disabled={disableProfileFields}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={profileForm.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="tel"
-                                {...field}
-                                placeholder="Include country code, e.g. +20 555 123456"
-                                disabled={disableProfileFields}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="flex justify-end gap-2">
+              <Collapsible
+                open={isProfileCardOpen}
+                onOpenChange={(open) => {
+                  setIsProfileCardOpen(open);
+                  if (!open) {
+                    setIsEditingProfile(false);
+                    handleProfileReset();
+                  }
+                }}
+              >
+                <Card>
+                  <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserCircle className="h-5 w-5 text-primary" />
+                        Profile details
+                      </CardTitle>
+                      <CardDescription>
+                        Keep your demographic and contact details current so we
+                        can personalize your care.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CollapsibleTrigger asChild>
                         <Button
                           type="button"
-                          variant="outline"
-                          onClick={handleProfileReset}
-                          disabled={disableProfileFields || !isProfileDirty}
+                          size="sm"
+                          variant="ghost"
+                          className="flex items-center gap-2"
                         >
-                          Reset
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              isProfileCardOpen ? "rotate-180" : "rotate-0",
+                            )}
+                          />
+                          {isProfileCardOpen ? "Hide details" : "Show details"}
                         </Button>
-                        <Button
-                          type="submit"
-                          disabled={disableProfileFields || !isProfileDirty}
-                        >
-                          {profileSaving ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Save changes
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
+                      </CollapsibleTrigger>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isEditingProfile ? "ghost" : "outline"}
+                        onClick={() => {
+                          handleProfileReset();
+                          if (!isProfileCardOpen) {
+                            setIsProfileCardOpen(true);
+                          }
+                          setIsEditingProfile((prev) => !prev);
+                        }}
+                        disabled={profileLoading || profileSaving}
+                      >
+                        {isEditingProfile ? "Cancel" : "Edit profile"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CollapsibleContent>
+                    {isEditingProfile ? (
+                      <CardContent>
+                        <Form {...profileForm}>
+                          <form
+                            onSubmit={profileForm.handleSubmit((values) =>
+                              profileMutation.mutate(values),
+                            )}
+                            className="space-y-4"
+                          >
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField
+                                control={profileForm.control}
+                                name="username"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Username</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="Display name"
+                                        disabled={disableProfileFields}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={profileForm.control}
+                                name="date_of_birth"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Date of birth</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="date"
+                                        {...field}
+                                        max={maxProfileDob}
+                                        disabled={disableProfileFields}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField
+                                control={profileForm.control}
+                                name="sex"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Sex</FormLabel>
+                                    <Select
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                      disabled={disableProfileFields}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select an option" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {sexOptions.map((option) => (
+                                          <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                          >
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={profileForm.control}
+                                name="nationality"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Nationality</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="e.g. Egyptian"
+                                        disabled={disableProfileFields}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <FormField
+                              control={profileForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Phone</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="tel"
+                                      {...field}
+                                      placeholder="Include country code, e.g. +20 555 123456"
+                                      disabled={disableProfileFields}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleProfileReset}
+                                disabled={
+                                  disableProfileFields || !isProfileDirty
+                                }
+                              >
+                                Reset
+                              </Button>
+                              <Button
+                                type="submit"
+                                disabled={
+                                  disableProfileFields || !isProfileDirty
+                                }
+                              >
+                                {profileSaving ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : null}
+                                Save changes
+                              </Button>
+                            </div>
+                          </form>
+                        </Form>
+                      </CardContent>
+                    ) : (
+                      <CardContent>
+                        <dl className="grid gap-4 md:grid-cols-2">
+                          {profileSummaryData.map((item) => (
+                            <div
+                              key={item.label}
+                              className="rounded-lg border border-border/60 bg-muted/20 p-4"
+                            >
+                              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                {item.label}
+                              </dt>
+                              <dd className="mt-1 text-base text-foreground">
+                                {item.value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </CardContent>
+                    )}
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
 
               <Card>
                 <CardHeader>
