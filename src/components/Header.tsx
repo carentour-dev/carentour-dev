@@ -31,8 +31,8 @@ const Header = () => {
   const { resolvedTheme } = useTheme();
   const logoSrc =
     mounted && resolvedTheme === "dark"
-      ? "/care-n-tour-logo-light.png"
-      : "/care-n-tour-logo-dark.png";
+      ? "/carentour-logo-light.png"
+      : "/carentour-logo-dark.png";
 
   const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>([]);
   const [loadingNavigation, setLoadingNavigation] = useState(true);
