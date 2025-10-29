@@ -8,7 +8,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import { User, Session, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useSecurity } from "@/hooks/useSecurity";
 
@@ -22,10 +22,18 @@ interface SignUpPayload {
   phone?: string;
 }
 
+type SignInResult = {
+  data: {
+    user: User | null;
+    session: Session | null;
+  } | null;
+  error: AuthError | null;
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
   signUp: (payload: SignUpPayload) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -44,6 +52,45 @@ const STAFF_ROLE_KEYS = new Set([
   "editor",
   "staff",
 ]);
+
+export const metadataIndicatesStaffAccount = (
+  metadata: Record<string, unknown>,
+): boolean => {
+  const accountTypeValue = metadata["account_type"];
+  const accountType =
+    typeof accountTypeValue === "string"
+      ? accountTypeValue.toLowerCase()
+      : null;
+
+  if (accountType === "staff") {
+    return true;
+  }
+
+  const staffRolesSource =
+    (Array.isArray(metadata["staff_roles"])
+      ? metadata["staff_roles"]
+      : Array.isArray(metadata["roles"])
+        ? metadata["roles"]
+        : Array.isArray(metadata["role"])
+          ? metadata["role"]
+          : []) ?? [];
+
+  const normalizedRoles = staffRolesSource
+    .filter((role): role is string => typeof role === "string")
+    .map((role) => role.toLowerCase());
+
+  if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+    return true;
+  }
+
+  const primaryRoleValue = metadata["primary_role"];
+  const primaryRole =
+    typeof primaryRoleValue === "string"
+      ? primaryRoleValue.toLowerCase()
+      : null;
+
+  return primaryRole !== null && STAFF_ROLE_KEYS.has(primaryRole);
+};
 
 const clearSupabaseAuthStorage = () => {
   if (typeof window === "undefined") {
@@ -84,40 +131,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
     useSecurity();
 
-  const isStaffAccount = useCallback((metadata: Record<string, unknown>) => {
-    const accountType =
-      typeof metadata.account_type === "string"
-        ? metadata.account_type.toLowerCase()
-        : null;
-
-    if (accountType === "staff") {
-      return true;
-    }
-
-    const staffRolesSource =
-      (Array.isArray(metadata.staff_roles)
-        ? metadata.staff_roles
-        : Array.isArray(metadata.roles)
-          ? metadata.roles
-          : Array.isArray(metadata.role)
-            ? metadata.role
-            : []) ?? [];
-
-    const normalizedRoles = staffRolesSource
-      .filter((role): role is string => typeof role === "string")
-      .map((role) => role.toLowerCase());
-
-    if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
-      return true;
-    }
-
-    const primaryRole =
-      typeof metadata.primary_role === "string"
-        ? metadata.primary_role.toLowerCase()
-        : null;
-
-    return primaryRole !== null && STAFF_ROLE_KEYS.has(primaryRole);
-  }, []);
+  const isStaffAccount = useCallback(
+    (metadata: Record<string, unknown>) =>
+      metadataIndicatesStaffAccount(metadata),
+    [],
+  );
 
   useEffect(() => {
     // Set up auth state listener
@@ -211,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -237,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      return { error };
+      return { data, error };
     },
     [checkRateLimit, recordLoginAttempt, logSecurityEvent],
   );
