@@ -138,13 +138,75 @@ function extractReadableMessage(
   return null;
 }
 
-function extractFunctionsErrorMessage(error: unknown): string {
+function isResponseLike(value: unknown): value is Response {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    clone?: () => unknown;
+    text?: () => Promise<string>;
+    headers?: Headers;
+  };
+
+  return (
+    typeof candidate.clone === "function" &&
+    typeof candidate.text === "function" &&
+    candidate.headers instanceof Headers
+  );
+}
+
+async function extractMessageFromResponse(
+  response: Response | null | undefined,
+): Promise<string | null> {
+  if (!response) {
+    return null;
+  }
+
+  try {
+    const clone = response.clone();
+    const contentType = clone.headers.get("Content-Type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const parsed = await clone.json();
+      return extractReadableMessage(parsed, new Set());
+    }
+
+    const text = await clone.text();
+    return extractMessageFromBody(text, new Set());
+  } catch {
+    return null;
+  }
+}
+
+async function extractFunctionsErrorMessage(
+  error: unknown,
+  response?: Response | null,
+): Promise<string> {
+  const responseMessage = await extractMessageFromResponse(response ?? null);
+  if (responseMessage) {
+    return responseMessage;
+  }
+
   if (error && typeof error === "object") {
+    const context = (error as { context?: unknown }).context;
+    if (isResponseLike(context)) {
+      const contextMessage = await extractMessageFromResponse(context);
+      if (contextMessage) {
+        return contextMessage;
+      }
+    }
+
     const contextBody = (error as { context?: { body?: unknown } }).context
       ?.body;
-    const contextMessage = extractMessageFromBody(contextBody, new Set());
-    if (contextMessage) {
-      return contextMessage;
+    if (contextBody) {
+      const nestedContextMessage = extractMessageFromBody(
+        contextBody,
+        new Set(),
+      );
+      if (nestedContextMessage) {
+        return nestedContextMessage;
+      }
     }
   }
 
@@ -409,7 +471,7 @@ export async function POST(request: Request) {
     const inviteUrl = magicLinkData.properties.action_link;
 
     // Send custom staff invite email via Edge Function
-    const { error: emailError } = await supabaseAdmin.functions.invoke(
+    const emailResponse = await supabaseAdmin.functions.invoke(
       "send-staff-invite",
       {
         body: {
@@ -422,11 +484,14 @@ export async function POST(request: Request) {
       },
     );
 
-    if (emailError) {
-      console.error("Failed to send staff invite email:", emailError);
+    if (emailResponse.error) {
+      console.error("Failed to send staff invite email:", emailResponse.error);
       // Rollback: delete the user if email fails
       await supabaseAdmin.auth.admin.deleteUser(newUserId).catch(() => {});
-      const emailErrorMessage = extractFunctionsErrorMessage(emailError);
+      const emailErrorMessage = await extractFunctionsErrorMessage(
+        emailResponse.error,
+        emailResponse.response,
+      );
       throw new ApiError(
         500,
         "Failed to send invitation email.",
