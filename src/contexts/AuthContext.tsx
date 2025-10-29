@@ -22,11 +22,13 @@ interface SignUpPayload {
   phone?: string;
 }
 
+type SignInData = {
+  user: User | null;
+  session: Session | null;
+};
+
 type SignInResult = {
-  data: {
-    user: User | null;
-    session: Session | null;
-  } | null;
+  data: SignInData | null;
   error: AuthError | null;
 };
 
@@ -221,11 +223,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         return {
-          error: {
-            message:
-              "Too many failed login attempts. Please try again in 15 minutes.",
-            status: 429,
-          },
+          data: null,
+          error: new AuthError(
+            "Too many failed login attempts. Please try again in 15 minutes.",
+            429,
+          ),
         };
       }
 
@@ -255,7 +257,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      return { data, error };
+      const normalizedData: SignInData | null =
+        data && (data.user ?? data.session)
+          ? {
+              user: data.user ?? null,
+              session: data.session ?? null,
+            }
+          : null;
+
+      return { data: normalizedData, error };
     },
     [checkRateLimit, recordLoginAttempt, logSecurityEvent],
   );
