@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Pencil, ShieldPlus, UserPlus2 } from "lucide-react";
+import { Loader2, Pencil, ShieldPlus, Trash2, UserPlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -42,6 +42,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -187,6 +197,8 @@ export default function AdminAccountsPage() {
   const [editingAccount, setEditingAccount] = useState<TeamAccount | null>(
     null,
   );
+  const [accountPendingDeletion, setAccountPendingDeletion] =
+    useState<TeamAccount | null>(null);
 
   const form = useForm<CreateAccountValues>({
     resolver: zodResolver(createAccountSchema),
@@ -340,8 +352,49 @@ export default function AdminAccountsPage() {
     updateMutation.mutate(values),
   );
   const isSavingDetails = updateMutation.isPending;
+  const deleteMutation = useMutation<TeamAccount, Error, TeamAccount>({
+    mutationFn: async (account) => {
+      await adminFetch<{ success: boolean }>(
+        `/api/admin/accounts/${account.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+      return account;
+    },
+    onSuccess: (deletedAccount) => {
+      toast({
+        title: "Staff account deleted",
+        description: `${deletedAccount.username ?? deletedAccount.email ?? "The team member"} no longer has access.`,
+      });
+      if (editingAccount?.id === deletedAccount.id) {
+        setEditingAccount(null);
+      }
+      setAccountPendingDeletion(null);
+      invalidate(["admin", "accounts"]);
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Unable to delete the staff account. Please try again.";
+      toast({
+        title: "Delete failed",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+  const isDeletingAccount = deleteMutation.isPending;
+  const deletingAccountId = isDeletingAccount
+    ? (deleteMutation.variables?.id ?? null)
+    : null;
 
   const accounts = data?.accounts ?? [];
+  const pendingDeletionLabel =
+    accountPendingDeletion?.username ??
+    accountPendingDeletion?.email ??
+    "this staff account";
 
   return (
     <div className="space-y-8">
@@ -641,10 +694,37 @@ export default function AdminAccountsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setEditingAccount(account)}
-                            disabled={isSavingDetails}
+                            disabled={
+                              isSavingDetails ||
+                              (isDeletingAccount &&
+                                deletingAccountId === account.id)
+                            }
                           >
                             <Pencil className="mr-1 h-4 w-4" />
                             Edit details
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setAccountPendingDeletion(account)}
+                            disabled={
+                              isDeletingAccount &&
+                              deletingAccountId === account.id
+                            }
+                          >
+                            {isDeletingAccount &&
+                            deletingAccountId === account.id ? (
+                              <>
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                Deleting…
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Delete account
+                              </>
+                            )}
                           </Button>
                         </div>
                       </CardContent>
@@ -655,6 +735,45 @@ export default function AdminAccountsPage() {
             )}
           </CardContent>
         </Card>
+        <AlertDialog
+          open={Boolean(accountPendingDeletion)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAccountPendingDeletion(null);
+              deleteMutation.reset();
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete staff account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action permanently removes{" "}
+                <span className="font-semibold text-foreground">
+                  {pendingDeletionLabel}
+                </span>{" "}
+                and revokes their access to the admin console. This cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingAccount}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
+                onClick={() => {
+                  if (accountPendingDeletion && !isDeletingAccount) {
+                    deleteMutation.mutate(accountPendingDeletion);
+                  }
+                }}
+                disabled={isDeletingAccount}
+              >
+                Confirm delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <Dialog
           open={Boolean(editingAccount)}
           onOpenChange={(open) => {
