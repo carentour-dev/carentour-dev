@@ -59,7 +59,7 @@ gitleaks-report.json
 scripts/
 
 # Cursor
-/.cursor/plans
+/.cursor
 
 # Claude
-/.claude/
+/.claude
