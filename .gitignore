@@ -20,6 +20,7 @@ dist-ssr
 *.pem
 WEBSITE_FLOW.md
 CLEANUP_SUMMARY.md
+docs/
 
 # debug
 npm-debug.log*
