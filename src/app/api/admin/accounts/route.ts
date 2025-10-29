@@ -54,69 +54,103 @@ function resolveInviteRedirectUrl(): string | null {
   return `${normalizedBase}/staff/onboarding`;
 }
 
-function extractFunctionsErrorMessage(error: unknown): string {
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error;
+function extractMessageFromBody(
+  body: unknown,
+  visited: Set<unknown>,
+): string | null {
+  if (!body) {
+    return null;
   }
 
-  if (error && typeof error === "object") {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string" && message.trim().length > 0) {
-      return message;
+  if (typeof body === "string") {
+    const trimmed = body.trim();
+    if (trimmed.length === 0) {
+      return null;
     }
 
-    const contextBody = (error as { context?: { body?: unknown } }).context
-      ?.body;
-    if (contextBody) {
-      try {
-        const parsed =
-          typeof contextBody === "string"
-            ? JSON.parse(contextBody)
-            : contextBody;
+    try {
+      const parsed = JSON.parse(trimmed);
+      return extractReadableMessage(parsed, visited);
+    } catch {
+      return trimmed;
+    }
+  }
 
-        if (parsed && typeof parsed === "object") {
-          const parsedError = (parsed as { error?: unknown }).error;
-          if (
-            typeof parsedError === "string" &&
-            parsedError.trim().length > 0
-          ) {
-            return parsedError;
-          }
+  return extractReadableMessage(body, visited);
+}
 
-          if (parsedError && typeof parsedError === "object") {
-            const nestedMessage = (parsedError as { message?: unknown })
-              .message;
-            if (
-              typeof nestedMessage === "string" &&
-              nestedMessage.trim().length > 0
-            ) {
-              return nestedMessage;
-            }
-          }
+function extractReadableMessage(
+  value: unknown,
+  visited: Set<unknown>,
+): string | null {
+  if (!value) {
+    return null;
+  }
 
-          const parsedMessage = (parsed as { message?: unknown }).message;
-          if (
-            typeof parsedMessage === "string" &&
-            parsedMessage.trim().length > 0
-          ) {
-            return parsedMessage;
-          }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
 
-          if (parsedMessage && typeof parsedMessage === "object") {
-            const nestedMessage = (parsedMessage as { message?: unknown })
-              .message;
-            if (
-              typeof nestedMessage === "string" &&
-              nestedMessage.trim().length > 0
-            ) {
-              return nestedMessage;
-            }
-          }
-        }
-      } catch {
-        // Ignore JSON parsing errors and fall back to generic message
+  if (visited.has(value)) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    visited.add(value);
+    for (const item of value) {
+      const nested = extractReadableMessage(item, visited);
+      if (nested) {
+        return nested;
       }
     }
+    return null;
+  }
+
+  if (typeof value === "object") {
+    visited.add(value);
+
+    if (value instanceof Error) {
+      const errorMessage = value.message?.trim();
+      return errorMessage && errorMessage.length > 0 ? errorMessage : null;
+    }
+
+    const candidateKeys = [
+      "error",
+      "message",
+      "msg",
+      "detail",
+      "details",
+    ] as const;
+    for (const key of candidateKeys) {
+      if (key in value) {
+        const nested = extractReadableMessage(
+          (value as Record<string, unknown>)[key],
+          visited,
+        );
+        if (nested) {
+          return nested;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractFunctionsErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const contextBody = (error as { context?: { body?: unknown } }).context
+      ?.body;
+    const contextMessage = extractMessageFromBody(contextBody, new Set());
+    if (contextMessage) {
+      return contextMessage;
+    }
+  }
+
+  const directMessage = extractReadableMessage(error, new Set());
+  if (directMessage) {
+    return directMessage;
   }
 
   return "Unknown email service error.";
