@@ -7,6 +7,7 @@ import { getRouteParam } from "@/server/utils/params";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import { normalizeRoles, pickPrimaryRole } from "@/lib/auth/roles";
+import { requireRole } from "@/server/auth/requireAdmin";
 
 const sexOptions = [
   "female",
@@ -208,5 +209,99 @@ export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
       created_at: refreshedProfile.created_at,
       updated_at: refreshedProfile.updated_at,
     },
+  });
+});
+
+export const DELETE = adminRoute(async (_req: NextRequest, ctx) => {
+  const profileId = getRouteParam(ctx.params, "id");
+
+  if (!profileId) {
+    throw new ApiError(400, "Missing staff account identifier.");
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data: profileRecord, error: profileFetchError } = await supabaseAdmin
+    .from("profiles")
+    .select(
+      `
+        id,
+        user_id,
+        email,
+        username,
+        profile_roles:profile_roles(
+          role:roles(
+            slug
+          )
+        )
+      `,
+    )
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (profileFetchError && profileFetchError.code !== "PGRST116") {
+    throw new ApiError(
+      500,
+      "Failed to load the staff account.",
+      profileFetchError.message,
+    );
+  }
+
+  if (!profileRecord) {
+    throw new ApiError(404, "Staff account not found.");
+  }
+
+  const assignedRoles = normalizeRoles(
+    (
+      profileRecord.profile_roles as ProfileRoleRecord[] | null | undefined
+    )?.map((record) => record?.role?.slug ?? "") ?? [],
+  );
+
+  const nonUserRoles = assignedRoles.filter((role) => role && role !== "user");
+
+  if (nonUserRoles.length === 0) {
+    throw new ApiError(
+      409,
+      "This profile is no longer configured as a staff account.",
+    );
+  }
+
+  const authContext = await requireRole(["admin"]);
+
+  if (profileRecord.user_id && authContext.user.id === profileRecord.user_id) {
+    throw new ApiError(
+      400,
+      "You cannot delete your own administrator account.",
+    );
+  }
+
+  if (profileRecord.user_id) {
+    const { error: deleteUserError } =
+      await supabaseAdmin.auth.admin.deleteUser(profileRecord.user_id);
+
+    if (deleteUserError) {
+      throw new ApiError(
+        500,
+        "Failed to delete the staff auth account.",
+        deleteUserError.message,
+      );
+    }
+  }
+
+  const { error: deleteProfileError } = await supabaseAdmin
+    .from("profiles")
+    .delete()
+    .eq("id", profileId);
+
+  if (deleteProfileError) {
+    throw new ApiError(
+      500,
+      "Failed to remove the staff profile record.",
+      deleteProfileError.message,
+    );
+  }
+
+  return jsonResponse({
+    success: true,
   });
 });
