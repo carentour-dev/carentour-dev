@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, metadataIndicatesStaffAccount } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { sexOptions, SexOptionValue } from "@/constants/profile";
 import { Loader2 } from "lucide-react";
@@ -57,7 +57,12 @@ function AuthContent() {
 
   useEffect(() => {
     if (user && !isPasswordResetMode) {
-      router.push("/dashboard");
+      const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+      if (metadataIndicatesStaffAccount(metadata)) {
+        router.replace("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     }
   }, [user, router, isPasswordResetMode]);
 
@@ -65,7 +70,7 @@ function AuthContent() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { data, error } = await signIn(email, password);
 
     if (error) {
       toast({
@@ -78,7 +83,15 @@ function AuthContent() {
         title: "Success",
         description: "Signed in successfully!",
       });
-      router.push("/dashboard");
+      const metadata = (data?.user?.user_metadata ?? {}) as Record<
+        string,
+        unknown
+      >;
+      if (metadataIndicatesStaffAccount(metadata)) {
+        router.replace("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     }
 
     setIsLoading(false);
