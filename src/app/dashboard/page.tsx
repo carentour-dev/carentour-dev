@@ -65,7 +65,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, metadataIndicatesStaffAccount } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePatientPortalData } from "@/hooks/usePatientPortalData";
 import { useToast } from "@/hooks/use-toast";
@@ -263,23 +263,30 @@ export default function DashboardPage() {
     if (profile && profile.hasAnyRole(STAFF_ROLES)) {
       return true;
     }
-    const metadataType =
-      typeof user?.user_metadata?.account_type === "string"
-        ? user.user_metadata.account_type.toLowerCase()
-        : null;
-    if (metadataType === "staff") {
-      return true;
-    }
-    const rawRoles = Array.isArray(user?.user_metadata?.staff_roles)
-      ? (user?.user_metadata?.staff_roles as string[])
-      : [];
-    return rawRoles.some((role) => STAFF_ROLES.includes(role.toLowerCase()));
+    const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+    return metadataIndicatesStaffAccount(metadata);
   }, [profile, user?.user_metadata]);
 
   useEffect(() => {
     if (!authLoading && !profileLoading && isStaffAccount) {
+      const fallbackId =
+        typeof window !== "undefined"
+          ? window.setTimeout(() => {
+              if (window.location.pathname.startsWith("/dashboard")) {
+                window.location.replace("/admin");
+              }
+            }, 500)
+          : undefined;
+
       router.replace("/admin");
+
+      return () => {
+        if (fallbackId !== undefined) {
+          window.clearTimeout(fallbackId);
+        }
+      };
     }
+    return undefined;
   }, [authLoading, profileLoading, isStaffAccount, router]);
 
   const {
