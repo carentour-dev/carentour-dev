@@ -18,6 +18,8 @@ dist-ssr
 # misc
 .DS_Store
 *.pem
+WEBSITE_FLOW.md
+CLEANUP_SUMMARY.md
 
 # debug
 npm-debug.log*
@@ -55,4 +57,9 @@ bun.lockb
 gitleaks-report.json
 .husky/
 scripts/
+
+# Cursor
 /.cursor/plans
+
+# Claude
+/.claude/
