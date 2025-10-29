@@ -3,7 +3,7 @@
 import Script from "next/script";
 
 const clarityProjectId =
-  process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? "txfb17s1hh";
+  process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? "txxpzmytta";
 const isProduction = process.env.NODE_ENV === "production";
 
 export default function MicrosoftClarity() {
