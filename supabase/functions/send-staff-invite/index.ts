@@ -3,7 +3,7 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resendApiKey = Deno.env.get("RESEND_API_KEY")?.trim();
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
-const fallbackFromAddress = "Care N Tour Team <contact@carentour.com>";
+const fallbackFromAddress = "Care N Tour Team <admin@carentour.com>";
 const resendFromAddress =
   Deno.env.get("RESEND_STAFF_INVITE_FROM")?.trim() ||
   Deno.env.get("RESEND_FROM_ADDRESS")?.trim() ||
