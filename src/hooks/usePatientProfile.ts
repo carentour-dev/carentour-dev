@@ -59,7 +59,9 @@ export interface PatientProfile {
   published_story_count: number;
 }
 
-const fetchPatientProfile = async (patientId: string): Promise<PatientProfile> => {
+const fetchPatientProfile = async (
+  patientId: string,
+): Promise<PatientProfile> => {
   const response = await fetch(`/api/patients/${patientId}`);
 
   if (!response.ok) {
