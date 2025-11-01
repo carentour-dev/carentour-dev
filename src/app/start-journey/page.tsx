@@ -439,7 +439,7 @@ type UploadResponse = {
 
 const DOCUMENT_UPLOAD_ENDPOINT = "/api/start-journey/documents";
 
-function PatientJourneyContent() {
+export function PatientJourneyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -1889,7 +1889,7 @@ function PatientJourneyContent() {
   );
 }
 
-function StartJourneyFallback() {
+export function StartJourneyFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
