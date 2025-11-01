@@ -50,7 +50,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
 import { useToast } from "@/hooks/use-toast";
@@ -58,32 +61,47 @@ import type { Database } from "@/integrations/supabase/types";
 import { CalendarDays, Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 
-type AppointmentRow = Database["public"]["Tables"]["patient_appointments"]["Row"];
+type AppointmentRow =
+  Database["public"]["Tables"]["patient_appointments"]["Row"];
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
-type ServiceProviderRow = Database["public"]["Tables"]["service_providers"]["Row"];
-type ConsultationRow = Database["public"]["Tables"]["patient_consultations"]["Row"];
+type ServiceProviderRow =
+  Database["public"]["Tables"]["service_providers"]["Row"];
+type ConsultationRow =
+  Database["public"]["Tables"]["patient_consultations"]["Row"];
 
 type AppointmentRecord = AppointmentRow & {
-  patients?: Pick<PatientRow, "id" | "full_name" | "contact_email" | "contact_phone" | "nationality"> | null;
+  patients?: Pick<
+    PatientRow,
+    "id" | "full_name" | "contact_email" | "contact_phone" | "nationality"
+  > | null;
   doctors?: Pick<DoctorRow, "id" | "name" | "title"> | null;
-  service_provider?: Pick<ServiceProviderRow, "id" | "name" | "facility_type"> | null;
-  patient_consultations?: Pick<ConsultationRow, "id" | "scheduled_at" | "status"> | null;
+  service_provider?: Pick<
+    ServiceProviderRow,
+    "id" | "name" | "facility_type"
+  > | null;
+  patient_consultations?: Pick<
+    ConsultationRow,
+    "id" | "scheduled_at" | "status"
+  > | null;
 };
 
-const appointmentStatuses = ["scheduled", "confirmed", "completed", "cancelled", "rescheduled"] as const;
+const appointmentStatuses = [
+  "scheduled",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "rescheduled",
+] as const;
 type AppointmentStatus = (typeof appointmentStatuses)[number];
 
-const nullableUuidField = z.preprocess(
-  (value) => {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : null;
-    }
-    return value ?? null;
-  },
-  z.string().uuid().nullable(),
-);
+const nullableUuidField = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return value ?? null;
+}, z.string().uuid().nullable());
 
 const formSchema = z.object({
   patient_id: z.string().uuid({ message: "Select a patient" }),
@@ -124,10 +142,13 @@ const toIsoString = (value: string) => {
 };
 
 export default function AdminAppointmentsPage() {
-  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">(
+    "all",
+  );
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState<AppointmentRecord | null>(null);
+  const [editingAppointment, setEditingAppointment] =
+    useState<AppointmentRecord | null>(null);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -137,7 +158,9 @@ export default function AdminAppointmentsPage() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (upcomingOnly) params.set("upcomingOnly", "true");
-      return adminFetch<AppointmentRecord[]>(`/api/admin/appointments${params.size ? `?${params}` : ""}`);
+      return adminFetch<AppointmentRecord[]>(
+        `/api/admin/appointments${params.size ? `?${params}` : ""}`,
+      );
     },
   });
 
@@ -232,7 +255,8 @@ export default function AdminAppointmentsPage() {
           starts_at: toIsoString(payload.starts_at),
           ends_at: payload.ends_at ? toIsoString(payload.ends_at) : null,
           location: payload.location?.trim() || null,
-          pre_visit_instructions: payload.pre_visit_instructions?.trim() || null,
+          pre_visit_instructions:
+            payload.pre_visit_instructions?.trim() || null,
           notes: payload.notes?.trim() || null,
         }),
       }),
@@ -333,7 +357,8 @@ export default function AdminAppointmentsPage() {
             Care Appointments
           </h1>
           <p className="text-sm text-muted-foreground">
-            Track patient appointments across service providers and ensure everyone has the right context.
+            Track patient appointments across service providers and ensure
+            everyone has the right context.
           </p>
         </div>
         <Button onClick={openCreateDialog}>
@@ -353,7 +378,12 @@ export default function AdminAppointmentsPage() {
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentStatus | "all")}>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as AppointmentStatus | "all")
+              }
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
@@ -367,7 +397,11 @@ export default function AdminAppointmentsPage() {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2 text-sm">
-              <Switch checked={upcomingOnly} onCheckedChange={setUpcomingOnly} id="upcoming-only" />
+              <Switch
+                checked={upcomingOnly}
+                onCheckedChange={setUpcomingOnly}
+                id="upcoming-only"
+              />
               <label htmlFor="upcoming-only" className="text-muted-foreground">
                 Upcoming only
               </label>
@@ -395,7 +429,9 @@ export default function AdminAppointmentsPage() {
             </div>
           ) : appointments.length === 0 ? (
             <div className="rounded-lg border border-dashed border-muted-foreground/30 p-10 text-center">
-              <p className="font-medium text-foreground">No appointments found.</p>
+              <p className="font-medium text-foreground">
+                No appointments found.
+              </p>
               <p className="text-sm text-muted-foreground">
                 Adjust filters or add a new appointment to see it here.
               </p>
@@ -409,9 +445,15 @@ export default function AdminAppointmentsPage() {
                     <TableHead>Doctor</TableHead>
                     <TableHead>Starts</TableHead>
                     <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Service Provider</TableHead>
-                    <TableHead className="hidden lg:table-cell">Consultation</TableHead>
-                    <TableHead className="w-[140px] text-right">Actions</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Service Provider
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Consultation
+                    </TableHead>
+                    <TableHead className="w-[140px] text-right">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -420,21 +462,29 @@ export default function AdminAppointmentsPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-foreground">
-                            {appointment.patients?.full_name ?? "Unknown patient"}
+                            {appointment.patients?.full_name ??
+                              "Unknown patient"}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {appointment.patients?.contact_email ?? appointment.patient_id}
+                            {appointment.patients?.contact_email ??
+                              appointment.patient_id}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         {appointment.doctors ? (
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">{appointment.doctors.name}</span>
-                            <span className="text-xs text-muted-foreground">{appointment.doctors.title}</span>
+                            <span className="font-medium text-foreground">
+                              {appointment.doctors.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {appointment.doctors.title}
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Not assigned</span>
+                          <span className="text-sm text-muted-foreground">
+                            Not assigned
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -444,7 +494,8 @@ export default function AdminAppointmentsPage() {
                           </span>
                           {appointment.ends_at ? (
                             <span className="text-xs text-muted-foreground">
-                              Ends {format(new Date(appointment.ends_at), "PPpp")}
+                              Ends{" "}
+                              {format(new Date(appointment.ends_at), "PPpp")}
                             </span>
                           ) : null}
                         </div>
@@ -452,7 +503,8 @@ export default function AdminAppointmentsPage() {
                       <TableCell>
                         <Badge
                           variant={
-                            appointment.status === "scheduled" || appointment.status === "confirmed"
+                            appointment.status === "scheduled" ||
+                            appointment.status === "confirmed"
                               ? "default"
                               : appointment.status === "completed"
                                 ? "success"
@@ -466,31 +518,49 @@ export default function AdminAppointmentsPage() {
                       <TableCell className="hidden lg:table-cell">
                         {appointment.service_provider ? (
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{appointment.service_provider.name}</span>
+                            <span className="text-sm font-medium">
+                              {appointment.service_provider.name}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {appointment.service_provider.facility_type}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Not assigned</span>
+                          <span className="text-sm text-muted-foreground">
+                            Not assigned
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {appointment.patient_consultations ? (
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">
-                              {format(new Date(appointment.patient_consultations.scheduled_at), "PPpp")}
+                              {format(
+                                new Date(
+                                  appointment.patient_consultations.scheduled_at,
+                                ),
+                                "PPpp",
+                              )}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {appointment.patient_consultations.status.replace("_", " ")}
+                              {appointment.patient_consultations.status.replace(
+                                "_",
+                                " ",
+                              )}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Not linked</span>
+                          <span className="text-sm text-muted-foreground">
+                            Not linked
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEditDialog(appointment)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(appointment)}
+                        >
                           Edit
                         </Button>
                         <Button
@@ -511,10 +581,15 @@ export default function AdminAppointmentsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(open))}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(open))}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingAppointment ? "Edit appointment" : "Create appointment"}</DialogTitle>
+            <DialogTitle>
+              {editingAppointment ? "Edit appointment" : "Create appointment"}
+            </DialogTitle>
             <DialogDescription>
               {editingAppointment
                 ? "Update timing or contextual details for this appointment."
@@ -531,7 +606,10 @@ export default function AdminAppointmentsPage() {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Patient</FormLabel>
                       <FormControl>
-                        <PatientSelector value={field.value} onValueChange={field.onChange} />
+                        <PatientSelector
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -564,7 +642,9 @@ export default function AdminAppointmentsPage() {
                         <Input
                           placeholder="Paste service provider ID"
                           value={field.value ?? ""}
-                          onChange={(event) => field.onChange(event.target.value || null)}
+                          onChange={(event) =>
+                            field.onChange(event.target.value || null)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -581,7 +661,9 @@ export default function AdminAppointmentsPage() {
                         <Input
                           placeholder="Link a consultation"
                           value={field.value ?? ""}
-                          onChange={(event) => field.onChange(event.target.value || null)}
+                          onChange={(event) =>
+                            field.onChange(event.target.value || null)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -658,7 +740,10 @@ export default function AdminAppointmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select status" />
@@ -696,7 +781,10 @@ export default function AdminAppointmentsPage() {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Location (optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Clinic room, address, or virtual" {...field} />
+                        <Input
+                          placeholder="Clinic room, address, or virtual"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -710,7 +798,11 @@ export default function AdminAppointmentsPage() {
                   <FormItem>
                     <FormLabel>Pre-visit instructions (optional)</FormLabel>
                     <FormControl>
-                      <Textarea rows={3} placeholder="Bring lab results, arrive fasting, etc." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Bring lab results, arrive fasting, etc."
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -723,7 +815,11 @@ export default function AdminAppointmentsPage() {
                   <FormItem>
                     <FormLabel>Internal notes</FormLabel>
                     <FormControl>
-                      <Textarea rows={3} placeholder="Logistics or reminders for the care team." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Logistics or reminders for the care team."
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -733,7 +829,12 @@ export default function AdminAppointmentsPage() {
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                >
                   {createMutation.isPending || updateMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
