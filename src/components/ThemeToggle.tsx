@@ -20,7 +20,7 @@ export function ThemeToggle() {
 
   const handleThemeChange = (newTheme: "light" | "dark") => {
     setTheme(newTheme);
-    
+
     // Announce theme change for screen readers
     const announcement = `Theme changed to ${newTheme} mode`;
     const ariaLiveRegion = document.createElement("div");
@@ -29,7 +29,7 @@ export function ThemeToggle() {
     ariaLiveRegion.className = "sr-only";
     ariaLiveRegion.textContent = announcement;
     document.body.appendChild(ariaLiveRegion);
-    
+
     setTimeout(() => {
       document.body.removeChild(ariaLiveRegion);
     }, 1000);
@@ -37,8 +37,8 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         size="icon"
         className="bg-background border-border animate-pulse"
         disabled
@@ -52,8 +52,8 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="icon"
           className="bg-background border-border hover:bg-muted/50 transition-colors"
           aria-label="Toggle theme"
@@ -63,11 +63,11 @@ export function ThemeToggle() {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
+      <DropdownMenuContent
+        align="end"
         className="bg-popover border-border shadow-lg min-w-[140px] z-50"
       >
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={() => handleThemeChange("light")}
           className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
             theme === "light" ? "bg-muted text-primary font-medium" : ""
@@ -79,7 +79,7 @@ export function ThemeToggle() {
           <span>Light</span>
           {theme === "light" && <span className="sr-only">(current)</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={() => handleThemeChange("dark")}
           className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
             theme === "dark" ? "bg-muted text-primary font-medium" : ""
