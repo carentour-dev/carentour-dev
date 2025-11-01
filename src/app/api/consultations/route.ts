@@ -17,7 +17,9 @@ const consultationSchema = z.object({
   procedure: z.string().optional(),
   destination: z.string().optional(),
   travelWindow: z.string().min(1, "Please share your ideal travel window"),
-  healthBackground: z.string().min(1, "Health goals or current diagnosis is required"),
+  healthBackground: z
+    .string()
+    .min(1, "Health goals or current diagnosis is required"),
   budgetRange: z.string().optional(),
   companions: z.string().optional(),
   medicalReports: z.string().optional(),
@@ -25,7 +27,9 @@ const consultationSchema = z.object({
   additionalQuestions: z.string().optional(),
 });
 
-const splitFullName = (fullName: string): { firstName: string; lastName: string } => {
+const splitFullName = (
+  fullName: string,
+): { firstName: string; lastName: string } => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
@@ -53,7 +57,8 @@ export const POST = async (req: NextRequest) => {
     if (authHeader?.startsWith("Bearer ")) {
       const accessToken = authHeader.slice(7).trim();
       if (accessToken.length > 0) {
-        const { data: tokenUser, error: tokenError } = await supabaseAdmin.auth.getUser(accessToken);
+        const { data: tokenUser, error: tokenError } =
+          await supabaseAdmin.auth.getUser(accessToken);
         if (!tokenError && tokenUser?.user) {
           user = tokenUser.user;
         }
@@ -96,7 +101,9 @@ export const POST = async (req: NextRequest) => {
     const portalMetadata =
       payload.treatmentId || payload.procedure
         ? {
-            ...(payload.treatmentId ? { treatmentId: payload.treatmentId } : {}),
+            ...(payload.treatmentId
+              ? { treatmentId: payload.treatmentId }
+              : {}),
             ...(payload.procedure ? { procedure: payload.procedure } : {}),
           }
         : undefined;
@@ -124,29 +131,32 @@ export const POST = async (req: NextRequest) => {
       portal_metadata: portalMetadata,
     });
 
-    const { error: emailError } = await supabaseAdmin.functions.invoke("send-contact-email", {
-      body: {
-        firstName,
-        lastName,
-        email: payload.email,
-        phone: payload.phone,
-        country: payload.country,
-        treatment: payload.treatment,
-        procedure: payload.procedure,
-        destination: payload.destination,
-        travelWindow: payload.travelWindow,
-        healthBackground,
-        message: healthBackground,
-        budgetRange: payload.budgetRange,
-        companions: payload.companions,
-        medicalReports: payload.medicalReports,
-        contactPreference: payload.contactPreference,
-        additionalQuestions: payload.additionalQuestions,
-        requestType: "consultation",
-        portalMetadata,
-        skipLogging: true,
+    const { error: emailError } = await supabaseAdmin.functions.invoke(
+      "send-contact-email",
+      {
+        body: {
+          firstName,
+          lastName,
+          email: payload.email,
+          phone: payload.phone,
+          country: payload.country,
+          treatment: payload.treatment,
+          procedure: payload.procedure,
+          destination: payload.destination,
+          travelWindow: payload.travelWindow,
+          healthBackground,
+          message: healthBackground,
+          budgetRange: payload.budgetRange,
+          companions: payload.companions,
+          medicalReports: payload.medicalReports,
+          contactPreference: payload.contactPreference,
+          additionalQuestions: payload.additionalQuestions,
+          requestType: "consultation",
+          portalMetadata,
+          skipLogging: true,
+        },
       },
-    });
+    );
 
     if (emailError) {
       throw emailError;
