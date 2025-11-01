@@ -13,7 +13,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 
 interface Treatment {
@@ -57,7 +61,8 @@ export function TreatmentSelector({
     );
   }, [treatments, search]);
 
-  const selectedTreatment = treatments.find((treatment) => treatment.id === value) ?? null;
+  const selectedTreatment =
+    treatments.find((treatment) => treatment.id === value) ?? null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,8 +75,15 @@ export function TreatmentSelector({
         >
           <span className="flex min-w-0 items-center gap-2 text-left">
             <Stethoscope className="h-4 w-4 shrink-0 opacity-50" />
-            <span className={cn("flex-1 truncate", !value && "text-muted-foreground")}>
-              {selectedTreatment ? `${selectedTreatment.name} (${selectedTreatment.slug})` : placeholder}
+            <span
+              className={cn(
+                "flex-1 truncate",
+                !value && "text-muted-foreground",
+              )}
+            >
+              {selectedTreatment
+                ? `${selectedTreatment.name} (${selectedTreatment.slug})`
+                : placeholder}
             </span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -86,7 +98,9 @@ export function TreatmentSelector({
           />
           <CommandList>
             {isLoading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">Loading treatments…</div>
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Loading treatments…
+              </div>
             ) : (
               <>
                 <CommandEmpty>No treatments found.</CommandEmpty>
@@ -105,8 +119,12 @@ export function TreatmentSelector({
                       }}
                     >
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{treatment.name}</span>
-                        <span className="text-xs text-muted-foreground">{treatment.slug}</span>
+                        <span className="font-medium text-foreground">
+                          {treatment.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {treatment.slug}
+                        </span>
                       </div>
                       <Check
                         className={cn(
