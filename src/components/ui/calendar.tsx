@@ -1,15 +1,20 @@
-import * as React from "react"
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react"
+import * as React from "react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+} from "lucide-react";
 import {
   DayPicker,
   DayButton as DefaultDayButton,
   type DayPickerProps,
-} from "react-day-picker"
+} from "react-day-picker";
 
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
-export type CalendarProps = DayPickerProps
+export type CalendarProps = DayPickerProps;
 
 const CalendarDayButton: typeof DefaultDayButton = ({
   className,
@@ -19,11 +24,11 @@ const CalendarDayButton: typeof DefaultDayButton = ({
   const isRangeMiddle =
     !!modifiers?.range_middle &&
     !modifiers?.range_start &&
-    !modifiers?.range_end
+    !modifiers?.range_end;
 
-  const isSelected = !!modifiers?.selected && !isRangeMiddle
+  const isSelected = !!modifiers?.selected && !isRangeMiddle;
 
-  const isToday = !!modifiers?.today
+  const isToday = !!modifiers?.today;
 
   return (
     <DefaultDayButton
@@ -48,11 +53,11 @@ const CalendarDayButton: typeof DefaultDayButton = ({
           "rounded-none",
         modifiers?.range_start && "rounded-l-md",
         modifiers?.range_end && "rounded-r-md",
-        className
+        className,
       )}
     />
-  )
-}
+  );
+};
 
 function Calendar({
   className,
@@ -67,19 +72,18 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         root: "space-y-4",
-        months:
-          "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         month_caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
@@ -109,22 +113,22 @@ function Calendar({
                 ? ChevronRight
                 : orientation === "up"
                   ? ChevronUp
-                  : ChevronDown
+                  : ChevronDown;
 
           return (
             <Icon
               className={cn("h-4 w-4", disabled && "opacity-50", className)}
               size={size ?? 16}
             />
-          )
+          );
         },
         DayButton: CalendarDayButton,
         ...components,
       }}
       {...props}
     />
-  )
+  );
 }
-Calendar.displayName = "Calendar"
+Calendar.displayName = "Calendar";
 
-export { Calendar }
+export { Calendar };
