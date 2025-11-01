@@ -16,7 +16,9 @@ export async function generateMetadata() {
   return {
     title: cmsPage?.seo?.title ?? "Care N Tour",
     description: cmsPage?.seo?.description ?? undefined,
-    openGraph: cmsPage?.seo?.ogImage ? { images: [cmsPage.seo.ogImage] } : undefined,
+    openGraph: cmsPage?.seo?.ogImage
+      ? { images: [cmsPage.seo.ogImage] }
+      : undefined,
   } as any;
 }
 
