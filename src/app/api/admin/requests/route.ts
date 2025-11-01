@@ -25,7 +25,11 @@ export const GET = adminRoute(async (req: NextRequest) => {
     filters.status = statusParam;
   }
 
-  if (requestTypeParam && requestTypeParam.trim().length > 0 && requestTypeParam !== "all") {
+  if (
+    requestTypeParam &&
+    requestTypeParam.trim().length > 0 &&
+    requestTypeParam !== "all"
+  ) {
     filters.requestType = requestTypeParam.trim();
   }
 
