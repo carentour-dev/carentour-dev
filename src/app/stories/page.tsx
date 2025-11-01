@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Quote, MapPin, Calendar, Loader2, Globe2, Stethoscope } from "lucide-react";
+import {
+  Quote,
+  MapPin,
+  Calendar,
+  Loader2,
+  Globe2,
+  Stethoscope,
+} from "lucide-react";
 import { usePatientStories } from "@/hooks/useTestimonials";
 
 const StoriesPage = () => {
@@ -30,8 +37,8 @@ const StoriesPage = () => {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Discover how patients from around the world have transformed their lives through world-class medical care
-                in Egypt.
+                Discover how patients from around the world have transformed
+                their lives through world-class medical care in Egypt.
               </p>
             </div>
           </div>
@@ -55,7 +62,8 @@ const StoriesPage = () => {
                 Transformative Journeys
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Read about the experiences of patients who chose Egypt for their medical care
+                Read about the experiences of patients who chose Egypt for their
+                medical care
               </p>
             </div>
 
@@ -64,23 +72,32 @@ const StoriesPage = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : error ? (
-              <div className="text-center text-destructive">Failed to load patient stories.</div>
+              <div className="text-center text-destructive">
+                Failed to load patient stories.
+              </div>
             ) : stories.length === 0 ? (
               <div className="text-center text-muted-foreground">
-                Stories are coming soon. Check back to hear from our latest patients.
+                Stories are coming soon. Check back to hear from our latest
+                patients.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {stories.map((story) => {
                   const treatmentLabel = story.treatment_name
                     ? story.treatment_name
-                    : story.treatment_slug?.replace(/-/g, " ") ?? "Medical Journey";
+                    : (story.treatment_slug?.replace(/-/g, " ") ??
+                      "Medical Journey");
                   const cleanCopy = (story.excerpt || story.body_markdown)
                     .replace(/[#*_`>/]/g, "")
                     .replace(/\s+/g, " ")
                     .trim();
-                  const outcomeHighlight = cleanCopy.split(/[.!?]/).map((segment) => segment.trim()).find(Boolean);
-                  const formattedDate = new Date(story.created_at).toLocaleDateString(undefined, {
+                  const outcomeHighlight = cleanCopy
+                    .split(/[.!?]/)
+                    .map((segment) => segment.trim())
+                    .find(Boolean);
+                  const formattedDate = new Date(
+                    story.created_at,
+                  ).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
@@ -97,15 +114,22 @@ const StoriesPage = () => {
                           <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary/80 via-primary to-accent" />
                           <div className="flex flex-col gap-6">
                             <div className="space-y-2">
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Treatment Center</p>
-                              <Badge variant="secondary" className="px-3 py-1 rounded-full text-sm font-medium">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Treatment Center
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className="px-3 py-1 rounded-full text-sm font-medium"
+                              >
                                 {treatmentLabel}
                               </Badge>
                             </div>
 
                             {outcomeHighlight && (
                               <div className="rounded-xl bg-muted/40 p-4">
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Outcome</p>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  Outcome
+                                </p>
                                 <p className="mt-2 text-sm text-foreground leading-relaxed">
                                   {outcomeHighlight}
                                 </p>
@@ -118,9 +142,12 @@ const StoriesPage = () => {
                                   <MapPin className="h-4 w-4" />
                                 </div>
                                 <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Patient</p>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    Patient
+                                  </p>
                                   <p className="text-sm font-medium text-foreground">
-                                    {story.patient_name ?? "International Patient"}
+                                    {story.patient_name ??
+                                      "International Patient"}
                                   </p>
                                 </div>
                               </div>
@@ -130,8 +157,12 @@ const StoriesPage = () => {
                                   <Calendar className="h-4 w-4" />
                                 </div>
                                 <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Treatment Date</p>
-                                  <p className="text-sm font-medium text-foreground">{formattedDate}</p>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    Treatment Date
+                                  </p>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {formattedDate}
+                                  </p>
                                 </div>
                               </div>
 
@@ -140,8 +171,13 @@ const StoriesPage = () => {
                                   <Globe2 className="h-4 w-4" />
                                 </div>
                                 <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p>
-                                  <Badge variant="outline" className="mt-1 text-xs uppercase tracking-wide">
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    Language
+                                  </p>
+                                  <Badge
+                                    variant="outline"
+                                    className="mt-1 text-xs uppercase tracking-wide"
+                                  >
                                     {localeBadge}
                                   </Badge>
                                 </div>
@@ -153,8 +189,12 @@ const StoriesPage = () => {
                                     <Stethoscope className="h-4 w-4" />
                                   </div>
                                   <div>
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Lead Specialist</p>
-                                    <p className="text-sm font-medium text-foreground">{story.doctor_name}</p>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                      Lead Specialist
+                                    </p>
+                                    <p className="text-sm font-medium text-foreground">
+                                      {story.doctor_name}
+                                    </p>
                                   </div>
                                 </div>
                               )}
@@ -179,17 +219,30 @@ const StoriesPage = () => {
 
                           <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-border/60">
                             <div className="text-sm text-muted-foreground">
-                              {story.doctor_name ? `Coordinated with ${story.doctor_name}` : "Personal care from our team"}
+                              {story.doctor_name
+                                ? `Coordinated with ${story.doctor_name}`
+                                : "Personal care from our team"}
                             </div>
                             <div className="flex flex-wrap gap-3">
                               {story.patient_id && (
                                 <Button asChild size="sm">
-                                  <Link href={`/patients/${story.patient_id}`}>Read full journey</Link>
+                                  <Link href={`/patients/${story.patient_id}`}>
+                                    Read full journey
+                                  </Link>
                                 </Button>
                               )}
                               {story.treatment_slug && (
-                                <Button asChild size="sm" variant="ghost" className="text-primary hover:text-primary">
-                                  <Link href={`/treatments/${story.treatment_slug}`}>Explore treatment</Link>
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-primary hover:text-primary"
+                                >
+                                  <Link
+                                    href={`/treatments/${story.treatment_slug}`}
+                                  >
+                                    Explore treatment
+                                  </Link>
                                 </Button>
                               )}
                             </div>
@@ -216,7 +269,8 @@ const StoriesPage = () => {
               Ready to Write Your Success Story?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Join thousands of satisfied patients who have chosen Egypt for their medical care
+              Join thousands of satisfied patients who have chosen Egypt for
+              their medical care
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
