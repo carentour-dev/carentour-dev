@@ -37,6 +37,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  Plane,
   Sparkles,
   Stethoscope,
   Users,
@@ -48,6 +49,7 @@ import {
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
   { label: "Requests", href: "/admin/requests", icon: Inbox },
+  { label: "Start Journey", href: "/admin/start-journey", icon: Plane },
   { label: "Consultations", href: "/admin/consultations", icon: CalendarCheck },
   { label: "Appointments", href: "/admin/appointments", icon: CalendarDays },
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
