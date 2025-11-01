@@ -433,64 +433,125 @@ USING (bucket_id = 'blog-assets');
 
 DROP POLICY IF EXISTS admin_editor_insert_blog_assets
 ON storage.objects;
-CREATE POLICY admin_editor_insert_blog_assets
-ON storage.objects
-FOR INSERT
-TO authenticated
-WITH CHECK (
-    bucket_id = 'blog-assets'
-    AND EXISTS (
-        SELECT 1
-        FROM public.profiles AS p
-        WHERE
-            p.user_id = auth.uid()
-            AND p.role IN ('admin', 'editor')
-    )
-);
-
 DROP POLICY IF EXISTS admin_editor_update_blog_assets
 ON storage.objects;
-CREATE POLICY admin_editor_update_blog_assets
-ON storage.objects
-FOR UPDATE
-TO authenticated
-USING (
-    bucket_id = 'blog-assets'
-    AND EXISTS (
-        SELECT 1
-        FROM public.profiles AS p
-        WHERE
-            p.user_id = auth.uid()
-            AND p.role IN ('admin', 'editor')
-    )
-)
-WITH CHECK (
-    bucket_id = 'blog-assets'
-    AND EXISTS (
-        SELECT 1
-        FROM public.profiles AS p
-        WHERE
-            p.user_id = auth.uid()
-            AND p.role IN ('admin', 'editor')
-    )
-);
-
 DROP POLICY IF EXISTS admin_editor_delete_blog_assets
 ON storage.objects;
-CREATE POLICY admin_editor_delete_blog_assets
-ON storage.objects
-FOR DELETE
-TO authenticated
-USING (
-    bucket_id = 'blog-assets'
-    AND EXISTS (
+
+DO $blog_assets_policies$
+DECLARE
+    has_any_role_proc regprocedure;
+    legacy_role_exists BOOLEAN;
+BEGIN
+    SELECT to_regprocedure('public.has_any_role(uuid,text[])')
+    INTO has_any_role_proc;
+
+    SELECT EXISTS (
         SELECT 1
-        FROM public.profiles AS p
-        WHERE
-            p.user_id = auth.uid()
-            AND p.role IN ('admin', 'editor')
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'profiles'
+          AND column_name = 'role'
     )
-);
+    INTO legacy_role_exists;
+
+    IF has_any_role_proc IS NOT NULL THEN
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_insert_blog_assets
+            ON storage.objects
+            FOR INSERT TO authenticated
+            WITH CHECK (
+                bucket_id = 'blog-assets'
+                AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+            );
+        $sql$;
+
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_update_blog_assets
+            ON storage.objects
+            FOR UPDATE TO authenticated
+            USING (
+                bucket_id = 'blog-assets'
+                AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+            )
+            WITH CHECK (
+                bucket_id = 'blog-assets'
+                AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+            );
+        $sql$;
+
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_delete_blog_assets
+            ON storage.objects
+            FOR DELETE TO authenticated
+            USING (
+                bucket_id = 'blog-assets'
+                AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+            );
+        $sql$;
+    ELSIF legacy_role_exists THEN
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_insert_blog_assets
+            ON storage.objects
+            FOR INSERT TO authenticated
+            WITH CHECK (
+                bucket_id = 'blog-assets'
+                AND EXISTS (
+                    SELECT 1
+                    FROM public.profiles AS p
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND p.role IN ('admin', 'editor')
+                )
+            );
+        $sql$;
+
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_update_blog_assets
+            ON storage.objects
+            FOR UPDATE TO authenticated
+            USING (
+                bucket_id = 'blog-assets'
+                AND EXISTS (
+                    SELECT 1
+                    FROM public.profiles AS p
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND p.role IN ('admin', 'editor')
+                )
+            )
+            WITH CHECK (
+                bucket_id = 'blog-assets'
+                AND EXISTS (
+                    SELECT 1
+                    FROM public.profiles AS p
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND p.role IN ('admin', 'editor')
+                )
+            );
+        $sql$;
+
+        EXECUTE $sql$
+            CREATE POLICY admin_editor_delete_blog_assets
+            ON storage.objects
+            FOR DELETE TO authenticated
+            USING (
+                bucket_id = 'blog-assets'
+                AND EXISTS (
+                    SELECT 1
+                    FROM public.profiles AS p
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND p.role IN ('admin', 'editor')
+                )
+            );
+        $sql$;
+    ELSE
+        RAISE NOTICE 'Skipping admin/editor blog asset policies because neither has_any_role() nor profiles.role are available.';
+    END IF;
+END;
+$blog_assets_policies$;
 
 -- Function to increment view count
 CREATE OR REPLACE FUNCTION public.increment_blog_post_view_count(post_id UUID)
