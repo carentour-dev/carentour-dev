@@ -9,7 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { Star, MapPin, Calendar, ChevronLeft, Loader2, Quote, Award } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  Calendar,
+  ChevronLeft,
+  Loader2,
+  Quote,
+  Award,
+} from "lucide-react";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 
 export default function PatientProfilePage() {
@@ -24,7 +32,9 @@ export default function PatientProfilePage() {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading patient testimonials...</p>
+            <p className="text-muted-foreground">
+              Loading patient testimonials...
+            </p>
           </div>
         </div>
         <Footer />
@@ -113,7 +123,9 @@ export default function PatientProfilePage() {
                     {profile.published_review_count}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {profile.published_review_count === 1 ? "Review" : "Reviews"}
+                    {profile.published_review_count === 1
+                      ? "Review"
+                      : "Reviews"}
                   </p>
                 </div>
 
@@ -136,10 +148,15 @@ export default function PatientProfilePage() {
                       <div className="flex items-center gap-1 justify-center">
                         <Star className="h-5 w-5 text-yellow-500 fill-current" />
                         <p className="text-3xl font-bold text-foreground">
-                          {(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}
+                          {(
+                            reviews.reduce((sum, r) => sum + r.rating, 0) /
+                            reviews.length
+                          ).toFixed(1)}
                         </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">Average Rating</p>
+                      <p className="text-sm text-muted-foreground">
+                        Average Rating
+                      </p>
                     </div>
                   </>
                 )}
@@ -163,10 +180,15 @@ export default function PatientProfilePage() {
                       <CardHeader>
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
-                            <CardTitle className="text-xl mb-2">{story.headline}</CardTitle>
+                            <CardTitle className="text-xl mb-2">
+                              {story.headline}
+                            </CardTitle>
                             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                               {story.treatment_name && (
-                                <Badge variant="secondary" className="capitalize">
+                                <Badge
+                                  variant="secondary"
+                                  className="capitalize"
+                                >
                                   {story.treatment_name}
                                 </Badge>
                               )}
@@ -178,7 +200,11 @@ export default function PatientProfilePage() {
                               )}
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
-                                <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                                <span>
+                                  {new Date(
+                                    story.created_at,
+                                  ).toLocaleDateString()}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -190,7 +216,9 @@ export default function PatientProfilePage() {
 
                       <CardContent className="space-y-4">
                         {story.excerpt && (
-                          <p className="text-muted-foreground italic">{story.excerpt}</p>
+                          <p className="text-muted-foreground italic">
+                            {story.excerpt}
+                          </p>
                         )}
 
                         <div className="space-y-4">
@@ -227,13 +255,22 @@ export default function PatientProfilePage() {
               Ready to Start Your Journey?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Join {profile.full_name} and thousands of satisfied patients who have chosen Egypt for their medical care
+              Join {profile.full_name} and thousands of satisfied patients who
+              have chosen Egypt for their medical care
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent" onClick={() => router.push("/consultation")}>
+              <Button
+                size="lg"
+                variant="accent"
+                onClick={() => router.push("/consultation")}
+              >
                 Get Free Consultation
               </Button>
-              <Button size="lg" variant="hero" onClick={() => router.push("/treatments")}>
+              <Button
+                size="lg"
+                variant="hero"
+                onClick={() => router.push("/treatments")}
+              >
                 Explore Treatments
               </Button>
             </div>
