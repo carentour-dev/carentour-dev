@@ -22,7 +22,8 @@ export const cmsTemplates: CmsTemplate[] = [
     defaultTitle: "Operations Team",
     seo: {
       title: "Operations Team | Care N Tour",
-      description: "Meet the Care N Tour operations team keeping journeys coordinated and seamless.",
+      description:
+        "Meet the Care N Tour operations team keeping journeys coordinated and seamless.",
     },
     blocks: [
       {
@@ -30,7 +31,8 @@ export const cmsTemplates: CmsTemplate[] = [
         eyebrow: "Operations",
         heading: "Meet the team behind every successful journey",
         highlight: "Care without compromise",
-        description: "Our coordinators orchestrate medical, travel, and hospitality details so patients focus on recovery.",
+        description:
+          "Our coordinators orchestrate medical, travel, and hospitality details so patients focus on recovery.",
         alignment: "left",
         background: "white",
         containerWidth: "wide",
@@ -62,22 +64,26 @@ export const cmsTemplates: CmsTemplate[] = [
         items: [
           {
             title: "Itinerary control",
-            description: "Dedicated trip managers ensure transfers, lodging, and clinic visits are synchronized.",
+            description:
+              "Dedicated trip managers ensure transfers, lodging, and clinic visits are synchronized.",
           },
           {
             title: "Medical liaisons",
-            description: "Bilingual coordinators keep specialists and patients aligned across time zones.",
+            description:
+              "Bilingual coordinators keep specialists and patients aligned across time zones.",
           },
           {
             title: "24/7 assurance",
-            description: "Real-time monitoring and escalation paths for every stage of the journey.",
+            description:
+              "Real-time monitoring and escalation paths for every stage of the journey.",
           },
         ],
       },
       {
         type: "doctors",
         title: "Operations leadership",
-        description: "Meet the coordinators orchestrating travel, medical, and hospitality logistics.",
+        description:
+          "Meet the coordinators orchestrating travel, medical, and hospitality logistics.",
         layout: "carousel",
         limit: 6,
         featuredOnly: true,
@@ -85,12 +91,21 @@ export const cmsTemplates: CmsTemplate[] = [
       {
         type: "callToAction",
         heading: "Plan your treatment journey with our operations team",
-        description: "Share your timeline and we will build a bespoke travel and care plan in under 24 hours.",
+        description:
+          "Share your timeline and we will build a bespoke travel and care plan in under 24 hours.",
         layout: "centered",
         background: "muted",
         actions: [
-          { label: "Book coordination call", href: "/consultation", variant: "default" },
-          { label: "Download playbook", href: "/travel-info", variant: "outline" },
+          {
+            label: "Book coordination call",
+            href: "/consultation",
+            variant: "default",
+          },
+          {
+            label: "Download playbook",
+            href: "/travel-info",
+            variant: "outline",
+          },
         ],
       },
     ],
@@ -103,7 +118,8 @@ export const cmsTemplates: CmsTemplate[] = [
     defaultTitle: "Campaign Landing",
     seo: {
       title: "Campaign Landing | Care N Tour",
-      description: "Convert visitors with a compelling hero, benefits, and testimonials layout.",
+      description:
+        "Convert visitors with a compelling hero, benefits, and testimonials layout.",
     },
     blocks: [
       {
@@ -111,12 +127,21 @@ export const cmsTemplates: CmsTemplate[] = [
         eyebrow: "Medical travel offer",
         heading: "Transform your care experience",
         highlight: "Personalized treatment packages",
-        description: "Bundle flights, accommodation, and world-class medical expertise with concierge guidance.",
+        description:
+          "Bundle flights, accommodation, and world-class medical expertise with concierge guidance.",
         alignment: "center",
         background: "gradient",
         containerWidth: "wide",
-        primaryAction: { label: "Start your plan", href: "/start-journey", variant: "default" },
-        secondaryAction: { label: "Download brochure", href: "/travel-info", variant: "secondary" },
+        primaryAction: {
+          label: "Start your plan",
+          href: "/start-journey",
+          variant: "default",
+        },
+        secondaryAction: {
+          label: "Download brochure",
+          href: "/travel-info",
+          variant: "secondary",
+        },
       },
       {
         type: "featureGrid",
@@ -125,15 +150,18 @@ export const cmsTemplates: CmsTemplate[] = [
         items: [
           {
             title: "Accredited hospitals",
-            description: "JCI-certified providers with translators and bedside support.",
+            description:
+              "JCI-certified providers with translators and bedside support.",
           },
           {
             title: "Transparent pricing",
-            description: "Upfront quotes with no surprise fees across treatments and travel.",
+            description:
+              "Upfront quotes with no surprise fees across treatments and travel.",
           },
           {
             title: "Recovery comfort",
-            description: "Partner hotels and recovery suites tailored to medical needs.",
+            description:
+              "Partner hotels and recovery suites tailored to medical needs.",
           },
         ],
       },
@@ -147,7 +175,8 @@ export const cmsTemplates: CmsTemplate[] = [
       },
       {
         type: "quote",
-        quote: "Care N Tour organized every detail, letting us focus entirely on recovery.",
+        quote:
+          "Care N Tour organized every detail, letting us focus entirely on recovery.",
         attribution: "Layla, Knee Replacement",
         highlight: "5-star experience from arrival to discharge.",
       },
@@ -157,30 +186,39 @@ export const cmsTemplates: CmsTemplate[] = [
         items: [
           {
             question: "What is included in a package?",
-            answer: "Treatment planning, travel logistics, accommodation recommendations, and on-ground support.",
+            answer:
+              "Treatment planning, travel logistics, accommodation recommendations, and on-ground support.",
           },
           {
             question: "How quickly can we start?",
-            answer: "Most treatment journeys can be coordinated within 7-10 days once medical records are received.",
+            answer:
+              "Most treatment journeys can be coordinated within 7-10 days once medical records are received.",
           },
           {
             question: "Can family travel too?",
-            answer: "Yes, we coordinate companion stays and activities while the patient is receiving care.",
+            answer:
+              "Yes, we coordinate companion stays and activities while the patient is receiving care.",
           },
           {
             question: "Do you support visa assistance?",
-            answer: "Our team provides invitation letters and step-by-step guidance for medical visa approvals.",
+            answer:
+              "Our team provides invitation letters and step-by-step guidance for medical visa approvals.",
           },
         ],
       },
       {
         type: "callToAction",
         heading: "Ready to design your medical journey?",
-        description: "Share your goals and our medical travel specialists will craft a personalized itinerary.",
+        description:
+          "Share your goals and our medical travel specialists will craft a personalized itinerary.",
         layout: "centered",
         background: "accent",
         actions: [
-          { label: "Book consultation", href: "/consultation", variant: "default" },
+          {
+            label: "Book consultation",
+            href: "/consultation",
+            variant: "default",
+          },
         ],
       },
     ],
@@ -193,7 +231,8 @@ export const cmsTemplates: CmsTemplate[] = [
     defaultTitle: "Medical Service",
     seo: {
       title: "Medical Service | Care N Tour",
-      description: "Explain a signature treatment with doctor expertise and travel planning guidance.",
+      description:
+        "Explain a signature treatment with doctor expertise and travel planning guidance.",
     },
     blocks: [
       {
@@ -201,12 +240,21 @@ export const cmsTemplates: CmsTemplate[] = [
         eyebrow: "Featured treatment",
         heading: "Comprehensive cardiac care in Cairo",
         highlight: "Expert cardiologists & modern facilities",
-        description: "Partner with Egypt's top cardiology teams for diagnosis, surgery, and recovery in one itinerary.",
+        description:
+          "Partner with Egypt's top cardiology teams for diagnosis, surgery, and recovery in one itinerary.",
         alignment: "left",
         background: "white",
         containerWidth: "wide",
-        primaryAction: { label: "Check availability", href: "/consultation", variant: "default" },
-        secondaryAction: { label: "Meet the doctors", href: "/doctors", variant: "secondary" },
+        primaryAction: {
+          label: "Check availability",
+          href: "/consultation",
+          variant: "default",
+        },
+        secondaryAction: {
+          label: "Meet the doctors",
+          href: "/doctors",
+          variant: "secondary",
+        },
       },
       {
         type: "imageFeature",
@@ -221,15 +269,18 @@ export const cmsTemplates: CmsTemplate[] = [
         items: [
           {
             title: "Accredited cardiac centers",
-            description: "Access to facilities with hybrid operating rooms and critical care suites.",
+            description:
+              "Access to facilities with hybrid operating rooms and critical care suites.",
           },
           {
             title: "Renowned surgeons",
-            description: "Internationally trained cardiologists with thousands of successful procedures.",
+            description:
+              "Internationally trained cardiologists with thousands of successful procedures.",
           },
           {
             title: "Dedicated recovery",
-            description: "Customized physiotherapy and cardiac rehabilitation pathways.",
+            description:
+              "Customized physiotherapy and cardiac rehabilitation pathways.",
           },
         ],
       },
@@ -246,7 +297,8 @@ export const cmsTemplates: CmsTemplate[] = [
       {
         type: "treatments",
         title: "Related procedures",
-        description: "Explore complementary services that pair with this treatment.",
+        description:
+          "Explore complementary services that pair with this treatment.",
         layout: "grid",
         limit: 4,
         featuredOnly: false,
@@ -264,12 +316,21 @@ export const cmsTemplates: CmsTemplate[] = [
       {
         type: "callToAction",
         heading: "Start your cardiac treatment plan",
-        description: "Submit medical records and receive a tailored treatment plan within 48 hours.",
+        description:
+          "Submit medical records and receive a tailored treatment plan within 48 hours.",
         layout: "centered",
         background: "muted",
         actions: [
-          { label: "Upload records", href: "/start-journey", variant: "default" },
-          { label: "Talk to a coordinator", href: "/contact", variant: "secondary" },
+          {
+            label: "Upload records",
+            href: "/start-journey",
+            variant: "default",
+          },
+          {
+            label: "Talk to a coordinator",
+            href: "/contact",
+            variant: "secondary",
+          },
         ],
       },
     ],
