@@ -55,43 +55,229 @@ const STAFF_ROLE_KEYS = new Set([
   "staff",
 ]);
 
+const safeJsonParse = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeRoleCandidates = (value: unknown): string[] => {
+  const seen = new Set<string>();
+
+  const visit = (input: unknown) => {
+    if (input === null || input === undefined) {
+      return;
+    }
+
+    if (typeof input === "string") {
+      const trimmed = input.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      if (/^\s*[\[{]/.test(trimmed)) {
+        const parsed = safeJsonParse(trimmed);
+        if (parsed !== null) {
+          visit(parsed);
+          return;
+        }
+      }
+
+      if (trimmed.includes(",")) {
+        trimmed
+          .split(",")
+          .map((segment) => segment.trim())
+          .filter((segment) => segment.length > 0)
+          .forEach((segment) => visit(segment));
+        return;
+      }
+
+      seen.add(trimmed.toLowerCase());
+      return;
+    }
+
+    if (Array.isArray(input)) {
+      input.forEach((item) => visit(item));
+      return;
+    }
+
+    if (typeof input === "object") {
+      const record = input as Record<string, unknown>;
+      const keysToInspect = [
+        "value",
+        "role",
+        "slug",
+        "name",
+        "label",
+        "primary",
+      ];
+
+      for (const key of keysToInspect) {
+        if (record[key] !== undefined) {
+          visit(record[key]);
+        }
+      }
+
+      if (Array.isArray((record as { values?: unknown }).values)) {
+        visit((record as { values?: unknown }).values);
+      }
+    }
+  };
+
+  visit(value);
+  return Array.from(seen);
+};
+
+const normalizeAccountType = (value: unknown): string | null => {
+  if (typeof value === "boolean") {
+    return value ? "staff" : null;
+  }
+
+  if (typeof value === "number") {
+    return value === 1 ? "staff" : null;
+  }
+
+  const candidates = normalizeRoleCandidates(value);
+  return candidates.length > 0 ? candidates[0] : null;
+};
+
+const booleanIndicatesStaff = (value: unknown): boolean => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "1", "yes", "y", "staff"].includes(normalized);
+  }
+
+  return false;
+};
+
 export const metadataIndicatesStaffAccount = (
   metadata: Record<string, unknown>,
 ): boolean => {
-  const accountTypeValue = metadata["account_type"];
-  const accountType =
-    typeof accountTypeValue === "string"
-      ? accountTypeValue.toLowerCase()
-      : null;
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
 
+  const accountType = normalizeAccountType(metadata["account_type"]);
   if (accountType === "staff") {
     return true;
   }
 
-  const staffRolesSource =
-    (Array.isArray(metadata["staff_roles"])
-      ? metadata["staff_roles"]
-      : Array.isArray(metadata["roles"])
-        ? metadata["roles"]
-        : Array.isArray(metadata["role"])
-          ? metadata["role"]
-          : []) ?? [];
+  const roleKeys = ["staff_roles", "roles", "role"] as const;
+  for (const key of roleKeys) {
+    if (metadata[key] !== undefined) {
+      const roles = normalizeRoleCandidates(metadata[key]);
+      if (roles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+        return true;
+      }
+    }
+  }
 
-  const normalizedRoles = staffRolesSource
-    .filter((role): role is string => typeof role === "string")
-    .map((role) => role.toLowerCase());
+  if (metadata["primary_role"] !== undefined) {
+    const primaryRoles = normalizeRoleCandidates(metadata["primary_role"]);
+    if (primaryRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+      return true;
+    }
+  }
 
-  if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+  const booleanKeys = [
+    "is_staff",
+    "staff",
+    "isStaff",
+    "is_staff_account",
+    "isStaffAccount",
+    "staffAccount",
+    "is_staff_user",
+  ] as const;
+
+  for (const key of booleanKeys) {
+    if (metadata[key] !== undefined && booleanIndicatesStaff(metadata[key])) {
+      return true;
+    }
+  }
+
+  const secondaryRoleKeys = ["primaryRole", "primary_role_slug"] as const;
+  for (const key of secondaryRoleKeys) {
+    if (metadata[key] !== undefined) {
+      const roles = normalizeRoleCandidates(metadata[key]);
+      if (roles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+const sessionIndicatesStaffAccount = async (
+  session: Session | null,
+): Promise<boolean> => {
+  if (!session?.user) {
+    return false;
+  }
+
+  const userMetadata = (session.user.user_metadata ?? {}) as Record<
+    string,
+    unknown
+  >;
+
+  if (metadataIndicatesStaffAccount(userMetadata)) {
     return true;
   }
 
-  const primaryRoleValue = metadata["primary_role"];
-  const primaryRole =
-    typeof primaryRoleValue === "string"
-      ? primaryRoleValue.toLowerCase()
-      : null;
+  const appMetadata = (session.user.app_metadata ?? {}) as Record<
+    string,
+    unknown
+  >;
 
-  return primaryRole !== null && STAFF_ROLE_KEYS.has(primaryRole);
+  if (metadataIndicatesStaffAccount(appMetadata)) {
+    return true;
+  }
+
+  if (!session.user.id) {
+    return false;
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("current_user_roles");
+
+    if (error) {
+      console.debug(
+        "current_user_roles RPC failed while determining staff status:",
+        error,
+      );
+      return true;
+    }
+
+    if (Array.isArray(data)) {
+      const normalizedRoles = data
+        .map((role) =>
+          typeof role === "string" ? role.trim().toLowerCase() : null,
+        )
+        .filter((role): role is string => !!role);
+
+      if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
+        return true;
+      }
+    }
+  } catch (rpcError) {
+    console.debug(
+      "Unable to check current user roles while determining staff status:",
+      rpcError,
+    );
+    return true;
+  }
+
+  return false;
 };
 
 const clearSupabaseAuthStorage = () => {
@@ -133,12 +319,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
     useSecurity();
 
-  const isStaffAccount = useCallback(
-    (metadata: Record<string, unknown>) =>
-      metadataIndicatesStaffAccount(metadata),
-    [],
-  );
-
   useEffect(() => {
     // Set up auth state listener
     const {
@@ -149,8 +329,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
 
       const currentUserId = session?.user?.id ?? null;
-      const metadata =
-        (session?.user?.user_metadata as Record<string, unknown>) ?? {};
 
       // Supabase reports a non-typed "USER_DELETED" event in some scenarios.
       const authEvent = event as string;
@@ -171,13 +349,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isNewSignIn &&
         typeof window !== "undefined" &&
         window.location.pathname === "/" &&
-        !redirectedForCurrentUser.current &&
-        !isStaffAccount(metadata)
+        !redirectedForCurrentUser.current
       ) {
-        redirectedForCurrentUser.current = true;
-        lastKnownUserId.current = currentUserId;
-        window.location.replace("/dashboard");
-        return;
+        void (async () => {
+          const isStaff = await sessionIndicatesStaffAccount(session ?? null);
+
+          if (
+            !isStaff &&
+            typeof window !== "undefined" &&
+            window.location.pathname === "/" &&
+            !redirectedForCurrentUser.current
+          ) {
+            redirectedForCurrentUser.current = true;
+            lastKnownUserId.current = currentUserId;
+            window.location.replace("/dashboard");
+          }
+        })();
       }
 
       if (currentUserId) {
@@ -203,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
     return () => subscription.unsubscribe();
-  }, [isStaffAccount]);
+  }, []);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
