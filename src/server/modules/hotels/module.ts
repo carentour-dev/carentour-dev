@@ -47,9 +47,7 @@ const trimString = (value: string) => value.trim();
 
 const sanitizeStringArray = (values: string[] | undefined) =>
   Array.isArray(values)
-    ? values
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
+    ? values.map((entry) => entry.trim()).filter((entry) => entry.length > 0)
     : undefined;
 
 function normalizeHotelForCreate(payload: ParsedHotel) {
@@ -78,24 +76,34 @@ function normalizeHotelForUpdate(payload: Partial<ParsedHotel>) {
 
   if (payload.name !== undefined) sanitized.name = trimString(payload.name);
   if (payload.slug !== undefined) sanitized.slug = trimString(payload.slug);
-  if (payload.description !== undefined) sanitized.description = payload.description?.trim() ?? null;
-  if (payload.star_rating !== undefined) sanitized.star_rating = payload.star_rating;
-  if (payload.nightly_rate !== undefined) sanitized.nightly_rate = payload.nightly_rate ?? null;
-  if (payload.currency !== undefined) sanitized.currency = payload.currency?.trim() ?? null;
+  if (payload.description !== undefined)
+    sanitized.description = payload.description?.trim() ?? null;
+  if (payload.star_rating !== undefined)
+    sanitized.star_rating = payload.star_rating;
+  if (payload.nightly_rate !== undefined)
+    sanitized.nightly_rate = payload.nightly_rate ?? null;
+  if (payload.currency !== undefined)
+    sanitized.currency = payload.currency?.trim() ?? null;
   if (payload.distance_to_facility_km !== undefined)
     sanitized.distance_to_facility_km = payload.distance_to_facility_km ?? null;
-  if (payload.address !== undefined) sanitized.address = payload.address ?? null;
-  if (payload.contact_info !== undefined) sanitized.contact_info = payload.contact_info ?? null;
-  if (payload.coordinates !== undefined) sanitized.coordinates = payload.coordinates ?? null;
+  if (payload.address !== undefined)
+    sanitized.address = payload.address ?? null;
+  if (payload.contact_info !== undefined)
+    sanitized.contact_info = payload.contact_info ?? null;
+  if (payload.coordinates !== undefined)
+    sanitized.coordinates = payload.coordinates ?? null;
   if (payload.amenities !== undefined)
     sanitized.amenities = sanitizeStringArray(payload.amenities) ?? [];
   if (payload.medical_services !== undefined)
-    sanitized.medical_services = sanitizeStringArray(payload.medical_services) ?? [];
+    sanitized.medical_services =
+      sanitizeStringArray(payload.medical_services) ?? [];
   if (payload.images !== undefined)
     sanitized.images = (payload.images as Json | null | undefined) ?? null;
-  if (payload.is_partner !== undefined) sanitized.is_partner = payload.is_partner;
+  if (payload.is_partner !== undefined)
+    sanitized.is_partner = payload.is_partner;
   if (payload.rating !== undefined) sanitized.rating = payload.rating ?? null;
-  if (payload.review_count !== undefined) sanitized.review_count = payload.review_count ?? null;
+  if (payload.review_count !== undefined)
+    sanitized.review_count = payload.review_count ?? null;
 
   return sanitized;
 }
