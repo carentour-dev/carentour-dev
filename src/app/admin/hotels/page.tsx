@@ -33,10 +33,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -206,11 +216,10 @@ export default function AdminHotelsPage() {
     if (!hotelsQuery.data) return [] as HotelRecord[];
 
     return hotelsQuery.data.filter((hotel) => {
-      const matchesSearch =
-        [hotel.name, hotel.slug]
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
+      const matchesSearch = [hotel.name, hotel.slug]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
       const matchesStar =
         starFilter === "all" || hotel.star_rating === Number(starFilter);
@@ -277,7 +286,9 @@ export default function AdminHotelsPage() {
       review_count: hotel.review_count ?? undefined,
       hero_image:
         hotel.images && typeof hotel.images === "object"
-          ? ((hotel.images as Record<string, unknown>)["hero"] as string | undefined) ?? null
+          ? (((hotel.images as Record<string, unknown>)["hero"] as
+              | string
+              | undefined) ?? null)
           : null,
     });
     setDialogOpen(true);
@@ -340,9 +351,12 @@ export default function AdminHotelsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Hotels</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Hotels
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Curate recovery-friendly accommodations with concierge amenities and medical-grade services.
+            Curate recovery-friendly accommodations with concierge amenities and
+            medical-grade services.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -354,13 +368,19 @@ export default function AdminHotelsPage() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingHotel ? "Edit Hotel" : "Add Hotel"}</DialogTitle>
+              <DialogTitle>
+                {editingHotel ? "Edit Hotel" : "Add Hotel"}
+              </DialogTitle>
               <DialogDescription>
-                Maintain accommodation details to pair patients with the right recovery environment.
+                Maintain accommodation details to pair patients with the right
+                recovery environment.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -368,7 +388,10 @@ export default function AdminHotelsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Name</FormLabel>
-                        <Input placeholder="Nile View Recovery Suites" {...field} />
+                        <Input
+                          placeholder="Nile View Recovery Suites"
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -392,7 +415,11 @@ export default function AdminHotelsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <Textarea rows={3} placeholder="Highlight recovery amenities and services." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Highlight recovery amenities and services."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -410,7 +437,9 @@ export default function AdminHotelsPage() {
                           min={1}
                           max={5}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -427,7 +456,9 @@ export default function AdminHotelsPage() {
                           min={0}
                           step="0.01"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -458,7 +489,9 @@ export default function AdminHotelsPage() {
                           min={0}
                           step="0.1"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -476,7 +509,9 @@ export default function AdminHotelsPage() {
                           max={5}
                           step="0.1"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -492,7 +527,9 @@ export default function AdminHotelsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -554,7 +591,10 @@ export default function AdminHotelsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
-                        <Input placeholder="reservations@hotel.com" {...field} />
+                        <Input
+                          placeholder="reservations@hotel.com"
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -579,7 +619,9 @@ export default function AdminHotelsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Amenities</FormLabel>
-                        <FormDescription>Comma separated list (Spa, Airport shuttle, ...).</FormDescription>
+                        <FormDescription>
+                          Comma separated list (Spa, Airport shuttle, ...).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -591,7 +633,10 @@ export default function AdminHotelsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Medical services</FormLabel>
-                        <FormDescription>Comma separated (Nurse on-call, Accessible rooms, ...).</FormDescription>
+                        <FormDescription>
+                          Comma separated (Nurse on-call, Accessible rooms,
+                          ...).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -623,7 +668,9 @@ export default function AdminHotelsPage() {
                       <FormLabel>Partner status</FormLabel>
                       <Select
                         value={(field.value ?? true) ? "partner" : "hidden"}
-                        onValueChange={(value) => field.onChange(value === "partner")}
+                        onValueChange={(value) =>
+                          field.onChange(value === "partner")
+                        }
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -644,7 +691,10 @@ export default function AdminHotelsPage() {
                   <Button type="button" variant="ghost" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createHotel.isPending || updateHotel.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={createHotel.isPending || updateHotel.isPending}
+                  >
                     {(createHotel.isPending || updateHotel.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
@@ -715,8 +765,12 @@ export default function AdminHotelsPage() {
                   <TableRow key={hotel.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{hotel.name}</span>
-                        <span className="text-xs text-muted-foreground">{hotel.slug}</span>
+                        <span className="font-medium text-foreground">
+                          {hotel.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {hotel.slug}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -728,12 +782,20 @@ export default function AdminHotelsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={hotel.is_partner === false ? "outline" : "default"}>
+                      <Badge
+                        variant={
+                          hotel.is_partner === false ? "outline" : "default"
+                        }
+                      >
                         {hotel.is_partner === false ? "Hidden" : "Partner"}
                       </Badge>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(hotel)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(hotel)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -751,7 +813,10 @@ export default function AdminHotelsPage() {
 
                 {filteredHotels.length === 0 && !hotelsQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
                       No hotels found. Adjust filters or add a new hotel.
                     </TableCell>
                   </TableRow>
