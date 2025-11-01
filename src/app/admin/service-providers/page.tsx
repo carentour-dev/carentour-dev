@@ -33,14 +33,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const serviceProviderTypes = ["hospital", "clinic", "surgery_center", "rehab_center"] as const;
+const serviceProviderTypes = [
+  "hospital",
+  "clinic",
+  "surgery_center",
+  "rehab_center",
+] as const;
 
 const serviceProviderSchema = z.object({
   name: z.string().min(2),
@@ -102,7 +117,8 @@ export default function AdminServiceProvidersPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingServiceProvider, setEditingServiceProvider] = useState<ServiceProviderRecord | null>(null);
+  const [editingServiceProvider, setEditingServiceProvider] =
+    useState<ServiceProviderRecord | null>(null);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -130,7 +146,8 @@ export default function AdminServiceProvidersPage() {
 
   const serviceProvidersQuery = useQuery({
     queryKey: QUERY_KEY,
-    queryFn: () => adminFetch<ServiceProviderRecord[]>("/api/admin/service-providers"),
+    queryFn: () =>
+      adminFetch<ServiceProviderRecord[]>("/api/admin/service-providers"),
   });
 
   const createServiceProvider = useMutation({
@@ -204,11 +221,14 @@ export default function AdminServiceProvidersPage() {
     if (!serviceProvidersQuery.data) return [] as ServiceProviderRecord[];
 
     return serviceProvidersQuery.data.filter((provider) => {
-      const matchesSearch =
-        [provider.name, provider.slug, provider.facility_type]
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
+      const matchesSearch = [
+        provider.name,
+        provider.slug,
+        provider.facility_type,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
       const matchesType =
         typeFilter === "all" || provider.facility_type === typeFilter;
@@ -275,7 +295,9 @@ export default function AdminServiceProvidersPage() {
       is_partner: provider.is_partner ?? true,
       hero_image:
         provider.images && typeof provider.images === "object"
-          ? ((provider.images as Record<string, unknown>)["hero"] as string | undefined) ?? null
+          ? (((provider.images as Record<string, unknown>)["hero"] as
+              | string
+              | undefined) ?? null)
           : null,
     });
     setDialogOpen(true);
@@ -325,7 +347,10 @@ export default function AdminServiceProvidersPage() {
     };
 
     if (editingServiceProvider) {
-      updateServiceProvider.mutate({ id: editingServiceProvider.id, data: payload });
+      updateServiceProvider.mutate({
+        id: editingServiceProvider.id,
+        data: payload,
+      });
     } else {
       createServiceProvider.mutate(payload);
     }
@@ -335,9 +360,12 @@ export default function AdminServiceProvidersPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Service Providers</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Service Providers
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Catalogue partner service providers with accreditation, amenities, and concierge contacts.
+            Catalogue partner service providers with accreditation, amenities,
+            and concierge contacts.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -350,14 +378,20 @@ export default function AdminServiceProvidersPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingServiceProvider ? "Edit Service Provider" : "Add Service Provider"}
+                {editingServiceProvider
+                  ? "Edit Service Provider"
+                  : "Add Service Provider"}
               </DialogTitle>
               <DialogDescription>
-                Store partner service provider metadata so coordinators can match patients with the right location.
+                Store partner service provider metadata so coordinators can
+                match patients with the right location.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -390,7 +424,10 @@ export default function AdminServiceProvidersPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Service provider type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -427,7 +464,11 @@ export default function AdminServiceProvidersPage() {
                             value={value ?? ""}
                             onBlur={onBlur}
                             onChange={(event) =>
-                              onChange(event.target.value === "" ? undefined : Number(event.target.value))
+                              onChange(
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                              )
                             }
                           />
                           <FormMessage />
@@ -443,7 +484,11 @@ export default function AdminServiceProvidersPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <Textarea rows={3} placeholder="Highlight specialties, certifications, and recovery suites." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Highlight specialties, certifications, and recovery suites."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -503,7 +548,10 @@ export default function AdminServiceProvidersPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
-                        <Input placeholder="coordinator@provider.com" {...field} />
+                        <Input
+                          placeholder="coordinator@provider.com"
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -528,7 +576,9 @@ export default function AdminServiceProvidersPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Amenities</FormLabel>
-                        <FormDescription>Comma separated list (e.g. 24/7 ICU, Concierge desk).</FormDescription>
+                        <FormDescription>
+                          Comma separated list (e.g. 24/7 ICU, Concierge desk).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -540,7 +590,9 @@ export default function AdminServiceProvidersPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Specialties</FormLabel>
-                        <FormDescription>Comma separated (e.g. Cardiology, Orthopedics).</FormDescription>
+                        <FormDescription>
+                          Comma separated (e.g. Cardiology, Orthopedics).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -572,7 +624,9 @@ export default function AdminServiceProvidersPage() {
                       <FormLabel>Partner status</FormLabel>
                       <Select
                         value={(field.value ?? true) ? "partner" : "hidden"}
-                        onValueChange={(value) => field.onChange(value === "partner")}
+                        onValueChange={(value) =>
+                          field.onChange(value === "partner")
+                        }
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -593,11 +647,20 @@ export default function AdminServiceProvidersPage() {
                   <Button type="button" variant="ghost" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createServiceProvider.isPending || updateServiceProvider.isPending}>
-                    {(createServiceProvider.isPending || updateServiceProvider.isPending) && (
+                  <Button
+                    type="submit"
+                    disabled={
+                      createServiceProvider.isPending ||
+                      updateServiceProvider.isPending
+                    }
+                  >
+                    {(createServiceProvider.isPending ||
+                      updateServiceProvider.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    {editingServiceProvider ? "Save changes" : "Create service provider"}
+                    {editingServiceProvider
+                      ? "Save changes"
+                      : "Create service provider"}
                   </Button>
                 </div>
               </form>
@@ -664,23 +727,39 @@ export default function AdminServiceProvidersPage() {
                   <TableRow key={provider.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{provider.name}</span>
-                        <span className="text-xs text-muted-foreground">{provider.slug}</span>
+                        <span className="font-medium text-foreground">
+                          {provider.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {provider.slug}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{provider.facility_type.replace("_", " ")}</Badge>
+                      <Badge variant="outline">
+                        {provider.facility_type.replace("_", " ")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      {typeof provider.rating === "number" ? `${provider.rating.toFixed(1)}/5` : "—"}
+                      {typeof provider.rating === "number"
+                        ? `${provider.rating.toFixed(1)}/5`
+                        : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={provider.is_partner === false ? "outline" : "default"}>
+                      <Badge
+                        variant={
+                          provider.is_partner === false ? "outline" : "default"
+                        }
+                      >
                         {provider.is_partner === false ? "Hidden" : "Partner"}
                       </Badge>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(provider)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(provider)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -688,7 +767,9 @@ export default function AdminServiceProvidersPage() {
                         size="icon"
                         className="text-destructive hover:text-destructive"
                         disabled={deleteServiceProvider.isPending}
-                        onClick={() => deleteServiceProvider.mutate(provider.id)}
+                        onClick={() =>
+                          deleteServiceProvider.mutate(provider.id)
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -696,13 +777,18 @@ export default function AdminServiceProvidersPage() {
                   </TableRow>
                 ))}
 
-                {filteredServiceProviders.length === 0 && !serviceProvidersQuery.isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                      No service providers found. Adjust filters or add a new partner service provider.
-                    </TableCell>
-                  </TableRow>
-                )}
+                {filteredServiceProviders.length === 0 &&
+                  !serviceProvidersQuery.isLoading && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No service providers found. Adjust filters or add a new
+                        partner service provider.
+                      </TableCell>
+                    </TableRow>
+                  )}
               </TableBody>
             </Table>
           )}
