@@ -34,10 +34,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -206,7 +215,9 @@ export default function AdminDoctorsPage() {
 
   const specializations = useMemo(() => {
     if (!doctorsQuery.data) return [] as string[];
-    return Array.from(new Set(doctorsQuery.data.map((doctor) => doctor.specialization))).sort();
+    return Array.from(
+      new Set(doctorsQuery.data.map((doctor) => doctor.specialization)),
+    ).sort();
   }, [doctorsQuery.data]);
 
   const filteredDoctors = useMemo(() => {
@@ -219,7 +230,8 @@ export default function AdminDoctorsPage() {
         .includes(search.toLowerCase());
 
       const matchesSpecialization =
-        specializationFilter === "all" || doctor.specialization === specializationFilter;
+        specializationFilter === "all" ||
+        doctor.specialization === specializationFilter;
 
       return matchesSearch && matchesSpecialization;
     });
@@ -321,9 +333,12 @@ export default function AdminDoctorsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Doctors</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Doctors
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Manage medical experts, clinical experience, and availability for Care N Tour patients.
+            Manage medical experts, clinical experience, and availability for
+            Care N Tour patients.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -335,13 +350,19 @@ export default function AdminDoctorsPage() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingDoctor ? "Edit Doctor" : "Add Doctor"}</DialogTitle>
+              <DialogTitle>
+                {editingDoctor ? "Edit Doctor" : "Add Doctor"}
+              </DialogTitle>
               <DialogDescription>
-                Provide credentials and profile details. You can refine the record later with additional data.
+                Provide credentials and profile details. You can refine the
+                record later with additional data.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -389,7 +410,9 @@ export default function AdminDoctorsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -403,7 +426,10 @@ export default function AdminDoctorsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Education</FormLabel>
-                      <Input placeholder="Johns Hopkins Fellowship" {...field} />
+                      <Input
+                        placeholder="Johns Hopkins Fellowship"
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -415,7 +441,11 @@ export default function AdminDoctorsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Biography</FormLabel>
-                      <Textarea rows={3} placeholder="Short overview shown on doctor profiles." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Short overview shown on doctor profiles."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -427,7 +457,9 @@ export default function AdminDoctorsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Languages</FormLabel>
-                      <FormDescription>Comma separated list (e.g. English, Arabic).</FormDescription>
+                      <FormDescription>
+                        Comma separated list (e.g. English, Arabic).
+                      </FormDescription>
                       <Input {...field} />
                       <FormMessage />
                     </FormItem>
@@ -441,7 +473,9 @@ export default function AdminDoctorsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Achievements</FormLabel>
-                        <FormDescription>Comma separated (e.g. 1,500+ surgeries).</FormDescription>
+                        <FormDescription>
+                          Comma separated (e.g. 1,500+ surgeries).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -453,7 +487,9 @@ export default function AdminDoctorsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Certifications</FormLabel>
-                        <FormDescription>Comma separated (e.g. Board Certified).</FormDescription>
+                        <FormDescription>
+                          Comma separated (e.g. Board Certified).
+                        </FormDescription>
                         <Input {...field} />
                         <FormMessage />
                       </FormItem>
@@ -474,7 +510,9 @@ export default function AdminDoctorsPage() {
                           max={5}
                           step="0.1"
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -490,7 +528,9 @@ export default function AdminDoctorsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -509,7 +549,9 @@ export default function AdminDoctorsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -525,7 +567,9 @@ export default function AdminDoctorsPage() {
                           type="number"
                           min={0}
                           {...field}
-                          onChange={(event) => field.onChange(Number(event.target.value))}
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value))
+                          }
                         />
                         <FormMessage />
                       </FormItem>
@@ -541,7 +585,9 @@ export default function AdminDoctorsPage() {
                       <FormLabel>Status</FormLabel>
                       <Select
                         value={(field.value ?? true) ? "active" : "inactive"}
-                        onValueChange={(value) => field.onChange(value === "active")}
+                        onValueChange={(value) =>
+                          field.onChange(value === "active")
+                        }
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -578,7 +624,10 @@ export default function AdminDoctorsPage() {
                   <Button type="button" variant="ghost" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createDoctor.isPending || updateDoctor.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={createDoctor.isPending || updateDoctor.isPending}
+                  >
                     {(createDoctor.isPending || updateDoctor.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
@@ -602,7 +651,10 @@ export default function AdminDoctorsPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 className="sm:w-48 lg:w-72"
               />
-              <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
+              <Select
+                value={specializationFilter}
+                onValueChange={setSpecializationFilter}
+              >
                 <SelectTrigger className="sm:w-44">
                   <SelectValue placeholder="Filter specialization" />
                 </SelectTrigger>
@@ -639,8 +691,12 @@ export default function AdminDoctorsPage() {
                   <TableRow key={doctor.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{doctor.name}</span>
-                        <span className="text-xs text-muted-foreground">{doctor.title}</span>
+                        <span className="font-medium text-foreground">
+                          {doctor.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {doctor.title}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -653,7 +709,11 @@ export default function AdminDoctorsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(doctor)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(doctor)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -671,7 +731,10 @@ export default function AdminDoctorsPage() {
 
                 {filteredDoctors.length === 0 && !doctorsQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
                       No doctors found. Adjust filters or create a new record.
                     </TableCell>
                   </TableRow>
