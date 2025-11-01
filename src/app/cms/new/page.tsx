@@ -15,7 +15,10 @@ export default function CmsNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateParam = searchParams?.get("template") ?? null;
-  const templateDefinition = useMemo(() => getTemplate(templateParam), [templateParam]);
+  const templateDefinition = useMemo(
+    () => getTemplate(templateParam),
+    [templateParam],
+  );
 
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
@@ -57,7 +60,7 @@ export default function CmsNewPage() {
         }),
       });
       if (!res.ok) {
-        const j = await res.json().catch(() => ({} as any));
+        const j = await res.json().catch(() => ({}) as any);
         throw new Error(j?.error || `Failed to create: ${res.status}`);
       }
       router.push(`/cms/${slug}/edit`);
@@ -75,7 +78,9 @@ export default function CmsNewPage() {
           <Sparkles className="h-4 w-4 text-primary" />
           <AlertTitle className="flex items-center gap-2 text-sm">
             Template applied
-            <Badge variant="secondary" className="uppercase tracking-wide">{templateDefinition.name}</Badge>
+            <Badge variant="secondary" className="uppercase tracking-wide">
+              {templateDefinition.name}
+            </Badge>
             <Button
               type="button"
               size="sm"
@@ -86,12 +91,15 @@ export default function CmsNewPage() {
             </Button>
           </AlertTitle>
           <AlertDescription className="text-xs text-muted-foreground">
-            Blocks and SEO will be pre-filled from this template. Adjust the slug and title or continue to customize in the editor.
+            Blocks and SEO will be pre-filled from this template. Adjust the
+            slug and title or continue to customize in the editor.
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
-          <AlertTitle className="text-sm">Start from scratch or pick a template</AlertTitle>
+          <AlertTitle className="text-sm">
+            Start from scratch or pick a template
+          </AlertTitle>
           <AlertDescription className="text-xs text-muted-foreground">
             Use the templates below to jump-start your content structure.
           </AlertDescription>
@@ -103,18 +111,32 @@ export default function CmsNewPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               New Page
-              {templateDefinition ? <Badge variant="outline" className="text-xs">Using template</Badge> : null}
+              {templateDefinition ? (
+                <Badge variant="outline" className="text-xs">
+                  Using template
+                </Badge>
+              ) : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error ? <div className="text-sm text-destructive">{error}</div> : null}
+            {error ? (
+              <div className="text-sm text-destructive">{error}</div>
+            ) : null}
             <div>
               <label className="block text-sm mb-1">Slug</label>
-              <Input value={slug} onChange={(e) => setSlug(e.target.value.trim())} placeholder="operations" />
+              <Input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.trim())}
+                placeholder="operations"
+              />
             </div>
             <div>
               <label className="block text-sm mb-1">Title</label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Operations" />
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Operations"
+              />
             </div>
             <Button type="submit" disabled={creating}>
               {creating ? "Creating..." : "Create"}
@@ -127,7 +149,10 @@ export default function CmsNewPage() {
         {cmsTemplates.map((template) => {
           const isActive = templateDefinition?.slug === template.slug;
           return (
-            <Card key={template.slug} className={isActive ? "border-primary" : "border-border/60"}>
+            <Card
+              key={template.slug}
+              className={isActive ? "border-primary" : "border-border/60"}
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{template.name}</CardTitle>
               </CardHeader>
@@ -138,7 +163,9 @@ export default function CmsNewPage() {
                   size="sm"
                   variant={isActive ? "default" : "secondary"}
                   onClick={() => {
-                    router.push(`/cms/new?template=${encodeURIComponent(template.slug)}`);
+                    router.push(
+                      `/cms/new?template=${encodeURIComponent(template.slug)}`,
+                    );
                   }}
                 >
                   {isActive ? "Selected" : "Use template"}
