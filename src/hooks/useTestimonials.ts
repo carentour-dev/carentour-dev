@@ -43,7 +43,12 @@ interface ReviewQuery {
   limit?: number;
 }
 
-const fetchReviews = async ({ treatmentId, treatmentSlug, highlightOnly, limit }: ReviewQuery): Promise<PatientReview[]> => {
+const fetchReviews = async ({
+  treatmentId,
+  treatmentSlug,
+  highlightOnly,
+  limit,
+}: ReviewQuery): Promise<PatientReview[]> => {
   let query = supabase
     .from("doctor_reviews")
     .select(
@@ -90,10 +95,17 @@ interface StoryQuery {
   limit?: number;
 }
 
-const fetchStories = async ({ treatmentId, treatmentSlug, featuredOnly, limit }: StoryQuery): Promise<PatientStory[]> => {
+const fetchStories = async ({
+  treatmentId,
+  treatmentSlug,
+  featuredOnly,
+  limit,
+}: StoryQuery): Promise<PatientStory[]> => {
   let query = supabase
     .from("patient_stories")
-    .select("id, patient_id, treatment_id, headline, excerpt, body_markdown, hero_image, featured, locale, created_at, patients(full_name), doctors(name), treatments(slug, name)")
+    .select(
+      "id, patient_id, treatment_id, headline, excerpt, body_markdown, hero_image, featured, locale, created_at, patients(full_name), doctors(name), treatments(slug, name)",
+    )
     .eq("published", true)
     .order("featured", { ascending: false })
     .order("display_order", { ascending: true })
@@ -146,7 +158,13 @@ export const usePatientReviews = (params?: ReviewHookParams) => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["patient-reviews", treatmentId ?? null, treatmentSlug ?? null, highlightOnly, limit ?? null],
+    queryKey: [
+      "patient-reviews",
+      treatmentId ?? null,
+      treatmentSlug ?? null,
+      highlightOnly,
+      limit ?? null,
+    ],
     queryFn: () =>
       fetchReviews({
         treatmentId,
@@ -183,7 +201,13 @@ export const usePatientStories = (params?: StoryHookParams) => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["patient-stories", treatmentId ?? null, treatmentSlug ?? null, featuredOnly, limit ?? null],
+    queryKey: [
+      "patient-stories",
+      treatmentId ?? null,
+      treatmentSlug ?? null,
+      featuredOnly,
+      limit ?? null,
+    ],
     queryFn: () =>
       fetchStories({
         treatmentId,
