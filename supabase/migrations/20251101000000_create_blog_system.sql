@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.blog_authors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users (id) ON DELETE SET NULL,
     name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     bio TEXT,
     avatar TEXT,
     email TEXT,
@@ -107,6 +108,8 @@ CREATE INDEX IF NOT EXISTS idx_blog_tags_slug
 ON public.blog_tags (slug);
 CREATE INDEX IF NOT EXISTS idx_blog_authors_user_id
 ON public.blog_authors (user_id);
+CREATE INDEX IF NOT EXISTS idx_blog_authors_slug
+ON public.blog_authors (slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug
 ON public.blog_posts (slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status
