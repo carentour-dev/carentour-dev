@@ -368,15 +368,29 @@ INNER JOIN public.permissions AS p
 WHERE r.slug IN ('admin', 'editor')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
--- Backfill profile_roles from legacy column (defaulting to user)
-INSERT INTO public.profile_roles (profile_id, role_id, assigned_at)
-SELECT
-    p.id AS profile_id,
-    r.id AS role_id,
-    coalesce(p.updated_at, now()) AS assigned_at
-FROM public.profiles AS p
-INNER JOIN public.roles AS r ON r.slug = coalesce(nullif(p.role, ''), 'user')
-ON CONFLICT (profile_id, role_id) DO NOTHING;
+-- Only run when the legacy role column is still present (fresh installs)
+DO $profile_roles_backfill$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'profiles'
+          AND column_name = 'role'
+    ) THEN
+        EXECUTE $sql$
+            INSERT INTO public.profile_roles (profile_id, role_id, assigned_at)
+            SELECT
+                p.id AS profile_id,
+                r.id AS role_id,
+                coalesce(p.updated_at, now()) AS assigned_at
+            FROM public.profiles AS p
+            INNER JOIN public.roles AS r ON r.slug = coalesce(nullif(p.role, ''), 'user')
+            ON CONFLICT (profile_id, role_id) DO NOTHING;
+        $sql$;
+    END IF;
+END;
+$profile_roles_backfill$;
 
 -- Ensure every profile has at least the user role
 INSERT INTO public.profile_roles (profile_id, role_id, assigned_at)
@@ -507,14 +521,17 @@ DECLARE
     qualified_table TEXT;
 BEGIN
     FOR policy_name, qualified_table IN
-        SELECT policy_name, qualified_table
+        SELECT policies.policy_name, policies.qualified_table
         FROM (
             VALUES
                 ('Admins can view all subscriptions', 'public.newsletter_subscriptions'),
                 ('Admins can view security events', 'public.security_events'),
                 ('Admin/Editor write cms-assets', 'storage.objects'),
                 ('Admin/Editor modify cms-assets', 'storage.objects'),
-                ('Admin/Editor delete cms-assets', 'storage.objects')
+                ('Admin/Editor delete cms-assets', 'storage.objects'),
+                ('admin_editor_insert_blog_assets', 'storage.objects'),
+                ('admin_editor_update_blog_assets', 'storage.objects'),
+                ('admin_editor_delete_blog_assets', 'storage.objects')
         ) AS policies(policy_name, qualified_table)
     LOOP
         EXECUTE format(
@@ -578,6 +595,35 @@ ON storage.objects
 FOR DELETE TO authenticated
 USING (
     bucket_id = 'cms-assets'
+    AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+);
+
+-- Refresh storage policies related to blog assets bucket
+CREATE POLICY admin_editor_insert_blog_assets
+ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (
+    bucket_id = 'blog-assets'
+    AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+);
+
+CREATE POLICY admin_editor_update_blog_assets
+ON storage.objects
+FOR UPDATE TO authenticated
+USING (
+    bucket_id = 'blog-assets'
+    AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+)
+WITH CHECK (
+    bucket_id = 'blog-assets'
+    AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
+);
+
+CREATE POLICY admin_editor_delete_blog_assets
+ON storage.objects
+FOR DELETE TO authenticated
+USING (
+    bucket_id = 'blog-assets'
     AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
 );
 
