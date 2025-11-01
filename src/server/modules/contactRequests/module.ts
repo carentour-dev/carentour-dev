@@ -1,5 +1,3 @@
-
-
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
@@ -11,15 +9,12 @@ const statusSchema = z.enum(STATUS_VALUES);
 const ORIGIN_VALUES = ["web", "portal", "manual"] as const;
 const originSchema = z.enum(ORIGIN_VALUES).optional();
 
-const optionalUuid = z.preprocess(
-  (value) => {
-    if (typeof value === "string" && value.trim() === "") {
-      return null;
-    }
-    return value;
-  },
-  z.string().uuid().nullable().optional(),
-);
+const optionalUuid = z.preprocess((value) => {
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+  return value;
+}, z.string().uuid().nullable().optional());
 
 const jsonSchema: z.ZodType<Json> = z.lazy(() =>
   z.union([
@@ -88,11 +83,17 @@ const listFiltersSchema = z.object({
 
 const contactRequestIdSchema = z.string().uuid();
 
-type ContactRequestInsert = Database["public"]["Tables"]["contact_requests"]["Insert"];
-type ContactRequestUpdate = Database["public"]["Tables"]["contact_requests"]["Update"];
-export type ContactRequestStatus = Database["public"]["Enums"]["contact_request_status"];
+type ContactRequestInsert =
+  Database["public"]["Tables"]["contact_requests"]["Insert"];
+type ContactRequestUpdate =
+  Database["public"]["Tables"]["contact_requests"]["Update"];
+export type ContactRequestStatus =
+  Database["public"]["Enums"]["contact_request_status"];
 
-const contactRequestService = new CrudService("contact_requests", "contact request");
+const contactRequestService = new CrudService(
+  "contact_requests",
+  "contact request",
+);
 
 const trim = (value: string) => value.trim();
 
@@ -102,8 +103,14 @@ const trimOptional = (value: string | undefined): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const sanitizeOrigin = (origin?: string | null, hasUser = false): ContactRequestInsert["origin"] => {
-  if (origin && ORIGIN_VALUES.includes(origin as (typeof ORIGIN_VALUES)[number])) {
+const sanitizeOrigin = (
+  origin?: string | null,
+  hasUser = false,
+): ContactRequestInsert["origin"] => {
+  if (
+    origin &&
+    ORIGIN_VALUES.includes(origin as (typeof ORIGIN_VALUES)[number])
+  ) {
     return origin as ContactRequestInsert["origin"];
   }
   return hasUser ? "portal" : "web";
@@ -112,7 +119,9 @@ const sanitizeOrigin = (origin?: string | null, hasUser = false): ContactRequest
 export const CONTACT_REQUEST_STATUSES = STATUS_VALUES;
 
 export const contactRequestController = {
-  async list(filters: { status?: ContactRequestStatus; requestType?: string } = {}) {
+  async list(
+    filters: { status?: ContactRequestStatus; requestType?: string } = {},
+  ) {
     const parsed = listFiltersSchema.parse(filters);
     const supabase = getSupabaseAdmin();
 
@@ -135,7 +144,8 @@ export const contactRequestController = {
       throw new ApiError(500, "Failed to load contact requests", error.message);
     }
 
-    return (data ?? []) as Database["public"]["Tables"]["contact_requests"]["Row"][];
+    return (data ??
+      []) as Database["public"]["Tables"]["contact_requests"]["Row"][];
   },
 
   async get(id: unknown) {
@@ -193,7 +203,8 @@ export const contactRequestController = {
 
     if (parsed.request_type !== undefined) {
       const trimmedType = trim(parsed.request_type);
-      updatePayload.request_type = trimmedType.length > 0 ? trimmedType : "general";
+      updatePayload.request_type =
+        trimmedType.length > 0 ? trimmedType : "general";
     }
 
     if (parsed.notes !== undefined) {
@@ -229,11 +240,15 @@ export const contactRequestController = {
     }
 
     if (parsed.contact_preference !== undefined) {
-      updatePayload.contact_preference = trimOptional(parsed.contact_preference);
+      updatePayload.contact_preference = trimOptional(
+        parsed.contact_preference,
+      );
     }
 
     if (parsed.additional_questions !== undefined) {
-      updatePayload.additional_questions = trimOptional(parsed.additional_questions);
+      updatePayload.additional_questions = trimOptional(
+        parsed.additional_questions,
+      );
     }
 
     if (parsed.user_id !== undefined) {
@@ -245,7 +260,10 @@ export const contactRequestController = {
     }
 
     if (parsed.origin !== undefined) {
-      updatePayload.origin = sanitizeOrigin(parsed.origin, parsed.user_id != null);
+      updatePayload.origin = sanitizeOrigin(
+        parsed.origin,
+        parsed.user_id != null,
+      );
     }
 
     if (parsed.portal_metadata !== undefined) {
