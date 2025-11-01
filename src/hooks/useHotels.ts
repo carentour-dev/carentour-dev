@@ -8,7 +8,9 @@ interface UseHotelsOptions {
   limit?: number;
 }
 
-const fetchHotels = async ({ limit }: UseHotelsOptions): Promise<HotelRow[]> => {
+const fetchHotels = async ({
+  limit,
+}: UseHotelsOptions): Promise<HotelRow[]> => {
   let query = supabase
     .from("hotels")
     .select("*")
