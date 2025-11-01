@@ -27,11 +27,18 @@ export const doctorTreatmentsController = {
       .eq("treatment_category", category);
 
     if (assignmentError) {
-      throw new ApiError(500, "Failed to fetch doctor assignments", assignmentError.message);
+      throw new ApiError(
+        500,
+        "Failed to fetch doctor assignments",
+        assignmentError.message,
+      );
     }
 
     const assignedMap = new Map(
-      (assignments ?? []).map((entry) => [entry.doctor_id, entry.is_primary_specialist === true]),
+      (assignments ?? []).map((entry) => [
+        entry.doctor_id,
+        entry.is_primary_specialist === true,
+      ]),
     );
 
     return (doctors ?? []).map((doctor) => ({
@@ -46,7 +53,8 @@ export const doctorTreatmentsController = {
   },
 
   async setAssignments(payload: unknown) {
-    const { category, doctorIds, primaryDoctorId } = assignmentSchema.parse(payload);
+    const { category, doctorIds, primaryDoctorId } =
+      assignmentSchema.parse(payload);
 
     const supabase = getSupabaseAdmin();
 
@@ -56,7 +64,11 @@ export const doctorTreatmentsController = {
       .eq("treatment_category", category);
 
     if (deleteError) {
-      throw new ApiError(500, "Failed to reset doctor assignments", deleteError.message);
+      throw new ApiError(
+        500,
+        "Failed to reset doctor assignments",
+        deleteError.message,
+      );
     }
 
     if (doctorIds.length === 0) {
