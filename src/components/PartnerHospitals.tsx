@@ -34,7 +34,9 @@ const certifications = [
 ];
 
 export default function PartnerHospitals() {
-  const { serviceProviders, loading, error } = useServiceProviders({ limit: 3 });
+  const { serviceProviders, loading, error } = useServiceProviders({
+    limit: 3,
+  });
 
   if (loading) {
     return (
@@ -53,9 +55,12 @@ export default function PartnerHospitals() {
     return (
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-destructive mb-4">Unable to load service providers right now.</p>
+          <p className="text-destructive mb-4">
+            Unable to load service providers right now.
+          </p>
           <p className="text-sm text-muted-foreground">
-            Please try again later or contact our concierge team for personalized recommendations.
+            Please try again later or contact our concierge team for
+            personalized recommendations.
           </p>
         </div>
       </section>
@@ -73,8 +78,9 @@ export default function PartnerHospitals() {
             Our Partner Hospitals & Clinics
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            We&apos;ve carefully selected premier medical service providers across Egypt that meet the highest
-            international standards, ensuring you receive world-class healthcare in state-of-the-art environments.
+            We&apos;ve carefully selected premier medical service providers
+            across Egypt that meet the highest international standards, ensuring
+            you receive world-class healthcare in state-of-the-art environments.
           </p>
         </div>
 
@@ -86,11 +92,16 @@ export default function PartnerHospitals() {
               .join(", ");
             const image =
               provider.images && typeof provider.images === "object"
-                ? ((provider.images as Record<string, unknown>)["hero"] as string | undefined)
+                ? ((provider.images as Record<string, unknown>)["hero"] as
+                    | string
+                    | undefined)
                 : undefined;
 
             return (
-              <Card key={provider.id} className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring">
+              <Card
+                key={provider.id}
+                className="overflow-hidden border-border/50 hover:shadow-card-hover transition-spring"
+              >
                 <div className="aspect-video relative overflow-hidden">
                   <Image
                     src={image || FALLBACK_IMAGE}
@@ -100,14 +111,19 @@ export default function PartnerHospitals() {
                     sizes="(min-width: 1024px) 45vw, 100vw"
                   />
                   <div className="absolute top-4 left-4">
-                    <Badge variant="secondary" className="bg-background/90 text-foreground text-center">
+                    <Badge
+                      variant="secondary"
+                      className="bg-background/90 text-foreground text-center"
+                    >
                       {provider.facility_type.replace("_", " ")}
                     </Badge>
                   </div>
                   {typeof provider.rating === "number" ? (
                     <div className="absolute top-4 right-4 flex items-center gap-1 bg-background/90 rounded-full px-2 py-1">
                       <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="text-sm font-medium">{provider.rating.toFixed(1)}</span>
+                      <span className="text-sm font-medium">
+                        {provider.rating.toFixed(1)}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -123,7 +139,9 @@ export default function PartnerHospitals() {
                     ) : null}
                   </CardTitle>
                   {provider.description ? (
-                    <p className="text-muted-foreground">{provider.description}</p>
+                    <p className="text-muted-foreground">
+                      {provider.description}
+                    </p>
                   ) : null}
                 </CardHeader>
 
@@ -133,7 +151,11 @@ export default function PartnerHospitals() {
                       <h4 className="font-semibold mb-2">Specialties</h4>
                       <div className="flex flex-wrap gap-2">
                         {provider.specialties.map((specialty) => (
-                          <Badge key={specialty} variant="secondary" className="text-xs text-center">
+                          <Badge
+                            key={specialty}
+                            variant="secondary"
+                            className="text-xs text-center"
+                          >
                             {specialty}
                           </Badge>
                         ))}
@@ -146,7 +168,10 @@ export default function PartnerHospitals() {
                       <h4 className="font-semibold mb-2">Amenities</h4>
                       <div className="grid grid-cols-2 gap-2">
                         {provider.amenities.slice(0, 6).map((feature) => (
-                          <div key={feature} className="flex items-center text-sm text-muted-foreground">
+                          <div
+                            key={feature}
+                            className="flex items-center text-sm text-muted-foreground"
+                          >
                             <div className="w-1.5 h-1.5 bg-primary rounded-full mr-2" />
                             {feature}
                           </div>
@@ -171,7 +196,10 @@ export default function PartnerHospitals() {
           <div className="mb-16">
             {(() => {
               const provider = serviceProviders[2];
-              const address = (provider.address ?? {}) as Record<string, unknown>;
+              const address = (provider.address ?? {}) as Record<
+                string,
+                unknown
+              >;
               const location = [address?.["city"], address?.["country"]]
                 .filter(Boolean)
                 .join(", ");
@@ -182,17 +210,23 @@ export default function PartnerHospitals() {
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                       <div>
-                        <h3 className="text-xl font-bold mb-2">{provider.name}</h3>
+                        <h3 className="text-xl font-bold mb-2">
+                          {provider.name}
+                        </h3>
                         <Badge variant="outline" className="mb-2 text-center">
                           {provider.facility_type.replace("_", " ")}
                         </Badge>
                         {provider.description ? (
-                          <p className="text-muted-foreground text-sm">{provider.description}</p>
+                          <p className="text-muted-foreground text-sm">
+                            {provider.description}
+                          </p>
                         ) : null}
                         {location ? (
                           <div className="flex items-center mt-2">
                             <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{location}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {location}
+                            </span>
                           </div>
                         ) : null}
                       </div>
@@ -203,7 +237,11 @@ export default function PartnerHospitals() {
                             <h4 className="font-semibold mb-2">Specialties</h4>
                             <div className="flex flex-wrap gap-1">
                               {specialties.map((specialty) => (
-                                <Badge key={specialty} variant="secondary" className="text-xs text-center">
+                                <Badge
+                                  key={specialty}
+                                  variant="secondary"
+                                  className="text-xs text-center"
+                                >
                                   {specialty}
                                 </Badge>
                               ))}
@@ -216,7 +254,9 @@ export default function PartnerHospitals() {
                         {typeof provider.rating === "number" ? (
                           <div className="flex items-center justify-center gap-1 mb-2">
                             <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                            <span className="font-semibold">{provider.rating.toFixed(1)}</span>
+                            <span className="font-semibold">
+                              {provider.rating.toFixed(1)}
+                            </span>
                           </div>
                         ) : null}
                         <Button variant="outline" asChild>
@@ -241,7 +281,9 @@ export default function PartnerHospitals() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{certification.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {certification.description}
+                </p>
               </CardContent>
             </Card>
           ))}
