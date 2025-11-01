@@ -11,7 +11,10 @@ export const GET = adminRoute(async (_req, ctx) => {
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const body = await req.json();
-  const doctor = await doctorController.update(getRouteParam(ctx.params, "id"), body);
+  const doctor = await doctorController.update(
+    getRouteParam(ctx.params, "id"),
+    body,
+  );
   return jsonResponse(doctor);
 });
 
