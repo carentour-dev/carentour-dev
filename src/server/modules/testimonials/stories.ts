@@ -28,7 +28,7 @@ export const patientStories = {
     const { data, error } = await supabase
       .from("patient_stories")
       .select(
-        `id, patient_id, doctor_id, treatment_id, headline, excerpt, body_markdown, outcome_summary, media, hero_image, locale, published, featured, display_order, created_at, updated_at, patients(full_name), doctors(name), treatments(name, slug)`
+        `id, patient_id, doctor_id, treatment_id, headline, excerpt, body_markdown, outcome_summary, media, hero_image, locale, published, featured, display_order, created_at, updated_at, patients(full_name), doctors(name), treatments(name, slug)`,
       )
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false });
