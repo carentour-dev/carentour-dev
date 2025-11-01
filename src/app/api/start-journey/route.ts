@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { startJourneySubmissionController } from "@/server/modules/startJourneySubmissions/module";
@@ -62,11 +63,7 @@ const formatTravelWindow = (window: z.infer<typeof travelWindowSchema>) => {
   return `${window.from} - ${window.to}`;
 };
 
-type AuthenticatedUser = {
-  id: string;
-  email?: string;
-  [key: string]: unknown;
-} | null;
+type AuthenticatedUser = User | null;
 
 type PatientSummary = {
   id: string;
