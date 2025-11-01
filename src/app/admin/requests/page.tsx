@@ -150,6 +150,7 @@ const STATUS_OPTIONS: Array<{
 const REQUEST_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "general", label: "General inquiry" },
   { value: "consultation", label: "Consultation intake" },
+  { value: "start_journey", label: "Start Journey intake" },
 ];
 
 const QUERY_KEY = ["admin", "contact-requests"] as const;
@@ -168,7 +169,11 @@ const formatDateTime = (value: string | null | undefined) => {
 
 const capitalize = (value: string | null) => {
   if (!value) return "General";
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 };
 
 export default function AdminRequestsPage() {
