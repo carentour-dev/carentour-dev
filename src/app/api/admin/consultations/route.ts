@@ -3,11 +3,18 @@
 import { NextRequest } from "next/server";
 import { adminRoute } from "@/server/utils/adminRoute";
 import { jsonResponse } from "@/server/utils/http";
-import { consultationStatusValues, patientConsultationController } from "@/server/modules/patientConsultations/module";
+import {
+  consultationStatusValues,
+  patientConsultationController,
+} from "@/server/modules/patientConsultations/module";
 
-const isValidStatus = (value: string | null): value is (typeof consultationStatusValues)[number] => {
+const isValidStatus = (
+  value: string | null,
+): value is (typeof consultationStatusValues)[number] => {
   if (!value) return false;
-  return consultationStatusValues.includes(value as (typeof consultationStatusValues)[number]);
+  return consultationStatusValues.includes(
+    value as (typeof consultationStatusValues)[number],
+  );
 };
 
 export const GET = adminRoute(async (req: NextRequest) => {
