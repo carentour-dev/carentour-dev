@@ -9,6 +9,7 @@ export function resolveIcon(name?: string): LucideIcon | null {
   if (!normalized) return null;
   const candidate = iconRegistry[normalized as keyof typeof iconRegistry];
   if (candidate) return candidate;
-  const fallback = iconRegistry[`${normalized}Icon` as keyof typeof iconRegistry];
+  const fallback =
+    iconRegistry[`${normalized}Icon` as keyof typeof iconRegistry];
   return (fallback as LucideIcon) ?? null;
 }
