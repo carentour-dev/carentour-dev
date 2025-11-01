@@ -13,7 +13,10 @@ const extractMissingColumn = (message?: string): string | null => {
   return match?.[1] ?? null;
 };
 
-const omitColumns = <T extends Record<string, unknown>>(input: T, columns: Set<string>): T => {
+const omitColumns = <T extends Record<string, unknown>>(
+  input: T,
+  columns: Set<string>,
+): T => {
   if (columns.size === 0) {
     return input;
   }
@@ -44,7 +47,11 @@ export class CrudService<TableName extends keyof Tables> {
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new ApiError(500, `Failed to fetch ${this.entityLabel} list`, error.message);
+      throw new ApiError(
+        500,
+        `Failed to fetch ${this.entityLabel} list`,
+        error.message,
+      );
     }
 
     return data as unknown as Tables[TableName]["Row"][];
@@ -59,7 +66,11 @@ export class CrudService<TableName extends keyof Tables> {
       .maybeSingle();
 
     if (error) {
-      throw new ApiError(500, `Failed to load ${this.entityLabel}`, error.message);
+      throw new ApiError(
+        500,
+        `Failed to load ${this.entityLabel}`,
+        error.message,
+      );
     }
 
     if (!data) {
@@ -74,9 +85,10 @@ export class CrudService<TableName extends keyof Tables> {
     const missingColumns = new Set<string>();
 
     for (let attempt = 0; attempt < MAX_SCHEMA_RETRIES; attempt++) {
-      const sanitizedInput = omitColumns(input as Record<string, unknown>, missingColumns) as Tables[
-        TableName
-      ]["Insert"];
+      const sanitizedInput = omitColumns(
+        input as Record<string, unknown>,
+        missingColumns,
+      ) as Tables[TableName]["Insert"];
 
       const { data, error } = await supabase
         .from(this.table)
@@ -91,7 +103,11 @@ export class CrudService<TableName extends keyof Tables> {
       const missingColumn = extractMissingColumn(error.message);
 
       if (!missingColumn) {
-        throw new ApiError(500, `Failed to create ${this.entityLabel}`, error.message);
+        throw new ApiError(
+          500,
+          `Failed to create ${this.entityLabel}`,
+          error.message,
+        );
       }
 
       missingColumns.add(missingColumn);
@@ -109,9 +125,10 @@ export class CrudService<TableName extends keyof Tables> {
     const missingColumns = new Set<string>();
 
     for (let attempt = 0; attempt < MAX_SCHEMA_RETRIES; attempt++) {
-      const sanitizedInput = omitColumns(input as Record<string, unknown>, missingColumns) as Tables[
-        TableName
-      ]["Update"];
+      const sanitizedInput = omitColumns(
+        input as Record<string, unknown>,
+        missingColumns,
+      ) as Tables[TableName]["Update"];
 
       const { data, error } = await supabase
         .from(this.table)
@@ -131,7 +148,11 @@ export class CrudService<TableName extends keyof Tables> {
       const missingColumn = extractMissingColumn(error.message);
 
       if (!missingColumn) {
-        throw new ApiError(500, `Failed to update ${this.entityLabel}`, error.message);
+        throw new ApiError(
+          500,
+          `Failed to update ${this.entityLabel}`,
+          error.message,
+        );
       }
 
       missingColumns.add(missingColumn);
@@ -154,7 +175,11 @@ export class CrudService<TableName extends keyof Tables> {
       .maybeSingle();
 
     if (error) {
-      throw new ApiError(500, `Failed to delete ${this.entityLabel}`, error.message);
+      throw new ApiError(
+        500,
+        `Failed to delete ${this.entityLabel}`,
+        error.message,
+      );
     }
 
     if (!data) {
