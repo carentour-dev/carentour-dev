@@ -6,7 +6,13 @@ import { DoctorProfile } from "@/components/DoctorProfile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { Search, Filter } from "lucide-react";
 import { useDoctors } from "@/hooks/useDoctors";
@@ -19,15 +25,22 @@ export default function Doctors() {
   const [languageFilter, setLanguageFilter] = useState("all");
 
   // Get unique specializations and languages for filters
-  const specializations = [...new Set(doctors.map(doctor => doctor.specialization))];
-  const languages = [...new Set(doctors.flatMap(doctor => doctor.languages || []))];
+  const specializations = [
+    ...new Set(doctors.map((doctor) => doctor.specialization)),
+  ];
+  const languages = [
+    ...new Set(doctors.flatMap((doctor) => doctor.languages || [])),
+  ];
 
   // Filter doctors based on search and filters
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = specialtyFilter === "all" || doctor.specialization === specialtyFilter;
-    const matchesLanguage = languageFilter === "all" || doctor.languages?.includes(languageFilter);
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesSearch =
+      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSpecialty =
+      specialtyFilter === "all" || doctor.specialization === specialtyFilter;
+    const matchesLanguage =
+      languageFilter === "all" || doctor.languages?.includes(languageFilter);
 
     return matchesSearch && matchesSpecialty && matchesLanguage;
   });
@@ -53,7 +66,9 @@ export default function Doctors() {
         <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <p className="text-destructive mb-4">Error loading doctors: {error}</p>
+            <p className="text-destructive mb-4">
+              Error loading doctors: {error}
+            </p>
             <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </div>
@@ -71,7 +86,9 @@ export default function Doctors() {
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Our Medical Team</Badge>
+              <Badge variant="outline" className="mb-6">
+                Our Medical Team
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Meet Our
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -79,8 +96,8 @@ export default function Doctors() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                World-class physicians with international training and extensive experience
-                in their respective specialties.
+                World-class physicians with international training and extensive
+                experience in their respective specialties.
               </p>
             </div>
           </div>
@@ -101,26 +118,36 @@ export default function Doctors() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+                  <Select
+                    value={specialtyFilter}
+                    onValueChange={setSpecialtyFilter}
+                  >
                     <SelectTrigger className="w-48">
                       <Filter className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Filter by specialty" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Specialties</SelectItem>
-                      {specializations.map(specialty => (
-                        <SelectItem key={specialty} value={specialty}>{specialty}</SelectItem>
+                      {specializations.map((specialty) => (
+                        <SelectItem key={specialty} value={specialty}>
+                          {specialty}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                  <Select
+                    value={languageFilter}
+                    onValueChange={setLanguageFilter}
+                  >
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by language" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Languages</SelectItem>
-                      {languages.map(language => (
-                        <SelectItem key={language} value={language}>{language}</SelectItem>
+                      {languages.map((language) => (
+                        <SelectItem key={language} value={language}>
+                          {language}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -138,7 +165,9 @@ export default function Doctors() {
           <div className="container mx-auto px-4">
             {filteredDoctors.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">No doctors found matching your criteria.</p>
+                <p className="text-muted-foreground text-lg">
+                  No doctors found matching your criteria.
+                </p>
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -168,7 +197,8 @@ export default function Doctors() {
               Schedule a Consultation
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Ready to meet with one of our specialists? Book a consultation to discuss your treatment options.
+              Ready to meet with one of our specialists? Book a consultation to
+              discuss your treatment options.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
