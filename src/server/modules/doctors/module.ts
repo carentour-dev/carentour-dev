@@ -52,9 +52,7 @@ const trimOptionalString = (value: string | undefined) => {
 
 const sanitizeStringArray = (values: string[] | undefined) =>
   Array.isArray(values)
-    ? values
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
+    ? values.map((entry) => entry.trim()).filter((entry) => entry.length > 0)
     : [];
 
 export const doctorController = {
@@ -86,7 +84,8 @@ export const doctorController = {
       research_publications: parsed.research_publications ?? 0,
       is_active: parsed.is_active ?? true,
       avatar_url:
-        typeof parsed.avatar_url === "string" && parsed.avatar_url.trim().length > 0
+        typeof parsed.avatar_url === "string" &&
+        parsed.avatar_url.trim().length > 0
           ? parsed.avatar_url.trim()
           : null,
     } as const;
@@ -111,24 +110,36 @@ export const doctorController = {
           : parsed.avatar_url,
     };
 
-    if (parsed.name !== undefined) payloadForUpdate.name = trimString(parsed.name);
-    if (parsed.title !== undefined) payloadForUpdate.title = trimString(parsed.title);
-    if (parsed.specialization !== undefined) payloadForUpdate.specialization = trimString(parsed.specialization);
-    if (parsed.bio !== undefined) payloadForUpdate.bio = trimOptionalString(parsed.bio);
-    if (parsed.education !== undefined) payloadForUpdate.education = trimString(parsed.education);
-    if (parsed.languages !== undefined) payloadForUpdate.languages = sanitizeStringArray(parsed.languages);
+    if (parsed.name !== undefined)
+      payloadForUpdate.name = trimString(parsed.name);
+    if (parsed.title !== undefined)
+      payloadForUpdate.title = trimString(parsed.title);
+    if (parsed.specialization !== undefined)
+      payloadForUpdate.specialization = trimString(parsed.specialization);
+    if (parsed.bio !== undefined)
+      payloadForUpdate.bio = trimOptionalString(parsed.bio);
+    if (parsed.education !== undefined)
+      payloadForUpdate.education = trimString(parsed.education);
+    if (parsed.languages !== undefined)
+      payloadForUpdate.languages = sanitizeStringArray(parsed.languages);
     if (parsed.achievements !== undefined)
       payloadForUpdate.achievements = sanitizeStringArray(parsed.achievements);
     if (parsed.certifications !== undefined)
-      payloadForUpdate.certifications = sanitizeStringArray(parsed.certifications);
-    if (parsed.patient_rating !== undefined) payloadForUpdate.patient_rating = parsed.patient_rating;
-    if (parsed.total_reviews !== undefined) payloadForUpdate.total_reviews = parsed.total_reviews;
+      payloadForUpdate.certifications = sanitizeStringArray(
+        parsed.certifications,
+      );
+    if (parsed.patient_rating !== undefined)
+      payloadForUpdate.patient_rating = parsed.patient_rating;
+    if (parsed.total_reviews !== undefined)
+      payloadForUpdate.total_reviews = parsed.total_reviews;
     if (parsed.successful_procedures !== undefined)
       payloadForUpdate.successful_procedures = parsed.successful_procedures;
     if (parsed.research_publications !== undefined)
       payloadForUpdate.research_publications = parsed.research_publications;
-    if (parsed.is_active !== undefined) payloadForUpdate.is_active = parsed.is_active;
-    if (parsed.experience_years !== undefined) payloadForUpdate.experience_years = parsed.experience_years;
+    if (parsed.is_active !== undefined)
+      payloadForUpdate.is_active = parsed.is_active;
+    if (parsed.experience_years !== undefined)
+      payloadForUpdate.experience_years = parsed.experience_years;
 
     return doctorService.update(doctorId, payloadForUpdate);
   },
