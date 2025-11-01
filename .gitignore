@@ -21,6 +21,8 @@ dist-ssr
 WEBSITE_FLOW.md
 CLEANUP_SUMMARY.md
 docs/
+BLOG_IMPLEMENTATION_STATUS.md
+BLOG_IMPLEMENTATION_COMPLETE.md
 
 # debug
 npm-debug.log*
