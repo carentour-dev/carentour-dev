@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { WheelEvent as ReactWheelEvent, TouchEvent as ReactTouchEvent } from "react";
+import type {
+  WheelEvent as ReactWheelEvent,
+  TouchEvent as ReactTouchEvent,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,7 +65,9 @@ export function PatientSelector({
     queryKey: ["patients-search", debouncedSearch],
     queryFn: () =>
       debouncedSearch.length >= 2
-        ? adminFetch<Patient[]>(`/api/admin/patients/search?q=${encodeURIComponent(debouncedSearch)}`)
+        ? adminFetch<Patient[]>(
+            `/api/admin/patients/search?q=${encodeURIComponent(debouncedSearch)}`,
+          )
         : Promise.resolve([]),
     enabled: debouncedSearch.length >= 2,
     staleTime: 30000,
@@ -71,7 +76,10 @@ export function PatientSelector({
   // Get selected patient for display
   const { data: selectedPatient } = useQuery({
     queryKey: ["patient", value],
-    queryFn: () => (value ? adminFetch<Patient>(`/api/admin/patients/${value}`) : Promise.resolve(null)),
+    queryFn: () =>
+      value
+        ? adminFetch<Patient>(`/api/admin/patients/${value}`)
+        : Promise.resolve(null),
     enabled: !!value,
     staleTime: 60000,
   });
@@ -86,7 +94,7 @@ export function PatientSelector({
       setOpen(false);
       setSearch("");
     },
-    [value, onValueChange]
+    [value, onValueChange],
   );
 
   const displayValue = selectedPatient
@@ -99,21 +107,27 @@ export function PatientSelector({
     scrollContainerRef.current.scrollTop += event.deltaY;
   }, []);
 
-  const handleTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    touchStartRef.current = event.touches[0]?.clientY ?? 0;
-  }, []);
+  const handleTouchStart = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      touchStartRef.current = event.touches[0]?.clientY ?? 0;
+    },
+    [],
+  );
 
-  const handleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
-    const currentY = event.touches[0]?.clientY ?? 0;
-    const delta = touchStartRef.current - currentY;
-    if (Math.abs(delta) < 0.5) {
-      return;
-    }
-    event.preventDefault();
-    scrollContainerRef.current.scrollTop += delta;
-    touchStartRef.current = currentY;
-  }, []);
+  const handleTouchMove = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (!scrollContainerRef.current) return;
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const delta = touchStartRef.current - currentY;
+      if (Math.abs(delta) < 0.5) {
+        return;
+      }
+      event.preventDefault();
+      scrollContainerRef.current.scrollTop += delta;
+      touchStartRef.current = currentY;
+    },
+    [],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -126,7 +140,14 @@ export function PatientSelector({
         >
           <span className="flex min-w-0 items-center gap-2 text-left">
             <User className="h-4 w-4 shrink-0 opacity-50" />
-            <span className={cn("flex-1 truncate", !value && "text-muted-foreground")}>{displayValue}</span>
+            <span
+              className={cn(
+                "flex-1 truncate",
+                !value && "text-muted-foreground",
+              )}
+            >
+              {displayValue}
+            </span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -169,11 +190,15 @@ export function PatientSelector({
                           <Check
                             className={cn(
                               "h-4 w-4 shrink-0",
-                              value === patient.id ? "opacity-100" : "opacity-0"
+                              value === patient.id
+                                ? "opacity-100"
+                                : "opacity-0",
                             )}
                           />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-medium truncate">{patient.full_name}</span>
+                            <span className="font-medium truncate">
+                              {patient.full_name}
+                            </span>
                             <span className="text-xs text-foreground/70 truncate">
                               {[
                                 patient.contact_email,
