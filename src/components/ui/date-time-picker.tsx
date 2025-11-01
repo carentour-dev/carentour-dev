@@ -1,109 +1,98 @@
-import * as React from "react"
-import { format } from "date-fns"
-import { CalendarIcon, Clock, X } from "lucide-react"
+import * as React from "react";
+import { format } from "date-fns";
+import { CalendarIcon, Clock, X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import {
-  Calendar,
-  type CalendarProps,
-} from "@/components/ui/calendar"
+} from "@/components/ui/select";
+import { Calendar, type CalendarProps } from "@/components/ui/calendar";
 
-const pad = (value: number) => value.toString().padStart(2, "0")
+const pad = (value: number) => value.toString().padStart(2, "0");
 
 const parseDateTimeValue = (value?: string | null) => {
   if (!value) {
-    return { date: undefined, hour: undefined, minute: undefined }
+    return { date: undefined, hour: undefined, minute: undefined };
   }
 
-  const [datePart, timePart] = value.split("T")
+  const [datePart, timePart] = value.split("T");
   if (!datePart) {
-    return { date: undefined, hour: undefined, minute: undefined }
+    return { date: undefined, hour: undefined, minute: undefined };
   }
 
-  const [yearStr, monthStr, dayStr] = datePart.split("-")
-  const year = Number(yearStr)
-  const month = Number(monthStr)
-  const day = Number(dayStr)
+  const [yearStr, monthStr, dayStr] = datePart.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
 
-  if (
-    Number.isNaN(year) ||
-    Number.isNaN(month) ||
-    Number.isNaN(day)
-  ) {
-    return { date: undefined, hour: undefined, minute: undefined }
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    return { date: undefined, hour: undefined, minute: undefined };
   }
 
-  const baseDate = new Date(year, month - 1, day)
+  const baseDate = new Date(year, month - 1, day);
 
   if (!timePart) {
-    return { date: baseDate, hour: undefined, minute: undefined }
+    return { date: baseDate, hour: undefined, minute: undefined };
   }
 
-  const [hourStr, minuteStr] = timePart.split(":")
-  const hour = Number(hourStr)
-  const minute = Number(minuteStr)
+  const [hourStr, minuteStr] = timePart.split(":");
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
 
   return {
     date: baseDate,
     hour: Number.isNaN(hour) ? undefined : hour,
     minute: Number.isNaN(minute) ? undefined : minute,
-  }
-}
+  };
+};
 
 const formatLocalDateTime = (date: Date, hour: number, minute: number) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(hour)}:${pad(minute)}`
+    date.getDate(),
+  )}T${pad(hour)}:${pad(minute)}`;
 
-const buildDisplayDate = (
-  date?: Date,
-  hour?: number,
-  minute?: number
-) => {
-  if (!date) return undefined
+const buildDisplayDate = (date?: Date, hour?: number, minute?: number) => {
+  if (!date) return undefined;
   return new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate(),
     hour ?? 0,
-    minute ?? 0
-  )
-}
+    minute ?? 0,
+  );
+};
 
 const createHourLabel = (hour: number) => {
-  const suffix = hour >= 12 ? "PM" : "AM"
-  const normalized = hour % 12 === 0 ? 12 : hour % 12
-  return `${normalized} ${suffix}`
-}
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const normalized = hour % 12 === 0 ? 12 : hour % 12;
+  return `${normalized} ${suffix}`;
+};
 
 export interface DateTimePickerProps {
-  id?: string
-  value?: string | null
-  onChange?: (value: string) => void
-  placeholder?: string
-  disabled?: boolean
-  minuteStep?: number
-  allowClear?: boolean
+  id?: string;
+  value?: string | null;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  minuteStep?: number;
+  allowClear?: boolean;
   calendarProps?: Omit<
     CalendarProps,
     "selected" | "onSelect" | "mode" | "required"
-  >
-  defaultHour?: number
-  defaultMinute?: number
-  className?: string
+  >;
+  defaultHour?: number;
+  defaultMinute?: number;
+  className?: string;
 }
 
 export const DateTimePicker = React.forwardRef<
@@ -124,104 +113,91 @@ export const DateTimePicker = React.forwardRef<
       defaultMinute = 0,
       className,
     },
-    ref
+    ref,
   ) => {
-    const [open, setOpen] = React.useState(false)
+    const [open, setOpen] = React.useState(false);
 
-    const parsed = React.useMemo(
-      () => parseDateTimeValue(value),
-      [value]
-    )
+    const parsed = React.useMemo(() => parseDateTimeValue(value), [value]);
 
     const minuteOptions = React.useMemo(() => {
-      const options: number[] = []
-      const step = Math.max(1, Math.min(60, minuteStep))
+      const options: number[] = [];
+      const step = Math.max(1, Math.min(60, minuteStep));
       for (let i = 0; i < 60; i += step) {
-        options.push(i)
+        options.push(i);
       }
       if (!options.includes(59) && 60 % step !== 0) {
-        options.push(59)
+        options.push(59);
       }
-      return Array.from(new Set(options)).sort((a, b) => a - b)
-    }, [minuteStep])
+      return Array.from(new Set(options)).sort((a, b) => a - b);
+    }, [minuteStep]);
 
     const commitChange = React.useCallback(
       (nextDate?: Date, nextHour?: number, nextMinute?: number) => {
-        if (!onChange) return
-        if (
-          !nextDate ||
-          nextHour === undefined ||
-          nextMinute === undefined
-        ) {
-          onChange("")
-          return
+        if (!onChange) return;
+        if (!nextDate || nextHour === undefined || nextMinute === undefined) {
+          onChange("");
+          return;
         }
 
-        onChange(
-          formatLocalDateTime(nextDate, nextHour, nextMinute)
-        )
+        onChange(formatLocalDateTime(nextDate, nextHour, nextMinute));
       },
-      [onChange]
-    )
+      [onChange],
+    );
 
     const handleDateSelect = React.useCallback(
       (selectedDate?: Date) => {
         if (!selectedDate) {
-          commitChange(undefined, undefined, undefined)
-          return
+          commitChange(undefined, undefined, undefined);
+          return;
         }
 
-        const hour =
-          parsed.hour !== undefined ? parsed.hour : defaultHour
+        const hour = parsed.hour !== undefined ? parsed.hour : defaultHour;
         const minute =
-          parsed.minute !== undefined
-            ? parsed.minute
-            : defaultMinute
+          parsed.minute !== undefined ? parsed.minute : defaultMinute;
 
-        commitChange(selectedDate, hour, minute)
+        commitChange(selectedDate, hour, minute);
       },
-      [commitChange, parsed.hour, parsed.minute, defaultHour, defaultMinute]
-    )
+      [commitChange, parsed.hour, parsed.minute, defaultHour, defaultMinute],
+    );
 
     const handleHourChange = React.useCallback(
       (hourValue: string) => {
-        if (!parsed.date) return
-        const hour = Number(hourValue)
-        if (Number.isNaN(hour)) return
+        if (!parsed.date) return;
+        const hour = Number(hourValue);
+        if (Number.isNaN(hour)) return;
         const minute =
-          parsed.minute !== undefined ? parsed.minute : defaultMinute
-        commitChange(parsed.date, hour, minute)
+          parsed.minute !== undefined ? parsed.minute : defaultMinute;
+        commitChange(parsed.date, hour, minute);
       },
-      [commitChange, parsed.date, parsed.minute, defaultMinute]
-    )
+      [commitChange, parsed.date, parsed.minute, defaultMinute],
+    );
 
     const handleMinuteChange = React.useCallback(
       (minuteValue: string) => {
-        if (!parsed.date) return
-        const minute = Number(minuteValue)
-        if (Number.isNaN(minute)) return
-        const hour =
-          parsed.hour !== undefined ? parsed.hour : defaultHour
-        commitChange(parsed.date, hour, minute)
+        if (!parsed.date) return;
+        const minute = Number(minuteValue);
+        if (Number.isNaN(minute)) return;
+        const hour = parsed.hour !== undefined ? parsed.hour : defaultHour;
+        commitChange(parsed.date, hour, minute);
       },
-      [commitChange, parsed.date, parsed.hour, defaultHour]
-    )
+      [commitChange, parsed.date, parsed.hour, defaultHour],
+    );
 
     const handleClear = React.useCallback(() => {
-      commitChange(undefined, undefined, undefined)
-    }, [commitChange])
+      commitChange(undefined, undefined, undefined);
+    }, [commitChange]);
 
     const displayDate = buildDisplayDate(
       parsed.date,
       parsed.hour,
-      parsed.minute
-    )
+      parsed.minute,
+    );
 
     const buttonLabel = displayDate
       ? format(displayDate, "PPpp")
       : parsed.date
         ? format(parsed.date, "PPP")
-        : placeholder
+        : placeholder;
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -235,7 +211,7 @@ export const DateTimePicker = React.forwardRef<
             className={cn(
               "w-full justify-start text-left font-normal",
               !value && "text-muted-foreground",
-              className
+              className,
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -257,9 +233,7 @@ export const DateTimePicker = React.forwardRef<
             </div>
             <div className="flex items-center gap-2">
               <Select
-                value={
-                  parsed.hour !== undefined ? String(parsed.hour) : ""
-                }
+                value={parsed.hour !== undefined ? String(parsed.hour) : ""}
                 onValueChange={handleHourChange}
                 disabled={!parsed.date}
               >
@@ -275,11 +249,7 @@ export const DateTimePicker = React.forwardRef<
                 </SelectContent>
               </Select>
               <Select
-                value={
-                  parsed.minute !== undefined
-                    ? String(parsed.minute)
-                    : ""
-                }
+                value={parsed.minute !== undefined ? String(parsed.minute) : ""}
                 onValueChange={handleMinuteChange}
                 disabled={!parsed.date}
               >
@@ -310,7 +280,7 @@ export const DateTimePicker = React.forwardRef<
           </div>
         </PopoverContent>
       </Popover>
-    )
-  }
-)
-DateTimePicker.displayName = "DateTimePicker"
+    );
+  },
+);
+DateTimePicker.displayName = "DateTimePicker";
