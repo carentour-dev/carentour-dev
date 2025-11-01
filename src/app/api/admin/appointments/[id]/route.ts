@@ -8,11 +8,16 @@ import { patientAppointmentController } from "@/server/modules/patientAppointmen
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const payload = await req.json();
-  const appointment = await patientAppointmentController.update(getRouteParam(ctx.params, "id"), payload);
+  const appointment = await patientAppointmentController.update(
+    getRouteParam(ctx.params, "id"),
+    payload,
+  );
   return jsonResponse(appointment);
 });
 
 export const DELETE = adminRoute(async (_req: NextRequest, ctx) => {
-  const result = await patientAppointmentController.delete(getRouteParam(ctx.params, "id"));
+  const result = await patientAppointmentController.delete(
+    getRouteParam(ctx.params, "id"),
+  );
   return jsonResponse(result);
 });
