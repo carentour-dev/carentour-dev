@@ -12,8 +12,9 @@ export async function POST(req: NextRequest) {
     revalidatePath(path);
     return NextResponse.json({ revalidated: true, path });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Failed to revalidate" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message ?? "Failed to revalidate" },
+      { status: 500 },
+    );
   }
 }
-
-
