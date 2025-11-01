@@ -21,7 +21,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { format } from "date-fns";
-import { DateRange } from "react-day-picker";
 import {
   ArrowLeft,
   ArrowRight,
@@ -439,7 +438,7 @@ type UploadResponse = {
 
 const DOCUMENT_UPLOAD_ENDPOINT = "/api/start-journey/documents";
 
-export function PatientJourneyContent() {
+function PatientJourneyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -1474,7 +1473,6 @@ export function PatientJourneyContent() {
                               onSelect={(range) => field.onChange(range)}
                               numberOfMonths={2}
                               disabled={(date) => date < todaysDate}
-                              initialFocus
                             />
                           </PopoverContent>
                         </Popover>
