@@ -252,7 +252,10 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
                       <Skeleton className="h-32" />
                     </div>
                   ) : approvedComments.length > 0 ? (
-                    <CommentThread comments={approvedComments} />
+                    <CommentThread
+                      comments={approvedComments}
+                      postId={post.id}
+                    />
                   ) : (
                     <p className="text-center text-muted-foreground py-8">
                       No comments yet. Be the first to share your thoughts!
