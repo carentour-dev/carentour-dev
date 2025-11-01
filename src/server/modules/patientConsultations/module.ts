@@ -4,25 +4,32 @@ import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import type { Database } from "@/integrations/supabase/types";
 
-const STATUS_VALUES = ["scheduled", "rescheduled", "completed", "cancelled", "no_show"] as const;
+const STATUS_VALUES = [
+  "scheduled",
+  "rescheduled",
+  "completed",
+  "cancelled",
+  "no_show",
+] as const;
 const statusSchema = z.enum(STATUS_VALUES);
 
-const optionalUuid = z.preprocess(
-  (value) => {
-    if (typeof value === "string" && value.trim() === "") {
-      return null;
-    }
-    return value;
-  },
-  z.string().uuid().nullable().optional(),
-);
+const optionalUuid = z.preprocess((value) => {
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+  return value;
+}, z.string().uuid().nullable().optional());
 
-const isoDateTime = z
-  .string()
-  .datetime({ offset: true, message: "Expected an ISO 8601 timestamp with timezone information" });
+const isoDateTime = z.string().datetime({
+  offset: true,
+  message: "Expected an ISO 8601 timestamp with timezone information",
+});
 
 const durationSchema = z
-  .preprocess((value) => (value === "" ? undefined : value), z.coerce.number().int().min(5).max(480))
+  .preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(5).max(480),
+  )
   .optional();
 
 const trimOptional = (value: string | undefined | null): string | null => {
@@ -34,7 +41,11 @@ const trimOptional = (value: string | undefined | null): string | null => {
 const selectColumns =
   "*, patients(id, full_name, contact_email, contact_phone, nationality), doctors(id, name, title), contact_requests(id, status, request_type, origin)";
 
-const consultationService = new CrudService("patient_consultations", "patient consultation", selectColumns);
+const consultationService = new CrudService(
+  "patient_consultations",
+  "patient consultation",
+  selectColumns,
+);
 
 const createConsultationSchema = z.object({
   patient_id: z.string().uuid(),
@@ -45,12 +56,7 @@ const createConsultationSchema = z.object({
   status: statusSchema.optional(),
   scheduled_at: isoDateTime,
   duration_minutes: durationSchema,
-  timezone: z
-    .string()
-    .min(2)
-    .max(60)
-    .optional()
-    .nullable(),
+  timezone: z.string().min(2).max(60).optional().nullable(),
   location: z.string().optional().nullable(),
   meeting_url: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -58,7 +64,9 @@ const createConsultationSchema = z.object({
 
 const updateConsultationSchema = createConsultationSchema
   .partial()
-  .refine((data) => Object.keys(data).length > 0, { message: "No fields provided for update" });
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No fields provided for update",
+  });
 
 const listFiltersSchema = z.object({
   status: statusSchema.optional(),
@@ -67,8 +75,10 @@ const listFiltersSchema = z.object({
   upcomingOnly: z.coerce.boolean().optional(),
 });
 
-type ConsultationInsert = Database["public"]["Tables"]["patient_consultations"]["Insert"];
-type ConsultationUpdate = Database["public"]["Tables"]["patient_consultations"]["Update"];
+type ConsultationInsert =
+  Database["public"]["Tables"]["patient_consultations"]["Insert"];
+type ConsultationUpdate =
+  Database["public"]["Tables"]["patient_consultations"]["Update"];
 
 const resolveUserIdForPatient = async (
   patientId: string,
@@ -130,7 +140,11 @@ export const patientConsultationController = {
     const { data, error } = await query;
 
     if (error) {
-      throw new ApiError(500, "Failed to load patient consultations", error.message);
+      throw new ApiError(
+        500,
+        "Failed to load patient consultations",
+        error.message,
+      );
     }
 
     return data ?? [];
@@ -146,7 +160,10 @@ export const patientConsultationController = {
 
     const insertPayload: ConsultationInsert = {
       patient_id: parsed.patient_id,
-      user_id: await resolveUserIdForPatient(parsed.patient_id, parsed.user_id ?? undefined),
+      user_id: await resolveUserIdForPatient(
+        parsed.patient_id,
+        parsed.user_id ?? undefined,
+      ),
       contact_request_id: parsed.contact_request_id ?? null,
       doctor_id: parsed.doctor_id ?? null,
       coordinator_id: parsed.coordinator_id ?? null,
@@ -170,21 +187,33 @@ export const patientConsultationController = {
 
     if (parsed.patient_id !== undefined) {
       updatePayload.patient_id = parsed.patient_id;
-      updatePayload.user_id = await resolveUserIdForPatient(parsed.patient_id, parsed.user_id ?? undefined);
+      updatePayload.user_id = await resolveUserIdForPatient(
+        parsed.patient_id,
+        parsed.user_id ?? undefined,
+      );
     } else if (parsed.user_id !== undefined) {
       updatePayload.user_id = parsed.user_id ?? null;
     }
 
-    if (parsed.contact_request_id !== undefined) updatePayload.contact_request_id = parsed.contact_request_id ?? null;
-    if (parsed.doctor_id !== undefined) updatePayload.doctor_id = parsed.doctor_id ?? null;
-    if (parsed.coordinator_id !== undefined) updatePayload.coordinator_id = parsed.coordinator_id ?? null;
+    if (parsed.contact_request_id !== undefined)
+      updatePayload.contact_request_id = parsed.contact_request_id ?? null;
+    if (parsed.doctor_id !== undefined)
+      updatePayload.doctor_id = parsed.doctor_id ?? null;
+    if (parsed.coordinator_id !== undefined)
+      updatePayload.coordinator_id = parsed.coordinator_id ?? null;
     if (parsed.status !== undefined) updatePayload.status = parsed.status;
-    if (parsed.scheduled_at !== undefined) updatePayload.scheduled_at = parsed.scheduled_at;
-    if (parsed.duration_minutes !== undefined) updatePayload.duration_minutes = parsed.duration_minutes ?? null;
-    if (parsed.timezone !== undefined) updatePayload.timezone = trimOptional(parsed.timezone);
-    if (parsed.location !== undefined) updatePayload.location = trimOptional(parsed.location);
-    if (parsed.meeting_url !== undefined) updatePayload.meeting_url = trimOptional(parsed.meeting_url);
-    if (parsed.notes !== undefined) updatePayload.notes = trimOptional(parsed.notes);
+    if (parsed.scheduled_at !== undefined)
+      updatePayload.scheduled_at = parsed.scheduled_at;
+    if (parsed.duration_minutes !== undefined)
+      updatePayload.duration_minutes = parsed.duration_minutes ?? null;
+    if (parsed.timezone !== undefined)
+      updatePayload.timezone = trimOptional(parsed.timezone);
+    if (parsed.location !== undefined)
+      updatePayload.location = trimOptional(parsed.location);
+    if (parsed.meeting_url !== undefined)
+      updatePayload.meeting_url = trimOptional(parsed.meeting_url);
+    if (parsed.notes !== undefined)
+      updatePayload.notes = trimOptional(parsed.notes);
 
     if (Object.keys(updatePayload).length === 0) {
       throw new ApiError(400, "No fields provided for update");
