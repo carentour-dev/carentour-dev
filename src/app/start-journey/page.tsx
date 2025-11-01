@@ -857,10 +857,7 @@ function PatientJourneyContent() {
 
         form.reset(defaultValues);
         setCurrentStep(1);
-
-        if (result?.redirectTo) {
-          router.push(result.redirectTo);
-        }
+        router.push("/");
       } catch (error) {
         console.error("Start journey submission failed:", error);
         toast({
