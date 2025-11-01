@@ -16,7 +16,12 @@ interface PriceComparisonProps {
   className?: string;
 }
 
-const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className }: PriceComparisonProps) => {
+const PriceComparison = ({
+  treatment,
+  egyptPrice,
+  internationalPrices,
+  className,
+}: PriceComparisonProps) => {
   if (internationalPrices.length === 0) {
     return null;
   }
@@ -27,13 +32,15 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
     return { amount: savings, percentage };
   };
 
-  const averageSavings = internationalPrices.reduce((total, country) => {
-    return total + calculateSavings(country.price).percentage;
-  }, 0) / internationalPrices.length;
+  const averageSavings =
+    internationalPrices.reduce((total, country) => {
+      return total + calculateSavings(country.price).percentage;
+    }, 0) / internationalPrices.length;
 
-  const totalAverageSavings = internationalPrices.reduce((total, country) => {
-    return total + calculateSavings(country.price).amount;
-  }, 0) / internationalPrices.length;
+  const totalAverageSavings =
+    internationalPrices.reduce((total, country) => {
+      return total + calculateSavings(country.price).amount;
+    }, 0) / internationalPrices.length;
 
   return (
     <Card className={`border-border/50 ${className}`}>
@@ -43,7 +50,10 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
           Price Comparison - {treatment}
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          <Badge
+            variant="secondary"
+            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+          >
             <TrendingDown className="h-3 w-3 mr-1" />
             Save up to {Math.round(averageSavings)}%
           </Badge>
@@ -62,7 +72,9 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-primary">${egyptPrice.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-primary">
+                  ${egyptPrice.toLocaleString()}
+                </p>
                 <p className="text-sm text-primary">Best Value</p>
               </div>
             </div>
@@ -73,23 +85,32 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
             {internationalPrices.map((country, index) => {
               const savings = calculateSavings(country.price);
               return (
-                <div key={index} className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div
+                  key={index}
+                  className="p-3 bg-muted/30 rounded-lg border border-border/50"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{country.flag ?? "🌍"}</span>
                       <div>
-                        <h4 className="font-medium text-foreground">{country.country}</h4>
-                        <p className="text-xs text-muted-foreground">Typical Cost</p>
+                        <h4 className="font-medium text-foreground">
+                          {country.country}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Typical Cost
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-foreground">
-                        {country.currency}{country.price.toLocaleString()}
+                        {country.currency}
+                        {country.price.toLocaleString()}
                       </p>
                       <div className="flex items-center gap-1">
                         <TrendingDown className="h-3 w-3 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
-                          Save ${savings.amount.toLocaleString()} ({savings.percentage}%)
+                          Save ${savings.amount.toLocaleString()} (
+                          {savings.percentage}%)
                         </span>
                       </div>
                     </div>
@@ -102,12 +123,15 @@ const PriceComparison = ({ treatment, egyptPrice, internationalPrices, className
           {/* Summary */}
           <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <div className="text-center">
-              <p className="text-sm text-green-700 dark:text-green-300 mb-1">Average Savings</p>
+              <p className="text-sm text-green-700 dark:text-green-300 mb-1">
+                Average Savings
+              </p>
               <p className="text-2xl font-bold text-green-800 dark:text-green-200">
                 ${Math.round(totalAverageSavings).toLocaleString()}
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                Up to {Math.round(averageSavings)}% less than international prices
+                Up to {Math.round(averageSavings)}% less than international
+                prices
               </p>
             </div>
           </div>
