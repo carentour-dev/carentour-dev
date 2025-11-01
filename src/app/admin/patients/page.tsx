@@ -4,12 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,21 +33,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const optionalUuid = z.preprocess(
-  (value) => {
-    if (typeof value === "string" && value.trim() === "") {
-      return null;
-    }
-    return value;
-  },
-  z.string().uuid().nullable().optional(),
-);
+const optionalUuid = z.preprocess((value) => {
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+  return value;
+}, z.string().uuid().nullable().optional());
 
 const patientSchema = z
   .object({
@@ -60,7 +62,10 @@ const patientSchema = z
     full_name: z.string().min(2),
     contact_email: z
       .preprocess(
-        (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+        (value) =>
+          typeof value === "string" && value.trim().length === 0
+            ? undefined
+            : value,
         z.string().email().optional(),
       )
       .optional(),
@@ -72,17 +77,28 @@ const patientSchema = z
       .string()
       .regex(/^(\d{4})-(\d{2})-(\d{2})$/)
       .optional(),
-    sex: z.enum(["female", "male", "non_binary", "prefer_not_to_say"]).optional(),
+    sex: z
+      .enum(["female", "male", "non_binary", "prefer_not_to_say"])
+      .optional(),
     notes: z.string().optional(),
     email_verified: z.boolean().optional(),
     portal_password: z
       .preprocess(
-        (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
-        z.string().min(8, "Password must be at least 8 characters").max(72).optional(),
+        (value) =>
+          typeof value === "string" && value.trim().length === 0
+            ? undefined
+            : value,
+        z
+          .string()
+          .min(8, "Password must be at least 8 characters")
+          .max(72)
+          .optional(),
       )
       .optional(),
-    portal_password_confirm: z
-      .preprocess((value) => (typeof value === "string" ? value : ""), z.string().optional()),
+    portal_password_confirm: z.preprocess(
+      (value) => (typeof value === "string" ? value : ""),
+      z.string().optional(),
+    ),
   })
   .superRefine((data, ctx) => {
     const password = data.portal_password;
@@ -145,7 +161,9 @@ export default function AdminPatientsPage() {
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(null);
+  const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(
+    null,
+  );
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -169,7 +187,11 @@ export default function AdminPatientsPage() {
   });
   const watchPortalPassword = form.watch("portal_password");
   useEffect(() => {
-    if (watchPortalPassword && watchPortalPassword.length > 0 && !form.getValues("email_verified")) {
+    if (
+      watchPortalPassword &&
+      watchPortalPassword.length > 0 &&
+      !form.getValues("email_verified")
+    ) {
       form.setValue("email_verified", true, { shouldDirty: true });
     }
   }, [watchPortalPassword, form]);
@@ -262,15 +284,19 @@ export default function AdminPatientsPage() {
 
     return patientsQuery.data.filter((patient) => {
       const query = search.toLowerCase();
-      const matchesSearch =
-        [patient.full_name, patient.contact_email, patient.contact_phone]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
+      const matchesSearch = [
+        patient.full_name,
+        patient.contact_email,
+        patient.contact_phone,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
 
       const matchesNationality =
         nationalityFilter === "all" ||
-        (patient.nationality ?? "").toLowerCase() === nationalityFilter.toLowerCase();
+        (patient.nationality ?? "").toLowerCase() ===
+          nationalityFilter.toLowerCase();
 
       return matchesSearch && matchesNationality;
     });
@@ -358,15 +384,26 @@ export default function AdminPatientsPage() {
     });
 
     const params = new URLSearchParams(searchParams.toString());
-    ["new", "fullName", "email", "phone", "fromRequestId"].forEach((key) => params.delete(key));
-    const nextUrl = params.size > 0 ? `/admin/patients?${params.toString()}` : "/admin/patients";
+    ["new", "fullName", "email", "phone", "fromRequestId"].forEach((key) =>
+      params.delete(key),
+    );
+    const nextUrl =
+      params.size > 0
+        ? `/admin/patients?${params.toString()}`
+        : "/admin/patients";
     router.replace(nextUrl, { scroll: false });
   }, [searchParams, dialogOpen, form, router]);
 
   const onSubmit = (values: PatientFormValues) => {
-    const { portal_password_confirm: _confirm, portal_password, ...rest } = values;
+    const {
+      portal_password_confirm: _confirm,
+      portal_password,
+      ...rest
+    } = values;
     const trimmedFullName = rest.full_name.trim();
-    const normalizedEmail = rest.contact_email ? rest.contact_email.trim().toLowerCase() : null;
+    const normalizedEmail = rest.contact_email
+      ? rest.contact_email.trim().toLowerCase()
+      : null;
 
     const payload: PatientPayload = {
       user_id: rest.user_id?.trim() ? rest.user_id.trim() : null,
@@ -398,9 +435,12 @@ export default function AdminPatientsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Patients</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Patients
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Maintain traveler records, emergency contacts, and preferences to streamline concierge coordination.
+            Maintain traveler records, emergency contacts, and preferences to
+            streamline concierge coordination.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -412,13 +452,19 @@ export default function AdminPatientsPage() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingPatient ? "Edit Patient" : "Add Patient"}</DialogTitle>
+              <DialogTitle>
+                {editingPatient ? "Edit Patient" : "Add Patient"}
+              </DialogTitle>
               <DialogDescription>
-                Capture patient contact details and notes. Link to an existing Supabase user if applicable.
+                Capture patient contact details and notes. Link to an existing
+                Supabase user if applicable.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -514,7 +560,11 @@ export default function AdminPatientsPage() {
                         <FormLabel>Sex (optional)</FormLabel>
                         <Select
                           value={field.value ?? "unspecified"}
-                          onValueChange={(value) => field.onChange(value === "unspecified" ? undefined : value)}
+                          onValueChange={(value) =>
+                            field.onChange(
+                              value === "unspecified" ? undefined : value,
+                            )
+                          }
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -522,11 +572,17 @@ export default function AdminPatientsPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="unspecified">Not specified</SelectItem>
+                            <SelectItem value="unspecified">
+                              Not specified
+                            </SelectItem>
                             <SelectItem value="female">Female</SelectItem>
                             <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="non_binary">Non-binary</SelectItem>
-                            <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                            <SelectItem value="non_binary">
+                              Non-binary
+                            </SelectItem>
+                            <SelectItem value="prefer_not_to_say">
+                              Prefer not to say
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -543,7 +599,9 @@ export default function AdminPatientsPage() {
                       <FormItem>
                         <FormLabel>Supabase user ID</FormLabel>
                         <Input placeholder="Optional user UUID" {...field} />
-                        <FormDescription>Link to an existing auth user if available.</FormDescription>
+                        <FormDescription>
+                          Link to an existing auth user if available.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -554,9 +612,15 @@ export default function AdminPatientsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Portal password</FormLabel>
-                        <Input type="password" placeholder="Create a temporary password" autoComplete="new-password" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Create a temporary password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
                         <FormDescription className="text-xs">
-                          Provide a password to create or reset portal access. We&apos;ll email it to the patient.
+                          Provide a password to create or reset portal access.
+                          We&apos;ll email it to the patient.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -571,7 +635,12 @@ export default function AdminPatientsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Confirm password</FormLabel>
-                        <Input type="password" placeholder="Re-enter the portal password" autoComplete="new-password" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Re-enter the portal password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -587,7 +656,9 @@ export default function AdminPatientsPage() {
                         <FormControl>
                           <Checkbox
                             checked={field.value ?? false}
-                            onCheckedChange={(checked) => field.onChange(checked === true)}
+                            onCheckedChange={(checked) =>
+                              field.onChange(checked === true)
+                            }
                           />
                         </FormControl>
                         <FormLabel className="text-sm font-medium leading-none">
@@ -595,7 +666,8 @@ export default function AdminPatientsPage() {
                         </FormLabel>
                       </div>
                       <FormDescription className="text-xs">
-                        Bypass the verification flow for this patient&apos;s email address.
+                        Bypass the verification flow for this patient&apos;s
+                        email address.
                       </FormDescription>
                     </FormItem>
                   )}
@@ -607,7 +679,11 @@ export default function AdminPatientsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Coordinator notes</FormLabel>
-                      <Textarea rows={3} placeholder="Special considerations, dietary needs, etc." {...field} />
+                      <Textarea
+                        rows={3}
+                        placeholder="Special considerations, dietary needs, etc."
+                        {...field}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -617,7 +693,12 @@ export default function AdminPatientsPage() {
                   <Button type="button" variant="ghost" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createPatient.isPending || updatePatient.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createPatient.isPending || updatePatient.isPending
+                    }
+                  >
                     {(createPatient.isPending || updatePatient.isPending) && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
@@ -641,7 +722,10 @@ export default function AdminPatientsPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 className="sm:w-48 lg:w-72"
               />
-              <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
+              <Select
+                value={nationalityFilter}
+                onValueChange={setNationalityFilter}
+              >
                 <SelectTrigger className="sm:w-44">
                   <SelectValue placeholder="Filter nationality" />
                 </SelectTrigger>
@@ -678,25 +762,37 @@ export default function AdminPatientsPage() {
                   <TableRow key={patient.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{patient.full_name}</span>
+                        <span className="font-medium text-foreground">
+                          {patient.full_name}
+                        </span>
                         {patient.date_of_birth ? (
-                          <span className="text-xs text-muted-foreground">DOB: {patient.date_of_birth}</span>
+                          <span className="text-xs text-muted-foreground">
+                            DOB: {patient.date_of_birth}
+                          </span>
                         ) : null}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-sm">
                         <span>{patient.contact_email || "—"}</span>
-                        <span className="text-muted-foreground">{patient.contact_phone || "—"}</span>
+                        <span className="text-muted-foreground">
+                          {patient.contact_phone || "—"}
+                        </span>
                         {patient.email_verified && (
-                          <span className="mt-1 text-xs font-medium text-emerald-600">Email verified</span>
+                          <span className="mt-1 text-xs font-medium text-emerald-600">
+                            Email verified
+                          </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>{patient.nationality || "—"}</TableCell>
                     <TableCell>{patient.preferred_language || "—"}</TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(patient)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(patient)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -714,7 +810,10 @@ export default function AdminPatientsPage() {
 
                 {filteredPatients.length === 0 && !patientsQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
                       No patients found. Adjust filters or add a new record.
                     </TableCell>
                   </TableRow>
