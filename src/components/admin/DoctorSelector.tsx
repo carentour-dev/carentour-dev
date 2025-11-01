@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState, useCallback } from "react";
-import type { WheelEvent as ReactWheelEvent, TouchEvent as ReactTouchEvent } from "react";
+import type {
+  WheelEvent as ReactWheelEvent,
+  TouchEvent as ReactTouchEvent,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, User2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +17,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 
 interface Doctor {
@@ -68,21 +75,27 @@ export function DoctorSelector({
     scrollContainerRef.current.scrollTop += event.deltaY;
   }, []);
 
-  const handleTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    touchStartRef.current = event.touches[0]?.clientY ?? 0;
-  }, []);
+  const handleTouchStart = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      touchStartRef.current = event.touches[0]?.clientY ?? 0;
+    },
+    [],
+  );
 
-  const handleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
-    const currentY = event.touches[0]?.clientY ?? 0;
-    const delta = touchStartRef.current - currentY;
-    if (Math.abs(delta) < 0.5) {
-      return;
-    }
-    event.preventDefault();
-    scrollContainerRef.current.scrollTop += delta;
-    touchStartRef.current = currentY;
-  }, []);
+  const handleTouchMove = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (!scrollContainerRef.current) return;
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const delta = touchStartRef.current - currentY;
+      if (Math.abs(delta) < 0.5) {
+        return;
+      }
+      event.preventDefault();
+      scrollContainerRef.current.scrollTop += delta;
+      touchStartRef.current = currentY;
+    },
+    [],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -95,8 +108,15 @@ export function DoctorSelector({
         >
           <span className="flex min-w-0 items-center gap-2 text-left">
             <User2 className="h-4 w-4 shrink-0 opacity-50" />
-            <span className={cn("flex-1 truncate", !value && "text-muted-foreground")}>
-              {selectedDoctor ? `${selectedDoctor.name} • ${selectedDoctor.specialization}` : placeholder}
+            <span
+              className={cn(
+                "flex-1 truncate",
+                !value && "text-muted-foreground",
+              )}
+            >
+              {selectedDoctor
+                ? `${selectedDoctor.name} • ${selectedDoctor.specialization}`
+                : placeholder}
             </span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -118,7 +138,9 @@ export function DoctorSelector({
           >
             <CommandList className="max-h-none">
               {isLoading ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">Loading doctors…</div>
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Loading doctors…
+                </div>
               ) : (
                 <>
                   <CommandEmpty>No doctors found.</CommandEmpty>
@@ -137,8 +159,12 @@ export function DoctorSelector({
                         }}
                       >
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{doctor.name}</span>
-                          <span className="text-xs text-foreground/70">{doctor.specialization}</span>
+                          <span className="font-medium text-foreground">
+                            {doctor.name}
+                          </span>
+                          <span className="text-xs text-foreground/70">
+                            {doctor.specialization}
+                          </span>
                         </div>
                         <Check
                           className={cn(
