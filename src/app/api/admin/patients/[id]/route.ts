@@ -11,11 +11,16 @@ export const GET = adminRoute(async (_req, ctx) => {
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const body = await req.json();
-  const patient = await patientController.update(getRouteParam(ctx.params, "id"), body);
+  const patient = await patientController.update(
+    getRouteParam(ctx.params, "id"),
+    body,
+  );
   return jsonResponse(patient);
 });
 
 export const DELETE = adminRoute(async (_req, ctx) => {
-  const result = await patientController.delete(getRouteParam(ctx.params, "id"));
+  const result = await patientController.delete(
+    getRouteParam(ctx.params, "id"),
+  );
   return jsonResponse(result);
 });
