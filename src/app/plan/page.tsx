@@ -12,20 +12,20 @@ import {
   Hotel,
   Car,
   Globe,
-  Shield,
-  Clock,
   Users,
   Phone,
   Wand2,
 } from "lucide-react";
-import {
-  PatientJourneyContent,
-  StartJourneyFallback,
-} from "@/app/start-journey/page";
-import { Suspense, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function PlanTrip() {
-  const [activeTab, setActiveTab] = useState("wizard");
+  const [activeTab, setActiveTab] = useState("overview");
+  const router = useRouter();
+
+  const handleStartJourney = () => {
+    router.push("/start-journey");
+  };
 
   const handleLearnProcess = () => {
     setActiveTab("overview");
@@ -203,9 +203,21 @@ export default function PlanTrip() {
               </div>
 
               <TabsContent value="wizard" className="space-y-8">
-                <Suspense fallback={<StartJourneyFallback />}>
-                  <PatientJourneyContent />
-                </Suspense>
+                <Card className="max-w-2xl mx-auto">
+                  <CardContent className="p-12 text-center">
+                    <Wand2 className="h-16 w-16 text-primary mx-auto mb-6" />
+                    <h3 className="text-2xl font-bold text-foreground mb-4">
+                      Start Your Medical Journey
+                    </h3>
+                    <p className="text-muted-foreground mb-8">
+                      Our comprehensive journey wizard will guide you through every step
+                      of planning your medical trip to Egypt.
+                    </p>
+                    <Button size="lg" onClick={handleStartJourney}>
+                      Begin Journey Wizard
+                    </Button>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="overview" className="space-y-20">
