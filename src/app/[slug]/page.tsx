@@ -6,7 +6,11 @@ import { getPublishedPageBySlug } from "@/lib/cms/server";
 
 export const revalidate = 300;
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const cmsPage = await getPublishedPageBySlug(slug);
   if (!cmsPage) {
@@ -16,11 +20,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: cmsPage.seo?.title ?? `${cmsPage.title} | Care N Tour`,
     description: cmsPage.seo?.description ?? undefined,
-    openGraph: cmsPage.seo?.ogImage ? { images: [cmsPage.seo.ogImage] } : undefined,
+    openGraph: cmsPage.seo?.ogImage
+      ? { images: [cmsPage.seo.ogImage] }
+      : undefined,
   } as any;
 }
 
-export default async function GenericCmsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GenericCmsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const cmsPage = await getPublishedPageBySlug(slug);
 
