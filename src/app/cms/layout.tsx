@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FilePlus, Link2, PanelsTopLeft } from "lucide-react";
+import {
+  LayoutDashboard,
+  FilePlus,
+  Link2,
+  PanelsTopLeft,
+  FileText,
+  BookOpen,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +23,7 @@ import { useTheme } from "next-themes";
 const NAV_ITEMS = [
   { href: "/cms", label: "Overview", icon: LayoutDashboard },
   { href: "/cms/new", label: "New Page", icon: FilePlus },
+  { href: "/cms/blog", label: "Blog", icon: FileText, badge: "Blog" },
   { href: "/cms/media", label: "Media Library", icon: PanelsTopLeft },
   { href: "/cms/navigation", label: "Navigation Links", icon: Link2 },
 ];
@@ -125,7 +133,8 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
           <nav className="flex flex-wrap items-center gap-2 overflow-x-auto py-4">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.href}
