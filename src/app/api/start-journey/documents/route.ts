@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { createClient as createSupabaseClient } from "@/integrations/supabase/server";
@@ -22,11 +23,7 @@ const deletePayloadSchema = z.object({
   bucket: z.string().min(1, "bucket is required"),
 });
 
-type AuthenticatedUser = {
-  id: string;
-  email?: string;
-  [key: string]: unknown;
-} | null;
+type AuthenticatedUser = User | null;
 
 type PatientSummary = {
   id: string;
