@@ -7,7 +7,14 @@
  */
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -1885,6 +1892,23 @@ function PatientJourneyContent() {
   );
 }
 
+function StartJourneyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center">
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Loading journey wizard…
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function StartJourneyPage() {
-  return <PatientJourneyContent />;
+  return (
+    <Suspense fallback={<StartJourneyFallback />}>
+      <PatientJourneyContent />
+    </Suspense>
+  );
 }
