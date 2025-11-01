@@ -81,6 +81,18 @@ const steps = [
 
 type StepId = (typeof steps)[number]["id"];
 
+const getNextStepId = (current: StepId): StepId => {
+  const currentIndex = steps.findIndex((step) => step.id === current);
+  const nextStep = steps[currentIndex + 1];
+  return nextStep ? nextStep.id : current;
+};
+
+const getPreviousStepId = (current: StepId): StepId => {
+  const currentIndex = steps.findIndex((step) => step.id === current);
+  const previousStep = steps[currentIndex - 1];
+  return previousStep ? previousStep.id : current;
+};
+
 const documentTypeSchema = z.enum([
   "passport",
   "medical_records",
@@ -701,11 +713,11 @@ function PatientJourneyContent() {
       }
     }
 
-    setCurrentStep((prev) => Math.min(prev + 1, steps.length as StepId));
+    setCurrentStep((prev) => getNextStepId(prev));
   }, [currentStep, form, procedureOptions.length, toast]);
 
   const handleBack = useCallback(() => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => getPreviousStepId(prev));
   }, []);
 
   const handleInvalidSubmit = useCallback(
