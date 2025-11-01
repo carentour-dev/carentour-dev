@@ -7,9 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { Plane, Hotel, Car, Globe, Shield, Clock, Users, Phone, Wand2 } from "lucide-react";
-import TripPlanningWizard from "@/components/TripPlanningWizard";
-import { useState } from "react";
+import {
+  Plane,
+  Hotel,
+  Car,
+  Globe,
+  Shield,
+  Clock,
+  Users,
+  Phone,
+  Wand2,
+} from "lucide-react";
+import {
+  PatientJourneyContent,
+  StartJourneyFallback,
+} from "@/app/start-journey/page";
+import { Suspense, useState } from "react";
 
 export default function PlanTrip() {
   const [activeTab, setActiveTab] = useState("wizard");
@@ -18,7 +31,9 @@ export default function PlanTrip() {
     setActiveTab("overview");
     // Scroll to the trip planner section after changing tab
     setTimeout(() => {
-      document.getElementById("trip-planner")?.scrollIntoView({ behavior: "smooth" });
+      document
+        .getElementById("trip-planner")
+        ?.scrollIntoView({ behavior: "smooth" });
     }, 100);
   };
   const services = [
@@ -26,54 +41,71 @@ export default function PlanTrip() {
       icon: Plane,
       title: "Airport Transfers",
       description: "Complimentary pickup and drop-off services",
-      features: ["Private luxury vehicles", "English-speaking drivers", "24/7 availability"]
+      features: [
+        "Private luxury vehicles",
+        "English-speaking drivers",
+        "24/7 availability",
+      ],
     },
     {
       icon: Hotel,
       title: "Accommodation",
       description: "Carefully selected hotels near medical service providers",
-      features: ["4-5 star hotels", "Special medical rates", "Recovery-friendly rooms"]
+      features: [
+        "4-5 star hotels",
+        "Special medical rates",
+        "Recovery-friendly rooms",
+      ],
     },
     {
       icon: Car,
       title: "Transportation",
       description: "Reliable transport for all medical appointments",
-      features: ["Doctor visits", "Pharmacy trips", "Sightseeing tours"]
+      features: ["Doctor visits", "Pharmacy trips", "Sightseeing tours"],
     },
     {
       icon: Users,
       title: "Translation Services",
       description: "Professional medical interpreters",
-      features: ["Medical terminology experts", "Available during procedures", "Cultural guidance"]
-    }
+      features: [
+        "Medical terminology experts",
+        "Available during procedures",
+        "Cultural guidance",
+      ],
+    },
   ];
 
   const steps = [
     {
       step: "1",
       title: "Initial Consultation",
-      description: "Free consultation with our medical coordinator to understand your needs and provide preliminary cost estimates."
+      description:
+        "Free consultation with our medical coordinator to understand your needs and provide preliminary cost estimates.",
     },
     {
       step: "2",
       title: "Medical Evaluation",
-      description: "Virtual consultation with Egyptian specialists and review of your medical records to create a treatment plan."
+      description:
+        "Virtual consultation with Egyptian specialists and review of your medical records to create a treatment plan.",
     },
     {
       step: "3",
       title: "Travel Planning",
-      description: "We handle visa assistance, flight booking, accommodation, and all logistics for your medical journey."
+      description:
+        "We handle visa assistance, flight booking, accommodation, and all logistics for your medical journey.",
     },
     {
       step: "4",
       title: "Arrival & Treatment",
-      description: "Meet your dedicated coordinator, settle into accommodation, and begin your treatment with full support."
+      description:
+        "Meet your dedicated coordinator, settle into accommodation, and begin your treatment with full support.",
     },
     {
       step: "5",
       title: "Recovery & Follow-up",
-      description: "Comfortable recovery period with continued care and follow-up consultations even after returning home."
-    }
+      description:
+        "Comfortable recovery period with continued care and follow-up consultations even after returning home.",
+    },
   ];
 
   const visaInfo = [
@@ -81,26 +113,26 @@ export default function PlanTrip() {
       country: "United States",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD"
+      cost: "$25 USD",
     },
     {
       country: "European Union",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD"
+      cost: "$25 USD",
     },
     {
       country: "Canada",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD"
+      cost: "$25 USD",
     },
     {
       country: "Australia",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD"
-    }
+      cost: "$25 USD",
+    },
   ];
 
   return (
@@ -112,7 +144,9 @@ export default function PlanTrip() {
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Plan Your Trip</Badge>
+              <Badge variant="outline" className="mb-6">
+                Plan Your Trip
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Your Complete
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -120,8 +154,9 @@ export default function PlanTrip() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-                From consultation to recovery, we handle every detail of your medical tourism
-                experience so you can focus on what matters most - your health.
+                From consultation to recovery, we handle every detail of your
+                medical tourism experience so you can focus on what matters most
+                - your health.
               </p>
 
               {/* Quick Start Options */}
@@ -129,10 +164,14 @@ export default function PlanTrip() {
                 <Button size="lg" asChild>
                   <a href="#trip-planner">
                     <Wand2 className="w-4 h-4 mr-2" />
-                    Start Interactive Planner
+                    Start Your Journey
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" onClick={handleLearnProcess}>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleLearnProcess}
+                >
                   Learn About Our Process
                 </Button>
               </div>
@@ -143,23 +182,30 @@ export default function PlanTrip() {
         {/* Trip Planning Section */}
         <section id="trip-planner" className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <div className="text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                   Plan Your Medical Journey
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                  Choose how you&apos;d like to plan your trip - use our interactive wizard for a personalized experience,
-                  or learn about our comprehensive process first.
+                  Choose how you&apos;d like to plan your trip - start your
+                  journey with our comprehensive wizard, or learn about our
+                  process first.
                 </p>
                 <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-                  <TabsTrigger value="wizard">Interactive Planner</TabsTrigger>
+                  <TabsTrigger value="wizard">Start Your Journey</TabsTrigger>
                   <TabsTrigger value="overview">Process Overview</TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="wizard" className="space-y-8">
-                <TripPlanningWizard />
+                <Suspense fallback={<StartJourneyFallback />}>
+                  <PatientJourneyContent />
+                </Suspense>
               </TabsContent>
 
               <TabsContent value="overview" className="space-y-20">
@@ -170,13 +216,17 @@ export default function PlanTrip() {
                       Your Journey, Step by Step
                     </h3>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                      A seamless process designed to make your medical tourism experience stress-free
+                      A seamless process designed to make your medical tourism
+                      experience stress-free
                     </p>
                   </div>
 
                   <div className="max-w-4xl mx-auto">
                     {steps.map((step, index) => (
-                      <div key={index} className="flex items-start space-x-6 mb-12">
+                      <div
+                        key={index}
+                        className="flex items-start space-x-6 mb-12"
+                      >
                         <div className="flex-shrink-0">
                           <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-background font-bold text-lg">
                             {step.step}
@@ -203,7 +253,8 @@ export default function PlanTrip() {
                         Concierge Services
                       </h3>
                       <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Comprehensive support services to ensure your comfort throughout your stay
+                        Comprehensive support services to ensure your comfort
+                        throughout your stay
                       </p>
                     </div>
 
@@ -211,18 +262,28 @@ export default function PlanTrip() {
                       {services.map((service, index) => {
                         const Icon = service.icon;
                         return (
-                          <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring text-center">
+                          <Card
+                            key={index}
+                            className="border-border/50 hover:shadow-card-hover transition-spring text-center"
+                          >
                             <CardHeader>
                               <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary-light rounded-full mb-4 mx-auto">
                                 <Icon className="h-8 w-8 text-secondary" />
                               </div>
-                              <CardTitle className="text-lg">{service.title}</CardTitle>
-                              <p className="text-muted-foreground text-sm">{service.description}</p>
+                              <CardTitle className="text-lg">
+                                {service.title}
+                              </CardTitle>
+                              <p className="text-muted-foreground text-sm">
+                                {service.description}
+                              </p>
                             </CardHeader>
                             <CardContent>
                               <ul className="text-sm text-muted-foreground space-y-2">
                                 {service.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-center justify-center">
+                                  <li
+                                    key={idx}
+                                    className="flex items-center justify-center"
+                                  >
                                     <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
                                     {feature}
                                   </li>
@@ -244,7 +305,8 @@ export default function PlanTrip() {
                         Visa Requirements
                       </h3>
                       <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Simple visa process for most countries - we&apos;ll guide you through every step
+                        Simple visa process for most countries - we&apos;ll
+                        guide you through every step
                       </p>
                     </div>
 
@@ -254,17 +316,29 @@ export default function PlanTrip() {
                           <Card key={index} className="border-border/50">
                             <CardContent className="p-6">
                               <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-semibold text-foreground">{visa.country}</h4>
-                                <Badge variant="secondary">{visa.requirement}</Badge>
+                                <h4 className="font-semibold text-foreground">
+                                  {visa.country}
+                                </h4>
+                                <Badge variant="secondary">
+                                  {visa.requirement}
+                                </Badge>
                               </div>
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Duration:</span>
-                                  <span className="font-medium">{visa.duration}</span>
+                                  <span className="text-muted-foreground">
+                                    Duration:
+                                  </span>
+                                  <span className="font-medium">
+                                    {visa.duration}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Cost:</span>
-                                  <span className="font-medium">{visa.cost}</span>
+                                  <span className="text-muted-foreground">
+                                    Cost:
+                                  </span>
+                                  <span className="font-medium">
+                                    {visa.cost}
+                                  </span>
                                 </div>
                               </div>
                             </CardContent>
@@ -276,9 +350,12 @@ export default function PlanTrip() {
                         <Card className="bg-primary/5 border-primary/20">
                           <CardContent className="p-6">
                             <Globe className="h-8 w-8 text-primary mx-auto mb-4" />
-                            <h4 className="font-semibold text-foreground mb-2">Need Visa Assistance?</h4>
+                            <h4 className="font-semibold text-foreground mb-2">
+                              Need Visa Assistance?
+                            </h4>
                             <p className="text-muted-foreground mb-4">
-                              Our team will help you with the visa application process and provide all necessary documentation.
+                              Our team will help you with the visa application
+                              process and provide all necessary documentation.
                             </p>
                             <Button asChild>
                               <Link href="/contact">Get Visa Support</Link>
@@ -300,9 +377,12 @@ export default function PlanTrip() {
             <Card className="max-w-3xl mx-auto bg-background/10 backdrop-blur-sm border-background/20">
               <CardContent className="p-8 text-center">
                 <Phone className="h-12 w-12 text-accent mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-background mb-2">24/7 Emergency Support</h3>
+                <h3 className="text-2xl font-bold text-background mb-2">
+                  24/7 Emergency Support
+                </h3>
                 <p className="text-background/90 mb-4">
-                  Our medical coordinators are available around the clock for any urgent needs during your stay
+                  Our medical coordinators are available around the clock for
+                  any urgent needs during your stay
                 </p>
                 <p className="text-accent font-semibold text-xl">
                   Emergency Hotline: +20 100 1741666
@@ -319,7 +399,8 @@ export default function PlanTrip() {
               Ready to Plan Your Medical Journey?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Let our experienced team handle all the details while you focus on your recovery
+              Let our experienced team handle all the details while you focus on
+              your recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
