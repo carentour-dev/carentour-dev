@@ -11,7 +11,10 @@ export const GET = adminRoute(async (_req, ctx) => {
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const body = await req.json();
-  const hotel = await hotelController.update(getRouteParam(ctx.params, "id"), body);
+  const hotel = await hotelController.update(
+    getRouteParam(ctx.params, "id"),
+    body,
+  );
   return jsonResponse(hotel);
 });
 
