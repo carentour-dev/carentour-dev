@@ -21,7 +21,7 @@ import {
   FileText,
   ChevronLeft,
   MessageCircle,
-  Phone
+  Phone,
 } from "lucide-react";
 import { useDoctors, useDoctorReviews } from "@/hooks/useDoctors";
 
@@ -29,8 +29,10 @@ export default function DoctorDetail() {
   const { doctorId } = useParams();
   const router = useRouter();
   const { doctors, loading, error } = useDoctors();
-  const doctor = doctors.find(d => d.id === doctorId);
-  const { reviews, loading: reviewsLoading } = useDoctorReviews(doctorId as string || "");
+  const doctor = doctors.find((d) => d.id === doctorId);
+  const { reviews, loading: reviewsLoading } = useDoctorReviews(
+    (doctorId as string) || "",
+  );
 
   if (loading) {
     return (
@@ -54,7 +56,7 @@ export default function DoctorDetail() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <p className="text-destructive mb-4">Doctor not found</p>
-            <Button onClick={() => router.push('/doctors')}>
+            <Button onClick={() => router.push("/doctors")}>
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to Doctors
             </Button>
@@ -75,7 +77,7 @@ export default function DoctorDetail() {
           <div className="container mx-auto px-4">
             <Button
               variant="ghost"
-              onClick={() => router.push('/doctors')}
+              onClick={() => router.push("/doctors")}
               className="mb-4"
             >
               <ChevronLeft className="h-4 w-4 mr-2" />
@@ -92,22 +94,33 @@ export default function DoctorDetail() {
                 <Avatar className="w-32 h-32 border-4 border-background shadow-lg">
                   <AvatarImage src={doctor.avatar_url} alt={doctor.name} />
                   <AvatarFallback className="text-2xl">
-                    {doctor.name.split(' ').map(n => n[0]).join('')}
+                    {doctor.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1">
-                  <Badge variant="outline" className="mb-2">{doctor.specialization}</Badge>
+                  <Badge variant="outline" className="mb-2">
+                    {doctor.specialization}
+                  </Badge>
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
                     {doctor.name}
                   </h1>
-                  <p className="text-xl text-muted-foreground mb-4">{doctor.title}</p>
+                  <p className="text-xl text-muted-foreground mb-4">
+                    {doctor.title}
+                  </p>
 
                   <div className="flex flex-wrap gap-4 mb-6">
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="font-semibold">{doctor.patient_rating}</span>
-                      <span className="text-muted-foreground">({doctor.total_reviews} reviews)</span>
+                      <span className="font-semibold">
+                        {doctor.patient_rating}
+                      </span>
+                      <span className="text-muted-foreground">
+                        ({doctor.total_reviews} reviews)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-primary" />
@@ -135,21 +148,22 @@ export default function DoctorDetail() {
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-8">
-
                 {/* About */}
                 {doctor.bio && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5" />
-                        About Dr. {doctor.name.split(' ')[1] || doctor.name.split(' ')[0]}
+                        About Dr.{" "}
+                        {doctor.name.split(" ")[1] || doctor.name.split(" ")[0]}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground leading-relaxed">{doctor.bio}</p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {doctor.bio}
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -181,7 +195,9 @@ export default function DoctorDetail() {
                         {doctor.achievements.map((achievement, index) => (
                           <li key={index} className="flex items-start gap-2">
                             <Award className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                            <span className="text-muted-foreground">{achievement}</span>
+                            <span className="text-muted-foreground">
+                              {achievement}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -198,7 +214,9 @@ export default function DoctorDetail() {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {doctor.certifications.map((cert, index) => (
-                          <Badge key={index} variant="secondary">{cert}</Badge>
+                          <Badge key={index} variant="secondary">
+                            {cert}
+                          </Badge>
                         ))}
                       </div>
                     </CardContent>
@@ -213,7 +231,6 @@ export default function DoctorDetail() {
 
               {/* Sidebar */}
               <div className="space-y-6">
-
                 {/* Quick Stats */}
                 <Card>
                   <CardHeader>
@@ -222,24 +239,36 @@ export default function DoctorDetail() {
                   <CardContent className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Experience</span>
-                      <span className="font-semibold">{doctor.experience_years} years</span>
+                      <span className="font-semibold">
+                        {doctor.experience_years} years
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Procedures</span>
-                      <span className="font-semibold">{doctor.successful_procedures}</span>
+                      <span className="font-semibold">
+                        {doctor.successful_procedures}
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Publications</span>
-                      <span className="font-semibold">{doctor.research_publications}</span>
+                      <span className="text-muted-foreground">
+                        Publications
+                      </span>
+                      <span className="font-semibold">
+                        {doctor.research_publications}
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Patient Rating</span>
+                      <span className="text-muted-foreground">
+                        Patient Rating
+                      </span>
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <span className="font-semibold">{doctor.patient_rating}</span>
+                        <span className="font-semibold">
+                          {doctor.patient_rating}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -257,7 +286,9 @@ export default function DoctorDetail() {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {doctor.languages.map((language, index) => (
-                          <Badge key={index} variant="outline">{language}</Badge>
+                          <Badge key={index} variant="outline">
+                            {language}
+                          </Badge>
                         ))}
                       </div>
                     </CardContent>
@@ -271,7 +302,9 @@ export default function DoctorDetail() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Book a consultation with Dr. {doctor.name.split(' ')[1] || doctor.name.split(' ')[0]} to discuss your treatment options.
+                      Book a consultation with Dr.{" "}
+                      {doctor.name.split(" ")[1] || doctor.name.split(" ")[0]}{" "}
+                      to discuss your treatment options.
                     </p>
                     <Button className="w-full" size="lg" asChild>
                       <Link href="/consultation">Schedule Consultation</Link>
