@@ -3,11 +3,11 @@ import { createClient } from "@/integrations/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const supabase = await createClient();
-    const { id } = params;
+    const { id } = await params;
     const limit = parseInt(request.nextUrl.searchParams.get("limit") || "4");
 
     // First, get the current post to know its category and tags
