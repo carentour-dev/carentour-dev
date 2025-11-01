@@ -9,9 +9,15 @@ type ResolvedRouteContext = {
 
 type IncomingRouteContext = RouteContext<any>;
 
-type RouteHandler = (req: NextRequest, ctx: ResolvedRouteContext) => Promise<Response>;
+type RouteHandler = (
+  req: NextRequest,
+  ctx: ResolvedRouteContext,
+) => Promise<Response>;
 
-type WrappedHandler = (req: NextRequest, ctx: IncomingRouteContext) => Promise<Response>;
+type WrappedHandler = (
+  req: NextRequest,
+  ctx: IncomingRouteContext,
+) => Promise<Response>;
 
 // Wrap a route handler with shared error handling.
 export function adminRoute(handler: RouteHandler): WrappedHandler {
