@@ -4,15 +4,17 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -34,7 +36,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
-import { adminFetch, useAdminInvalidate } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { useToast } from "@/hooks/use-toast";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
@@ -46,11 +51,17 @@ const reviewSchema = z.object({
   patient_country: z.string().optional().nullable(),
   patient_id: z.string().uuid().optional().nullable(),
   doctor_id: z.preprocess(
-    (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+    (value) =>
+      typeof value === "string" && value.trim().length === 0
+        ? undefined
+        : value,
     z.string({ required_error: "Select a doctor" }).uuid(),
   ),
   treatment_id: z.preprocess(
-    (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+    (value) =>
+      typeof value === "string" && value.trim().length === 0
+        ? undefined
+        : value,
     z.string({ required_error: "Select a treatment" }).uuid(),
   ),
   procedure_name: z.string().optional().nullable(),
@@ -70,11 +81,15 @@ const storySchema = z.object({
   id: z.string().uuid().optional(),
   patient_id: z.string().uuid().optional().nullable(),
   doctor_id: z.preprocess(
-    (value) => (typeof value === "string" && value.trim().length === 0 ? null : value),
+    (value) =>
+      typeof value === "string" && value.trim().length === 0 ? null : value,
     z.string().uuid().optional().nullable(),
   ),
   treatment_id: z.preprocess(
-    (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+    (value) =>
+      typeof value === "string" && value.trim().length === 0
+        ? undefined
+        : value,
     z.string({ required_error: "Select a treatment" }).uuid(),
   ),
   headline: z.string().min(4),
@@ -93,8 +108,12 @@ const STORIES_KEY = ["admin", "testimonials", "stories"] as const;
 
 export default function TestimonialsAdminPage() {
   const [activeTab, setActiveTab] = useState("reviews");
-  const [editingReview, setEditingReview] = useState<ReviewFormValues | null>(null);
-  const [editingStory, setEditingStory] = useState<StoryFormValues | null>(null);
+  const [editingReview, setEditingReview] = useState<ReviewFormValues | null>(
+    null,
+  );
+  const [editingStory, setEditingStory] = useState<StoryFormValues | null>(
+    null,
+  );
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
   const invalidate = useAdminInvalidate();
@@ -158,7 +177,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Review saved" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to save review", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to save review",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -174,7 +197,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Review updated" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to update review", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to update review",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -188,7 +215,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Review deleted" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to delete review", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to delete review",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -204,7 +235,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Story saved" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to save story", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to save story",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -220,7 +255,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Story updated" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to update story", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to update story",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -234,7 +273,11 @@ export default function TestimonialsAdminPage() {
       toast({ title: "Story deleted" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to delete story", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to delete story",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -323,7 +366,9 @@ export default function TestimonialsAdminPage() {
 
     const payload: ReviewFormValues = {
       ...rest,
-      patient_country: rest.patient_country?.trim() ? rest.patient_country : null,
+      patient_country: rest.patient_country?.trim()
+        ? rest.patient_country
+        : null,
       procedure_name: rest.procedure_name?.trim() || null,
       recovery_time: rest.recovery_time?.trim() || null,
     } as ReviewFormValues;
@@ -356,9 +401,12 @@ export default function TestimonialsAdminPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Testimonials</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          Testimonials
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Manage patient reviews and long-form stories used across the marketing site.
+          Manage patient reviews and long-form stories used across the marketing
+          site.
         </p>
       </div>
 
@@ -402,32 +450,53 @@ export default function TestimonialsAdminPage() {
                       <TableRow key={review.id}>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">{review.patient_name}</span>
+                            <span className="font-medium text-foreground">
+                              {review.patient_name}
+                            </span>
                             <span className="text-xs text-muted-foreground">
-                              {review.patient_country ?? "International Patient"}
+                              {review.patient_country ??
+                                "International Patient"}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>{review.treatment_name ?? review.treatment_slug ?? "—"}</TableCell>
+                        <TableCell>
+                          {review.treatment_name ??
+                            review.treatment_slug ??
+                            "—"}
+                        </TableCell>
                         <TableCell>{review.doctors?.name || "—"}</TableCell>
-                        <TableCell>{Number(review.rating).toFixed(1)}</TableCell>
+                        <TableCell>
+                          {Number(review.rating).toFixed(1)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-1 text-xs">
                             {review.published ? (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Published</span>
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                                Published
+                              </span>
                             ) : (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">Hidden</span>
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                Hidden
+                              </span>
                             )}
                             {review.is_verified && (
-                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700">Verified</span>
+                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700">
+                                Verified
+                              </span>
                             )}
                             {review.highlight && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">Highlight</span>
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
+                                Highlight
+                              </span>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEditReview(review)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditReview(review)}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
@@ -463,7 +532,8 @@ export default function TestimonialsAdminPage() {
                 </div>
               ) : stories.length === 0 ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">
-                  No patient stories yet. Add a story to share detailed success journeys.
+                  No patient stories yet. Add a story to share detailed success
+                  journeys.
                 </div>
               ) : (
                 <Table>
@@ -481,26 +551,42 @@ export default function TestimonialsAdminPage() {
                       <TableRow key={story.id}>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">{story.headline}</span>
-                            <span className="text-xs text-muted-foreground">{story.patients?.full_name || "Anon."}</span>
+                            <span className="font-medium text-foreground">
+                              {story.headline}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {story.patients?.full_name || "Anon."}
+                            </span>
                           </div>
                         </TableCell>
-                        <TableCell>{story.treatment_name ?? story.treatment_slug ?? "—"}</TableCell>
+                        <TableCell>
+                          {story.treatment_name ?? story.treatment_slug ?? "—"}
+                        </TableCell>
                         <TableCell>{story.doctors?.name || "—"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 text-xs">
                             {story.published ? (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Published</span>
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                                Published
+                              </span>
                             ) : (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">Hidden</span>
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                Hidden
+                              </span>
                             )}
                             {story.featured && (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">Featured</span>
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
+                                Featured
+                              </span>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEditStory(story)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditStory(story)}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
@@ -526,8 +612,12 @@ export default function TestimonialsAdminPage() {
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingReview ? "Edit Review" : "Add Review"}</DialogTitle>
-            <DialogDescription>Patient testimonials appear on treatment and doctor pages.</DialogDescription>
+            <DialogTitle>
+              {editingReview ? "Edit Review" : "Add Review"}
+            </DialogTitle>
+            <DialogDescription>
+              Patient testimonials appear on treatment and doctor pages.
+            </DialogDescription>
           </DialogHeader>
           <Form {...reviewForm}>
             <form onSubmit={reviewDialogSubmit} className="space-y-4">
@@ -571,7 +661,11 @@ export default function TestimonialsAdminPage() {
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value ?? ""} placeholder="United States" />
+                        <Input
+                          {...field}
+                          value={field.value ?? ""}
+                          placeholder="United States"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -585,7 +679,13 @@ export default function TestimonialsAdminPage() {
                     <FormItem>
                       <FormLabel>Rating</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" max="5" step="0.5" {...field} />
+                        <Input
+                          type="number"
+                          min="0"
+                          max="5"
+                          step="0.5"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -600,7 +700,11 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Review Text</FormLabel>
                     <FormControl>
-                      <Textarea {...field} rows={4} placeholder="Write the patient's review..." />
+                      <Textarea
+                        {...field}
+                        rows={4}
+                        placeholder="Write the patient's review..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -652,7 +756,11 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Procedure Name</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="Coronary Bypass" />
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="Coronary Bypass"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -666,7 +774,11 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Recovery Time</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="4-6 weeks" />
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="4-6 weeks"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -680,7 +792,10 @@ export default function TestimonialsAdminPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                       <FormLabel className="font-normal">Verified</FormLabel>
                     </FormItem>
@@ -693,7 +808,10 @@ export default function TestimonialsAdminPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                       <FormLabel className="font-normal">Published</FormLabel>
                     </FormItem>
@@ -706,7 +824,10 @@ export default function TestimonialsAdminPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                       <FormLabel className="font-normal">Highlight</FormLabel>
                     </FormItem>
@@ -715,7 +836,11 @@ export default function TestimonialsAdminPage() {
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setReviewDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setReviewDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save Review</Button>
@@ -729,8 +854,12 @@ export default function TestimonialsAdminPage() {
       <Dialog open={storyDialogOpen} onOpenChange={setStoryDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingStory ? "Edit Story" : "Add Story"}</DialogTitle>
-            <DialogDescription>Long-form patient success stories for the stories page.</DialogDescription>
+            <DialogTitle>
+              {editingStory ? "Edit Story" : "Add Story"}
+            </DialogTitle>
+            <DialogDescription>
+              Long-form patient success stories for the stories page.
+            </DialogDescription>
           </DialogHeader>
           <Form {...storyForm}>
             <form onSubmit={storyDialogSubmit} className="space-y-4">
@@ -759,7 +888,10 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Headline</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Patient's Journey to Recovery" />
+                      <Input
+                        {...field}
+                        placeholder="Patient's Journey to Recovery"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -812,7 +944,12 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Excerpt (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} value={field.value ?? ""} rows={2} placeholder="Brief summary..." />
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        rows={2}
+                        placeholder="Brief summary..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -826,7 +963,11 @@ export default function TestimonialsAdminPage() {
                   <FormItem>
                     <FormLabel>Story Content (Markdown)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} rows={8} placeholder="Write the full patient story in markdown..." />
+                      <Textarea
+                        {...field}
+                        rows={8}
+                        placeholder="Write the full patient story in markdown..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -840,7 +981,10 @@ export default function TestimonialsAdminPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                       <FormLabel className="font-normal">Published</FormLabel>
                     </FormItem>
@@ -853,7 +997,10 @@ export default function TestimonialsAdminPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                       <FormLabel className="font-normal">Featured</FormLabel>
                     </FormItem>
@@ -862,7 +1009,11 @@ export default function TestimonialsAdminPage() {
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setStoryDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStoryDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save Story</Button>
