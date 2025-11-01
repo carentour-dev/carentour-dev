@@ -3,11 +3,11 @@ import { createClient } from "@/integrations/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { category: string; slug: string } },
+  { params }: { params: Promise<{ category: string; slug: string }> },
 ) {
   try {
     const supabase = await createClient();
-    const { category: categorySlug, slug } = params;
+    const { category: categorySlug, slug } = await params;
 
     // First get the category
     const { data: category, error: categoryError } = await supabase
