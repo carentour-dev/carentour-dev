@@ -29,19 +29,23 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
   return (
     <div className={`space-y-6 ${className}`}>
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-foreground mb-2">Patient Reviews</h3>
+        <h3 className="text-2xl font-bold text-foreground mb-2">
+          Patient Reviews
+        </h3>
         <p className="text-muted-foreground">
           Real experiences from verified patients
         </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {reviews.map((review) => (
           <Card key={review.id} className="border-border/50 relative">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-lg">{review.patient_name}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {review.patient_name}
+                  </CardTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
                       {review.patient_country ?? "International"}
@@ -55,31 +59,39 @@ export const DoctorReviews = ({ reviews, className }: DoctorReviewsProps) => {
                 </div>
                 <Quote className="h-6 w-6 text-primary/30" />
               </div>
-              
+
               <div className="flex items-center gap-4 text-sm pt-2">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`h-4 w-4 ${
-                        i < review.rating ? 'text-yellow-500 fill-current' : 'text-gray-300'
+                        i < review.rating
+                          ? "text-yellow-500 fill-current"
+                          : "text-gray-300"
                       }`}
                     />
                   ))}
                 </div>
                 <span className="text-muted-foreground">•</span>
-                {review.procedure_name && <span className="text-muted-foreground">{review.procedure_name}</span>}
+                {review.procedure_name && (
+                  <span className="text-muted-foreground">
+                    {review.procedure_name}
+                  </span>
+                )}
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 &ldquo;{review.review_text}&rdquo;
               </p>
-              
+
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  {review.recovery_time && <span>Recovery: {review.recovery_time}</span>}
+                  {review.recovery_time && (
+                    <span>Recovery: {review.recovery_time}</span>
+                  )}
                   {review.patient_id && (
                     <>
                       <span>•</span>
