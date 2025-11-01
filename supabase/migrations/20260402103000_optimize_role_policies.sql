@@ -1,9 +1,8 @@
 BEGIN;
 
--- Newsletter subscriptions: avoid repeated auth.uid() calls
-DROP POLICY IF EXISTS admin_view_all_subscriptions
+DROP POLICY IF EXISTS admin_can_view_all_subscriptions
 ON public.newsletter_subscriptions;
-CREATE POLICY admin_view_all_subscriptions
+CREATE POLICY admin_can_view_all_subscriptions
 ON public.newsletter_subscriptions
 FOR SELECT
 USING (
@@ -11,9 +10,9 @@ USING (
 );
 
 -- Security events
-DROP POLICY IF EXISTS admin_view_security_events
+DROP POLICY IF EXISTS admin_can_view_security_events
 ON public.security_events;
-CREATE POLICY admin_view_security_events
+CREATE POLICY admin_can_view_security_events
 ON public.security_events
 FOR SELECT
 USING (
