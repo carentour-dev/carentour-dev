@@ -1459,7 +1459,14 @@ function PatientJourneyContent() {
                             <Calendar
                               mode="range"
                               defaultMonth={field.value?.from ?? todaysDate}
-                              selected={field.value}
+                              selected={
+                                field.value?.from
+                                  ? {
+                                      from: field.value.from,
+                                      to: field.value.to ?? undefined,
+                                    }
+                                  : undefined
+                              }
                               onSelect={(range) => field.onChange(range)}
                               numberOfMonths={2}
                               disabled={(date) => date < todaysDate}
