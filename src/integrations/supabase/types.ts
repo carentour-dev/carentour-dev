@@ -1188,6 +1188,171 @@ export type Database = {
         };
         Relationships: [];
       };
+      start_journey_submissions: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          age: string | null;
+          country: string;
+          treatment_id: string | null;
+          treatment_name: string | null;
+          procedure_id: string | null;
+          procedure_name: string | null;
+          timeline: string | null;
+          budget_range: string | null;
+          medical_condition: string;
+          previous_treatments: string | null;
+          current_medications: string | null;
+          allergies: string | null;
+          doctor_preference: string | null;
+          accessibility_needs: string | null;
+          travel_dates: Json | null;
+          accommodation_type: string | null;
+          companion_travelers: string | null;
+          dietary_requirements: string | null;
+          language_preference: string | null;
+          language_notes: string | null;
+          has_insurance: boolean | null;
+          has_passport: boolean | null;
+          has_medical_records: boolean | null;
+          documents: Json | null;
+          consultation_mode: string | null;
+          status: Database["public"]["Enums"]["journey_submission_status"];
+          user_id: string | null;
+          patient_id: string | null;
+          assigned_to: string | null;
+          consultation_id: string | null;
+          origin: string;
+          notes: string | null;
+          resolved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          age?: string | null;
+          country: string;
+          treatment_id?: string | null;
+          treatment_name?: string | null;
+          procedure_id?: string | null;
+          procedure_name?: string | null;
+          timeline?: string | null;
+          budget_range?: string | null;
+          medical_condition: string;
+          previous_treatments?: string | null;
+          current_medications?: string | null;
+          allergies?: string | null;
+          doctor_preference?: string | null;
+          accessibility_needs?: string | null;
+          travel_dates?: Json | null;
+          accommodation_type?: string | null;
+          companion_travelers?: string | null;
+          dietary_requirements?: string | null;
+          language_preference?: string | null;
+          language_notes?: string | null;
+          has_insurance?: boolean | null;
+          has_passport?: boolean | null;
+          has_medical_records?: boolean | null;
+          documents?: Json | null;
+          consultation_mode?: string | null;
+          status?: Database["public"]["Enums"]["journey_submission_status"];
+          user_id?: string | null;
+          patient_id?: string | null;
+          assigned_to?: string | null;
+          consultation_id?: string | null;
+          origin?: string;
+          notes?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string;
+          phone?: string;
+          age?: string | null;
+          country?: string;
+          treatment_id?: string | null;
+          treatment_name?: string | null;
+          procedure_id?: string | null;
+          procedure_name?: string | null;
+          timeline?: string | null;
+          budget_range?: string | null;
+          medical_condition?: string;
+          previous_treatments?: string | null;
+          current_medications?: string | null;
+          allergies?: string | null;
+          doctor_preference?: string | null;
+          accessibility_needs?: string | null;
+          travel_dates?: Json | null;
+          accommodation_type?: string | null;
+          companion_travelers?: string | null;
+          dietary_requirements?: string | null;
+          language_preference?: string | null;
+          language_notes?: string | null;
+          has_insurance?: boolean | null;
+          has_passport?: boolean | null;
+          has_medical_records?: boolean | null;
+          documents?: Json | null;
+          consultation_mode?: string | null;
+          status?: Database["public"]["Enums"]["journey_submission_status"];
+          user_id?: string | null;
+          patient_id?: string | null;
+          assigned_to?: string | null;
+          consultation_id?: string | null;
+          origin?: string;
+          notes?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "start_journey_submissions_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "start_journey_submissions_consultation_id_fkey";
+            columns: ["consultation_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_consultations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "start_journey_submissions_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "start_journey_submissions_procedure_id_fkey";
+            columns: ["procedure_id"];
+            isOneToOne: false;
+            referencedRelation: "treatment_procedures";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "start_journey_submissions_treatment_id_fkey";
+            columns: ["treatment_id"];
+            isOneToOne: false;
+            referencedRelation: "treatments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       trip_plan_accommodations: {
         Row: {
           amenities: string[] | null;
@@ -1604,6 +1769,13 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "rescheduled";
+      journey_submission_status:
+        | "new"
+        | "reviewing"
+        | "contacted"
+        | "consultation_scheduled"
+        | "completed"
+        | "archived";
       contact_request_status: "new" | "in_progress" | "resolved";
       consultation_status:
         | "scheduled"
