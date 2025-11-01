@@ -118,7 +118,13 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
               </Button>
 
               <div className="max-w-4xl mx-auto">
-                <CategoryBadge category={post.category} className="mb-4" />
+                {post.category && (
+                  <CategoryBadge
+                    name={post.category.name}
+                    color={post.category.color}
+                    className="mb-4"
+                  />
+                )}
 
                 <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
                   {post.title}
