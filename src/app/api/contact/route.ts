@@ -17,7 +17,8 @@ export const POST = async (req: NextRequest) => {
     if (authHeader?.startsWith("Bearer ")) {
       const accessToken = authHeader.slice(7).trim();
       if (accessToken.length > 0) {
-        const { data: tokenUser, error: tokenError } = await supabaseAdmin.auth.getUser(accessToken);
+        const { data: tokenUser, error: tokenError } =
+          await supabaseAdmin.auth.getUser(accessToken);
         if (!tokenError && tokenUser?.user) {
           user = tokenUser.user;
         }
@@ -68,18 +69,21 @@ export const POST = async (req: NextRequest) => {
       origin: user ? "portal" : undefined,
     });
 
-    const { error: emailError } = await supabaseAdmin.functions.invoke("send-contact-email", {
-      body: {
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        email: payload.email,
-        phone: payload.phone,
-        country: payload.country,
-        treatment: payload.treatment,
-        message: payload.message,
-        skipLogging: true,
+    const { error: emailError } = await supabaseAdmin.functions.invoke(
+      "send-contact-email",
+      {
+        body: {
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          phone: payload.phone,
+          country: payload.country,
+          treatment: payload.treatment,
+          message: payload.message,
+          skipLogging: true,
+        },
       },
-    });
+    );
 
     if (emailError) {
       throw emailError;
