@@ -1,5 +1,3 @@
- 
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TeamSection from "@/components/TeamSection";
@@ -19,7 +17,9 @@ export async function generateMetadata() {
   return {
     title: cmsPage?.seo?.title ?? "About | Care N Tour",
     description: cmsPage?.seo?.description ?? undefined,
-    openGraph: cmsPage?.seo?.ogImage ? { images: [cmsPage.seo.ogImage] } : undefined,
+    openGraph: cmsPage?.seo?.ogImage
+      ? { images: [cmsPage.seo.ogImage] }
+      : undefined,
   } as any;
 }
 
@@ -40,25 +40,28 @@ export default async function About() {
     { icon: Heart, label: "Successful Procedures", value: "5000+" },
     { icon: Users, label: "Medical Specialists", value: "200+" },
     { icon: Globe, label: "Countries Served", value: "50+" },
-    { icon: Award, label: "Years of Experience", value: "10+" }
+    { icon: Award, label: "Years of Experience", value: "10+" },
   ];
 
   const values = [
     {
       icon: Shield,
       title: "Safety First",
-      description: "We maintain the highest safety standards with internationally accredited service providers and certified medical professionals."
+      description:
+        "We maintain the highest safety standards with internationally accredited service providers and certified medical professionals.",
     },
     {
       icon: Heart,
       title: "Patient-Centered Care",
-      description: "Every treatment plan is personalized to meet your specific needs, ensuring optimal outcomes and comfort."
+      description:
+        "Every treatment plan is personalized to meet your specific needs, ensuring optimal outcomes and comfort.",
     },
     {
       icon: Clock,
       title: "24/7 Support",
-      description: "Our dedicated team provides round-the-clock assistance throughout your entire medical journey."
-    }
+      description:
+        "Our dedicated team provides round-the-clock assistance throughout your entire medical journey.",
+    },
   ];
 
   return (
@@ -70,7 +73,9 @@ export default async function About() {
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">About Care N Tour</Badge>
+              <Badge variant="outline" className="mb-6">
+                About Care N Tour
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Transforming Lives Through
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -78,8 +83,10 @@ export default async function About() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                For over a decade, we&apos;ve been connecting patients from around the world with Egypt&apos;s finest medical service providers,
-                delivering exceptional healthcare experiences that combine clinical excellence with warm hospitality.
+                For over a decade, we&apos;ve been connecting patients from
+                around the world with Egypt&apos;s finest medical service
+                providers, delivering exceptional healthcare experiences that
+                combine clinical excellence with warm hospitality.
               </p>
             </div>
           </div>
@@ -96,7 +103,9 @@ export default async function About() {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4">
                       <Icon className="h-8 w-8 text-primary" />
                     </div>
-                    <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {stat.value}
+                    </p>
                     <p className="text-muted-foreground">{stat.label}</p>
                   </div>
                 );
@@ -115,19 +124,24 @@ export default async function About() {
                 </h2>
                 <div className="prose prose-lg max-w-none">
                   <p className="text-muted-foreground leading-relaxed mb-6">
-                    Founded in 2014, Care N Tour emerged from a simple vision: to make world-class medical care
-                    accessible to everyone, regardless of geographical boundaries. What started as a small initiative
-                    has grown into Egypt&apos;s premier medical tourism facilitator.
+                    Founded in 2014, Care N Tour emerged from a simple vision:
+                    to make world-class medical care accessible to everyone,
+                    regardless of geographical boundaries. What started as a
+                    small initiative has grown into Egypt&apos;s premier medical
+                    tourism facilitator.
                   </p>
                   <p className="text-muted-foreground leading-relaxed mb-6">
-                    Our founders, having witnessed firsthand the challenges patients face when seeking quality healthcare
-                    abroad, were determined to create a seamless bridge between international patients and Egypt&apos;s
-                    exceptional medical infrastructure.
+                    Our founders, having witnessed firsthand the challenges
+                    patients face when seeking quality healthcare abroad, were
+                    determined to create a seamless bridge between international
+                    patients and Egypt&apos;s exceptional medical
+                    infrastructure.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
-                    Today, we partner with over 50 accredited hospitals and clinics across Egypt, working with more than
-                    200 certified specialists to provide comprehensive medical tourism services that have transformed
-                    thousands of lives.
+                    Today, we partner with over 50 accredited hospitals and
+                    clinics across Egypt, working with more than 200 certified
+                    specialists to provide comprehensive medical tourism
+                    services that have transformed thousands of lives.
                   </p>
                 </div>
                 <Button size="lg" className="mt-8">
@@ -156,7 +170,8 @@ export default async function About() {
                 Our Core Values
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                The principles that guide everything we do in delivering exceptional medical tourism experiences
+                The principles that guide everything we do in delivering
+                exceptional medical tourism experiences
               </p>
             </div>
 
@@ -164,7 +179,10 @@ export default async function About() {
               {values.map((value, index) => {
                 const Icon = value.icon;
                 return (
-                  <Card key={index} className="text-center border-border/50 hover:shadow-card-hover transition-spring">
+                  <Card
+                    key={index}
+                    className="text-center border-border/50 hover:shadow-card-hover transition-spring"
+                  >
                     <CardHeader>
                       <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary-light rounded-full mb-4 mx-auto">
                         <Icon className="h-8 w-8 text-secondary" />
@@ -196,7 +214,8 @@ export default async function About() {
               Ready to Begin Your Journey?
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Join thousands of satisfied patients who have trusted us with their healthcare journey
+              Join thousands of satisfied patients who have trusted us with
+              their healthcare journey
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="accent" asChild>
