@@ -7,15 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import {
-  Plane,
-  Hotel,
-  Car,
-  Globe,
-  Users,
-  Phone,
-  Wand2,
-} from "lucide-react";
+import { Plane, Hotel, Car, Globe, Users, Phone, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -161,11 +153,9 @@ export default function PlanTrip() {
 
               {/* Quick Start Options */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild>
-                  <a href="#trip-planner">
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Start Your Journey
-                  </a>
+                <Button size="lg" onClick={handleStartJourney}>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Start Your Journey
                 </Button>
                 <Button
                   size="lg"
@@ -210,8 +200,8 @@ export default function PlanTrip() {
                       Start Your Medical Journey
                     </h3>
                     <p className="text-muted-foreground mb-8">
-                      Our comprehensive journey wizard will guide you through every step
-                      of planning your medical trip to Egypt.
+                      Our comprehensive journey wizard will guide you through
+                      every step of planning your medical trip to Egypt.
                     </p>
                     <Button size="lg" onClick={handleStartJourney}>
                       Begin Journey Wizard
@@ -415,8 +405,8 @@ export default function PlanTrip() {
               your recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <a href="#trip-planner">Start Planning Today</a>
+              <Button size="lg" onClick={handleStartJourney}>
+                Start Planning Today
               </Button>
               <Button size="lg" variant="outline">
                 Download Travel Guide
