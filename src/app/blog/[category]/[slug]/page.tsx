@@ -36,9 +36,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
   const router = useRouter();
 
   const { data: post, isLoading, error } = useBlogPost(category, slug);
-  const { data: relatedPosts, isLoading: relatedLoading } = useRelatedPosts(
-    post?.id,
-  );
+  const { data: relatedPosts } = useRelatedPosts(post?.id);
   const { data: comments, isLoading: commentsLoading } = useBlogComments(
     post?.id,
   );
