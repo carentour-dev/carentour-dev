@@ -7,10 +7,33 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MapPin, Clock, MessageCircle, FileText, CreditCard, Hotel, HeartHandshake, ArrowRight } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  MessageCircle,
+  FileText,
+  CreditCard,
+  Hotel,
+  HeartHandshake,
+  ArrowRight,
+} from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,7 +99,8 @@ export default function Contact() {
 
       toast({
         title: "Message Sent Successfully!",
-        description: "Thanks for reaching out—our coordinators see your request instantly and will be in touch within 2 hours.",
+        description:
+          "Thanks for reaching out—our coordinators see your request instantly and will be in touch within 2 hours.",
       });
 
       // Reset form after successful submission
@@ -98,26 +122,26 @@ export default function Contact() {
       icon: Phone,
       title: "Phone Support",
       content: "+20 100 1741666",
-      description: "Available 24/7 for emergencies"
+      description: "Available 24/7 for emergencies",
     },
     {
       icon: Mail,
       title: "Email Us",
       content: "info@carentour.com",
-      description: "Response within 2 hours"
+      description: "Response within 2 hours",
     },
     {
       icon: MapPin,
       title: "Visit Our Office",
       content: "Cairo Medical District, Egypt",
-      description: "Monday - Saturday: 9AM - 6PM"
+      description: "Monday - Saturday: 9AM - 6PM",
     },
     {
       icon: MessageCircle,
       title: "Live Chat",
       content: "Available on website",
-      description: "Instant support online"
-    }
+      description: "Instant support online",
+    },
   ];
 
   return (
@@ -129,7 +153,9 @@ export default function Contact() {
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Contact Us</Badge>
+              <Badge variant="outline" className="mb-6">
+                Contact Us
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Get in Touch with
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
@@ -137,8 +163,9 @@ export default function Contact() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Our medical coordinators are ready to help you plan your treatment journey.
-                Reach out for a free consultation or any questions about our services.
+                Our medical coordinators are ready to help you plan your
+                treatment journey. Reach out for a free consultation or any
+                questions about our services.
               </p>
             </div>
           </div>
@@ -152,14 +179,20 @@ export default function Contact() {
               <div>
                 <Card className="border-border/50 shadow-card-hover">
                   <CardHeader>
-                    <CardTitle className="text-2xl">Send Us a Message</CardTitle>
+                    <CardTitle className="text-2xl">
+                      Send Us a Message
+                    </CardTitle>
                     <p className="text-muted-foreground">
-                      Fill out the form below and we&apos;ll get back to you within 2 hours
+                      Fill out the form below and we&apos;ll get back to you
+                      within 2 hours
                     </p>
                   </CardHeader>
                   <CardContent>
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-6"
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -196,7 +229,11 @@ export default function Contact() {
                             <FormItem>
                               <FormLabel>Email Address *</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="john@example.com" {...field} />
+                                <Input
+                                  type="email"
+                                  placeholder="john@example.com"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -210,7 +247,10 @@ export default function Contact() {
                             <FormItem>
                               <FormLabel>Phone Number</FormLabel>
                               <FormControl>
-                                <Input placeholder="+1 (555) 123-4567" {...field} />
+                                <Input
+                                  placeholder="+1 (555) 123-4567"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -238,7 +278,10 @@ export default function Contact() {
                             <FormItem>
                               <FormLabel>Treatment of Interest</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g., Cardiac Surgery, LASIK, Dental Implants" {...field} />
+                                <Input
+                                  placeholder="e.g., Cardiac Surgery, LASIK, Dental Implants"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -263,14 +306,20 @@ export default function Contact() {
                           )}
                         />
 
-                         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                           {isSubmitting ? "Sending..." : "Send Message"}
-                         </Button>
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="w-full"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? "Sending..." : "Send Message"}
+                        </Button>
                       </form>
                     </Form>
 
                     <p className="text-sm text-muted-foreground text-center">
-                      By submitting this form, you agree to our privacy policy and terms of service.
+                      By submitting this form, you agree to our privacy policy
+                      and terms of service.
                     </p>
                   </CardContent>
                 </Card>
@@ -283,8 +332,9 @@ export default function Contact() {
                     Contact Information
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-8">
-                    Our dedicated team is available around the clock to assist you with any questions
-                    or concerns about your medical tourism journey.
+                    Our dedicated team is available around the clock to assist
+                    you with any questions or concerns about your medical
+                    tourism journey.
                   </p>
                 </div>
 
@@ -292,7 +342,10 @@ export default function Contact() {
                   {contactInfo.map((info, index) => {
                     const Icon = info.icon;
                     return (
-                      <Card key={index} className="border-border/50 hover:shadow-card-hover transition-spring">
+                      <Card
+                        key={index}
+                        className="border-border/50 hover:shadow-card-hover transition-spring"
+                      >
                         <CardContent className="p-6">
                           <div className="flex items-start space-x-4">
                             <div className="flex-shrink-0">
@@ -324,9 +377,12 @@ export default function Contact() {
                     <div className="flex items-center space-x-4">
                       <Clock className="h-8 w-8 text-accent" />
                       <div>
-                        <h3 className="font-semibold text-xl mb-2">24/7 Emergency Support</h3>
+                        <h3 className="font-semibold text-xl mb-2">
+                          24/7 Emergency Support
+                        </h3>
                         <p className="text-background/90 mb-2">
-                          For urgent medical questions or emergencies during your treatment
+                          For urgent medical questions or emergencies during
+                          your treatment
                         </p>
                         <p className="text-accent font-semibold">
                           Emergency Hotline: +20 100 1741666
@@ -347,7 +403,8 @@ export default function Contact() {
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground mb-8">
-              Find quick answers to common questions about medical tourism in Egypt
+              Find quick answers to common questions about medical tourism in
+              Egypt
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
@@ -356,27 +413,35 @@ export default function Contact() {
                 <CardContent className="p-6">
                   <div
                     className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => router.push('/faq#visa-travel')}
+                    onClick={() => router.push("/faq#visa-travel")}
                   >
                     <FileText className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-lg">Visa & Travel</h3>
                     <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
                   <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="visa-question-1" className="border-none">
+                    <AccordionItem
+                      value="visa-question-1"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         Do I need a visa to visit Egypt for medical treatment?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Most nationalities require a visa. We assist with medical visa applications with expedited processing.
+                        Most nationalities require a visa. We assist with
+                        medical visa applications with expedited processing.
                       </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="visa-question-2" className="border-none">
+                    <AccordionItem
+                      value="visa-question-2"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         What documents do I need?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Valid passport, visa, medical records, and insurance documentation. We provide a comprehensive checklist.
+                        Valid passport, visa, medical records, and insurance
+                        documentation. We provide a comprehensive checklist.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -388,27 +453,35 @@ export default function Contact() {
                 <CardContent className="p-6">
                   <div
                     className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => router.push('/faq#costs-payment')}
+                    onClick={() => router.push("/faq#costs-payment")}
                   >
                     <CreditCard className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-lg">Costs & Payment</h3>
                     <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
                   <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="cost-question-1" className="border-none">
+                    <AccordionItem
+                      value="cost-question-1"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         How much can I save compared to my home country?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Patients typically save 50-70% while receiving the same quality of care.
+                        Patients typically save 50-70% while receiving the same
+                        quality of care.
                       </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="cost-question-2" className="border-none">
+                    <AccordionItem
+                      value="cost-question-2"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         What payment methods do you accept?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Bank transfers, credit cards, and cash payments. Payment plans available for complex treatments.
+                        Bank transfers, credit cards, and cash payments. Payment
+                        plans available for complex treatments.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -420,27 +493,35 @@ export default function Contact() {
                 <CardContent className="p-6">
                   <div
                     className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => router.push('/faq#stay-transport')}
+                    onClick={() => router.push("/faq#stay-transport")}
                   >
                     <Hotel className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-lg">Stay & Transport</h3>
                     <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
                   <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="accommodation-question-1" className="border-none">
+                    <AccordionItem
+                      value="accommodation-question-1"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         What accommodation options are available?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        5-star hotels to comfortable apartments near hospitals, all carefully selected for comfort and proximity.
+                        5-star hotels to comfortable apartments near hospitals,
+                        all carefully selected for comfort and proximity.
                       </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="accommodation-question-2" className="border-none">
+                    <AccordionItem
+                      value="accommodation-question-2"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         Can my family accompany me?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Yes, we arrange accommodation for companions and provide guidance on visa requirements.
+                        Yes, we arrange accommodation for companions and provide
+                        guidance on visa requirements.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -452,27 +533,37 @@ export default function Contact() {
                 <CardContent className="p-6">
                   <div
                     className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => router.push('/faq#recovery-support')}
+                    onClick={() => router.push("/faq#recovery-support")}
                   >
                     <HeartHandshake className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-lg">Recovery & Support</h3>
+                    <h3 className="font-semibold text-lg">
+                      Recovery & Support
+                    </h3>
                     <ArrowRight className="h-4 w-4 ml-auto opacity-60" />
                   </div>
                   <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="recovery-question-1" className="border-none">
+                    <AccordionItem
+                      value="recovery-question-1"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         What follow-up care is provided?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Comprehensive aftercare including check-ups, medication management, and coordination with home physicians.
+                        Comprehensive aftercare including check-ups, medication
+                        management, and coordination with home physicians.
                       </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="recovery-question-2" className="border-none">
+                    <AccordionItem
+                      value="recovery-question-2"
+                      className="border-none"
+                    >
                       <AccordionTrigger className="text-sm font-medium hover:no-underline py-2">
                         What if complications arise after I return home?
                       </AccordionTrigger>
                       <AccordionContent className="text-xs text-muted-foreground pb-2">
-                        Our doctors remain available for consultation and can provide guidance to your local physicians.
+                        Our doctors remain available for consultation and can
+                        provide guidance to your local physicians.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -481,7 +572,10 @@ export default function Contact() {
             </div>
 
             <div className="mt-8">
-              <Button onClick={() => window.location.href = '/faq'} variant="outline">
+              <Button
+                onClick={() => (window.location.href = "/faq")}
+                variant="outline"
+              >
                 View All FAQs
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
