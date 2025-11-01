@@ -1,154 +1,191 @@
 "use client";
 
+import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, ArrowRight, Heart, Stethoscope, Plane } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Search, Loader2 } from "lucide-react";
+import { useBlogPosts } from "@/hooks/useBlogPosts";
+import { useBlogCategories } from "@/hooks/useBlogCategories";
+import { BlogPostCard } from "@/components/blog/BlogPostCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Blog() {
-  const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const blogPosts = [
+  const [selectedCategory, setSelectedCategory] = useState<
+    string | undefined
+  >();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(1);
+
+  const { data: categoriesData } = useBlogCategories();
+  const categories = categoriesData || [];
+
+  const { data: postsData, isLoading } = useBlogPosts({
+    category: selectedCategory,
+    search: searchTerm,
+    page,
+    limit: 12,
+  });
+
+  const posts = postsData?.posts || [];
+  const pagination = postsData?.pagination;
+  const featuredPost = posts.find((p: any) => p.featured);
+  const regularPosts = posts.filter(
+    (p: any) => !p.featured || p.id !== featuredPost?.id,
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchTerm(searchInput);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (categoryId?: string) => {
+    setSelectedCategory(categoryId);
+    setPage(1);
+  };
+
+  const oldStaticPosts = [
     {
       id: 1,
-      title: "Complete Guide to Medical Tourism in Egypt: What You Need to Know",
-      excerpt: "Discover everything about medical tourism in Egypt, from choosing the right hospital to understanding the process and costs involved.",
+      title:
+        "Complete Guide to Medical Tourism in Egypt: What You Need to Know",
+      excerpt:
+        "Discover everything about medical tourism in Egypt, from choosing the right hospital to understanding the process and costs involved.",
       category: "Medical Tourism",
       author: "Dr. Sarah Ahmed",
       readTime: "8 min read",
       date: "March 15, 2024",
       image: "/blog-medical-tourism.jpg",
-      featured: true
+      featured: true,
     },
     {
       id: 2,
       title: "LASIK Surgery in Egypt: Advanced Technology at Affordable Prices",
-      excerpt: "Learn about the latest LASIK technology available in Egypt and why thousands choose Egyptian eye clinics for vision correction.",
+      excerpt:
+        "Learn about the latest LASIK technology available in Egypt and why thousands choose Egyptian eye clinics for vision correction.",
       category: "Eye Surgery",
       author: "Dr. Mohamed Hassan",
       readTime: "6 min read",
       date: "March 12, 2024",
-      image: "/blog-lasik-surgery.jpg"
+      image: "/blog-lasik-surgery.jpg",
     },
     {
       id: 3,
-      title: "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
-      excerpt: "Explore Egypt&apos;s leading cardiac surgery service providers and the internationally trained surgeons performing life-saving procedures.",
+      title:
+        "Cardiac Surgery Excellence: Egypt&apos;s World-Class Heart Centers",
+      excerpt:
+        "Explore Egypt&apos;s leading cardiac surgery service providers and the internationally trained surgeons performing life-saving procedures.",
       category: "Cardiac Surgery",
       author: "Dr. Amira Farouk",
       readTime: "10 min read",
       date: "March 10, 2024",
-      image: "/blog-cardiac-surgery.jpg"
+      image: "/blog-cardiac-surgery.jpg",
     },
     {
       id: 4,
       title: "Dental Tourism: Why Egypt is Becoming the Top Destination",
-      excerpt: "From dental implants to cosmetic dentistry, discover why Egypt offers the perfect combination of quality and affordability.",
+      excerpt:
+        "From dental implants to cosmetic dentistry, discover why Egypt offers the perfect combination of quality and affordability.",
       category: "Dental Care",
       author: "Dr. Ahmed Mahmoud",
       readTime: "7 min read",
       date: "March 8, 2024",
-      image: "/blog-dental-care.jpg"
+      image: "/blog-dental-care.jpg",
     },
     {
       id: 5,
       title: "Recovery and Wellness: Making the Most of Your Medical Trip",
-      excerpt: "Tips for a smooth recovery while exploring Egypt&apos;s rich culture and history during your medical tourism journey.",
+      excerpt:
+        "Tips for a smooth recovery while exploring Egypt&apos;s rich culture and history during your medical tourism journey.",
       category: "Wellness",
       author: "Fatima El-Sayed",
       readTime: "5 min read",
       date: "March 5, 2024",
-      image: "/blog-wellness-recovery.jpg"
+      image: "/blog-wellness-recovery.jpg",
     },
     {
       id: 6,
       title: "Understanding Medical Insurance and International Coverage",
-      excerpt: "Navigate the complexities of medical insurance for international treatments and learn about coverage options.",
+      excerpt:
+        "Navigate the complexities of medical insurance for international treatments and learn about coverage options.",
       category: "Insurance",
       author: "Omar Rashid",
       readTime: "9 min read",
       date: "March 3, 2024",
-      image: "/blog-medical-insurance.jpg"
-    }
+      image: "/blog-medical-insurance.jpg",
+    },
   ];
-
-  const categories = [
-    { name: "All", icon: Stethoscope },
-    { name: "Medical Tourism", icon: Plane },
-    { name: "Cardiac Surgery", icon: Heart },
-    { name: "Eye Surgery", icon: "👁️" },
-    { name: "Dental Care", icon: "🦷" },
-    { name: "Wellness", icon: "🧘" },
-    { name: "Insurance", icon: "📋" }
-  ];
-
-  const featuredPost = blogPosts.find(post => post.featured);
-  const allPosts = blogPosts.filter(post => !post.featured);
-  
-  // Filter posts based on selected category
-  const filteredPosts = selectedCategory === "All" 
-    ? allPosts 
-    : allPosts.filter(post => post.category === selectedCategory);
-
-  // Update category counts based on actual posts
-  const getCategoryCount = (categoryName: string) => {
-    if (categoryName === "All") return blogPosts.length;
-    return blogPosts.filter(post => post.category === categoryName).length;
-  };
 
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <main>
         {/* Hero Section */}
         <section className="py-20 bg-gradient-card">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <Badge variant="outline" className="mb-6">Medical Tourism Blog</Badge>
+              <Badge variant="outline" className="mb-6">
+                Medical Tourism Blog
+              </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-                Health Insights & 
+                Health Insights &
                 <span className="block bg-gradient-hero bg-clip-text text-transparent">
                   Travel Guides
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Expert insights, patient stories, and comprehensive guides to help you make 
-                informed decisions about your medical tourism journey to Egypt.
+                Expert insights, patient stories, and comprehensive guides to
+                help you make informed decisions about your medical tourism
+                journey to Egypt.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Categories */}
+        {/* Search & Categories */}
         <section className="py-12 bg-background border-b border-border">
           <div className="container mx-auto px-4">
+            {/* Search */}
+            <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search articles..."
+                  className="pl-10"
+                />
+              </div>
+            </form>
+
+            {/* Categories */}
             <div className="flex flex-wrap justify-center gap-4">
-              {categories.map((category, index) => {
-                const Icon = category.icon;
-                const isActive = selectedCategory === category.name;
-                const count = getCategoryCount(category.name);
-                
+              <Button
+                variant={!selectedCategory ? "default" : "outline"}
+                onClick={() => handleCategoryChange(undefined)}
+              >
+                All
+                <Badge variant="secondary" className="ml-2">
+                  {pagination?.total || 0}
+                </Badge>
+              </Button>
+              {categories.map((category) => {
+                const isActive = selectedCategory === category.id;
                 return (
                   <Button
-                    key={index}
+                    key={category.id}
                     variant={isActive ? "default" : "outline"}
                     className="flex items-center space-x-2"
-                    onClick={() => setSelectedCategory(category.name)}
+                    onClick={() => handleCategoryChange(category.id)}
                   >
-                    {typeof Icon === "string" ? (
-                      <span className="text-lg">{Icon}</span>
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
                     <span>{category.name}</span>
                     <Badge variant="secondary" className="ml-2">
-                      {count}
+                      {category.post_count || 0}
                     </Badge>
                   </Button>
                 );
@@ -163,55 +200,15 @@ export default function Blog() {
             <div className="container mx-auto px-4">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8">
-                  <Badge variant="secondary" className="mb-4">Featured Article</Badge>
-                  <h2 className="text-2xl font-bold text-foreground">Editor&apos;s Pick</h2>
+                  <Badge variant="secondary" className="mb-4">
+                    Featured Article
+                  </Badge>
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Editor&apos;s Pick
+                  </h2>
                 </div>
-                
-                <Card className="border-border/50 overflow-hidden">
-                  <div className="grid grid-cols-1 lg:grid-cols-2">
-                    <div className="relative aspect-video lg:aspect-square bg-muted overflow-hidden">
-                      <Image
-                        src={featuredPost.image}
-                        alt={featuredPost.title}
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 1024px) 40vw, 100vw"
-                        priority
-                      />
-                    </div>
-                    <CardContent className="p-8 flex flex-col justify-center">
-                      <Badge variant="outline" className="w-fit mb-4">
-                        {featuredPost.category}
-                      </Badge>
-                      <CardTitle className="text-2xl mb-4">
-                        {featuredPost.title}
-                      </CardTitle>
-                      <p className="text-muted-foreground leading-relaxed mb-6">
-                        {featuredPost.excerpt}
-                      </p>
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{featuredPost.author}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{featuredPost.readTime}</span>
-                          </div>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{featuredPost.date}</span>
-                      </div>
-                      <Button 
-                        className="w-fit"
-                        onClick={() => router.push(`/blog/${featuredPost.id}`)}
-                      >
-                        Read Full Article
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </div>
-                </Card>
+
+                <BlogPostCard post={featuredPost} />
               </div>
             </div>
           </section>
@@ -222,82 +219,74 @@ export default function Blog() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-foreground mb-4">
-                {selectedCategory === "All" ? "Latest Articles" : `${selectedCategory} Articles`}
+                {searchTerm
+                  ? `Search Results: "${searchTerm}"`
+                  : selectedCategory
+                    ? `${categories.find((c) => c.id === selectedCategory)?.name} Articles`
+                    : "Latest Articles"}
               </h2>
               <p className="text-xl text-muted-foreground">
                 Stay informed with our latest insights and guides
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredPosts.length > 0 ? (
-                filteredPosts.map((post) => (
-                <Card key={post.id} className="border-border/50 hover:shadow-card-hover transition-spring overflow-hidden">
-                  <div className="relative aspect-video bg-muted overflow-hidden">
-                    <Image
-                      src={post.image}
-                      alt={post.title}
-                      fill
-                      className="object-cover"
-                      sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
-                    />
-                  </div>
-                  <CardHeader>
-                    <Badge variant="outline" className="w-fit mb-2">
-                      {post.category}
-                    </Badge>
-                    <CardTitle className="text-lg leading-tight">
-                      {post.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                      {post.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-1">
-                          <User className="h-3 w-3" />
-                          <span>{post.author}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{post.readTime}</span>
-                        </div>
-                      </div>
-                      <span>{post.date}</span>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => router.push(`/blog/${post.id}`)}
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[400px]" />
+                ))}
+              </div>
+            ) : regularPosts.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {regularPosts.map((post: any) => (
+                    <BlogPostCard key={post.id} post={post} />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-12">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
                     >
-                      Read More
+                      Previous
                     </Button>
-                  </CardContent>
-                </Card>
-              ))
+                    <span className="text-sm text-muted-foreground">
+                      Page {page} of {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setPage((p) => Math.min(pagination.totalPages, p + 1))
+                      }
+                      disabled={page === pagination.totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="col-span-full text-center py-12">
                 <p className="text-muted-foreground text-lg">
-                  No articles found in the {selectedCategory} category.
+                  {searchTerm
+                    ? `No articles found matching "${searchTerm}"`
+                    : "No articles found."}
                 </p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="mt-4"
-                  onClick={() => setSelectedCategory("All")}
+                  onClick={() => {
+                    setSelectedCategory(undefined);
+                    setSearchTerm("");
+                    setSearchInput("");
+                    setPage(1);
+                  }}
                 >
                   View All Articles
-                </Button>
-              </div>
-            )}
-            </div>
-
-            {filteredPosts.length > 0 && (
-              <div className="text-center mt-12">
-                <Button size="lg" variant="outline">
-                  Load More Articles
                 </Button>
               </div>
             )}
@@ -311,7 +300,8 @@ export default function Blog() {
               Stay Updated with Health Insights
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Subscribe to our newsletter for the latest medical tourism news, health tips, and exclusive insights
+              Subscribe to our newsletter for the latest medical tourism news,
+              health tips, and exclusive insights
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
               <input
@@ -330,5 +320,4 @@ export default function Blog() {
       <Footer />
     </div>
   );
-};
-
+}
