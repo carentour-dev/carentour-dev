@@ -14,7 +14,10 @@ export function useAdminInvalidate() {
   return invalidate;
 }
 
-export async function adminFetch<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+export async function adminFetch<T>(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<T> {
   let {
     data: { session },
   } = await supabase.auth.getSession();
@@ -56,8 +59,8 @@ export async function adminFetch<T>(input: RequestInfo, init?: RequestInit): Pro
       typeof payload?.details === "string"
         ? payload.details
         : typeof payload?.details?.message === "string"
-        ? payload.details.message
-        : null;
+          ? payload.details.message
+          : null;
 
     throw new Error(details ? `${message}: ${details}` : message);
   }
