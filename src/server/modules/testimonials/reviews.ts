@@ -51,7 +51,7 @@ export const testimonialReviews = {
     const { data, error } = await supabase
       .from("doctor_reviews")
       .select(
-        `id, patient_name, patient_country, patient_id, doctor_id, treatment_id, procedure_name, rating, review_text, recovery_time, is_verified, published, highlight, display_order, locale, media, created_at, updated_at, doctors(name), patients(full_name), treatments(name, slug)`
+        `id, patient_name, patient_country, patient_id, doctor_id, treatment_id, procedure_name, rating, review_text, recovery_time, is_verified, published, highlight, display_order, locale, media, created_at, updated_at, doctors(name), patients(full_name), treatments(name, slug)`,
       )
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false });
