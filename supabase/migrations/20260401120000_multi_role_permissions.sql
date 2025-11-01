@@ -190,9 +190,9 @@ BEGIN
     JOIN public.permissions AS perm ON perm.id = rp.permission_id
   )
   SELECT
-    COALESCE(bool_or(is_superuser), FALSE),
+    COALESCE(bool_or(role_memberships.is_superuser), FALSE),
     CASE
-      WHEN bool_or(is_superuser) THEN (
+      WHEN bool_or(role_memberships.is_superuser) THEN (
         SELECT COALESCE(array_agg(perm.slug ORDER BY perm.slug), ARRAY[]::TEXT[])
         FROM public.permissions AS perm
       )
@@ -557,19 +557,22 @@ AS $$
   SELECT public.has_any_role(auth.uid(), ARRAY['admin','editor']);
 $$;
 
--- Update newsletter subscription policy to use new helper
+DROP POLICY IF EXISTS admin_can_view_all_subscriptions
+ON public.newsletter_subscriptions;
 CREATE POLICY admin_can_view_all_subscriptions
 ON public.newsletter_subscriptions
 FOR SELECT
 USING (public.has_role(auth.uid(), 'admin'));
 
--- Update security events policy
+DROP POLICY IF EXISTS admin_can_view_security_events
+ON public.security_events;
 CREATE POLICY admin_can_view_security_events
 ON public.security_events
 FOR SELECT
 USING (public.has_role(auth.uid(), 'admin'));
 
--- Refresh storage policies related to CMS assets
+DROP POLICY IF EXISTS admin_editor_write_cms_assets
+ON storage.objects;
 CREATE POLICY admin_editor_write_cms_assets
 ON storage.objects
 FOR INSERT TO authenticated
@@ -578,6 +581,8 @@ WITH CHECK (
     AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
 );
 
+DROP POLICY IF EXISTS admin_editor_modify_cms_assets
+ON storage.objects;
 CREATE POLICY admin_editor_modify_cms_assets
 ON storage.objects
 FOR UPDATE TO authenticated
@@ -590,6 +595,8 @@ WITH CHECK (
     AND public.has_any_role(auth.uid(), ARRAY['admin', 'editor'])
 );
 
+DROP POLICY IF EXISTS admin_editor_delete_cms_assets
+ON storage.objects;
 CREATE POLICY admin_editor_delete_cms_assets
 ON storage.objects
 FOR DELETE TO authenticated
