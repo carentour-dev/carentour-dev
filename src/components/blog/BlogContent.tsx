@@ -14,6 +14,7 @@ interface BlogContentProps {
 export function BlogContent({ content, className }: BlogContentProps) {
   return (
     <div
+      data-toc-root
       className={cn(
         "prose prose-lg max-w-none",
         "prose-headings:font-bold prose-headings:text-foreground",
