@@ -10,7 +10,6 @@ import {
   BarChart3,
   Edit3,
   FileText,
-  MessageSquare,
   Eye,
   Plus,
   ArrowRight,
@@ -27,17 +26,10 @@ export default function BlogDashboard() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const [postsRes, commentsRes] = await Promise.all([
-        fetch("/api/cms/blog/posts?limit=1000", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }),
-        fetch("/api/cms/blog/comments?limit=1000", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }),
-      ]);
-
+      const postsRes = await fetch("/api/cms/blog/posts?limit=1000", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const postsData = await postsRes.json();
-      const commentsData = await commentsRes.json();
 
       const totalPosts = postsData.pagination?.total || 0;
       const publishedPosts =
@@ -45,9 +37,6 @@ export default function BlogDashboard() {
         0;
       const draftPosts =
         postsData.posts?.filter((p: any) => p.status === "draft").length || 0;
-      const pendingComments =
-        commentsData.comments?.filter((c: any) => c.status === "pending")
-          .length || 0;
       const totalViews =
         postsData.posts?.reduce(
           (sum: number, p: any) => sum + (p.view_count || 0),
@@ -58,7 +47,6 @@ export default function BlogDashboard() {
         totalPosts,
         publishedPosts,
         draftPosts,
-        pendingComments,
         totalViews,
       };
     },
@@ -87,7 +75,7 @@ export default function BlogDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Blog Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your blog posts, categories, and comments
+            Manage your blog posts, categories, tags, and authors
           </p>
         </div>
         <div className="flex gap-3">
@@ -104,7 +92,7 @@ export default function BlogDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Posts"
           value={stats?.totalPosts}
@@ -126,13 +114,6 @@ export default function BlogDashboard() {
           variant="warning"
         />
         <StatCard
-          title="Pending Comments"
-          value={stats?.pendingComments}
-          icon={<MessageSquare className="h-4 w-4" />}
-          loading={statsLoading}
-          variant="info"
-        />
-        <StatCard
           title="Total Views"
           value={stats?.totalViews}
           icon={<Eye className="h-4 w-4" />}
@@ -146,7 +127,7 @@ export default function BlogDashboard() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <QuickActionButton
               href="/cms/blog/posts"
               icon={<FileText className="h-5 w-5" />}
@@ -164,12 +145,6 @@ export default function BlogDashboard() {
               icon={<Edit3 className="h-5 w-5" />}
               title="Authors"
               description="Manage authors"
-            />
-            <QuickActionButton
-              href="/cms/blog/comments"
-              icon={<MessageSquare className="h-5 w-5" />}
-              title="Comments"
-              description="Moderate comments"
             />
           </div>
         </CardContent>
