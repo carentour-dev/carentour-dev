@@ -68,9 +68,6 @@ export function BlogPostEditor({
 
   // Settings
   const [featured, setFeatured] = useState(initialData?.featured || false);
-  const [enableComments, setEnableComments] = useState(
-    initialData?.enable_comments ?? true,
-  );
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -196,7 +193,6 @@ export function BlogPostEditor({
       seo_keywords: seoKeywords.trim(),
       og_image: ogImage.trim() || featuredImage.trim(),
       featured,
-      enable_comments: enableComments,
     };
 
     onSave(postData, status);
@@ -524,20 +520,6 @@ export function BlogPostEditor({
                 id="featured"
                 checked={featured}
                 onCheckedChange={setFeatured}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="comments">Enable Comments</Label>
-                <p className="text-xs text-muted-foreground">
-                  Allow readers to comment
-                </p>
-              </div>
-              <Switch
-                id="comments"
-                checked={enableComments}
-                onCheckedChange={setEnableComments}
               />
             </div>
           </CardContent>
