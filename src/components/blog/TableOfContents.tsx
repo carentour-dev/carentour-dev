@@ -75,7 +75,9 @@ export function TableOfContents({
           {items.map((item) => (
             <li
               key={item.id}
-              style={{ paddingLeft: `${(item.level - 2) * 12}px` }}
+              style={{
+                paddingLeft: `${Math.max(0, (item.level - 2) * 12)}px`,
+              }}
             >
               <a
                 href={`#${item.id}`}
