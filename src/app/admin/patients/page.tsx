@@ -56,6 +56,9 @@ const optionalUuid = z.preprocess((value) => {
   return value;
 }, z.string().uuid().nullable().optional());
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[ab89][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const patientSchema = z
   .object({
     user_id: optionalUuid,
@@ -164,6 +167,9 @@ export default function AdminPatientsPage() {
   const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(
     null,
   );
+  const [startJourneyLinkId, setStartJourneyLinkId] = useState<string | null>(
+    null,
+  );
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -207,13 +213,41 @@ export default function AdminPatientsPage() {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    onSuccess: (_patient, payload) => {
+    onSuccess: async (patient, payload) => {
+      const startJourneyId = startJourneyLinkId;
+      let linkError: Error | null = null;
+
+      if (startJourneyId) {
+        try {
+          await adminFetch(`/api/admin/start-journey/${startJourneyId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ patient_id: patient.id }),
+          });
+          invalidate(["admin", "start-journey-submissions"]);
+        } catch (error) {
+          linkError =
+            error instanceof Error
+              ? error
+              : new Error("Failed to link Start Journey submission.");
+        } finally {
+          setStartJourneyLinkId(null);
+        }
+      }
+
       invalidate(QUERY_KEY);
       closeDialog();
       toast({
         title: "Patient added",
         description: `${payload?.full_name ?? "Patient"} has been captured.`,
       });
+
+      if (linkError) {
+        toast({
+          title: "Linking issue",
+          description: `${linkError.message} Link the Start Journey submission manually from the Start Journey tab.`,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -345,6 +379,7 @@ export default function AdminPatientsPage() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingPatient(null);
+    setStartJourneyLinkId(null);
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -364,29 +399,80 @@ export default function AdminPatientsPage() {
     const fullName = (searchParams.get("fullName") ?? "").trim();
     const email = (searchParams.get("email") ?? "").trim();
     const phone = (searchParams.get("phone") ?? "").trim();
+    const nationality = (searchParams.get("nationality") ?? "").trim();
+    const preferredLanguage = (
+      searchParams.get("preferredLanguage") ?? ""
+    ).trim();
+    const preferredCurrency = (
+      searchParams.get("preferredCurrency") ?? ""
+    ).trim();
+    const dateOfBirthParam = (searchParams.get("dateOfBirth") ?? "").trim();
+    const sexParam = (searchParams.get("sex") ?? "").trim();
+    const userIdParam = (searchParams.get("userId") ?? "").trim();
+    const portalPassword = (searchParams.get("portalPassword") ?? "").trim();
+    const fromStartJourneyId = (
+      searchParams.get("fromStartJourneyId") ?? ""
+    ).trim();
+
+    const normalizedDateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirthParam)
+      ? dateOfBirthParam
+      : "";
+
+    const validSexValues = [
+      "female",
+      "male",
+      "non_binary",
+      "prefer_not_to_say",
+    ] as const;
+    const normalizedSex = validSexValues.includes(
+      sexParam as (typeof validSexValues)[number],
+    )
+      ? (sexParam as (typeof validSexValues)[number])
+      : undefined;
+
+    const normalizedUserId = UUID_PATTERN.test(userIdParam) ? userIdParam : "";
+    const normalizedStartJourneyId = UUID_PATTERN.test(fromStartJourneyId)
+      ? fromStartJourneyId
+      : null;
+
+    if (normalizedStartJourneyId) {
+      setStartJourneyLinkId(normalizedStartJourneyId);
+    }
 
     setEditingPatient(null);
     setDialogOpen(true);
     form.reset({
-      user_id: "",
+      user_id: normalizedUserId,
       full_name: fullName,
       contact_email: email,
       contact_phone: phone,
-      nationality: "",
-      preferred_language: "",
-      preferred_currency: "",
-      date_of_birth: "",
-      sex: undefined,
+      nationality,
+      preferred_language: preferredLanguage,
+      preferred_currency: preferredCurrency,
+      date_of_birth: normalizedDateOfBirth,
+      sex: normalizedSex,
       notes: "",
-      email_verified: false,
-      portal_password: "",
-      portal_password_confirm: "",
+      email_verified: portalPassword.length > 0,
+      portal_password: portalPassword,
+      portal_password_confirm: portalPassword,
     });
 
     const params = new URLSearchParams(searchParams.toString());
-    ["new", "fullName", "email", "phone", "fromRequestId"].forEach((key) =>
-      params.delete(key),
-    );
+    [
+      "new",
+      "fullName",
+      "email",
+      "phone",
+      "fromRequestId",
+      "nationality",
+      "preferredLanguage",
+      "preferredCurrency",
+      "dateOfBirth",
+      "sex",
+      "userId",
+      "portalPassword",
+      "fromStartJourneyId",
+    ].forEach((key) => params.delete(key));
     const nextUrl =
       params.size > 0
         ? `/admin/patients?${params.toString()}`
