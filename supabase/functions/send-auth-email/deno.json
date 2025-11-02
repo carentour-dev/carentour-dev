@@ -1,0 +1,15 @@
+{
+  "imports": {
+    "std/http/server": "https://deno.land/std@0.190.0/http/server.ts",
+    "standardwebhooks": "https://esm.sh/standardwebhooks@1.0.0",
+    "resend": "npm:resend@2.0.0"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "proseWrap": "preserve"
+  }
+}
