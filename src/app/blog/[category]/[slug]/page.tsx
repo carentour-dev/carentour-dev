@@ -7,10 +7,9 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, User, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Eye } from "lucide-react";
 import { useBlogPost } from "@/hooks/useBlogPost";
 import { useRelatedPosts } from "@/hooks/useRelatedPosts";
-import { useBlogComments } from "@/hooks/useBlogComments";
 import { useTableOfContents } from "@/hooks/useTableOfContents";
 import { BlogContent } from "@/components/blog/BlogContent";
 import { TableOfContents } from "@/components/blog/TableOfContents";
@@ -19,8 +18,6 @@ import { ReadingProgress } from "@/components/blog/ReadingProgress";
 import { CategoryBadge } from "@/components/blog/CategoryBadge";
 import { TagList } from "@/components/blog/TagList";
 import { AuthorCard } from "@/components/blog/AuthorCard";
-import { CommentForm } from "@/components/blog/CommentForm";
-import { CommentThread } from "@/components/blog/CommentThread";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
 import { NewsletterSubscribe } from "@/components/blog/NewsletterSubscribe";
 // SEO metadata is handled by generateMetadata export in server components
@@ -37,9 +34,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
 
   const { data: post, isLoading, error } = useBlogPost(category, slug);
   const { data: relatedPosts } = useRelatedPosts(post?.id);
-  const { data: comments, isLoading: commentsLoading } = useBlogComments(
-    post?.id,
-  );
 
   // All hooks must be called before conditional returns (Rules of Hooks)
   const tocItems = useTableOfContents(post?.content);
@@ -91,9 +85,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
       </div>
     );
   }
-
-  const approvedComments =
-    comments?.filter((c: any) => c.status === "approved") || [];
 
   return (
     <>
@@ -228,41 +219,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
               </div>
             </div>
           </section>
-
-          {/* Comments Section */}
-          {post.enable_comments && (
-            <section className="py-16 bg-muted/30">
-              <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto">
-                  <h2 className="text-2xl font-bold text-foreground mb-8">
-                    Comments ({approvedComments.length})
-                  </h2>
-
-                  {/* Comment Form */}
-                  <div className="mb-12">
-                    <CommentForm postId={post.id} />
-                  </div>
-
-                  {/* Comment Thread */}
-                  {commentsLoading ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-32" />
-                      <Skeleton className="h-32" />
-                    </div>
-                  ) : approvedComments.length > 0 ? (
-                    <CommentThread
-                      comments={approvedComments}
-                      postId={post.id}
-                    />
-                  ) : (
-                    <p className="text-center text-muted-foreground py-8">
-                      No comments yet. Be the first to share your thoughts!
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
 
           {/* Newsletter Subscription */}
           <section className="py-16 bg-muted/30">
