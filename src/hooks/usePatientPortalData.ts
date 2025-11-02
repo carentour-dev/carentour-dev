@@ -8,6 +8,8 @@ import type { Database } from "@/integrations/supabase/types";
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
 type ContactRequestRow =
   Database["public"]["Tables"]["contact_requests"]["Row"];
+type JourneySubmissionRow =
+  Database["public"]["Tables"]["start_journey_submissions"]["Row"];
 type ConsultationRow =
   Database["public"]["Tables"]["patient_consultations"]["Row"];
 type AppointmentRow =
@@ -18,6 +20,21 @@ type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
 type ServiceProviderRow =
   Database["public"]["Tables"]["service_providers"]["Row"];
 type PatientStoryRow = Database["public"]["Tables"]["patient_stories"]["Row"];
+
+export interface PatientPortalRequest {
+  id: string;
+  source: "contact" | "start_journey";
+  status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  resolved_at: string | null;
+  request_type: string | null;
+  treatment: string | null;
+  origin: string | null;
+  notes: string | null;
+  contact_request?: ContactRequestRow;
+  journey_submission?: JourneySubmissionRow;
+}
 
 export type PatientConsultation = ConsultationRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
@@ -60,7 +77,7 @@ const STAFF_ROLE_SLUGS = new Set([
 
 export interface PatientPortalSnapshot {
   patient: PatientRow | null;
-  requests: ContactRequestRow[];
+  requests: PatientPortalRequest[];
   consultations: PatientConsultation[];
   appointments: PatientAppointment[];
   reviews: PatientReview[];
@@ -251,79 +268,142 @@ const fetchPatientPortalSnapshot = async (
 
   const patient = await ensurePatientRecord(user);
 
-  const [requests, consultations, appointments, reviews, stories] =
-    await Promise.all([
-      supabase
-        .from("contact_requests")
-        .select(
-          "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, created_at, updated_at, resolved_at",
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("patient_consultations")
-        .select(
-          "id, patient_id, user_id, contact_request_id, doctor_id, status, scheduled_at, duration_minutes, timezone, location, meeting_url, notes, created_at, updated_at, doctors(id, name, title, avatar_url), contact_requests(id, status, request_type, origin)",
-        )
-        .eq("patient_id", patient.id)
-        .order("scheduled_at", { ascending: true }),
-      supabase
-        .from("patient_appointments")
-        .select(
-          "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), service_provider:service_providers(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
-        )
-        .eq("patient_id", patient.id)
-        .order("starts_at", { ascending: true }),
-      supabase
-        .from("doctor_reviews")
-        .select(
-          "id, doctor_id, treatment_id, patient_id, rating, review_text, recovery_time, is_verified, published, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
-        )
-        .eq("patient_id", patient.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("patient_stories")
-        .select(
-          "id, patient_id, doctor_id, treatment_id, headline, excerpt, body_markdown, hero_image, locale, published, featured, display_order, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
-        )
-        .eq("patient_id", patient.id)
-        .order("created_at", { ascending: false }),
-    ]);
+  const [
+    contactRequestsResult,
+    journeySubmissionsResult,
+    consultationsResult,
+    appointmentsResult,
+    reviewsResult,
+    storiesResult,
+  ] = await Promise.all([
+    supabase
+      .from("contact_requests")
+      .select(
+        "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, created_at, updated_at, resolved_at",
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("start_journey_submissions")
+      .select(
+        "id, user_id, patient_id, status, treatment_name, procedure_name, origin, notes, created_at, updated_at, resolved_at",
+      )
+      .or(`user_id.eq.${user.id},patient_id.eq.${patient.id}`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("patient_consultations")
+      .select(
+        "id, patient_id, user_id, contact_request_id, doctor_id, status, scheduled_at, duration_minutes, timezone, location, meeting_url, notes, created_at, updated_at, doctors(id, name, title, avatar_url), contact_requests(id, status, request_type, origin)",
+      )
+      .eq("patient_id", patient.id)
+      .order("scheduled_at", { ascending: true }),
+    supabase
+      .from("patient_appointments")
+      .select(
+        "id, patient_id, user_id, doctor_id, facility_id, consultation_id, title, appointment_type, status, starts_at, ends_at, timezone, location, pre_visit_instructions, notes, created_at, updated_at, doctors(id, name, title, avatar_url), service_provider:service_providers(id, name, facility_type), patient_consultations(id, scheduled_at, status)",
+      )
+      .eq("patient_id", patient.id)
+      .order("starts_at", { ascending: true }),
+    supabase
+      .from("doctor_reviews")
+      .select(
+        "id, doctor_id, treatment_id, patient_id, rating, review_text, recovery_time, is_verified, published, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
+      )
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("patient_stories")
+      .select(
+        "id, patient_id, doctor_id, treatment_id, headline, excerpt, body_markdown, hero_image, locale, published, featured, display_order, created_at, updated_at, doctors(id, name, title, avatar_url), treatments(id, name, slug)",
+      )
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const requestError = requests.error;
-  if (requestError) {
-    throw new Error(requestError.message ?? "Failed to load contact requests");
+  const contactError = contactRequestsResult.error;
+  if (contactError) {
+    throw new Error(contactError.message ?? "Failed to load contact requests");
   }
 
-  const consultationsError = consultations.error;
+  const journeyError = journeySubmissionsResult.error;
+  if (journeyError) {
+    throw new Error(
+      journeyError.message ?? "Failed to load Start Your Journey submissions",
+    );
+  }
+
+  const consultationsError = consultationsResult.error;
   if (consultationsError) {
     throw new Error(
       consultationsError.message ?? "Failed to load consultations",
     );
   }
 
-  const appointmentsError = appointments.error;
+  const appointmentsError = appointmentsResult.error;
   if (appointmentsError) {
     throw new Error(appointmentsError.message ?? "Failed to load appointments");
   }
 
-  const reviewsError = reviews.error;
+  const reviewsError = reviewsResult.error;
   if (reviewsError) {
     throw new Error(reviewsError.message ?? "Failed to load reviews");
   }
 
-  const storiesError = stories.error;
+  const storiesError = storiesResult.error;
   if (storiesError) {
     throw new Error(storiesError.message ?? "Failed to load stories");
   }
 
+  const portalRequests: PatientPortalRequest[] = [
+    ...(contactRequestsResult.data ?? []).map((request) => ({
+      id: request.id,
+      source: "contact" as const,
+      status: request.status ?? null,
+      created_at: request.created_at ?? null,
+      updated_at: request.updated_at ?? null,
+      resolved_at: request.resolved_at ?? null,
+      request_type: request.request_type ?? "general",
+      treatment:
+        request.treatment && request.treatment.trim().length > 0
+          ? request.treatment
+          : null,
+      origin: request.origin ?? "web",
+      notes: request.notes ?? null,
+      contact_request: request,
+    })),
+    ...(journeySubmissionsResult.data ?? []).map((submission) => {
+      const treatmentParts = [
+        submission.treatment_name?.trim(),
+        submission.procedure_name?.trim(),
+      ].filter(
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
+      );
+
+      return {
+        id: submission.id,
+        source: "start_journey" as const,
+        status: submission.status ?? null,
+        created_at: submission.created_at ?? null,
+        updated_at: submission.updated_at ?? null,
+        resolved_at: submission.resolved_at ?? null,
+        request_type: "start_journey",
+        treatment:
+          treatmentParts.length > 0 ? treatmentParts.join(" — ") : null,
+        origin: submission.origin ?? "web",
+        notes: submission.notes ?? null,
+        journey_submission: submission,
+      };
+    }),
+  ];
+
   return {
     patient,
-    requests: requests.data ?? [],
-    consultations: (consultations.data ?? []) as PatientConsultation[],
-    appointments: (appointments.data ?? []) as PatientAppointment[],
-    reviews: (reviews.data ?? []) as PatientReview[],
-    stories: (stories.data ?? []) as PatientStory[],
+    requests: portalRequests,
+    consultations: (consultationsResult.data ?? []) as PatientConsultation[],
+    appointments: (appointmentsResult.data ?? []) as PatientAppointment[],
+    reviews: (reviewsResult.data ?? []) as PatientReview[],
+    stories: (storiesResult.data ?? []) as PatientStory[],
   };
 };
 
