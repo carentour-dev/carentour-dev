@@ -203,6 +203,52 @@ const formatTravelDates = (travelDates: any) => {
   return `${formattedFrom} – ${formattedTo}`;
 };
 
+const isGuestSubmission = (submission: StartJourneySubmission) => {
+  return !submission.user_id;
+};
+
+const buildPatientPrefillParams = (submission: StartJourneySubmission) => {
+  const params = new URLSearchParams({
+    new: "1",
+    fromStartJourneyId: submission.id,
+  });
+
+  const fullName =
+    `${submission.first_name ?? ""} ${submission.last_name ?? ""}`
+      .replace(/\s+/g, " ")
+      .trim();
+  if (fullName.length > 0) {
+    params.set("fullName", fullName);
+  }
+
+  if (submission.email) {
+    params.set("email", submission.email);
+  }
+
+  if (submission.phone) {
+    params.set("phone", submission.phone);
+  }
+
+  if (submission.country) {
+    params.set("nationality", submission.country);
+  }
+
+  const preferredLanguage = submission.language_preference?.trim();
+  if (preferredLanguage) {
+    params.set("preferredLanguage", preferredLanguage);
+  }
+
+  return params;
+};
+
+const getActionButtonLabel = (submission: StartJourneySubmission) => {
+  if (!submission.patient_id && isGuestSubmission(submission)) {
+    return "Add Patient";
+  }
+
+  return "Schedule";
+};
+
 export default function AdminStartJourneyPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -362,6 +408,12 @@ export default function AdminStartJourneyPage() {
     const hasLinkedPatient = Boolean(submission.patient_id);
 
     if (!hasLinkedPatient) {
+      if (isGuestSubmission(submission)) {
+        const params = buildPatientPrefillParams(submission);
+        router.push(`/admin/patients?${params.toString()}`);
+        return;
+      }
+
       openDialogFor(submission);
       return;
     }
@@ -647,7 +699,7 @@ export default function AdminStartJourneyPage() {
                         onClick={() => handleSchedule(submission)}
                         className="w-full"
                       >
-                        Schedule
+                        {getActionButtonLabel(submission)}
                       </Button>
                       <div className="space-y-1 text-xs text-muted-foreground md:text-right">
                         <p className="uppercase tracking-wide text-muted-foreground/80">
