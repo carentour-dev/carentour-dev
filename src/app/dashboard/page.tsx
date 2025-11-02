@@ -85,8 +85,43 @@ import {
 const requestStatusLabels = {
   new: "New",
   in_progress: "In progress",
+  reviewing: "Reviewing",
+  contacted: "Contacted",
+  consultation_scheduled: "Consultation scheduled",
   resolved: "Resolved",
+  completed: "Completed",
+  archived: "Archived",
 } as const;
+
+const resolvedRequestStatuses = new Set(["resolved", "completed", "archived"]);
+
+const isActiveRequestStatus = (status: string | null | undefined) => {
+  if (!status) return true;
+  return !resolvedRequestStatuses.has(status);
+};
+
+const formatRequestStatus = (status: string | null | undefined) => {
+  if (!status) return "Pending";
+  const label = requestStatusLabels[status as keyof typeof requestStatusLabels];
+  if (label) return label;
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+const getRequestTitle = (
+  source: "contact" | "start_journey",
+  requestType: string | null,
+) => {
+  if (source === "start_journey") {
+    return "Start Your Journey submission";
+  }
+  if (requestType === "consultation") {
+    return "Consultation request";
+  }
+  return "General inquiry";
+};
 
 const consultationStatusLabels = {
   scheduled: "Scheduled",
@@ -207,20 +242,25 @@ const scrollToSection = (id: string) => {
   section?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
-const statusBadgeVariant = (status: string) => {
+const statusBadgeVariant = (status: string | null | undefined) => {
+  if (!status) return "default" as const;
   switch (status) {
     case "new":
     case "scheduled":
     case "confirmed":
+    case "consultation_scheduled":
       return "default" as const;
     case "in_progress":
     case "rescheduled":
+    case "reviewing":
+    case "contacted":
       return "secondary" as const;
     case "completed":
       return "secondary" as const;
     case "cancelled":
     case "no_show":
     case "resolved":
+    case "archived":
       return "outline" as const;
     default:
       return "secondary" as const;
@@ -741,7 +781,7 @@ export default function DashboardPage() {
   const isLoading = authLoading || profileLoading || portalLoading;
 
   const pendingRequests = useMemo(
-    () => requests.filter((request) => request.status !== "resolved"),
+    () => requests.filter((request) => isActiveRequestStatus(request.status)),
     [requests],
   );
 
@@ -1276,15 +1316,16 @@ export default function DashboardPage() {
                     <div className="space-y-4">
                       {sortedRequests.slice(0, 5).map((request) => (
                         <div
-                          key={request.id}
+                          key={`${request.source}-${request.id}`}
                           className="rounded-xl border border-border/60 bg-muted/10 p-4 transition-colors hover:border-primary/30"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="space-y-1">
                               <p className="text-sm font-semibold text-foreground">
-                                {request.request_type === "consultation"
-                                  ? "Consultation request"
-                                  : "General inquiry"}
+                                {getRequestTitle(
+                                  request.source,
+                                  request.request_type,
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 Submitted {formatDateTime(request.created_at)}
@@ -1294,7 +1335,7 @@ export default function DashboardPage() {
                               variant={statusBadgeVariant(request.status)}
                               className="capitalize"
                             >
-                              {requestStatusLabels[request.status]}
+                              {formatRequestStatus(request.status)}
                             </Badge>
                           </div>
                           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -1314,7 +1355,7 @@ export default function DashboardPage() {
                                 Origin
                               </p>
                               <p className="text-sm capitalize">
-                                {request.origin ?? "web"}
+                                {(request.origin ?? "web").replace(/_/g, " ")}
                               </p>
                             </div>
                           </div>
