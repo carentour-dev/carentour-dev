@@ -20,6 +20,20 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Eye, Loader2, X, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () =>
+    import("@/components/cms/RichTextEditor").then((mod) => mod.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded-lg bg-background p-4 text-sm text-muted-foreground">
+        Loading editor...
+      </div>
+    ),
+  },
+);
 
 interface BlogPostEditorProps {
   initialData?: any;
@@ -41,12 +55,34 @@ export function BlogPostEditor({
   );
 
   // Content
-  const [contentType, setContentType] = useState<
-    "richtext" | "markdown" | "html"
-  >(initialData?.content?.type || "html");
-  const [contentData, setContentData] = useState(
-    initialData?.content?.data || "",
+  const initialContentType =
+    typeof initialData?.content?.type === "string"
+      ? initialData?.content?.type.toLowerCase()
+      : null;
+  type ContentFormat = "richtext" | "markdown" | "html";
+  const [contentType, setContentType] = useState<ContentFormat>(
+    initialContentType === "markdown" || initialContentType === "html"
+      ? (initialContentType as ContentFormat)
+      : "richtext",
   );
+  const initialContentString =
+    typeof initialData?.content?.data === "string"
+      ? initialData.content.data
+      : "";
+  const [contentValues, setContentValues] = useState<
+    Record<ContentFormat, string>
+  >({
+    html: initialContentString,
+    markdown: initialContentString,
+    richtext: initialContentString,
+  });
+
+  const handleContentValueChange = (type: ContentFormat, value: string) => {
+    setContentValues((prev) => ({
+      ...prev,
+      [type]: value,
+    }));
+  };
 
   // Metadata
   const [categoryId, setCategoryId] = useState(initialData?.category_id || "");
@@ -182,7 +218,7 @@ export function BlogPostEditor({
       excerpt: excerpt.trim(),
       content: {
         type: contentType,
-        data: contentData,
+        data: contentValues[contentType],
       },
       featured_image: featuredImage.trim(),
       category_id: categoryId || null,
@@ -257,7 +293,7 @@ export function BlogPostEditor({
                 <Label>Content Format</Label>
                 <Tabs
                   value={contentType}
-                  onValueChange={(v) => setContentType(v as any)}
+                  onValueChange={(v) => setContentType(v as ContentFormat)}
                 >
                   <TabsList>
                     <TabsTrigger value="html">HTML</TabsTrigger>
@@ -267,25 +303,38 @@ export function BlogPostEditor({
                 </Tabs>
               </div>
 
-              {/* Simple textarea for now - can be enhanced with Monaco/TipTap later */}
-              <Textarea
-                value={contentData}
-                onChange={(e) => setContentData(e.target.value)}
-                placeholder={
-                  contentType === "html"
-                    ? "Enter HTML content..."
-                    : contentType === "markdown"
-                      ? "Enter Markdown content..."
-                      : "Enter content..."
-                }
-                rows={20}
-                className="font-mono text-sm"
-              />
+              {contentType === "richtext" ? (
+                <RichTextEditor
+                  value={contentValues.richtext}
+                  onChange={(val) => handleContentValueChange("richtext", val)}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <Textarea
+                    value={contentValues[contentType]}
+                    onChange={(e) =>
+                      handleContentValueChange(contentType, e.target.value)
+                    }
+                    placeholder={
+                      contentType === "html"
+                        ? "Enter HTML content..."
+                        : "Enter Markdown content..."
+                    }
+                    rows={20}
+                    className="font-mono text-sm"
+                  />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 {contentType === "html" && "Use HTML tags for formatting"}
                 {contentType === "markdown" &&
                   "Use Markdown syntax for formatting"}
-                {contentType === "richtext" && "Plain text content"}
+                {contentType === "richtext" &&
+                  "Use the toolbar to style your content. Content is stored as HTML."}
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                Switching formats keeps separate values per tab and does not
+                automatically convert between HTML, Markdown, and Rich Text.
               </p>
             </div>
           </CardContent>
