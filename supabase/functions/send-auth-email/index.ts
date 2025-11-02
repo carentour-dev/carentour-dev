@@ -1,11 +1,12 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0';
-import { Resend } from 'npm:resend@2.0.0';
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET');
+import { serve } from "std/http/server";
+import { Webhook } from "standardwebhooks";
+import { Resend } from "resend";
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const hookSecret = Deno.env.get("SEND_EMAIL_HOOK_SECRET");
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 // HTML template function
 function createConfirmationEmailHTML(params) {
@@ -72,89 +73,99 @@ function createConfirmationEmailHTML(params) {
     </html>
   `;
 }
-const handler = async (req)=>{
+const handler = async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
       status: 405,
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
   try {
     const payload = await req.text();
     const headers = Object.fromEntries(req.headers);
-    console.log('Received auth webhook:', {
-      headers: Object.keys(headers)
+    console.log("Received auth webhook:", {
+      headers: Object.keys(headers),
     });
     const wh = new Webhook(hookSecret);
-    const { user, email_data: { token, token_hash, redirect_to, email_action_type } } = wh.verify(payload, headers);
-    console.log('Processing auth email:', {
+    const {
+      user,
+      email_data: { token, token_hash, redirect_to, email_action_type },
+    } = wh.verify(payload, headers);
+    console.log("Processing auth email:", {
       email: user.email,
-      action_type: email_action_type
+      action_type: email_action_type,
     });
     // Only handle signup confirmations
-    if (email_action_type !== 'signup') {
-      console.log('Ignoring non-signup email type:', email_action_type);
-      return new Response(JSON.stringify({
-        message: 'Email type not handled'
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
+    if (email_action_type !== "signup") {
+      console.log("Ignoring non-signup email type:", email_action_type);
+      return new Response(
+        JSON.stringify({
+          message: "Email type not handled",
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        },
+      );
     }
     // Generate the HTML email
     const html = createConfirmationEmailHTML({
-      supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+      supabase_url: Deno.env.get("SUPABASE_URL") ?? "",
       token,
       token_hash,
       redirect_to,
       email_action_type,
-      user_email: user.email
+      user_email: user.email,
     });
-    console.log('Sending confirmation email to:', user.email);
+    console.log("Sending confirmation email to:", user.email);
     const { data, error } = await resend.emails.send({
-      from: 'Care N Tour <info@carentour.com>',
-      to: [
-        user.email
-      ],
-      subject: 'Confirm your Care N Tour Account',
-      html
+      from: "Care N Tour <info@carentour.com>",
+      to: [user.email],
+      subject: "Confirm your Care N Tour Account",
+      html,
     });
     if (error) {
-      console.error('Error sending email:', error);
+      console.error("Error sending email:", error);
       throw error;
     }
-    console.log('Email sent successfully:', data?.id);
-    return new Response(JSON.stringify({
-      success: true,
-      email_id: data?.id
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
-    });
+    console.log("Email sent successfully:", data?.id);
+    return new Response(
+      JSON.stringify({
+        success: true,
+        email_id: data?.id,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   } catch (error) {
-    console.error('Error in send-auth-email function:', error);
-    return new Response(JSON.stringify({
-      error: error.message,
-      success: false
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
-    });
+    console.error("Error in send-auth-email function:", error);
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        success: false,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   }
 };
 serve(handler);
