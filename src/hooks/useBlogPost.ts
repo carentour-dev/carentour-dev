@@ -14,7 +14,6 @@ export interface BlogPostDetail {
   publish_date?: string;
   reading_time?: number;
   view_count?: number;
-  enable_comments?: boolean;
   featured?: boolean;
   seo_title?: string;
   seo_description?: string;
