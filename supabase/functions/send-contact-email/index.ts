@@ -1,23 +1,25 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
+import { serve } from "std/http/server";
+import { Resend } from "resend";
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
-const handler = async (req)=>{
+const handler = async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
   try {
-    const { firstName, lastName, email, phone, country, treatment, message } = await req.json();
+    const { firstName, lastName, email, phone, country, treatment, message } =
+      await req.json();
     console.log("Processing contact form submission:", {
       firstName,
       lastName,
-      email
+      email,
     });
     // Send confirmation email to the user
     const userEmailResponse = await resend.emails.send({
@@ -34,9 +36,9 @@ const handler = async (req)=>{
             <h3 style="margin-top: 0;">Your message details:</h3>
             <p><strong>Name:</strong> ${firstName} ${lastName}</p>
             <p><strong>Email:</strong> ${email}</p>
-            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ''}
-            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ''}
+            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ""}
+            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ""}
             <p><strong>Message:</strong></p>
             <p style="background-color: white; padding: 15px; border-radius: 4px;">${message}</p>
           </div>
@@ -54,14 +56,12 @@ const handler = async (req)=>{
             <p>Email: info@carentour.com | Website: www.carentour.com</p>
           </div>
         </div>
-      `
+      `,
     });
     // Send notification email to the business
     const businessEmailResponse = await resend.emails.send({
       from: "Care N Tour Contact Form <contact@carentour.com>",
-      to: [
-        "contact@carentour.com"
-      ],
+      to: ["contact@carentour.com"],
       subject: `New Contact Form Submission - ${firstName} ${lastName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -71,9 +71,9 @@ const handler = async (req)=>{
             <h3 style="margin-top: 0; color: #dc2626;">Contact Details:</h3>
             <p><strong>Name:</strong> ${firstName} ${lastName}</p>
             <p><strong>Email:</strong> ${email}</p>
-            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ''}
-            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ''}
+            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ""}
+            ${treatment ? `<p><strong>Treatment of Interest:</strong> ${treatment}</p>` : ""}
           </div>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -87,34 +87,40 @@ const handler = async (req)=>{
             <p>Submitted at: ${new Date().toLocaleString()}</p>
           </div>
         </div>
-      `
+      `,
     });
     console.log("User email sent successfully:", userEmailResponse);
     console.log("Business email sent successfully:", businessEmailResponse);
-    return new Response(JSON.stringify({
-      success: true,
-      message: "Emails sent successfully",
-      userEmailId: userEmailResponse.data?.id,
-      businessEmailId: businessEmailResponse.data?.id
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Emails sent successfully",
+        userEmailId: userEmailResponse.data?.id,
+        businessEmailId: businessEmailResponse.data?.id,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   } catch (error) {
     console.error("Error in send-contact-email function:", error);
-    return new Response(JSON.stringify({
-      error: error.message,
-      success: false
-    }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        success: false,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   }
 };
 serve(handler);
