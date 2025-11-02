@@ -100,7 +100,6 @@ export async function POST(request: NextRequest) {
       seo_description,
       seo_keywords,
       og_image,
-      enable_comments = true,
       featured = false,
       tags = [],
     } = body;
@@ -132,7 +131,6 @@ export async function POST(request: NextRequest) {
         seo_description,
         seo_keywords,
         og_image,
-        enable_comments,
         featured,
       })
       .select()
