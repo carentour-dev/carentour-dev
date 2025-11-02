@@ -1,51 +1,39 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
+import { serve } from "std/http/server";
+import { Resend } from "resend";
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
-const handler = async (req)=>{
+const handler = async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
   try {
     const { email, username, password } = await req.json();
     // Email validation
     if (typeof email !== "string" || !email.trim()) {
-      return new Response(JSON.stringify({
-        error: "Missing or invalid email address.",
-        success: false
-      }), {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders
-        }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing or invalid email address.",
+          success: false,
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        },
+      );
     }
     const trimmedPassword = typeof password === "string" ? password.trim() : "";
     console.log("Password provided:", trimmedPassword.length > 0);
     console.log("Sending welcome email to:", email);
-    const passwordHtml = trimmedPassword
-      ? `
-          <div style="margin: 30px 0; padding: 24px; border-radius: 12px; background-color: #dcfce7; border: 1px solid #86efac;">
-            <h3 style="color: #166534; font-size: 18px; margin-top: 0;">Your Patient Portal Access</h3>
-            <p style="color: #166534; line-height: 1.6;">
-              Sign in with your email <strong>${email}</strong> and the temporary password below. For security, please change it after your first login.
-            </p>
-            <div style="margin-top: 16px; display: inline-block; font-family: 'Courier New', Courier, monospace; background-color: #14532d; color: #bbf7d0; padding: 14px 22px; border-radius: 10px; letter-spacing: 0.04em; font-weight: 600;">
-              ${trimmedPassword}
-            </div>
-            <p style="color: #166534; line-height: 1.6; margin-top: 20px;">
-              Visit <a href="https://www.carentour.com" style="color: #14532d; text-decoration: underline;">www.carentour.com</a> to discover upcoming treatments and concierge support options.
-            </p>
-          </div>
-        `
-      : "";
     const passwordText = trimmedPassword
       ? `
 Temporary password: ${trimmedPassword}
@@ -128,32 +116,38 @@ Your account has been created successfully.${passwordText}
 Need assistance? Our team is available 24/7.
 
 Care N Tour Team
-info@carentour.com`
+info@carentour.com`,
     });
     console.log("Welcome email sent successfully:", emailResponse);
-    return new Response(JSON.stringify({
-      success: true,
-      message: "Welcome email sent successfully",
-      emailId: emailResponse.data?.id
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Welcome email sent successfully",
+        emailId: emailResponse.data?.id,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   } catch (error) {
     console.error("Error in send-welcome-email function:", error);
-    return new Response(JSON.stringify({
-      error: error.message,
-      success: false
-    }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        success: false,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
+    );
   }
 };
 serve(handler);
