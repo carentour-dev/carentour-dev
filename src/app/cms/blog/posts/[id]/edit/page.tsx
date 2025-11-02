@@ -56,7 +56,7 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
       } else if (postData.content.type === "markdown") {
         contentText = postData.content.data;
       } else if (postData.content.type === "richtext") {
-        contentText = postData.content.data;
+        contentText = postData.content.data.replace(/<[^>]*>/g, "");
       }
       const readingTime = calculateReadingTime(contentText);
 
