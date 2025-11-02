@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
 
 export async function GET(
   request: NextRequest,
@@ -77,6 +78,8 @@ export async function PUT(
       tags,
     } = body;
 
+    const sanitizedContent = sanitizeContentPayload(content);
+
     // Update blog post
     const { data: post, error: updateError } = await supabase
       .from("blog_posts")
@@ -84,7 +87,7 @@ export async function PUT(
         title,
         slug,
         excerpt,
-        content,
+        content: sanitizedContent,
         featured_image,
         category_id,
         author_id,
