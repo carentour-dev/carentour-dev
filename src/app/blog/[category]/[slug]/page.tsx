@@ -174,7 +174,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
 
           {/* Featured Image */}
           {post.featured_image && (
-            <section className="py-0">
+            <section className="py-0 mt-8">
               <div className="container mx-auto px-4">
                 <div className="max-w-4xl mx-auto">
                   <div className="relative aspect-video overflow-hidden rounded-lg">
