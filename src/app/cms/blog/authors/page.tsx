@@ -332,6 +332,14 @@ function AuthorCard({ author, onEdit }: { author: any; onEdit: () => void }) {
   );
 }
 
+type AuthorLinkableUser = {
+  profile_id: string;
+  user_id: string;
+  email: string | null;
+  username: string | null;
+  avatar_url: string | null;
+};
+
 function AuthorDialog({
   author,
   onClose,
@@ -360,22 +368,51 @@ function AuthorDialog({
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch users for linking
-  const { data: users } = useQuery({
-    queryKey: ["users-for-authors"],
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    isError: isUsersError,
+    error: usersError,
+  } = useQuery<AuthorLinkableUser[]>({
+    queryKey: ["users-for-authors", author?.id],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/admin/accounts", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      return data.accounts || [];
+      const params = new URLSearchParams();
+      if (author?.id) {
+        params.set("authorId", author.id);
+      }
+
+      const queryString = params.toString();
+
+      const response = await fetch(
+        queryString
+          ? `/api/cms/blog/authors/users?${queryString}`
+          : "/api/cms/blog/authors/users",
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const message =
+          (errorBody && (errorBody.error || errorBody.message)) ||
+          "Failed to load users";
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      return (data.users || []) as AuthorLinkableUser[];
     },
     enabled: authorType === "linked",
   });
+
+  const usersErrorMessage =
+    usersError instanceof Error ? usersError.message : "Failed to load users";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -470,18 +507,46 @@ function AuthorDialog({
         {authorType === "linked" && (
           <div>
             <Label htmlFor="user">User Account *</Label>
-            <Select value={userId} onValueChange={setUserId} required>
+            <Select
+              value={userId || undefined}
+              onValueChange={setUserId}
+              required
+              disabled={usersLoading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select a user" />
+                <SelectValue
+                  placeholder={
+                    usersLoading
+                      ? "Loading users..."
+                      : users.length === 0
+                        ? "No available users"
+                        : "Select a user"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {users?.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.email}
+                {users.length > 0 ? (
+                  users.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id}>
+                      {user.email || user.username || user.user_id}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no_users" disabled>
+                    {isUsersError
+                      ? usersErrorMessage
+                      : usersLoading
+                        ? "Loading users..."
+                        : "No available users"}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
+            {isUsersError && (
+              <p className="text-xs text-destructive mt-1">
+                {usersErrorMessage}
+              </p>
+            )}
           </div>
         )}
 
