@@ -21,6 +21,46 @@ type ServiceProviderRow =
   Database["public"]["Tables"]["service_providers"]["Row"];
 type PatientStoryRow = Database["public"]["Tables"]["patient_stories"]["Row"];
 
+type PatientPortalContactRequest = Pick<
+  ContactRequestRow,
+  | "id"
+  | "user_id"
+  | "patient_id"
+  | "first_name"
+  | "last_name"
+  | "email"
+  | "phone"
+  | "country"
+  | "treatment"
+  | "message"
+  | "status"
+  | "request_type"
+  | "notes"
+  | "origin"
+  | "travel_window"
+  | "health_background"
+  | "budget_range"
+  | "companions"
+  | "created_at"
+  | "updated_at"
+  | "resolved_at"
+>;
+
+type PatientPortalJourneySubmission = Pick<
+  JourneySubmissionRow,
+  | "id"
+  | "user_id"
+  | "patient_id"
+  | "status"
+  | "treatment_name"
+  | "procedure_name"
+  | "origin"
+  | "notes"
+  | "created_at"
+  | "updated_at"
+  | "resolved_at"
+>;
+
 export interface PatientPortalRequest {
   id: string;
   source: "contact" | "start_journey";
@@ -32,8 +72,8 @@ export interface PatientPortalRequest {
   treatment: string | null;
   origin: string | null;
   notes: string | null;
-  contact_request?: ContactRequestRow;
-  journey_submission?: JourneySubmissionRow;
+  contact_request?: PatientPortalContactRequest;
+  journey_submission?: PatientPortalJourneySubmission;
 }
 
 export type PatientConsultation = ConsultationRow & {
@@ -354,8 +394,13 @@ const fetchPatientPortalSnapshot = async (
     throw new Error(storiesError.message ?? "Failed to load stories");
   }
 
+  const contactRequests = (contactRequestsResult.data ??
+    []) as PatientPortalContactRequest[];
+  const journeySubmissions = (journeySubmissionsResult.data ??
+    []) as PatientPortalJourneySubmission[];
+
   const portalRequests: PatientPortalRequest[] = [
-    ...(contactRequestsResult.data ?? []).map((request) => ({
+    ...contactRequests.map((request) => ({
       id: request.id,
       source: "contact" as const,
       status: request.status ?? null,
@@ -371,7 +416,7 @@ const fetchPatientPortalSnapshot = async (
       notes: request.notes ?? null,
       contact_request: request,
     })),
-    ...(journeySubmissionsResult.data ?? []).map((submission) => {
+    ...journeySubmissions.map((submission) => {
       const treatmentParts = [
         submission.treatment_name?.trim(),
         submission.procedure_name?.trim(),
