@@ -73,7 +73,6 @@ export async function PUT(
       seo_description,
       seo_keywords,
       og_image,
-      enable_comments,
       featured,
       tags,
     } = body;
@@ -96,7 +95,6 @@ export async function PUT(
         seo_description,
         seo_keywords,
         og_image,
-        enable_comments,
         featured,
       })
       .eq("id", id)
