@@ -1,0 +1,15 @@
+{
+  "imports": {
+    "std/http/server": "https://deno.land/std@0.190.0/http/server.ts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.57.4",
+    "resend": "npm:resend@4.0.0"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "proseWrap": "preserve"
+  }
+}
