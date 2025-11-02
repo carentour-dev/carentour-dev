@@ -1,8 +1,19 @@
+const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
+
+function stripMarkdown(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, "") // Remove code blocks
+    .replace(/`[^`]*`/g, "") // Remove inline code
+    .replace(/!\[.*?\]\(.*?\)/g, "") // Remove images
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Replace links with text
+    .replace(/[#*_~`]/g, "") // Remove markdown symbols
+    .replace(/^>\s+/gm, ""); // Remove blockquotes
+}
+
 /**
  * Calculate reading time for blog post content
  * Assumes average reading speed of 200 words per minute
  */
-
 export function calculateReadingTime(content: any): number {
   if (!content) return 0;
 
@@ -12,24 +23,24 @@ export function calculateReadingTime(content: any): number {
   if (typeof content === "string") {
     text = content;
   } else if (content.type && content.data) {
+    const data =
+      typeof content.data === "string"
+        ? content.data
+        : String(content.data ?? "");
+
     switch (content.type) {
       case "richtext":
       case "html":
-        // Strip HTML tags
-        text = content.data.replace(/<[^>]*>/g, " ");
+        // If the stored value doesn't contain HTML tags, treat it as markdown/plain text
+        text = HTML_TAG_PATTERN.test(data)
+          ? data.replace(/<[^>]*>/g, " ")
+          : stripMarkdown(data);
         break;
       case "markdown":
-        // Remove markdown syntax
-        text = content.data
-          .replace(/```[\s\S]*?```/g, "") // Remove code blocks
-          .replace(/`[^`]*`/g, "") // Remove inline code
-          .replace(/!\[.*?\]\(.*?\)/g, "") // Remove images
-          .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Replace links with text
-          .replace(/[#*_~`]/g, "") // Remove markdown symbols
-          .replace(/^>\s+/gm, ""); // Remove blockquotes
+        text = stripMarkdown(data);
         break;
       default:
-        text = content.data;
+        text = data;
     }
   }
 
