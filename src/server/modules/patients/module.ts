@@ -76,6 +76,117 @@ type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 const ACCOUNT_ALREADY_EXISTS = /already registered/i;
 
+const normalizeProfileField = (value: string | null | undefined) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const syncProfileWithPatient = async (
+  supabase: SupabaseAdminClient,
+  {
+    userId,
+    fullName,
+    dateOfBirth,
+    sex,
+    nationality,
+    phone,
+  }: {
+    userId: string | null | undefined;
+    fullName?: string | null;
+    dateOfBirth?: string | null;
+    sex?: string | null;
+    nationality?: string | null;
+    phone?: string | null;
+  },
+) => {
+  if (!userId) return;
+
+  const updatePayload: Record<string, unknown> = {};
+
+  const normalizedFullName = normalizeProfileField(fullName);
+  if (normalizedFullName !== undefined) {
+    updatePayload.username = normalizedFullName;
+  }
+
+  const normalizedDob = normalizeProfileField(dateOfBirth);
+  if (normalizedDob !== undefined) {
+    updatePayload.date_of_birth = normalizedDob;
+  }
+
+  const normalizedSex = normalizeProfileField(sex);
+  if (normalizedSex !== undefined) {
+    updatePayload.sex = normalizedSex;
+  }
+
+  const normalizedNationality = normalizeProfileField(nationality);
+  if (normalizedNationality !== undefined) {
+    updatePayload.nationality = normalizedNationality;
+  }
+
+  const normalizedPhone = normalizeProfileField(phone);
+  if (normalizedPhone !== undefined) {
+    updatePayload.phone = normalizedPhone;
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
+    return;
+  }
+
+  const { data: updatedProfile, error: updateError } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
+
+  if (updateError && updateError.code !== "PGRST116") {
+    throw new ApiError(
+      500,
+      "Failed to synchronize patient profile details.",
+      updateError.message,
+    );
+  }
+
+  if (updatedProfile) {
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("profiles").insert({
+    user_id: userId,
+    ...updatePayload,
+  });
+
+  if (insertError) {
+    if (insertError.code === "23505" || insertError.code === "409") {
+      const { error: retryError } = await supabase
+        .from("profiles")
+        .update(updatePayload)
+        .eq("user_id", userId);
+
+      if (retryError) {
+        throw new ApiError(
+          500,
+          "Failed to synchronize patient profile details.",
+          retryError.message,
+        );
+      }
+      return;
+    }
+
+    throw new ApiError(
+      500,
+      "Failed to synchronize patient profile details.",
+      insertError.message,
+    );
+  }
+};
+
 const createOrUpdatePortalAccount = async (
   supabase: SupabaseAdminClient,
   {
@@ -321,6 +432,32 @@ export const patientController = {
       throw error;
     }
 
+    try {
+      await syncProfileWithPatient(supabase, {
+        userId: patient.user_id,
+        fullName: patient.full_name,
+        dateOfBirth: patient.date_of_birth,
+        sex: patient.sex,
+        nationality: patient.nationality,
+        phone: patient.contact_phone,
+      });
+    } catch (error) {
+      if (portalAccount?.createdNew) {
+        await supabase.auth.admin
+          .deleteUser(portalAccount.userId)
+          .catch(() => {});
+      }
+      await patientService.remove(patient.id).catch(() => {});
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        500,
+        "Failed to synchronize patient profile details.",
+        error instanceof Error ? error.message : undefined,
+      );
+    }
+
     if (portalPassword && contactEmail) {
       try {
         await sendPortalPasswordEmail(supabase, {
@@ -469,6 +606,49 @@ export const patientController = {
     updatePayload.email_verified = effectiveEmailVerified;
 
     const updated = await patientService.update(patientId, updatePayload);
+
+    try {
+      await syncProfileWithPatient(supabase, {
+        userId: updated.user_id,
+        fullName: updated.full_name,
+        dateOfBirth: updated.date_of_birth,
+        sex: updated.sex,
+        nationality: updated.nationality,
+        phone: updated.contact_phone,
+      });
+    } catch (error) {
+      if (portalAccount?.createdNew) {
+        await supabase.auth.admin
+          .deleteUser(portalAccount.userId)
+          .catch(() => {});
+        portalAccount = null;
+      }
+
+      const revertPayload: PatientUpdate = {
+        full_name: existing.full_name,
+        user_id: existing.user_id ?? null,
+        date_of_birth: existing.date_of_birth ?? null,
+        sex: existing.sex ?? null,
+        nationality: existing.nationality ?? null,
+        contact_email: existing.contact_email ?? null,
+        contact_phone: existing.contact_phone ?? null,
+        preferred_language: existing.preferred_language ?? null,
+        preferred_currency: existing.preferred_currency ?? null,
+        notes: existing.notes ?? null,
+        email_verified: existing.email_verified ?? null,
+      };
+
+      await patientService.update(patientId, revertPayload).catch(() => {});
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        500,
+        "Failed to synchronize patient profile details.",
+        error instanceof Error ? error.message : undefined,
+      );
+    }
 
     if (portalPassword && effectiveContactEmail) {
       try {
