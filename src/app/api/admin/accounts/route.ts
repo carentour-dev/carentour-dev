@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import { normalizeRoles, pickPrimaryRole } from "@/lib/auth/roles";
@@ -220,14 +220,30 @@ async function extractFunctionsErrorMessage(
 
 export async function GET() {
   try {
-    await requireRole(["admin"]);
+    await requirePermission("admin.access");
 
     const supabaseAdmin = getSupabaseAdmin();
 
     const [rolesResult, profilesResult] = await Promise.all([
       supabaseAdmin
         .from("roles")
-        .select("id, slug, name, description")
+        .select(
+          `
+            id,
+            slug,
+            name,
+            description,
+            is_superuser,
+            role_permissions:role_permissions(
+              permission:permissions(
+                id,
+                slug,
+                name,
+                description
+              )
+            )
+          `,
+        )
         .order("slug", { ascending: true }),
       supabaseAdmin
         .from("profiles")
@@ -275,12 +291,27 @@ export async function GET() {
     }
 
     const roles =
-      (rolesResult.data ?? []).map((role) => ({
-        id: role.id,
-        slug: role.slug,
-        name: role.name,
-        description: role.description ?? null,
-      })) ?? [];
+      (rolesResult.data ?? []).map((role: any) => {
+        const permissions = (role.role_permissions ?? [])
+          .map((entry: any) => entry?.permission)
+          .filter(Boolean)
+          .map((permission: any) => ({
+            id: permission.id,
+            slug: permission.slug,
+            name: permission.name,
+            description: permission.description,
+          }))
+          .sort((a: any, b: any) => (a.slug ?? "").localeCompare(b.slug ?? ""));
+
+        return {
+          id: role.id,
+          slug: role.slug,
+          name: role.name,
+          description: role.description ?? null,
+          is_superuser: Boolean(role.is_superuser),
+          permissions,
+        };
+      }) ?? [];
 
     const staffAccounts = (profilesResult.data ?? [])
       .map((profile) => {
@@ -328,7 +359,7 @@ export async function POST(request: Request) {
     const { roles: requestedRolesInput, ...payload } =
       createAccountSchema.parse(await request.json());
 
-    const authContext = await requireRole(["admin"]);
+    const authContext = await requirePermission("admin.access");
     const supabaseAdmin = getSupabaseAdmin();
 
     const normalizedRoles = normalizeRoles(requestedRolesInput);
