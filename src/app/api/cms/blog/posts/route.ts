@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
 
 export async function GET(request: NextRequest) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.read");
     const supabase = getSupabaseAdmin();
 
     // Get query parameters
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await requireRole(["admin", "editor"]);
+    const context = await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
