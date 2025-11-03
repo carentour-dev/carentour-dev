@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { normalizeRoles } from "@/lib/auth/roles";
 
@@ -12,7 +12,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params?: Promise<RouteParams> },
 ) {
-  const context = await requireRole(["admin"]);
+  const context = await requirePermission("admin.access");
   const supabaseAdmin = getSupabaseAdmin();
   const routeParams = params ? await params : undefined;
   const profileId = routeParams?.id;
@@ -48,21 +48,21 @@ export async function PUT(
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  // Prevent admins from removing their own admin access entirely
-  if (
-    profile.user_id === context.user.id &&
-    !requestedRoles.includes("admin")
-  ) {
-    return NextResponse.json(
-      { error: "You must retain your own admin role." },
-      { status: 400 },
-    );
-  }
-
   // Resolve role ids for the requested slugs
   const { data: roleRecords, error: rolesError } = await supabaseAdmin
     .from("roles")
-    .select("id, slug")
+    .select(
+      `
+        id,
+        slug,
+        is_superuser,
+        role_permissions:role_permissions(
+          permission:permissions(
+            slug
+          )
+        )
+      `,
+    )
     .in("slug", requestedRoles);
 
   if (rolesError) {
@@ -72,10 +72,41 @@ export async function PUT(
     );
   }
 
-  const roleMap = new Map<string, string>();
+  const roleMap = new Map<
+    string,
+    { id: string; slug: string; is_superuser: boolean }
+  >();
+  const adminPermissionRoles = new Set<string>();
+
   for (const role of roleRecords ?? []) {
-    if (role?.slug) {
-      roleMap.set(role.slug, role.id);
+    if (!role?.slug || !role?.id) {
+      continue;
+    }
+
+    const slug = role.slug;
+    const isSuperuser = Boolean(role.is_superuser);
+
+    roleMap.set(slug, {
+      id: role.id,
+      slug,
+      is_superuser: isSuperuser,
+    });
+
+    if (isSuperuser) {
+      adminPermissionRoles.add(slug);
+      continue;
+    }
+
+    const permissions = Array.isArray(role?.role_permissions)
+      ? role.role_permissions
+      : [];
+
+    for (const entry of permissions) {
+      const permissionSlug = entry?.permission?.slug;
+      if (permissionSlug === "admin.access") {
+        adminPermissionRoles.add(slug);
+        break;
+      }
     }
   }
 
@@ -87,7 +118,24 @@ export async function PUT(
     );
   }
 
-  const roleIds = requestedRoles.map((role) => roleMap.get(role)!);
+  // Ensure the acting user keeps admin.access after the change
+  if (profile.user_id === context.user.id) {
+    const retainsAdminAccess = requestedRoles.some((role) =>
+      adminPermissionRoles.has(role),
+    );
+
+    if (!retainsAdminAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "You must retain at least one role that grants admin console access.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const roleIds = requestedRoles.map((role) => roleMap.get(role)!.id);
 
   // Reset current assignments, then insert the new set
   const { error: deleteError } = await supabaseAdmin
