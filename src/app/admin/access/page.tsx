@@ -23,8 +23,21 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Settings2, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, Plus, Search, Settings2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type RoleRecord = {
@@ -39,7 +52,7 @@ type RoleRecord = {
 type PermissionRecord = {
   id: string;
   slug: string;
-  name: string;
+  name: string | null;
   description: string | null;
 };
 
@@ -60,8 +73,21 @@ type AccessPayload = {
   users: UserRecord[];
 };
 
+const normalizeRoleSlug = (value: string): string => {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+};
+
+const PROTECTED_ROLE_SLUGS = new Set(["user", "admin"]);
+
 export default function AccessManagementPage() {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [data, setData] = useState<AccessPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +104,20 @@ export default function AccessManagementPage() {
   >([]);
   const [permissionSearch, setPermissionSearch] = useState("");
   const [savingPermissions, setSavingPermissions] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createRoleSaving, setCreateRoleSaving] = useState(false);
+  const [createRoleName, setCreateRoleName] = useState("");
+  const [createRoleSlug, setCreateRoleSlug] = useState("");
+  const [createRoleDescription, setCreateRoleDescription] = useState("");
+  const [createRolePermissions, setCreateRolePermissions] = useState<string[]>(
+    [],
+  );
+  const [createRoleSuperuser, setCreateRoleSuperuser] = useState(false);
+  const [createPermissionSearch, setCreatePermissionSearch] = useState("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [rolePendingDeletion, setRolePendingDeletion] =
+    useState<RoleRecord | null>(null);
+  const [deletingRole, setDeletingRole] = useState(false);
 
   const getAuthHeaders = async () => {
     const {
@@ -121,6 +161,14 @@ export default function AccessManagementPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (slugManuallyEdited) {
+      return;
+    }
+    const nextSlug = normalizeRoleSlug(createRoleName);
+    setCreateRoleSlug(nextSlug);
+  }, [createRoleName, slugManuallyEdited]);
+
   const filteredUsers = useMemo(() => {
     if (!data?.users) {
       return [];
@@ -138,10 +186,63 @@ export default function AccessManagementPage() {
     });
   }, [data?.users, search]);
 
-  const availablePermissions = useMemo(
-    () => data?.permissions ?? [],
-    [data?.permissions],
-  );
+  const availablePermissions = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    const map = new Map<string, PermissionRecord>();
+
+    for (const permission of data.permissions ?? []) {
+      if (!permission?.slug) {
+        continue;
+      }
+      map.set(permission.slug, permission);
+    }
+
+    for (const role of data.roles ?? []) {
+      for (const permission of role.permissions ?? []) {
+        if (!permission?.slug) {
+          continue;
+        }
+        if (!map.has(permission.slug)) {
+          map.set(permission.slug, {
+            id: permission.id ?? permission.slug,
+            slug: permission.slug,
+            name: permission.name ?? permission.slug,
+            description: permission.description ?? null,
+          });
+        }
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) =>
+      (a.slug ?? "").localeCompare(b.slug ?? ""),
+    );
+  }, [data]);
+
+  const rolePermissionMap = useMemo(() => {
+    const mapping = new Map<string, Set<string>>();
+    if (!data?.roles?.length) {
+      return mapping;
+    }
+    for (const role of data.roles) {
+      if (!role?.slug) {
+        continue;
+      }
+      const permissions = new Set<string>();
+      if (role.is_superuser) {
+        permissions.add("admin.access");
+      }
+      for (const permission of role.permissions ?? []) {
+        if (permission?.slug) {
+          permissions.add(permission.slug);
+        }
+      }
+      mapping.set(role.slug, permissions);
+    }
+    return mapping;
+  }, [data?.roles]);
 
   const filteredPermissions = useMemo(() => {
     if (!availablePermissions.length) {
@@ -161,6 +262,24 @@ export default function AccessManagementPage() {
     });
   }, [availablePermissions, permissionSearch]);
 
+  const createDialogPermissions = useMemo(() => {
+    if (!availablePermissions.length) {
+      return [];
+    }
+    if (!createPermissionSearch.trim()) {
+      return availablePermissions;
+    }
+    const query = createPermissionSearch.toLowerCase();
+    return availablePermissions.filter((permission) => {
+      const description = permission.description ?? "";
+      return (
+        permission.slug.toLowerCase().includes(query) ||
+        (permission.name ?? "").toLowerCase().includes(query) ||
+        description.toLowerCase().includes(query)
+      );
+    });
+  }, [availablePermissions, createPermissionSearch]);
+
   const openEditor = (user: UserRecord) => {
     const roles = user.roles.includes("user")
       ? user.roles
@@ -176,16 +295,263 @@ export default function AccessManagementPage() {
     setSelectedRoles([]);
   };
 
+  const roleGrantsAdminAccess = (role: string) => {
+    if (!role) {
+      return false;
+    }
+    if (role === "admin") {
+      return true;
+    }
+    return rolePermissionMap.get(role)?.has("admin.access") ?? false;
+  };
+
   const toggleRole = (role: string, checked: boolean) => {
     setSelectedRoles((current) => {
       const normalized = new Set(current);
+
       if (checked) {
         normalized.add(role);
+        return Array.from(normalized);
+      }
+
+      normalized.delete(role);
+
+      const nextRoles = Array.from(normalized);
+      const editingSelf =
+        selectedUser?.user_id && currentUser?.id
+          ? selectedUser.user_id === currentUser.id
+          : false;
+
+      if (
+        editingSelf &&
+        !nextRoles.some((candidate) => roleGrantsAdminAccess(candidate))
+      ) {
+        toast({
+          title: "Admin access required",
+          description:
+            "You must keep at least one role that grants admin console access.",
+          variant: "destructive",
+        });
+        return current;
+      }
+
+      return nextRoles;
+    });
+  };
+
+  const resetCreateRoleForm = () => {
+    setCreateRoleName("");
+    setCreateRoleSlug("");
+    setCreateRoleDescription("");
+    setCreateRolePermissions([]);
+    setCreateRoleSuperuser(false);
+    setCreatePermissionSearch("");
+    setSlugManuallyEdited(false);
+  };
+
+  const openCreateRoleDialog = () => {
+    resetCreateRoleForm();
+    setCreateRoleSaving(false);
+    setCreateDialogOpen(true);
+  };
+
+  const closeCreateRoleDialog = () => {
+    setCreateDialogOpen(false);
+    setCreateRoleSaving(false);
+    resetCreateRoleForm();
+  };
+
+  const toggleCreateRolePermission = (
+    permissionSlug: string,
+    enabled: boolean,
+  ) => {
+    if (!permissionSlug) {
+      return;
+    }
+    setCreateRolePermissions((current) => {
+      const normalized = new Set(current);
+      if (enabled) {
+        normalized.add(permissionSlug);
       } else {
-        normalized.delete(role);
+        normalized.delete(permissionSlug);
       }
       return Array.from(normalized);
     });
+  };
+
+  const handleSuperuserToggle = (enabled: boolean) => {
+    setCreateRoleSuperuser(enabled);
+    if (enabled) {
+      setCreateRolePermissions([]);
+    }
+  };
+
+  const isCreateRoleValid = useMemo(() => {
+    const nameValid = createRoleName.trim().length >= 2;
+    const slugValid = normalizeRoleSlug(createRoleSlug).length > 0;
+    return nameValid && slugValid;
+  }, [createRoleName, createRoleSlug]);
+
+  const handleCreateRole = async () => {
+    if (!isCreateRoleValid) {
+      toast({
+        title: "Review new role details",
+        description: "Provide a name and slug before creating the role.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setCreateRoleSaving(true);
+      const authHeaders = await getAuthHeaders();
+      const trimmedName = createRoleName.trim();
+      const normalizedSlug = normalizeRoleSlug(createRoleSlug);
+      const descriptionValue = createRoleDescription.trim();
+      const requestedPermissions = createRoleSuperuser
+        ? []
+        : Array.from(new Set(createRolePermissions));
+
+      const response = await fetch("/api/admin/roles", {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          slug: normalizedSlug,
+          description: descriptionValue.length ? descriptionValue : undefined,
+          is_superuser: createRoleSuperuser,
+          permissions: requestedPermissions,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error ?? "Failed to create role.");
+      }
+
+      const payload = (await response.json()) as { role: RoleRecord };
+
+      setData((current) => {
+        if (!current) {
+          return current;
+        }
+        const nextRoles = [...current.roles, payload.role].sort((a, b) =>
+          a.slug.localeCompare(b.slug),
+        );
+        return {
+          ...current,
+          roles: nextRoles,
+        };
+      });
+
+      toast({
+        title: "Role created",
+        description: `${payload.role.name} is now available for assignments.`,
+      });
+
+      closeCreateRoleDialog();
+    } catch (createError: any) {
+      console.error(createError);
+      toast({
+        title: "Unable to create role",
+        description:
+          createError?.message ??
+          "Something went wrong while creating the role.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreateRoleSaving(false);
+    }
+  };
+
+  const openDeleteRoleDialog = (role: RoleRecord) => {
+    setRolePendingDeletion(role);
+  };
+
+  const closeDeleteRoleDialog = () => {
+    if (deletingRole) {
+      return;
+    }
+    setRolePendingDeletion(null);
+  };
+
+  const handleDeleteRole = async () => {
+    const roleToDelete = rolePendingDeletion;
+    if (!roleToDelete) {
+      return;
+    }
+
+    try {
+      setDeletingRole(true);
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(
+        `/api/admin/roles?id=${encodeURIComponent(roleToDelete.id)}`,
+        {
+          method: "DELETE",
+          headers: authHeaders,
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error ?? "Failed to delete role.");
+      }
+
+      setData((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const filteredRoles = current.roles.filter(
+          (role) => role.id !== roleToDelete.id,
+        );
+
+        const updatedUsers = current.users.map((user) => {
+          if (!user.roles.includes(roleToDelete.slug)) {
+            return user;
+          }
+          const updatedRoles = user.roles.filter(
+            (roleSlug) => roleSlug !== roleToDelete.slug,
+          );
+          return {
+            ...user,
+            roles: updatedRoles,
+          };
+        });
+
+        return {
+          ...current,
+          roles: filteredRoles,
+          users: updatedUsers,
+        };
+      });
+
+      setSelectedRoles((current) =>
+        current.filter((roleSlug) => roleSlug !== roleToDelete.slug),
+      );
+
+      if (selectedRoleRecord?.id === roleToDelete.id) {
+        closeRolePermissionEditor();
+      }
+
+      toast({
+        title: "Role deleted",
+        description: `${roleToDelete.name ?? roleToDelete.slug} has been removed.`,
+      });
+    } catch (deleteError: any) {
+      console.error(deleteError);
+      toast({
+        title: "Unable to delete role",
+        description: deleteError?.message ?? "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingRole(false);
+      setRolePendingDeletion(null);
+    }
   };
 
   const handleSave = async () => {
@@ -340,6 +706,10 @@ export default function AccessManagementPage() {
     if (!roles.length) {
       return <Badge variant="outline">user</Badge>;
     }
+    const hasAdminRole = roles.includes("admin");
+    const hasAdminPermission = roles.some((role) =>
+      rolePermissionMap.get(role)?.has("admin.access"),
+    );
     return (
       <div className="flex flex-wrap gap-1">
         {roles.map((role) => (
@@ -347,13 +717,18 @@ export default function AccessManagementPage() {
             {role.replace(/[-_]/g, " ")}
           </Badge>
         ))}
+        {hasAdminPermission && !hasAdminRole ? (
+          <Badge variant="secondary" className="capitalize">
+            admin access
+          </Badge>
+        ) : null}
       </div>
     );
   };
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Access Management
@@ -362,6 +737,16 @@ export default function AccessManagementPage() {
             Assign roles and fine-tune permissions for your team. Admins retain
             full access.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={openCreateRoleDialog}
+            className="gap-2"
+            disabled={createDialogOpen || createRoleSaving}
+          >
+            <Plus className="h-4 w-4" />
+            New role
+          </Button>
         </div>
       </header>
 
@@ -535,16 +920,31 @@ export default function AccessManagementPage() {
                       </Badge>
                     ) : null}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    disabled={role.is_superuser}
-                    onClick={() => openRolePermissionEditor(role)}
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    Edit
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={role.is_superuser}
+                      onClick={() => openRolePermissionEditor(role)}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1"
+                      disabled={
+                        PROTECTED_ROLE_SLUGS.has(role.slug) ||
+                        deletingRole ||
+                        Boolean(rolePendingDeletion)
+                      }
+                      onClick={() => openDeleteRoleDialog(role)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {role.description ?? "No description provided."}
@@ -590,6 +990,249 @@ export default function AccessManagementPage() {
           ) : null}
         </div>
       </section>
+
+      <Dialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && createDialogOpen) {
+            if (createRoleSaving) {
+              return;
+            }
+            closeCreateRoleDialog();
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Create role</DialogTitle>
+            <DialogDescription>
+              Define a new role and choose which permissions it grants.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Role name
+              </label>
+              <Input
+                value={createRoleName}
+                onChange={(event) => setCreateRoleName(event.target.value)}
+                placeholder="Operations coordinator"
+                autoFocus
+                disabled={createRoleSaving}
+              />
+              <p className="text-xs text-muted-foreground">
+                Appears throughout the admin console.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Role slug
+              </label>
+              <Input
+                value={createRoleSlug}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (!raw.trim()) {
+                    setSlugManuallyEdited(false);
+                    setCreateRoleSlug("");
+                    return;
+                  }
+                  setSlugManuallyEdited(true);
+                  setCreateRoleSlug(normalizeRoleSlug(raw));
+                }}
+                placeholder="operations-coordinator"
+                disabled={createRoleSaving}
+              />
+              <p className="text-xs text-muted-foreground">
+                Lowercase identifier used internally. Letters, numbers, and
+                hyphens only.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Description (optional)
+              </label>
+              <Textarea
+                value={createRoleDescription}
+                onChange={(event) =>
+                  setCreateRoleDescription(event.target.value)
+                }
+                placeholder="Explain what this role can access."
+                disabled={createRoleSaving}
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 p-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Superuser access
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Superusers inherit every permission automatically.
+                </p>
+              </div>
+              <Switch
+                checked={createRoleSuperuser}
+                onCheckedChange={handleSuperuserToggle}
+                disabled={createRoleSaving}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Permissions
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {createRoleSuperuser
+                    ? "Superuser roles grant every permission automatically."
+                    : "Select the permissions this role should grant by default."}
+                </p>
+              </div>
+              {!createRoleSuperuser && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={createPermissionSearch}
+                    onChange={(event) =>
+                      setCreatePermissionSearch(event.target.value)
+                    }
+                    placeholder="Search permissions"
+                    className="pl-9"
+                    disabled={createRoleSaving}
+                  />
+                </div>
+              )}
+              {createRoleSuperuser ? null : (
+                <div className="max-h-[24rem] overflow-y-auto rounded-md border border-border/60">
+                  <div className="space-y-2 p-3">
+                    {createDialogPermissions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {availablePermissions.length === 0
+                          ? "No permissions have been configured yet."
+                          : "No permissions match your search."}
+                      </p>
+                    ) : (
+                      createDialogPermissions.map((permission) => {
+                        const checked = createRolePermissions.includes(
+                          permission.slug,
+                        );
+                        return (
+                          <label
+                            key={permission.id}
+                            className="flex items-start gap-3 rounded-md border border-transparent p-2 transition hover:border-border/70"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(value) =>
+                                toggleCreateRolePermission(
+                                  permission.slug,
+                                  Boolean(value),
+                                )
+                              }
+                              disabled={createRoleSaving}
+                            />
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">
+                                  {permission.name ?? permission.slug}
+                                </span>
+                                <Badge variant="outline">
+                                  {permission.slug}
+                                </Badge>
+                              </div>
+                              {permission.description ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {permission.description}
+                                </p>
+                              ) : null}
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+              {createRoleSuperuser ? (
+                <div className="rounded-md border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
+                  Superuser roles do not require manual permission selection.
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeCreateRoleDialog}
+              disabled={createRoleSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateRole}
+              disabled={createRoleSaving || !isCreateRoleValid}
+              className="gap-2"
+            >
+              {createRoleSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create role"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(rolePendingDeletion)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeDeleteRoleDialog();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete role</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the{" "}
+              <strong>
+                {rolePendingDeletion?.name ??
+                  rolePendingDeletion?.slug ??
+                  "selected"}
+              </strong>{" "}
+              role and unassign it from all team members. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingRole}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRole}
+              disabled={deletingRole}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingRole ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete role"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={roleDialogOpen}
