@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 type RouteParams = {
@@ -31,7 +31,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params?: Promise<RouteParams> },
 ) {
-  await requireRole(["admin"]);
+  await requirePermission("admin.access");
 
   const routeParams = params ? await params : undefined;
   const roleId = routeParams?.id;
