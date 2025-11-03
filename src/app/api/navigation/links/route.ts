@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { Database } from "@/integrations/supabase/types";
 
 type NavigationLinkRow =
@@ -11,7 +11,7 @@ const SELECT_COLUMNS =
   "id,label,slug,href,status,position,kind,cms_page_id,created_at,updated_at";
 
 export async function GET() {
-  await requireRole(["admin", "editor"]);
+  await requirePermission("nav.manage");
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -28,7 +28,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  await requireRole(["admin", "editor"]);
+  await requirePermission("nav.manage");
   const payload = (await request.json()) as Partial<NavigationLinkRow>;
 
   if (!payload?.label || !payload?.href || !payload?.slug) {
