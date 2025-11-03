@@ -147,11 +147,20 @@ const staffDetailsSchema = z.object({
 
 type StaffDetailsValues = z.infer<typeof staffDetailsSchema>;
 
+type PermissionRecord = {
+  id: string;
+  slug: string;
+  name: string | null;
+  description: string | null;
+};
+
 type RoleRecord = {
   id: string;
   slug: string;
   name: string;
   description: string | null;
+  is_superuser: boolean;
+  permissions: PermissionRecord[];
 };
 
 type TeamAccount = {
@@ -192,6 +201,35 @@ export default function AdminAccountsPage() {
     return data.roles
       .filter((role) => role.slug !== "user")
       .sort((a, b) => a.slug.localeCompare(b.slug));
+  }, [data?.roles]);
+
+  const rolePermissionMap = useMemo(() => {
+    const mapping = new Map<string, Set<string>>();
+    if (!data?.roles) {
+      return mapping;
+    }
+
+    for (const role of data.roles) {
+      if (!role?.slug) {
+        continue;
+      }
+
+      const permissions = new Set<string>();
+
+      if (role.is_superuser) {
+        permissions.add("admin.access");
+      }
+
+      for (const permission of role.permissions ?? []) {
+        if (permission?.slug) {
+          permissions.add(permission.slug);
+        }
+      }
+
+      mapping.set(role.slug, permissions);
+    }
+
+    return mapping;
   }, [data?.roles]);
 
   const [editingAccount, setEditingAccount] = useState<TeamAccount | null>(
@@ -486,6 +524,10 @@ export default function AdminAccountsPage() {
                         ) : (
                           assignableRoles.map((role) => {
                             const checked = field.value.includes(role.slug);
+                            const grantsAdmin =
+                              rolePermissionMap
+                                .get(role.slug)
+                                ?.has("admin.access") ?? false;
                             return (
                               <label
                                 key={role.id}
@@ -522,6 +564,21 @@ export default function AdminAccountsPage() {
                                     <Badge variant="outline">
                                       #{role.name}
                                     </Badge>
+                                    {role.is_superuser ? (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs uppercase"
+                                      >
+                                        full access
+                                      </Badge>
+                                    ) : grantsAdmin ? (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs uppercase"
+                                      >
+                                        admin access
+                                      </Badge>
+                                    ) : null}
                                   </div>
                                   <p className="text-sm text-muted-foreground">
                                     {role.description ??
@@ -604,6 +661,10 @@ export default function AdminAccountsPage() {
                       .slice(0, 2)
                       .map((part) => part.charAt(0).toUpperCase())
                       .join("") || "ST";
+                  const hasAdminRole = account.roles.includes("admin");
+                  const hasAdminAccess = account.roles.some((role) =>
+                    rolePermissionMap.get(role)?.has("admin.access"),
+                  );
 
                   const metadata: Array<{ label: string; value: string }> = [
                     {
@@ -669,6 +730,11 @@ export default function AdminAccountsPage() {
                                 {role.replace(/[-_]/g, " ")}
                               </Badge>
                             ))}
+                            {hasAdminAccess && !hasAdminRole ? (
+                              <Badge variant="secondary" className="capitalize">
+                                admin access
+                              </Badge>
+                            ) : null}
                           </div>
                         </div>
 
