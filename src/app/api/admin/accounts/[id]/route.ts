@@ -7,7 +7,7 @@ import { getRouteParam } from "@/server/utils/params";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import { normalizeRoles, pickPrimaryRole } from "@/lib/auth/roles";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 
 const sexOptions = [
   "female",
@@ -266,7 +266,7 @@ export const DELETE = adminRoute(async (_req: NextRequest, ctx) => {
     );
   }
 
-  const authContext = await requireRole(["admin"]);
+  const authContext = await requirePermission("admin.access");
 
   if (profileRecord.user_id && authContext.user.id === profileRecord.user_id) {
     throw new ApiError(
