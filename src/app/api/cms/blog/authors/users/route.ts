@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 type ProfileRecord = {
@@ -18,7 +18,7 @@ type AuthorRecord = {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.read");
 
     const supabase = getSupabaseAdmin();
     const searchParams = request.nextUrl.searchParams;
