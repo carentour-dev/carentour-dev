@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
 
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.read");
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
@@ -30,7 +30,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.write");
   const updates = await req.json();
   const sanitizedContent = sanitizeCmsBlocks(updates.content ?? []);
   const parsedContent = blockArraySchema.safeParse(sanitizedContent);
@@ -71,7 +71,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.write");
   const supabaseAdmin = getSupabaseAdmin();
   const { error } = await supabaseAdmin.from("cms_pages").delete().eq("id", id);
   if (error) {
