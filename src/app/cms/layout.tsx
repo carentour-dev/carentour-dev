@@ -9,7 +9,6 @@ import {
   Link2,
   PanelsTopLeft,
   FileText,
-  BookOpen,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,13 @@ const NAV_ITEMS = [
   { href: "/cms/navigation", label: "Navigation Links", icon: Link2 },
 ];
 
+const CMS_PERMISSION_SLUGS = new Set([
+  "cms.read",
+  "cms.write",
+  "cms.media",
+  "nav.manage",
+]);
+
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -44,15 +50,21 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
         router.push("/auth");
         return;
       }
-      const { data: roles, error } = await supabase.rpc("current_user_roles");
+      const { data: permissions, error } = await supabase.rpc(
+        "current_user_permissions",
+      );
       if (error) {
-        console.error("Failed to resolve CMS roles", error);
+        console.error("Failed to resolve CMS permissions", error);
         setAuthorized(false);
         return;
       }
-      const normalizedRoles = Array.isArray(roles) ? roles : [];
+      const normalizedPermissions = Array.isArray(permissions)
+        ? permissions
+        : [];
       setAuthorized(
-        normalizedRoles.some((role) => ["admin", "editor"].includes(role)),
+        normalizedPermissions.some((permission) =>
+          CMS_PERMISSION_SLUGS.has(permission),
+        ),
       );
     };
     check();
@@ -88,7 +100,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
             <CardTitle>Access denied</CardTitle>
           </CardHeader>
           <CardContent>
-            You need Admin or Editor permissions to access the CMS.
+            You need CMS permissions to access this workspace.
             <div className="mt-4">
               <Button asChild>
                 <Link href="/">Go home</Link>
