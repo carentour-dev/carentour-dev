@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 const slugify = (value: string) =>
@@ -40,7 +40,7 @@ async function ensureUniqueAuthorSlug(
 
 export async function GET() {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.read");
     const supabase = getSupabaseAdmin();
 
     const { data: authors, error } = await supabase
@@ -80,7 +80,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
@@ -194,7 +194,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const searchParams = request.nextUrl.searchParams;
