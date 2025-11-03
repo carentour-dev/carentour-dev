@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
 
 export async function GET() {
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.read");
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.write");
   const body = await req.json();
   const { slug, title, content = [], seo = {}, status = "draft" } = body ?? {};
 
