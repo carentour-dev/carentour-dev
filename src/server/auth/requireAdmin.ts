@@ -10,6 +10,10 @@ export type AuthorizationContext = {
   roles: RoleSlug[];
   permissions: string[];
   primaryRole: RoleSlug | null;
+  hasRole: (role: RoleSlug) => boolean;
+  hasAnyRole: (roles: RoleSlug[]) => boolean;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
 };
 
 async function resolveAuthorization(): Promise<AuthorizationContext> {
@@ -66,11 +70,17 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
     roles,
     permissions,
     primaryRole,
+    hasRole: (role: RoleSlug) => roles.includes(role),
+    hasAnyRole: (allowed: RoleSlug[]) =>
+      allowed.some((role) => roles.includes(role)),
+    hasPermission: (permission: string) => permissions.includes(permission),
+    hasAnyPermission: (required: string[]) =>
+      required.some((permission) => permissions.includes(permission)),
   };
 }
 
 export async function requireAdmin(): Promise<AuthorizationContext> {
-  return requireRole(["admin"]);
+  return requirePermission("admin.access");
 }
 
 export async function requireRole(
@@ -78,7 +88,7 @@ export async function requireRole(
 ): Promise<AuthorizationContext> {
   const context = await resolveAuthorization();
 
-  if (!allowed.some((role) => context.roles.includes(role))) {
+  if (!context.hasAnyRole(allowed)) {
     throw new ApiError(403, "Insufficient privileges");
   }
 
@@ -91,9 +101,7 @@ export async function requirePermission(
   const required = Array.isArray(permission) ? permission : [permission];
   const context = await resolveAuthorization();
 
-  const hasPermission = required.every((perm) =>
-    context.permissions.includes(perm),
-  );
+  const hasPermission = required.every((perm) => context.hasPermission(perm));
 
   if (!hasPermission) {
     throw new ApiError(403, "Permission denied");
