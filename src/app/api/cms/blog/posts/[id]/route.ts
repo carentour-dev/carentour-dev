@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
 
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.read");
     const supabase = getSupabaseAdmin();
     const { id } = await params;
 
@@ -54,7 +54,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
     const { id } = await params;
 
@@ -149,7 +149,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(["admin", "editor"]);
+    await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
     const { id } = await params;
 
