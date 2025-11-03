@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 type DeletePayload = {
@@ -8,7 +8,7 @@ type DeletePayload = {
 };
 
 export async function POST(req: NextRequest) {
-  await requireRole(["admin", "editor"]);
+  await requirePermission("cms.media");
 
   const json = (await req.json().catch(() => null)) as DeletePayload | null;
 
