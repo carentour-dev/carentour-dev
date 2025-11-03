@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRole } from "@/server/auth/requireAdmin";
+import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { Database } from "@/integrations/supabase/types";
 
@@ -15,7 +15,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requireRole(["admin", "editor"]);
+  await requirePermission("nav.manage");
 
   const payload = (await request.json()) as Partial<NavigationLinkRow>;
 
@@ -88,7 +88,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requireRole(["admin", "editor"]);
+  await requirePermission("nav.manage");
 
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
