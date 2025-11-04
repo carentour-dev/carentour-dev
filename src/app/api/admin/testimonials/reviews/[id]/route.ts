@@ -4,15 +4,19 @@ import { jsonResponse } from "@/server/utils/http";
 import { testimonialReviews } from "@/server/modules/testimonials/reviews";
 import { getRouteParam } from "@/server/utils/params";
 
+const TESTIMONIALS_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.testimonials"],
+} as const;
+
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const id = getRouteParam(ctx.params, "id");
   const body = await req.json();
   const updated = await testimonialReviews.update(id, body);
   return jsonResponse(updated);
-});
+}, TESTIMONIALS_PERMISSIONS);
 
 export const DELETE = adminRoute(async (_req, ctx) => {
   const id = getRouteParam(ctx.params, "id");
   const result = await testimonialReviews.remove(id);
   return jsonResponse(result);
-});
+}, TESTIMONIALS_PERMISSIONS);
