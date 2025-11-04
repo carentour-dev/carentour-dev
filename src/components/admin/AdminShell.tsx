@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,6 +25,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import {
+  createEntitlementContext,
+  hasOperationsEntry,
+} from "@/lib/operations/entitlements";
+import { hasAnyOperationsSection } from "@/lib/operations/sections";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import {
@@ -74,6 +79,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const isCheckingAccess = authLoading || profileLoading;
   const hasAdminAccess = profile?.hasPermission("admin.access");
+  const operationsEntitlements = useMemo(
+    () =>
+      profile
+        ? createEntitlementContext({
+            permissions: profile.permissions,
+            roles: profile.roles,
+          })
+        : createEntitlementContext(),
+    [profile],
+  );
+  const hasOperationsAccess =
+    hasOperationsEntry(operationsEntitlements) ||
+    hasAnyOperationsSection(operationsEntitlements);
 
   // Reuse existing auth provider to fully sign out admins.
   const handleSignOut = async () => {
@@ -183,7 +201,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-        <AdminTopbar />
+        <AdminTopbar hasOperationsAccess={hasOperationsAccess} />
         <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
@@ -192,7 +210,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
   );
 }
 
-function AdminTopbar() {
+function AdminTopbar({
+  hasOperationsAccess,
+}: {
+  hasOperationsAccess: boolean;
+}) {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -211,6 +233,13 @@ function AdminTopbar() {
         </div>
       </div>
       <div className="ml-auto flex items-center gap-2">
+        {hasOperationsAccess && (
+          <Button asChild size="sm">
+            <Link href="/operations" prefetch={false}>
+              Operations dashboard
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline" size="sm">
           <Link
             href="/"
