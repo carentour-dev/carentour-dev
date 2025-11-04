@@ -79,6 +79,7 @@ const updateContactRequestSchema = z
 const listFiltersSchema = z.object({
   status: statusSchema.optional(),
   requestType: z.string().optional(),
+  assignedTo: optionalUuid,
 });
 
 const contactRequestIdSchema = z.string().uuid();
@@ -127,7 +128,24 @@ export const contactRequestController = {
 
     let query = supabase
       .from("contact_requests")
-      .select("*")
+      .select(
+        `
+          *,
+          assigned_profile:profiles!contact_requests_assigned_to_fkey(
+            id,
+            username,
+            avatar_url,
+            email,
+            job_title
+          ),
+          assigned_secure_profile:secure_profiles!contact_requests_assigned_to_fkey(
+            id,
+            username,
+            email,
+            avatar_url
+          )
+        `,
+      )
       .order("created_at", { ascending: false });
 
     if (parsed.status) {
@@ -136,6 +154,14 @@ export const contactRequestController = {
 
     if (parsed.requestType) {
       query = query.eq("request_type", parsed.requestType);
+    }
+
+    if (parsed.assignedTo !== undefined) {
+      if (parsed.assignedTo === null) {
+        query = query.is("assigned_to", null);
+      } else {
+        query = query.eq("assigned_to", parsed.assignedTo);
+      }
     }
 
     const { data, error } = await query;
