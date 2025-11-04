@@ -38,8 +38,40 @@ const trimOptional = (value: string | undefined | null): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const selectColumns =
-  "*, patients(id, full_name, contact_email, contact_phone, nationality), doctors(id, name, title), contact_requests(id, status, request_type, origin)";
+const selectColumns = `
+  *,
+  patients(
+    id,
+    full_name,
+    contact_email,
+    contact_phone,
+    nationality
+  ),
+  doctors(
+    id,
+    name,
+    title
+  ),
+  coordinator:profiles!patient_consultations_coordinator_id_fkey(
+    id,
+    username,
+    avatar_url,
+    email,
+    job_title
+  ),
+  coordinator_secure:secure_profiles!patient_consultations_coordinator_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url
+  ),
+  contact_requests(
+    id,
+    status,
+    request_type,
+    origin
+  )
+`;
 
 const consultationService = new CrudService(
   "patient_consultations",
@@ -73,6 +105,7 @@ const listFiltersSchema = z.object({
   patientId: z.string().uuid().optional(),
   contactRequestId: z.string().uuid().optional(),
   upcomingOnly: z.coerce.boolean().optional(),
+  coordinatorId: optionalUuid,
 });
 
 type ConsultationInsert =
@@ -131,6 +164,14 @@ export const patientConsultationController = {
 
     if (parsed.contactRequestId) {
       query = query.eq("contact_request_id", parsed.contactRequestId);
+    }
+
+    if (parsed.coordinatorId !== undefined) {
+      if (parsed.coordinatorId === null) {
+        query = query.is("coordinator_id", null);
+      } else {
+        query = query.eq("coordinator_id", parsed.coordinatorId);
+      }
     }
 
     if (parsed.upcomingOnly) {
