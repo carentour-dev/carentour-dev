@@ -1094,7 +1094,7 @@ export default function AdminRequestsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="flex w-full flex-col gap-2 sm:flex-row">
+                            <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1433,7 +1433,7 @@ export default function AdminRequestsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="flex w-full flex-col gap-2 sm:flex-row">
+                            <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
                               <Button
                                 variant="outline"
                                 size="sm"
