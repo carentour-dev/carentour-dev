@@ -16,6 +16,8 @@ export type AuthorizationContext = {
   hasAnyPermission: (permissions: string[]) => boolean;
 };
 
+const ADMIN_PERMISSION = "admin.access";
+
 async function resolveAuthorization(): Promise<AuthorizationContext> {
   const authHeader = (await headers()).get("authorization");
 
@@ -80,7 +82,51 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
 }
 
 export async function requireAdmin(): Promise<AuthorizationContext> {
-  return requirePermission("admin.access");
+  const context = await resolveAuthorization();
+
+  if (!context.hasPermission(ADMIN_PERMISSION)) {
+    throw new ApiError(403, "Admin access required");
+  }
+
+  return context;
+}
+
+export type BackofficeAccessOptions = {
+  allPermissions?: string[];
+  anyPermissions?: string[];
+};
+
+export async function requireBackofficeAccess(
+  options: BackofficeAccessOptions,
+): Promise<AuthorizationContext> {
+  const context = await resolveAuthorization();
+
+  if (context.hasPermission(ADMIN_PERMISSION)) {
+    return context;
+  }
+
+  const requiredAll = options.allPermissions ?? [];
+  const requiredAny = options.anyPermissions ?? [];
+
+  if (
+    requiredAll.length > 0 &&
+    !requiredAll.every((permission) => context.hasPermission(permission))
+  ) {
+    throw new ApiError(403, "Permission denied");
+  }
+
+  if (
+    requiredAny.length > 0 &&
+    !requiredAny.some((permission) => context.hasPermission(permission))
+  ) {
+    throw new ApiError(403, "Permission denied");
+  }
+
+  if (requiredAll.length === 0 && requiredAny.length === 0) {
+    throw new ApiError(403, "Admin access required");
+  }
+
+  return context;
 }
 
 export async function requireRole(
