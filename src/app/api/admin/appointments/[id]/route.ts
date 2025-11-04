@@ -5,10 +5,11 @@ import { adminRoute } from "@/server/utils/adminRoute";
 import { jsonResponse } from "@/server/utils/http";
 import { getRouteParam } from "@/server/utils/params";
 import { patientAppointmentController } from "@/server/modules/patientAppointments/module";
+import type { BackofficeAccessOptions } from "@/server/auth/requireAdmin";
 
-const APPOINTMENT_PERMISSIONS = {
+const APPOINTMENT_PERMISSIONS: BackofficeAccessOptions = {
   allPermissions: ["operations.shared", "operations.appointments"],
-} as const;
+};
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const payload = await req.json();
