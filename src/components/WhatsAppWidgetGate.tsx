@@ -5,7 +5,7 @@ import WhatsAppWidget, {
   type WhatsAppWidgetProps,
 } from "@/components/WhatsAppWidget";
 
-const HIDDEN_PREFIXES = ["/admin", "/cms"];
+const HIDDEN_PREFIXES = ["/admin", "/operations", "/cms"];
 
 export default function WhatsAppWidgetGate(props: WhatsAppWidgetProps) {
   const pathname = usePathname();
