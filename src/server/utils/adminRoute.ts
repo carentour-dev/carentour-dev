@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
-import { requireAdmin } from "@/server/auth/requireAdmin";
+import {
+  requireAdmin,
+  requireBackofficeAccess,
+  type BackofficeAccessOptions,
+} from "@/server/auth/requireAdmin";
 import { handleRouteError } from "@/server/utils/http";
 
 type ResolvedRouteContext = {
@@ -20,10 +24,21 @@ type WrappedHandler = (
 ) => Promise<Response>;
 
 // Wrap a route handler with shared error handling.
-export function adminRoute(handler: RouteHandler): WrappedHandler {
+export function adminRoute(
+  handler: RouteHandler,
+  options: BackofficeAccessOptions = {},
+): WrappedHandler {
   return async (req, ctx) => {
     try {
-      await requireAdmin();
+      const requiresCustomPermissions =
+        (options.allPermissions?.length ?? 0) > 0 ||
+        (options.anyPermissions?.length ?? 0) > 0;
+
+      if (requiresCustomPermissions) {
+        await requireBackofficeAccess(options);
+      } else {
+        await requireAdmin();
+      }
 
       const resolvedCtx: ResolvedRouteContext =
         ctx && typeof ctx === "object"
