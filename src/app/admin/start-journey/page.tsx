@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Download,
@@ -10,8 +10,9 @@ import {
   Plane,
   RefreshCcw,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PatientSelector } from "@/components/admin/PatientSelector";
+import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import {
   adminFetch,
   useAdminInvalidate,
@@ -38,8 +39,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type StartJourneySubmission =
+type StartJourneySubmissionRow =
   Database["public"]["Tables"]["start_journey_submissions"]["Row"];
+type StartJourneySubmission = StartJourneySubmissionRow & {
+  assigned_profile?: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    email: string | null;
+    job_title: string | null;
+  } | null;
+  assigned_secure_profile?: {
+    id: string | null;
+    username: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  } | null;
+};
 type SubmissionStatus = StartJourneySubmission["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
 
@@ -171,6 +187,17 @@ const STATUS_OPTIONS: Array<{
 
 const QUERY_KEY = ["admin", "start-journey-submissions"] as const;
 
+type AssignmentFilter = "all" | "me" | "unassigned";
+
+const ASSIGNMENT_FILTER_OPTIONS: Array<{
+  value: AssignmentFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All assignees" },
+  { value: "me", label: "Assigned to me" },
+  { value: "unassigned", label: "Unassigned" },
+];
+
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return "Not provided";
   const date = new Date(value);
@@ -201,6 +228,51 @@ const formatTravelDates = (travelDates: any) => {
   }).format(toDate);
 
   return `${formattedFrom} – ${formattedTo}`;
+};
+
+const formatSubmissionAssignee = (
+  submission: Pick<
+    StartJourneySubmission,
+    "assigned_to" | "assigned_profile" | "assigned_secure_profile"
+  >,
+) => {
+  const profile = submission.assigned_profile;
+  if (profile?.id) {
+    const label =
+      profile.username?.trim() ??
+      profile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = profile.job_title ?? profile.email ?? null;
+    return {
+      id: submission.assigned_to ?? profile.id,
+      label,
+      description,
+    };
+  }
+
+  const secureProfile = submission.assigned_secure_profile;
+  if (secureProfile?.id) {
+    const label =
+      secureProfile.username?.trim() ??
+      secureProfile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = secureProfile.email ?? null;
+    return {
+      id: submission.assigned_to ?? secureProfile.id ?? null,
+      label,
+      description,
+    };
+  }
+
+  if (submission.assigned_to) {
+    return {
+      id: submission.assigned_to,
+      label: "Assigned",
+      description: submission.assigned_to.slice(0, 8),
+    };
+  }
+
+  return { id: null, label: null, description: null };
 };
 
 const isGuestSubmission = (submission: StartJourneySubmission) => {
@@ -251,6 +323,16 @@ const getActionButtonLabel = (submission: StartJourneySubmission) => {
 
 export default function AdminStartJourneyPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const initialAssignmentParam = searchParams.get("assigned");
+  const initialAssignmentFilter: AssignmentFilter =
+    initialAssignmentParam === "me" || initialAssignmentParam === "unassigned"
+      ? (initialAssignmentParam as AssignmentFilter)
+      : "all";
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>(
+    initialAssignmentFilter,
+  );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [notesDraft, setNotesDraft] = useState("");
   const [patientIdDraft, setPatientIdDraft] = useState<string | null>(null);
@@ -269,10 +351,40 @@ export default function AdminStartJourneyPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
-  const fetchSubmissions = async (status: StatusFilter) => {
+  useEffect(() => {
+    const param = searchParams.get("assigned");
+    const nextFilter: AssignmentFilter =
+      param === "me" || param === "unassigned"
+        ? (param as AssignmentFilter)
+        : "all";
+    setAssignmentFilter((prev) => (prev === nextFilter ? prev : nextFilter));
+  }, [searchParams]);
+
+  const handleAssignmentFilterChange = (value: AssignmentFilter) => {
+    setAssignmentFilter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("assigned");
+    } else {
+      params.set("assigned", value);
+    }
+    const query = params.toString();
+    const target = query ? `${pathname}?${query}` : pathname;
+    router.replace(target, { scroll: false });
+  };
+
+  const fetchSubmissions = async (
+    status: StatusFilter,
+    assignment: AssignmentFilter = "all",
+  ) => {
     const params = new URLSearchParams();
     if (status !== "all") {
       params.set("status", status);
+    }
+    if (assignment === "me") {
+      params.set("assignedTo", "me");
+    } else if (assignment === "unassigned") {
+      params.set("assignedTo", "unassigned");
     }
     const query = params.toString();
     return adminFetch<StartJourneySubmission[]>(
@@ -281,8 +393,8 @@ export default function AdminStartJourneyPage() {
   };
 
   const submissionsQuery = useQuery({
-    queryKey: [...QUERY_KEY, statusFilter],
-    queryFn: () => fetchSubmissions(statusFilter),
+    queryKey: [...QUERY_KEY, statusFilter, assignmentFilter],
+    queryFn: () => fetchSubmissions(statusFilter, assignmentFilter),
   });
 
   const updateSubmission = useMutation({
@@ -294,7 +406,7 @@ export default function AdminStartJourneyPage() {
       data: Partial<
         Pick<
           StartJourneySubmission,
-          "status" | "notes" | "patient_id" | "consultation_id"
+          "status" | "notes" | "patient_id" | "consultation_id" | "assigned_to"
         >
       >;
     }) =>
@@ -426,6 +538,22 @@ export default function AdminStartJourneyPage() {
     router.push(`/admin/consultations?${params.toString()}`);
   };
 
+  const handleAssignmentChange = async (
+    submission: StartJourneySubmission,
+    assigneeId: string | null,
+  ) => {
+    const normalizedAssignee = assigneeId ?? null;
+    if (submission.assigned_to === normalizedAssignee) {
+      return;
+    }
+
+    setUpdatingId(submission.id);
+    await updateSubmission.mutateAsync({
+      id: submission.id,
+      data: { assigned_to: normalizedAssignee },
+    });
+  };
+
   const submissions = submissionsQuery.data ?? [];
 
   const activeDocuments = useMemo(
@@ -521,6 +649,23 @@ export default function AdminStartJourneyPage() {
           </div>
           <div className="flex items-center gap-3">
             <Select
+              value={assignmentFilter}
+              onValueChange={(value) =>
+                handleAssignmentFilterChange(value as AssignmentFilter)
+              }
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StatusFilter)}
             >
@@ -574,191 +719,214 @@ export default function AdminStartJourneyPage() {
 
           {submissions.length > 0 && (
             <div className="space-y-4">
-              {submissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex flex-1 flex-col gap-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-lg font-semibold text-foreground">
-                              {submission.first_name} {submission.last_name}
-                            </p>
-                            <Badge variant="secondary" className="capitalize">
-                              {submission.origin ?? "web"}
-                            </Badge>
-                            {submission.age && (
-                              <Badge variant="outline">
-                                Age: {submission.age}
+              {submissions.map((submission) => {
+                const assignment = formatSubmissionAssignee(submission);
+                const isRowUpdating =
+                  updateSubmission.isPending && updatingId === submission.id;
+                const isRowDeleting =
+                  deleteSubmission.isPending && deletingId === submission.id;
+
+                return (
+                  <div
+                    key={submission.id}
+                    className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                  >
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex flex-1 flex-col gap-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-lg font-semibold text-foreground">
+                                {submission.first_name} {submission.last_name}
+                              </p>
+                              <Badge variant="secondary" className="capitalize">
+                                {submission.origin ?? "web"}
                               </Badge>
-                            )}
+                              {submission.age && (
+                                <Badge variant="outline">
+                                  Age: {submission.age}
+                                </Badge>
+                              )}
+                              {assignment.label && (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1 text-xs font-normal"
+                                >
+                                  Assigned • {assignment.label}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              <span>
+                                Received {formatDateTime(submission.created_at)}
+                              </span>
+                              <span>
+                                Updated {formatDateTime(submission.updated_at)}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm text-muted-foreground">
+                              <p>{submission.email}</p>
+                              <p>{submission.phone}</p>
+                              <p className="uppercase">
+                                Based in {submission.country}
+                              </p>
+                              {submission.consultation_mode && (
+                                <p className="font-medium text-primary capitalize">
+                                  Prefers: {submission.consultation_mode}{" "}
+                                  consultation
+                                </p>
+                              )}
+                              {submission.patient_id && (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-1 w-fit text-xs font-normal"
+                                >
+                                  Linked patient •{" "}
+                                  {submission.patient_id.slice(0, 8)}
+                                  {submission.patient_id.length > 8 ? "…" : ""}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span>
-                              Received {formatDateTime(submission.created_at)}
-                            </span>
-                            <span>
-                              Updated {formatDateTime(submission.updated_at)}
-                            </span>
-                          </div>
-                          <div className="space-y-1 text-sm text-muted-foreground">
-                            <p>{submission.email}</p>
-                            <p>{submission.phone}</p>
-                            <p className="uppercase">
-                              Based in {submission.country}
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                              Treatment
                             </p>
-                            {submission.consultation_mode && (
-                              <p className="font-medium text-primary capitalize">
-                                Prefers: {submission.consultation_mode}{" "}
-                                consultation
+                            <p className="text-sm text-foreground">
+                              {submission.treatment_name ?? "Not specified"}
+                              {submission.procedure_name &&
+                                ` — ${submission.procedure_name}`}
+                            </p>
+                            <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                              {submission.budget_range && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Budget
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {submission.budget_range}
+                                  </p>
+                                </div>
+                              )}
+                              {submission.timeline && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Timeline
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {submission.timeline}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                              Medical Condition
+                            </p>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {submission.medical_condition}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                              Travel Dates
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatTravelDates(submission.travel_dates)}
+                            </p>
+                            {submission.companion_travelers && (
+                              <p className="text-xs text-muted-foreground">
+                                Companions: {submission.companion_travelers}
                               </p>
                             )}
-                            {submission.patient_id && (
-                              <Badge
-                                variant="outline"
-                                className="mt-1 w-fit text-xs font-normal"
-                              >
-                                Linked patient •{" "}
-                                {submission.patient_id.slice(0, 8)}
-                                {submission.patient_id.length > 8 ? "…" : ""}
-                              </Badge>
-                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                            Treatment
-                          </p>
-                          <p className="text-sm text-foreground">
-                            {submission.treatment_name ?? "Not specified"}
-                            {submission.procedure_name &&
-                              ` — ${submission.procedure_name}`}
-                          </p>
-                          <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                            {submission.budget_range && (
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                  Budget
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {submission.budget_range}
-                                </p>
-                              </div>
-                            )}
-                            {submission.timeline && (
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                  Timeline
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {submission.timeline}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                            Medical Condition
-                          </p>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {submission.medical_condition}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                            Travel Dates
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatTravelDates(submission.travel_dates)}
-                          </p>
-                          {submission.companion_travelers && (
-                            <p className="text-xs text-muted-foreground">
-                              Companions: {submission.companion_travelers}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDialogFor(submission)}
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleSchedule(submission)}
-                        className="w-full"
-                      >
-                        {getActionButtonLabel(submission)}
-                      </Button>
-                      <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                        <p className="uppercase tracking-wide text-muted-foreground/80">
-                          Status
-                        </p>
-                        <Select
-                          value={submission.status}
-                          onValueChange={(value) => {
-                            void handleStatusChange(
-                              submission.id,
-                              value as SubmissionStatus,
-                            );
+                      <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDialogFor(submission)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSchedule(submission)}
+                          className="w-full"
+                        >
+                          {getActionButtonLabel(submission)}
+                        </Button>
+                        <AssignmentControl
+                          assigneeId={assignment.id}
+                          assigneeLabel={assignment.label}
+                          assigneeDescription={assignment.description}
+                          onAssign={(memberId) => {
+                            void handleAssignmentChange(submission, memberId);
                           }}
+                          isPending={isRowUpdating}
+                          disabled={isRowDeleting}
+                        />
+                        <div className="space-y-1 text-xs text-muted-foreground md:text-right">
+                          <p className="uppercase tracking-wide text-muted-foreground/80">
+                            Status
+                          </p>
+                          <Select
+                            value={submission.status}
+                            onValueChange={(value) => {
+                              void handleStatusChange(
+                                submission.id,
+                                value as SubmissionStatus,
+                              );
+                            }}
+                            disabled={isRowUpdating || isRowDeleting}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.filter(
+                                (option) => option.value !== "all",
+                              ).map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => handleDelete(submission.id)}
                           disabled={
-                            updatingId === submission.id ||
-                            updateSubmission.isPending
+                            deleteSubmission.isPending &&
+                            deletingId === submission.id
                           }
                         >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.filter(
-                              (option) => option.value !== "all",
-                            ).map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {deletingId === submission.id &&
+                          deleteSubmission.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                              Deleting
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => handleDelete(submission.id)}
-                        disabled={
-                          deleteSubmission.isPending &&
-                          deletingId === submission.id
-                        }
-                      >
-                        {deletingId === submission.id &&
-                        deleteSubmission.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            Deleting
-                          </>
-                        ) : (
-                          "Delete"
-                        )}
-                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
