@@ -54,13 +54,14 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { CalendarClock, Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 type ConsultationRow =
   Database["public"]["Tables"]["patient_consultations"]["Row"];
@@ -79,6 +80,19 @@ type ConsultationRecord = ConsultationRow & {
     ContactRequestRow,
     "id" | "status" | "request_type" | "origin"
   > | null;
+  coordinator?: {
+    id: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    email: string | null;
+    job_title: string | null;
+  } | null;
+  coordinator_secure?: {
+    id: string | null;
+    username: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  } | null;
 };
 
 const consultationStatuses = [
@@ -89,6 +103,15 @@ const consultationStatuses = [
   "no_show",
 ] as const;
 type ConsultationStatus = (typeof consultationStatuses)[number];
+type AssignmentFilter = "all" | "me" | "unassigned";
+const ASSIGNMENT_FILTER_OPTIONS: Array<{
+  value: AssignmentFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All coordinators" },
+  { value: "me", label: "Assigned to me" },
+  { value: "unassigned", label: "Unassigned" },
+];
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (value?: string | null): value is string =>
@@ -165,6 +188,51 @@ const toIsoString = (value: string) => {
   return date.toISOString();
 };
 
+const formatCoordinator = (
+  consultation: Pick<
+    ConsultationRecord,
+    "coordinator" | "coordinator_secure" | "coordinator_id"
+  >,
+) => {
+  const profile = consultation.coordinator;
+  if (profile?.id) {
+    const label =
+      profile.username?.trim() ??
+      profile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = profile.job_title ?? profile.email ?? null;
+    return {
+      id: consultation.coordinator_id ?? profile.id ?? null,
+      label,
+      description,
+    };
+  }
+
+  const secureProfile = consultation.coordinator_secure;
+  if (secureProfile?.id) {
+    const label =
+      secureProfile.username?.trim() ??
+      secureProfile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = secureProfile.email ?? null;
+    return {
+      id: consultation.coordinator_id ?? secureProfile.id ?? null,
+      label,
+      description,
+    };
+  }
+
+  if (consultation.coordinator_id) {
+    return {
+      id: consultation.coordinator_id,
+      label: "Assigned",
+      description: consultation.coordinator_id.slice(0, 8),
+    };
+  }
+
+  return { id: null, label: null, description: null };
+};
+
 export default function AdminConsultationsPage() {
   const [statusFilter, setStatusFilter] = useState<ConsultationStatus | "all">(
     "all",
@@ -173,15 +241,47 @@ export default function AdminConsultationsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConsultation, setEditingConsultation] =
     useState<ConsultationRecord | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const initialAssignmentParam = searchParams.get("assigned");
+  const initialAssignmentFilter: AssignmentFilter =
+    initialAssignmentParam === "me" || initialAssignmentParam === "unassigned"
+      ? (initialAssignmentParam as AssignmentFilter)
+      : "all";
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>(
+    initialAssignmentFilter,
+  );
   const schedulePrefillKeyRef = useRef<string | null>(null);
 
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const param = searchParams.get("assigned");
+    const nextFilter: AssignmentFilter =
+      param === "me" || param === "unassigned"
+        ? (param as AssignmentFilter)
+        : "all";
+    setAssignmentFilter((prev) => (prev === nextFilter ? prev : nextFilter));
+  }, [searchParams]);
+
+  const handleAssignmentFilterChange = (value: AssignmentFilter) => {
+    setAssignmentFilter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("assigned");
+    } else {
+      params.set("assigned", value);
+    }
+    const query = params.toString();
+    const target = query ? `${pathname}?${query}` : pathname;
+    router.replace(target, { scroll: false });
+  };
+
   const query = useQuery({
-    queryKey: [...QUERY_KEY, statusFilter, upcomingOnly],
+    queryKey: [...QUERY_KEY, statusFilter, upcomingOnly, assignmentFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") {
@@ -189,6 +289,11 @@ export default function AdminConsultationsPage() {
       }
       if (upcomingOnly) {
         params.set("upcomingOnly", "true");
+      }
+      if (assignmentFilter === "me") {
+        params.set("assignedTo", "me");
+      } else if (assignmentFilter === "unassigned") {
+        params.set("assignedTo", "unassigned");
       }
       return adminFetch<ConsultationRecord[]>(
         `/api/admin/consultations${params.size ? `?${params}` : ""}`,
@@ -534,6 +639,37 @@ export default function AdminConsultationsPage() {
     },
   });
 
+  const coordinatorMutation = useMutation({
+    mutationFn: ({
+      id,
+      coordinatorId,
+    }: {
+      id: string;
+      coordinatorId: string | null;
+    }) =>
+      adminFetch<ConsultationRecord>(`/api/admin/consultations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ coordinator_id: coordinatorId }),
+      }),
+    onMutate: ({ id }) => {
+      setAssigningId(id);
+    },
+    onSuccess: () => {
+      invalidate(QUERY_KEY);
+      toast({ title: "Coordinator updated" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update coordinator",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setAssigningId(null);
+    },
+  });
+
   const consultations = useMemo(() => query.data ?? [], [query.data]);
 
   const groupedByStatus = useMemo(() => {
@@ -590,6 +726,23 @@ export default function AdminConsultationsPage() {
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={assignmentFilter}
+              onValueChange={(value) =>
+                handleAssignmentFilterChange(value as AssignmentFilter)
+              }
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter coordinator" />
+              </SelectTrigger>
+              <SelectContent>
+                {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={statusFilter}
               onValueChange={(value) =>
@@ -666,103 +819,135 @@ export default function AdminConsultationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {consultations.map((consultation) => (
-                    <TableRow key={consultation.id}>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-foreground">
-                            {consultation.patients?.full_name ??
-                              "Unknown patient"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {consultation.patients?.contact_email ??
-                              consultation.patient_id}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {consultation.doctors ? (
-                          <div className="flex flex-col">
+                  {consultations.map((consultation) => {
+                    const coordinator = formatCoordinator(consultation);
+                    const isAssigning =
+                      assigningId === consultation.id &&
+                      coordinatorMutation.isPending;
+
+                    return (
+                      <TableRow key={consultation.id}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
                             <span className="font-medium text-foreground">
-                              {consultation.doctors.name}
+                              {consultation.patients?.full_name ??
+                                "Unknown patient"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {consultation.doctors.title}
+                              {consultation.patients?.contact_email ??
+                                consultation.patient_id}
                             </span>
                           </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not assigned
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {format(
-                              new Date(consultation.scheduled_at),
-                              "PPpp",
-                            )}
-                          </span>
-                          {consultation.duration_minutes ? (
-                            <span className="text-xs text-muted-foreground">
-                              {consultation.duration_minutes} minutes
+                        </TableCell>
+                        <TableCell>
+                          {consultation.doctors ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">
+                                {consultation.doctors.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {consultation.doctors.title}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Not assigned
                             </span>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            consultation.status === "scheduled" ||
-                            consultation.status === "rescheduled"
-                              ? "default"
-                              : consultation.status === "completed"
-                                ? "success"
-                                : "secondary"
-                          }
-                          className="capitalize"
-                        >
-                          {consultation.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {consultation.contact_requests ? (
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-sm">
-                              {consultation.contact_requests.request_type ??
-                                "general"}
+                            <span className="text-sm font-medium">
+                              {format(
+                                new Date(consultation.scheduled_at),
+                                "PPpp",
+                              )}
                             </span>
-                            <span className="text-xs text-muted-foreground capitalize">
-                              {consultation.contact_requests.status} •{" "}
-                              {consultation.contact_requests.origin}
-                            </span>
+                            {consultation.duration_minutes ? (
+                              <span className="text-xs text-muted-foreground">
+                                {consultation.duration_minutes} minutes
+                              </span>
+                            ) : null}
                           </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not linked
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(consultation)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => deleteMutation.mutate(consultation.id)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              consultation.status === "scheduled" ||
+                              consultation.status === "rescheduled"
+                                ? "default"
+                                : consultation.status === "completed"
+                                  ? "success"
+                                  : "secondary"
+                            }
+                            className="capitalize"
+                          >
+                            {consultation.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {consultation.contact_requests ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm">
+                                {consultation.contact_requests.request_type ??
+                                  "general"}
+                              </span>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {consultation.contact_requests.status} •{" "}
+                                {consultation.contact_requests.origin}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Not linked
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="w-[260px]">
+                          <div className="flex flex-col items-end gap-2">
+                            <AssignmentControl
+                              assigneeId={coordinator.id}
+                              assigneeLabel={coordinator.label}
+                              assigneeDescription={coordinator.description}
+                              onAssign={(memberId) => {
+                                if (
+                                  (consultation.coordinator_id ?? null) ===
+                                  (memberId ?? null)
+                                ) {
+                                  return;
+                                }
+                                coordinatorMutation.mutate({
+                                  id: consultation.id,
+                                  coordinatorId: memberId,
+                                });
+                              }}
+                              isPending={isAssigning}
+                              disabled={deleteMutation.isPending}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditDialog(consultation)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() =>
+                                  deleteMutation.mutate(consultation.id)
+                                }
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
