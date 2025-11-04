@@ -4,12 +4,16 @@ import { jsonResponse } from "@/server/utils/http";
 import { getRouteParam } from "@/server/utils/params";
 import { treatmentController } from "@/server/modules/treatments/module";
 
+const TREATMENTS_READ_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.testimonials"],
+} as const;
+
 export const GET = adminRoute(async (_req, ctx) => {
   const treatment = await treatmentController.get(
     getRouteParam(ctx.params, "id"),
   );
   return jsonResponse(treatment);
-});
+}, TREATMENTS_READ_PERMISSIONS);
 
 export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const body = await req.json();
