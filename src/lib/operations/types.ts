@@ -4,6 +4,7 @@ export type OperationsSectionId =
   | "start-journey"
   | "consultations"
   | "appointments"
-  | "patients";
+  | "patients"
+  | "testimonials";
 
 export type OperationsSectionSlug = OperationsSectionId;
