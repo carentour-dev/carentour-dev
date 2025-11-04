@@ -8,6 +8,10 @@ import {
   patientConsultationController,
 } from "@/server/modules/patientConsultations/module";
 
+const CONSULTATION_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.consultations"],
+} as const;
+
 const isValidStatus = (
   value: string | null,
 ): value is (typeof consultationStatusValues)[number] => {
@@ -50,10 +54,10 @@ export const GET = adminRoute(async (req: NextRequest) => {
 
   const consultations = await patientConsultationController.list(filters);
   return jsonResponse(consultations);
-});
+}, CONSULTATION_PERMISSIONS);
 
 export const POST = adminRoute(async (req: NextRequest) => {
   const payload = await req.json();
   const consultation = await patientConsultationController.create(payload);
   return jsonResponse(consultation);
-});
+}, CONSULTATION_PERMISSIONS);
