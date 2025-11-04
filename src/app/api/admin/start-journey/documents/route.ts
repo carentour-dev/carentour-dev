@@ -4,6 +4,10 @@ import { jsonResponse } from "@/server/utils/http";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 
+const START_JOURNEY_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.start_journey"],
+} as const;
+
 const querySchema = z.object({
   bucket: z.string().min(1, "bucket is required"),
   path: z.string().min(1, "path is required"),
@@ -49,4 +53,4 @@ export const GET = adminRoute(async (req) => {
     expiresIn: DEFAULT_EXPIRY_SECONDS,
     download: shouldDownload,
   });
-});
+}, START_JOURNEY_PERMISSIONS);
