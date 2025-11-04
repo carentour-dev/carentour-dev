@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FileQuestion, Inbox, Loader2, RefreshCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import {
   adminFetch,
@@ -40,7 +41,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Database, Tables } from "@/integrations/supabase/types";
 
-type ContactRequest = Tables<"contact_requests">;
+type ContactRequestRow = Tables<"contact_requests">;
+type ContactRequest = ContactRequestRow & {
+  assigned_profile?: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    email: string | null;
+    job_title: string | null;
+  } | null;
+  assigned_secure_profile?: {
+    id: string | null;
+    username: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  } | null;
+};
 type ContactRequestStatus = ContactRequest["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
 type RequestTab = "contact" | "consultation";
@@ -176,9 +192,79 @@ const capitalize = (value: string | null) => {
     .join(" ");
 };
 
+type AssignmentFilter = "all" | "me" | "unassigned";
+
+const ASSIGNMENT_FILTER_OPTIONS: Array<{
+  value: AssignmentFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All assignees" },
+  { value: "me", label: "Assigned to me" },
+  { value: "unassigned", label: "Unassigned" },
+];
+
+const formatAssignee = (
+  record: Pick<
+    ContactRequest,
+    "assigned_to" | "assigned_profile" | "assigned_secure_profile"
+  >,
+) => {
+  const profile = record.assigned_profile;
+  if (profile?.id) {
+    const label =
+      profile.username?.trim() ??
+      profile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = profile.job_title ?? profile.email ?? null;
+    return {
+      id: record.assigned_to ?? profile.id,
+      label,
+      description,
+    };
+  }
+
+  const secureProfile = record.assigned_secure_profile;
+  if (secureProfile?.id) {
+    const label =
+      secureProfile.username?.trim() ??
+      secureProfile.email?.split("@")[0]?.trim() ??
+      "Team member";
+    const description = secureProfile.email ?? null;
+    return {
+      id: record.assigned_to ?? secureProfile.id ?? null,
+      label,
+      description,
+    };
+  }
+
+  if (record.assigned_to) {
+    return {
+      id: record.assigned_to,
+      label: "Assigned",
+      description: record.assigned_to.slice(0, 8),
+    };
+  }
+
+  return {
+    id: null,
+    label: null,
+    description: null,
+  };
+};
+
 export default function AdminRequestsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<RequestTab>("consultation");
+  const initialAssignmentParam = searchParams.get("assigned");
+  const initialAssignmentFilter: AssignmentFilter =
+    initialAssignmentParam === "me" || initialAssignmentParam === "unassigned"
+      ? (initialAssignmentParam as AssignmentFilter)
+      : "all";
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>(
+    initialAssignmentFilter,
+  );
   const [statusFilters, setStatusFilters] = useState<
     Record<RequestTab, StatusFilter>
   >({
@@ -203,6 +289,28 @@ export default function AdminRequestsPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
+  useEffect(() => {
+    const param = searchParams.get("assigned");
+    const nextFilter: AssignmentFilter =
+      param === "me" || param === "unassigned"
+        ? (param as AssignmentFilter)
+        : "all";
+    setAssignmentFilter((prev) => (prev === nextFilter ? prev : nextFilter));
+  }, [searchParams]);
+
+  const handleAssignmentFilterChange = (value: AssignmentFilter) => {
+    setAssignmentFilter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("assigned");
+    } else {
+      params.set("assigned", value);
+    }
+    const query = params.toString();
+    const target = query ? `${pathname}?${query}` : pathname;
+    router.replace(target, { scroll: false });
+  };
+
   const consultationStatus: StatusFilter = showArchivedOnly
     ? "all"
     : statusFilters.consultation;
@@ -210,13 +318,22 @@ export default function AdminRequestsPage() {
     ? "all"
     : statusFilters.contact;
 
-  const fetchRequests = async (status: StatusFilter, requestType?: string) => {
+  const fetchRequests = async (
+    status: StatusFilter,
+    requestType?: string,
+    assignment: AssignmentFilter = "all",
+  ) => {
     const params = new URLSearchParams();
     if (status !== "all") {
       params.set("status", status);
     }
     if (requestType) {
       params.set("requestType", requestType);
+    }
+    if (assignment === "me") {
+      params.set("assignedTo", "me");
+    } else if (assignment === "unassigned") {
+      params.set("assignedTo", "unassigned");
     }
     const query = params.toString();
     return adminFetch<ContactRequest[]>(
@@ -225,8 +342,14 @@ export default function AdminRequestsPage() {
   };
 
   const contactQuery = useQuery({
-    queryKey: [...QUERY_KEY, "contact", contactStatus, showArchivedOnly],
-    queryFn: () => fetchRequests(contactStatus),
+    queryKey: [
+      ...QUERY_KEY,
+      "contact",
+      contactStatus,
+      showArchivedOnly,
+      assignmentFilter,
+    ],
+    queryFn: () => fetchRequests(contactStatus, undefined, assignmentFilter),
   });
 
   const consultationQuery = useQuery({
@@ -235,8 +358,10 @@ export default function AdminRequestsPage() {
       "consultation",
       consultationStatus,
       showArchivedOnly,
+      assignmentFilter,
     ],
-    queryFn: () => fetchRequests(consultationStatus, "consultation"),
+    queryFn: () =>
+      fetchRequests(consultationStatus, "consultation", assignmentFilter),
   });
 
   useEffect(() => {
@@ -288,7 +413,12 @@ export default function AdminRequestsPage() {
       data: Partial<
         Pick<
           ContactRequest,
-          "status" | "notes" | "request_type" | "patient_id" | "portal_metadata"
+          | "status"
+          | "notes"
+          | "request_type"
+          | "patient_id"
+          | "portal_metadata"
+          | "assigned_to"
         >
       >;
     }) =>
@@ -468,6 +598,22 @@ export default function AdminRequestsPage() {
     deleteRequest.mutate(id);
   };
 
+  const handleAssignmentChange = async (
+    request: ContactRequest,
+    assigneeId: string | null,
+  ) => {
+    const normalizedAssignee = assigneeId ?? null;
+    if (request.assigned_to === normalizedAssignee) {
+      return;
+    }
+
+    setUpdatingId(request.id);
+    await updateRequest.mutateAsync({
+      id: request.id,
+      data: { assigned_to: normalizedAssignee },
+    });
+  };
+
   const matchesArchiveView = (request: ContactRequest) => {
     const archived = getArchivedState(request);
     return showArchivedOnly ? archived : !archived;
@@ -641,18 +787,37 @@ export default function AdminRequestsPage() {
           <p className="text-sm text-muted-foreground">
             Toggle archived view to review closed requests.
           </p>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-archived-toggle"
-              checked={showArchivedOnly}
-              onCheckedChange={(checked) => setShowArchivedOnly(checked)}
-            />
-            <Label
-              htmlFor="show-archived-toggle"
-              className="text-sm font-normal text-muted-foreground"
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={assignmentFilter}
+              onValueChange={(value) =>
+                handleAssignmentFilterChange(value as AssignmentFilter)
+              }
             >
-              Show archived only
-            </Label>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-archived-toggle"
+                checked={showArchivedOnly}
+                onCheckedChange={(checked) => setShowArchivedOnly(checked)}
+              />
+              <Label
+                htmlFor="show-archived-toggle"
+                className="text-sm font-normal text-muted-foreground"
+              >
+                Show archived only
+              </Label>
+            </div>
           </div>
         </div>
 
@@ -734,6 +899,11 @@ export default function AdminRequestsPage() {
                     const scheduleLabel = getScheduleButtonLabel(request);
                     const archived = getArchivedState(request);
                     const archiveLabel = archived ? "Unarchive" : "Archive";
+                    const assignment = formatAssignee(request);
+                    const isRowUpdating =
+                      updateRequest.isPending && updatingId === request.id;
+                    const isRowDeleting =
+                      deleteRequest.isPending && deletingId === request.id;
                     return (
                       <div
                         key={request.id}
@@ -759,6 +929,14 @@ export default function AdminRequestsPage() {
                                   >
                                     {capitalize(request.request_type)}
                                   </Badge>
+                                  {assignment.label && (
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 text-xs font-normal"
+                                    >
+                                      Assigned • {assignment.label}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                   <span>
@@ -875,6 +1053,16 @@ export default function AdminRequestsPage() {
                               </TooltipTrigger>
                               <TooltipContent>{scheduleTooltip}</TooltipContent>
                             </Tooltip>
+                            <AssignmentControl
+                              assigneeId={assignment.id}
+                              assigneeLabel={assignment.label}
+                              assigneeDescription={assignment.description}
+                              onAssign={(memberId) => {
+                                void handleAssignmentChange(request, memberId);
+                              }}
+                              isPending={isRowUpdating}
+                              disabled={isRowDeleting}
+                            />
                             <div className="space-y-1 text-xs text-muted-foreground md:text-right">
                               <p className="uppercase tracking-wide text-muted-foreground/80">
                                 Status
@@ -887,10 +1075,7 @@ export default function AdminRequestsPage() {
                                     value as ContactRequestStatus,
                                   );
                                 }}
-                                disabled={
-                                  updatingId === request.id ||
-                                  updateRequest.isPending
-                                }
+                                disabled={isRowUpdating || isRowDeleting}
                               >
                                 <SelectTrigger className="w-full">
                                   <SelectValue />
@@ -1043,6 +1228,11 @@ export default function AdminRequestsPage() {
                     const scheduleLabel = getScheduleButtonLabel(request);
                     const archived = getArchivedState(request);
                     const archiveLabel = archived ? "Unarchive" : "Archive";
+                    const assignment = formatAssignee(request);
+                    const isRowUpdating =
+                      updateRequest.isPending && updatingId === request.id;
+                    const isRowDeleting =
+                      deleteRequest.isPending && deletingId === request.id;
 
                     return (
                       <div
@@ -1069,6 +1259,14 @@ export default function AdminRequestsPage() {
                                   >
                                     {capitalize(request.request_type)}
                                   </Badge>
+                                  {assignment.label && (
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 text-xs font-normal"
+                                    >
+                                      Assigned • {assignment.label}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                   <span>
@@ -1194,6 +1392,16 @@ export default function AdminRequestsPage() {
                               </TooltipTrigger>
                               <TooltipContent>{scheduleTooltip}</TooltipContent>
                             </Tooltip>
+                            <AssignmentControl
+                              assigneeId={assignment.id}
+                              assigneeLabel={assignment.label}
+                              assigneeDescription={assignment.description}
+                              onAssign={(memberId) => {
+                                void handleAssignmentChange(request, memberId);
+                              }}
+                              isPending={isRowUpdating}
+                              disabled={isRowDeleting}
+                            />
                             <div className="space-y-1 text-xs text-muted-foreground md:text-right">
                               <p className="uppercase tracking-wide text-muted-foreground/80">
                                 Status
@@ -1206,10 +1414,7 @@ export default function AdminRequestsPage() {
                                     value as ContactRequestStatus,
                                   );
                                 }}
-                                disabled={
-                                  updatingId === request.id ||
-                                  updateRequest.isPending
-                                }
+                                disabled={isRowUpdating || isRowDeleting}
                               >
                                 <SelectTrigger className="w-full">
                                   <SelectValue />
