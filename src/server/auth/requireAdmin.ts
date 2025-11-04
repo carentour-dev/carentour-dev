@@ -10,6 +10,7 @@ export type AuthorizationContext = {
   roles: RoleSlug[];
   permissions: string[];
   primaryRole: RoleSlug | null;
+  profileId: string | null;
   hasRole: (role: RoleSlug) => boolean;
   hasAnyRole: (roles: RoleSlug[]) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -39,9 +40,14 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
     throw new ApiError(401, "Invalid or expired token", userError?.message);
   }
 
-  const [rolesResult, permissionsResult] = await Promise.all([
+  const [rolesResult, permissionsResult, profileResult] = await Promise.all([
     supabaseAdmin.rpc("user_roles", { p_user_id: userData.user.id }),
     supabaseAdmin.rpc("user_permissions", { p_user_id: userData.user.id }),
+    supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle(),
   ]);
 
   if (rolesResult.error) {
@@ -66,12 +72,14 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
     : [];
 
   const primaryRole = pickPrimaryRole(roles);
+  const profileId = profileResult.data?.id ?? null;
 
   return {
     user: userData.user,
     roles,
     permissions,
     primaryRole,
+    profileId,
     hasRole: (role: RoleSlug) => roles.includes(role),
     hasAnyRole: (allowed: RoleSlug[]) =>
       allowed.some((role) => roles.includes(role)),
