@@ -92,8 +92,8 @@ export async function requireAdmin(): Promise<AuthorizationContext> {
 }
 
 export type BackofficeAccessOptions = {
-  allPermissions?: string[];
-  anyPermissions?: string[];
+  allPermissions?: readonly string[];
+  anyPermissions?: readonly string[];
 };
 
 export async function requireBackofficeAccess(
