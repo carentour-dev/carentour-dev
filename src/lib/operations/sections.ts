@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Plane,
   Users,
+  Sparkles,
 } from "lucide-react";
 
 import type { OperationsSectionId } from "@/lib/operations/types";
@@ -35,6 +36,7 @@ const overviewRequirement: AccessRequirement = [
       "operations.consultations",
       "operations.appointments",
       "operations.patients",
+      "operations.testimonials",
     ],
   },
 ];
@@ -103,6 +105,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: Users,
     adminHref: "/admin/patients",
     required: sectionRequirement("operations.patients"),
+  },
+  {
+    id: "testimonials",
+    label: "Testimonials",
+    description:
+      "Collect, curate, and publish patient reviews and success stories.",
+    href: "/operations/testimonials",
+    icon: Sparkles,
+    adminHref: "/admin/testimonials",
+    required: sectionRequirement("operations.testimonials"),
   },
 ];
 
