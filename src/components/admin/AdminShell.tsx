@@ -236,7 +236,7 @@ function AdminTopbar({
         {hasOperationsAccess && (
           <Button asChild size="sm">
             <Link href="/operations" prefetch={false}>
-              Operations dashboard
+              Operations Dashboard
             </Link>
           </Button>
         )}
@@ -247,7 +247,7 @@ function AdminTopbar({
             target="_blank"
             rel="noopener noreferrer"
           >
-            Visit site
+            Visit Site
           </Link>
         </Button>
         <ThemeToggle />
