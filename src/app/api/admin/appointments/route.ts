@@ -8,6 +8,10 @@ import {
   patientAppointmentController,
 } from "@/server/modules/patientAppointments/module";
 
+const APPOINTMENT_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.appointments"],
+} as const;
+
 const isValidStatus = (
   value: string | null,
 ): value is (typeof appointmentStatusValues)[number] => {
@@ -44,10 +48,10 @@ export const GET = adminRoute(async (req: NextRequest) => {
 
   const appointments = await patientAppointmentController.list(filters);
   return jsonResponse(appointments);
-});
+}, APPOINTMENT_PERMISSIONS);
 
 export const POST = adminRoute(async (req: NextRequest) => {
   const payload = await req.json();
   const appointment = await patientAppointmentController.create(payload);
   return jsonResponse(appointment);
-});
+}, APPOINTMENT_PERMISSIONS);
