@@ -3,6 +3,10 @@ import type { StartJourneySubmissionStatus } from "@/server/modules/startJourney
 import { adminRoute } from "@/server/utils/adminRoute";
 import { jsonResponse } from "@/server/utils/http";
 
+const START_JOURNEY_PERMISSIONS = {
+  allPermissions: ["operations.shared", "operations.start_journey"],
+} as const;
+
 export const GET = adminRoute(async (req) => {
   const { searchParams } = new URL(req.url);
   const status = (searchParams.get("status") ?? undefined) as
@@ -14,4 +18,4 @@ export const GET = adminRoute(async (req) => {
   });
 
   return jsonResponse(submissions);
-});
+}, START_JOURNEY_PERMISSIONS);
