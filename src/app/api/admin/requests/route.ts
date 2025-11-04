@@ -14,25 +14,28 @@ const isValidStatus = (value: string | null): value is ContactRequestStatus => {
   return CONTACT_REQUEST_STATUSES.includes(value as ContactRequestStatus);
 };
 
-export const GET = adminRoute(async (req: NextRequest) => {
-  const searchParams = req.nextUrl.searchParams;
-  const statusParam = searchParams.get("status");
-  const requestTypeParam = searchParams.get("requestType");
+export const GET = adminRoute(
+  async (req: NextRequest) => {
+    const searchParams = req.nextUrl.searchParams;
+    const statusParam = searchParams.get("status");
+    const requestTypeParam = searchParams.get("requestType");
 
-  const filters: { status?: ContactRequestStatus; requestType?: string } = {};
+    const filters: { status?: ContactRequestStatus; requestType?: string } = {};
 
-  if (isValidStatus(statusParam)) {
-    filters.status = statusParam;
-  }
+    if (isValidStatus(statusParam)) {
+      filters.status = statusParam;
+    }
 
-  if (
-    requestTypeParam &&
-    requestTypeParam.trim().length > 0 &&
-    requestTypeParam !== "all"
-  ) {
-    filters.requestType = requestTypeParam.trim();
-  }
+    if (
+      requestTypeParam &&
+      requestTypeParam.trim().length > 0 &&
+      requestTypeParam !== "all"
+    ) {
+      filters.requestType = requestTypeParam.trim();
+    }
 
-  const requests = await contactRequestController.list(filters);
-  return jsonResponse(requests);
-});
+    const requests = await contactRequestController.list(filters);
+    return jsonResponse(requests);
+  },
+  { allPermissions: ["operations.shared", "operations.requests"] },
+);
