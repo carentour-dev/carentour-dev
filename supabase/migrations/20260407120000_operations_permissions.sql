@@ -38,6 +38,11 @@ VALUES
     'operations.patients',
     'Operations Patients Module',
     'Allows managing patient records and portal access.'
+),
+(
+    'operations.testimonials',
+    'Operations Testimonials Module',
+    'Allows managing patient testimonials and success stories.'
 )
 ON CONFLICT (slug) DO UPDATE
     SET
@@ -57,7 +62,8 @@ WITH operations_permissions AS (
         'operations.start_journey',
         'operations.consultations',
         'operations.appointments',
-        'operations.patients'
+        'operations.patients',
+        'operations.testimonials'
     )
 ),
 
