@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "../index.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,8 +8,6 @@ import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import { AuthProvider } from "@/contexts/AuthContext";
 import QueryProvider from "@/components/QueryProvider";
 import WhatsAppWidgetGate from "@/components/WhatsAppWidgetGate";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Care N Tour | World-Class Medical Care in Egypt",
@@ -47,7 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <MicrosoftClarity />
         <ThemeProvider defaultTheme="system" storageKey="care-n-tour-theme">
           <QueryProvider>
