@@ -7,10 +7,11 @@ import {
   appointmentStatusValues,
   patientAppointmentController,
 } from "@/server/modules/patientAppointments/module";
+import type { BackofficeAccessOptions } from "@/server/auth/requireAdmin";
 
-const APPOINTMENT_PERMISSIONS = {
+const APPOINTMENT_PERMISSIONS: BackofficeAccessOptions = {
   allPermissions: ["operations.shared", "operations.appointments"],
-} as const;
+};
 
 const isValidStatus = (
   value: string | null,
