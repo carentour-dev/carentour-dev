@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import {
   requireAdmin,
   requireBackofficeAccess,
+  type AuthorizationContext,
   type BackofficeAccessOptions,
 } from "@/server/auth/requireAdmin";
 import { handleRouteError } from "@/server/utils/http";
@@ -13,9 +14,13 @@ type ResolvedRouteContext = {
 
 type IncomingRouteContext = RouteContext<any>;
 
+type ResolvedHandlerContext = ResolvedRouteContext & {
+  auth?: AuthorizationContext;
+};
+
 type RouteHandler = (
   req: NextRequest,
-  ctx: ResolvedRouteContext,
+  ctx: ResolvedHandlerContext,
 ) => Promise<Response>;
 
 type WrappedHandler = (
@@ -34,11 +39,9 @@ export function adminRoute(
         (options.allPermissions?.length ?? 0) > 0 ||
         (options.anyPermissions?.length ?? 0) > 0;
 
-      if (requiresCustomPermissions) {
-        await requireBackofficeAccess(options);
-      } else {
-        await requireAdmin();
-      }
+      const authContext = requiresCustomPermissions
+        ? await requireBackofficeAccess(options)
+        : await requireAdmin();
 
       const resolvedCtx: ResolvedRouteContext =
         ctx && typeof ctx === "object"
@@ -48,7 +51,7 @@ export function adminRoute(
             }
           : {};
 
-      return await handler(req, resolvedCtx);
+      return await handler(req, { ...resolvedCtx, auth: authContext });
     } catch (error) {
       return handleRouteError(error);
     }
