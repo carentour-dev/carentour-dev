@@ -54,9 +54,9 @@ ON public.patients
 FOR UPDATE
 USING (
     -- Patients can always update their own record
-    (auth.uid() = user_id)
+    ((SELECT auth.uid()) = user_id)
     OR (
-        public.has_permission(auth.uid(), 'operations.patients')
+        public.has_permission((SELECT auth.uid()), 'operations.patients')
         AND (
             -- Referral users may update patients they created
             (
@@ -68,7 +68,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug = 'referral'
                 )
                 AND NOT EXISTS (
@@ -79,7 +79,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -91,7 +91,7 @@ USING (
                 AND created_by_profile_id IN (
                     SELECT id
                     FROM public.profiles
-                    WHERE user_id = auth.uid()
+                    WHERE user_id = (SELECT auth.uid())
                 )
             )
             OR (
@@ -104,7 +104,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -124,9 +124,9 @@ CREATE POLICY manage_patient_selects
 ON public.patients
 FOR SELECT
 USING (
-    (auth.uid() = user_id)
+    ((SELECT auth.uid()) = user_id)
     OR (
-        public.has_permission(auth.uid(), 'operations.patients')
+        public.has_permission((SELECT auth.uid()), 'operations.patients')
         AND (
             (
                 EXISTS (
@@ -137,7 +137,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug = 'referral'
                 )
                 AND NOT EXISTS (
@@ -148,7 +148,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -160,7 +160,7 @@ USING (
                 AND created_by_profile_id IN (
                     SELECT id
                     FROM public.profiles
-                    WHERE user_id = auth.uid()
+                    WHERE user_id = (SELECT auth.uid())
                 )
             )
             OR (
@@ -172,7 +172,7 @@ USING (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -194,11 +194,11 @@ FOR INSERT
 WITH CHECK (
     -- Patients can insert their own record, excluding staff accounts
     (
-        (auth.uid() = user_id)
-        AND NOT public.is_staff_account(auth.uid())
+        ((SELECT auth.uid()) = user_id)
+        AND NOT public.is_staff_account((SELECT auth.uid()))
     )
     OR (
-        public.has_permission(auth.uid(), 'operations.patients')
+        public.has_permission((SELECT auth.uid()), 'operations.patients')
         AND (
             -- Referral users may insert patients when they are referral-only
             (
@@ -210,7 +210,7 @@ WITH CHECK (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug = 'referral'
                 )
                 AND NOT EXISTS (
@@ -221,7 +221,7 @@ WITH CHECK (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -241,7 +241,7 @@ WITH CHECK (
                     INNER JOIN public.profiles AS p
                         ON pr.profile_id = p.id
                     WHERE
-                        p.user_id = auth.uid()
+                        p.user_id = (SELECT auth.uid())
                         AND r.slug IN (
                             'admin',
                             'coordinator',
@@ -260,7 +260,7 @@ CREATE POLICY staff_users_delete_patients
 ON public.patients
 FOR DELETE
 USING (
-    public.has_permission(auth.uid(), 'operations.patients')
+    public.has_permission((SELECT auth.uid()), 'operations.patients')
     AND EXISTS (
         SELECT 1
         FROM public.profile_roles AS pr
@@ -269,7 +269,7 @@ USING (
         INNER JOIN public.profiles AS p
             ON pr.profile_id = p.id
         WHERE
-            p.user_id = auth.uid()
+            p.user_id = (SELECT auth.uid())
             AND r.slug IN (
                 'admin',
                 'coordinator',
