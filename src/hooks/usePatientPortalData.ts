@@ -178,7 +178,7 @@ const fetchPatientRecord = async (userId: string) => {
   return supabase
     .from("patients")
     .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_at, updated_at",
+      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_by_profile_id, created_channel, source, created_at, updated_at",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -199,7 +199,12 @@ const ensurePatientRecord = async (
   }
 
   if (data) {
-    return data;
+    return {
+      ...data,
+      created_by_profile_id: data.created_by_profile_id ?? null,
+      created_channel: data.created_channel ?? "portal_signup",
+      source: data.source ?? "organic",
+    };
   }
 
   const fallbackName = buildFallbackName(user);
@@ -234,9 +239,11 @@ const ensurePatientRecord = async (
         metadataPreferredLanguage.length > 0 ? metadataPreferredLanguage : null,
       preferred_currency:
         metadataPreferredCurrency.length > 0 ? metadataPreferredCurrency : null,
+      source: "organic",
+      created_channel: "portal_signup",
     })
     .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_at, updated_at",
+      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_by_profile_id, created_channel, source, created_at, updated_at",
     )
     .maybeSingle();
 
@@ -268,7 +275,12 @@ const ensurePatientRecord = async (
     return retry.data;
   }
 
-  return inserted;
+  return {
+    ...inserted,
+    created_by_profile_id: inserted.created_by_profile_id ?? null,
+    created_channel: inserted.created_channel ?? "portal_signup",
+    source: inserted.source ?? "organic",
+  };
 };
 
 const fetchPatientPortalSnapshot = async (
