@@ -1148,6 +1148,8 @@ export type Database = {
       };
       patients: {
         Row: {
+          confirmed_at: string | null;
+          confirmed_by: string | null;
           contact_email: string | null;
           contact_phone: string | null;
           created_at: string;
@@ -1162,11 +1164,14 @@ export type Database = {
           preferred_currency: string | null;
           preferred_language: string | null;
           sex: string | null;
+          status: Database["public"]["Enums"]["patient_status"];
           travel_year: number | null;
           updated_at: string;
           user_id: string | null;
         };
         Insert: {
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
           contact_email?: string | null;
           contact_phone?: string | null;
           created_at?: string;
@@ -1181,11 +1186,14 @@ export type Database = {
           preferred_currency?: string | null;
           preferred_language?: string | null;
           sex?: string | null;
+          status?: Database["public"]["Enums"]["patient_status"];
           travel_year?: number | null;
           updated_at?: string;
           user_id?: string | null;
         };
         Update: {
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
           contact_email?: string | null;
           contact_phone?: string | null;
           created_at?: string;
@@ -1200,11 +1208,27 @@ export type Database = {
           preferred_currency?: string | null;
           preferred_language?: string | null;
           sex?: string | null;
+          status?: Database["public"]["Enums"]["patient_status"];
           travel_year?: number | null;
           updated_at?: string;
           user_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "patients_confirmed_by_fkey";
+            columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_confirmed_by_fkey";
+            columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       permissions: {
         Row: {
@@ -2260,6 +2284,7 @@ export type Database = {
         | "consultation_scheduled"
         | "completed"
         | "archived";
+      patient_status: "potential" | "confirmed";
       subscription_status: "pending" | "active" | "unsubscribed" | "bounced";
       treatment_grade: "grade_a" | "grade_b" | "grade_c";
     };
@@ -2415,6 +2440,7 @@ export const Constants = {
         "completed",
         "archived",
       ],
+      patient_status: ["potential", "confirmed"],
       subscription_status: ["pending", "active", "unsubscribed", "bounced"],
       treatment_grade: ["grade_a", "grade_b", "grade_c"],
     },
