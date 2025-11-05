@@ -2,10 +2,14 @@ import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import type { AuthorizationContext } from "@/server/auth/requireAdmin";
 import type { Database } from "@/integrations/supabase/types";
+import { PatientStatusEnum, type PatientStatus } from "@/lib/patients/status";
 
 // Patients share the generic CRUD helpers used by other admin modules.
 const patientServiceInstance = new CrudService("patients", "patient");
+
+const CONFIRM_PATIENT_PERMISSION = "operations.patients.confirm";
 
 const isoDate = z
   .string()
@@ -48,6 +52,7 @@ const createPatientSchema = z.object({
       z.string().min(8).max(72).optional(),
     )
     .optional(),
+  status: PatientStatusEnum.optional(),
 });
 
 const updatePatientSchema = createPatientSchema.partial();
@@ -298,22 +303,44 @@ const sendPortalPasswordEmail = async (
 };
 
 export const patientController = {
-  async list() {
-    return patientService.list();
+  async list(options?: { status?: PatientStatus }) {
+    const supabase = getSupabaseAdmin();
+    let query = supabase
+      .from("patients")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (options?.status) {
+      query = query.eq("status", options.status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new ApiError(500, "Failed to fetch patient list", error.message);
+    }
+
+    return data ?? [];
   },
 
-  async search(query: string) {
+  async search(query: string, options?: { status?: PatientStatus }) {
     const supabase = getSupabaseAdmin();
     const searchTerm = `%${query.trim()}%`;
 
-    const { data, error } = await supabase
+    let request = supabase
       .from("patients")
       .select(
-        "id, full_name, contact_email, nationality, home_city, has_testimonial",
+        "id, full_name, contact_email, nationality, home_city, has_testimonial, status",
       )
       .or(`full_name.ilike.${searchTerm},contact_email.ilike.${searchTerm}`)
       .order("full_name", { ascending: true })
       .limit(20);
+
+    if (options?.status) {
+      request = request.eq("status", options.status);
+    }
+
+    const { data, error } = await request;
 
     if (error) {
       throw new ApiError(500, "Failed to search patients", error.message);
@@ -327,7 +354,7 @@ export const patientController = {
     return patientService.getById(patientId);
   },
 
-  async create(payload: unknown) {
+  async create(payload: unknown, auth?: AuthorizationContext) {
     const parsed = createPatientSchema.parse(payload);
     const supabase = getSupabaseAdmin();
     const trimmedFullName = trimString(parsed.full_name);
@@ -336,6 +363,25 @@ export const patientController = {
       typeof parsed.portal_password === "string"
         ? parsed.portal_password.trim()
         : undefined;
+    const canManageStatus =
+      auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
+    const requestedStatus: PatientStatus = parsed.status ?? "potential";
+
+    if (
+      parsed.status !== undefined &&
+      requestedStatus !== "potential" &&
+      !canManageStatus
+    ) {
+      throw new ApiError(
+        403,
+        "Confirm patient permission is required to set status.",
+      );
+    }
+
+    const resolvedStatus: PatientStatus =
+      canManageStatus || requestedStatus === "potential"
+        ? requestedStatus
+        : "potential";
 
     // Prevent staff accounts from being registered as patients
     if (parsed.user_id) {
@@ -371,6 +417,13 @@ export const patientController = {
       preferred_currency: trimOptionalString(parsed.preferred_currency),
       notes: trimOptionalString(parsed.notes),
       email_verified: parsed.email_verified ?? false,
+      status: resolvedStatus,
+      confirmed_at:
+        resolvedStatus === "confirmed" ? new Date().toISOString() : null,
+      confirmed_by:
+        resolvedStatus === "confirmed" && auth?.profileId
+          ? auth.profileId
+          : null,
     };
 
     let effectiveEmailVerified = createPayload.email_verified;
@@ -479,7 +532,7 @@ export const patientController = {
     return patient;
   },
 
-  async update(id: unknown, payload: unknown) {
+  async update(id: unknown, payload: unknown, auth?: AuthorizationContext) {
     const patientId = patientIdSchema.parse(id);
     const parsed = updatePatientSchema.parse(payload);
 
@@ -489,6 +542,10 @@ export const patientController = {
 
     const supabase = getSupabaseAdmin();
     const existing = await patientService.getById(patientId);
+    const canManageStatus =
+      auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
+    const existingStatus =
+      (existing as { status?: PatientStatus | null }).status ?? "potential";
 
     const updatePayload: PatientUpdate = {};
 
@@ -554,6 +611,31 @@ export const patientController = {
       );
     if (parsed.notes !== undefined)
       updatePayload.notes = trimOptionalString(parsed.notes);
+
+    if (parsed.status !== undefined) {
+      const requestedStatus = parsed.status;
+
+      if (requestedStatus !== existingStatus && !canManageStatus) {
+        throw new ApiError(
+          403,
+          "Confirm patient permission is required to change status.",
+        );
+      }
+
+      if (canManageStatus && requestedStatus !== existingStatus) {
+        updatePayload.status = requestedStatus;
+        if (requestedStatus === "confirmed") {
+          updatePayload.confirmed_at = new Date().toISOString();
+          updatePayload.confirmed_by =
+            auth?.profileId && auth.profileId.length > 0
+              ? auth.profileId
+              : null;
+        } else {
+          updatePayload.confirmed_at = null;
+          updatePayload.confirmed_by = null;
+        }
+      }
+    }
 
     let effectiveEmailVerified =
       parsed.email_verified !== undefined
@@ -636,6 +718,12 @@ export const patientController = {
         preferred_currency: existing.preferred_currency ?? null,
         notes: existing.notes ?? null,
         email_verified: existing.email_verified ?? null,
+        status:
+          (existing as { status?: PatientStatus | null }).status ?? "potential",
+        confirmed_at:
+          (existing as { confirmed_at?: string | null }).confirmed_at ?? null,
+        confirmed_by:
+          (existing as { confirmed_by?: string | null }).confirmed_by ?? null,
       };
 
       await patientService.update(patientId, revertPayload).catch(() => {});
