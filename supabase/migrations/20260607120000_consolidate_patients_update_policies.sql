@@ -3,15 +3,18 @@
 -- policy per action.
 BEGIN;
 
--- Drop the legacy policy with spaces in the name via dynamic SQL
+-- Drop legacy policies with spaces in the name via dynamic SQL
 DO $$
 BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Patients can update their own record" ON public.patients';
+    EXECUTE 'DROP POLICY IF EXISTS "Patients can view their own record" ON public.patients';
 END;
 $$;
 
 DROP POLICY IF EXISTS referral_users_update_own_patients ON public.patients;
+DROP POLICY IF EXISTS referral_users_view_own_patients ON public.patients;
 DROP POLICY IF EXISTS staff_users_full_patient_access ON public.patients;
+DROP POLICY IF EXISTS staff_users_select_patients ON public.patients;
 
 -- Combined UPDATE policy covering patients, referral users, and staff members
 CREATE POLICY manage_patient_updates
@@ -83,28 +86,70 @@ USING (
     )
 );
 
--- Recreate staff access for the remaining actions (select, insert, delete)
-CREATE POLICY staff_users_select_patients
+-- Combined SELECT policy covering patients, referral users, and staff members
+CREATE POLICY manage_patient_selects
 ON public.patients
 FOR SELECT
 USING (
-    public.has_permission(auth.uid(), 'operations.patients')
-    AND EXISTS (
-        SELECT 1
-        FROM public.profile_roles AS pr
-        INNER JOIN public.roles AS r
-            ON pr.role_id = r.id
-        INNER JOIN public.profiles AS p
-            ON pr.profile_id = p.id
-        WHERE
-            p.user_id = auth.uid()
-            AND r.slug IN (
-                'admin',
-                'coordinator',
-                'employee',
-                'doctor',
-                'management'
+    (auth.uid() = user_id)
+    OR (
+        public.has_permission(auth.uid(), 'operations.patients')
+        AND (
+            (
+                EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug = 'referral'
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug IN (
+                            'admin',
+                            'coordinator',
+                            'employee',
+                            'doctor',
+                            'management'
+                        )
+                )
+                AND created_by_profile_id IN (
+                    SELECT id
+                    FROM public.profiles
+                    WHERE user_id = auth.uid()
+                )
             )
+            OR (
+                EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug IN (
+                            'admin',
+                            'coordinator',
+                            'employee',
+                            'doctor',
+                            'management'
+                        )
+                )
+            )
+        )
     )
 );
 
