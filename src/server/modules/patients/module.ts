@@ -1,10 +1,18 @@
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import type { AuthorizationContext } from "@/server/auth/requireAdmin";
 import type { Database } from "@/integrations/supabase/types";
-import { PatientStatusEnum, type PatientStatus } from "@/lib/patients/status";
+import {
+  PatientStatusEnum,
+  PatientSourceEnum,
+  PatientCreationChannelEnum,
+  type PatientStatus,
+  type PatientSource,
+  type PatientCreationChannel,
+} from "@/lib/patients/status";
 
 // Patients share the generic CRUD helpers used by other admin modules.
 const patientServiceInstance = new CrudService("patients", "patient");
@@ -53,6 +61,9 @@ const createPatientSchema = z.object({
     )
     .optional(),
   status: PatientStatusEnum.optional(),
+  source: PatientSourceEnum.optional(),
+  created_channel: PatientCreationChannelEnum.optional(),
+  created_by_profile_id: optionalUuid,
 });
 
 const updatePatientSchema = createPatientSchema.partial();
@@ -62,6 +73,110 @@ export const patientService = patientServiceInstance;
 
 type PatientInsert = Database["public"]["Tables"]["patients"]["Insert"];
 type PatientUpdate = Database["public"]["Tables"]["patients"]["Update"];
+type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
+type ProfileSummary = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "id" | "username" | "email" | "avatar_url" | "phone" | "job_title"
+>;
+type ContactRequestRow =
+  Database["public"]["Tables"]["contact_requests"]["Row"];
+type StartJourneySubmissionRow =
+  Database["public"]["Tables"]["start_journey_submissions"]["Row"];
+type ConsultationRow =
+  Database["public"]["Tables"]["patient_consultations"]["Row"];
+type AppointmentRow =
+  Database["public"]["Tables"]["patient_appointments"]["Row"];
+type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
+type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
+type ServiceProviderRow =
+  Database["public"]["Tables"]["service_providers"]["Row"];
+type DoctorReviewRow = Database["public"]["Tables"]["doctor_reviews"]["Row"];
+type PatientStoryRow = Database["public"]["Tables"]["patient_stories"]["Row"];
+type StartJourneyDocumentRecord = {
+  id?: string;
+  type?: string;
+  originalName?: string;
+  storedName?: string;
+  path?: string;
+  bucket?: string;
+  size?: number;
+  url?: string | null;
+  uploadedAt?: string;
+};
+
+type ContactRequestDetail = ContactRequestRow & {
+  assigned_profile?: ProfileSummary | null;
+};
+
+type StartJourneySubmissionDetail = StartJourneySubmissionRow & {
+  assigned_profile?: ProfileSummary | null;
+};
+
+type ConsultationDetail = ConsultationRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  contact_requests?: Pick<
+    ContactRequestRow,
+    "id" | "status" | "request_type" | "origin"
+  > | null;
+  coordinator_profile?: ProfileSummary | null;
+};
+
+type AppointmentDetail = AppointmentRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  service_provider?: Pick<
+    ServiceProviderRow,
+    "id" | "name" | "facility_type"
+  > | null;
+  patient_consultations?: Pick<
+    ConsultationRow,
+    "id" | "scheduled_at" | "status"
+  > | null;
+};
+
+type ReviewDetail = DoctorReviewRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
+};
+
+type StoryDetail = PatientStoryRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
+};
+
+export type PatientDocumentSummary = {
+  id: string;
+  source: "start_journey" | "storage";
+  label: string;
+  type: string | null;
+  uploaded_at: string | null;
+  request_id?: string | null;
+  bucket?: string | null;
+  path?: string | null;
+  size?: number | null;
+  signed_url?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type PatientDetails = {
+  patient: PatientRow & {
+    creator_profile: ProfileSummary | null;
+    confirmed_by_profile: ProfileSummary | null;
+    portal_profile: ProfileSummary | null;
+    auth_user: {
+      id: string;
+      email: string | null;
+      created_at: string | null;
+      last_sign_in_at: string | null;
+    } | null;
+  };
+  contact_requests: ContactRequestDetail[];
+  start_journey_submissions: StartJourneySubmissionDetail[];
+  consultations: ConsultationDetail[];
+  appointments: AppointmentDetail[];
+  reviews: ReviewDetail[];
+  stories: StoryDetail[];
+  documents: PatientDocumentSummary[];
+};
 
 const trimString = (value: string) => value.trim();
 
@@ -91,6 +206,170 @@ const normalizeProfileField = (value: string | null | undefined) => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 };
+
+const OPERATIONS_PRIMARY_ROLES = new Set(["coordinator", "employee"]);
+
+const resolvePatientSource = (
+  requested: PatientSource | undefined,
+  createdByProfileId: string | null,
+): PatientSource => {
+  if (requested) {
+    return requested;
+  }
+  return createdByProfileId ? "staff" : "organic";
+};
+
+const resolveCreatedChannel = (
+  requested: PatientCreationChannel | undefined,
+  auth?: AuthorizationContext,
+): PatientCreationChannel => {
+  if (requested) {
+    return requested;
+  }
+  if (!auth?.profileId) {
+    return "portal_signup";
+  }
+  if (
+    auth.primaryRole &&
+    OPERATIONS_PRIMARY_ROLES.has(auth.primaryRole.toLowerCase())
+  ) {
+    return "operations_dashboard";
+  }
+  return "admin_console";
+};
+
+const PATIENT_DOCUMENT_BUCKET = "patient-documents";
+
+const dedupeById = <T extends { id: string }>(rows: T[]): T[] => {
+  const map = new Map<string, T>();
+  for (const row of rows) {
+    if (!map.has(row.id)) {
+      map.set(row.id, row);
+    }
+  }
+  return Array.from(map.values());
+};
+
+const CONTACT_REQUEST_SELECT = `
+  id,
+  user_id,
+  patient_id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  country,
+  treatment,
+  message,
+  status,
+  request_type,
+  origin,
+  notes,
+  travel_window,
+  health_background,
+  budget_range,
+  companions,
+  assigned_to,
+  portal_metadata,
+  medical_reports,
+  resolved_at,
+  created_at,
+  updated_at,
+  assigned_profile:profiles!contact_requests_assigned_to_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
+const START_JOURNEY_SELECT = `
+  *,
+  assigned_profile:profiles!start_journey_submissions_assigned_to_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
+const CONSULTATION_SELECT = `
+  *,
+  doctors:doctors!patient_consultations_doctor_id_fkey(
+    id,
+    name,
+    title,
+    avatar_url
+  ),
+  contact_requests:contact_requests!patient_consultations_contact_request_id_fkey(
+    id,
+    status,
+    request_type,
+    origin
+  ),
+  coordinator_profile:profiles!patient_consultations_coordinator_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
+const APPOINTMENT_SELECT = `
+  *,
+  doctors:doctors!patient_appointments_doctor_id_fkey(
+    id,
+    name,
+    title,
+    avatar_url
+  ),
+  service_provider:service_providers!patient_appointments_facility_id_fkey(
+    id,
+    name,
+    facility_type
+  ),
+  patient_consultations:patient_consultations!patient_appointments_consultation_id_fkey(
+    id,
+    scheduled_at,
+    status
+  )
+`;
+
+const REVIEW_SELECT = `
+  *,
+  doctors:doctors!doctor_reviews_doctor_id_fkey(
+    id,
+    name,
+    title,
+    avatar_url
+  ),
+  treatments:treatments!doctor_reviews_treatment_id_fkey(
+    id,
+    name,
+    slug
+  )
+`;
+
+const STORY_SELECT = `
+  *,
+  doctors:doctors!patient_stories_doctor_id_fkey(
+    id,
+    name,
+    title,
+    avatar_url
+  ),
+  treatments:treatments!patient_stories_treatment_id_fkey(
+    id,
+    name,
+    slug
+  )
+`;
 
 const syncProfileWithPatient = async (
   supabase: SupabaseAdminClient,
@@ -350,6 +629,434 @@ export const patientController = {
     return patientService.getById(patientId);
   },
 
+  async details(id: unknown): Promise<PatientDetails> {
+    const patientId = patientIdSchema.parse(id);
+    const supabase = getSupabaseAdmin();
+
+    const { data: patientRow, error: patientError } = await supabase
+      .from("patients")
+      .select(
+        `
+          *,
+          creator_profile:profiles!patients_created_by_profile_id_fkey(
+            id,
+            username,
+            email,
+            avatar_url,
+            phone,
+            job_title
+          ),
+          confirmed_by_profile:profiles!patients_confirmed_by_fkey(
+            id,
+            username,
+            email,
+            avatar_url,
+            phone,
+            job_title
+          )
+        `,
+      )
+      .eq("id", patientId)
+      .maybeSingle();
+
+    if (patientError) {
+      throw new ApiError(
+        500,
+        "Failed to load patient record",
+        patientError.message,
+      );
+    }
+
+    if (!patientRow) {
+      throw new ApiError(404, "Patient not found");
+    }
+
+    const patient = patientRow as PatientRow & {
+      creator_profile: ProfileSummary | null;
+      confirmed_by_profile: ProfileSummary | null;
+    };
+
+    const contactQueries = [
+      supabase
+        .from("contact_requests")
+        .select(CONTACT_REQUEST_SELECT)
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
+    ];
+
+    if (patient.user_id) {
+      contactQueries.push(
+        supabase
+          .from("contact_requests")
+          .select(CONTACT_REQUEST_SELECT)
+          .eq("user_id", patient.user_id)
+          .order("created_at", { ascending: false }),
+      );
+    }
+
+    if (patient.contact_email) {
+      contactQueries.push(
+        supabase
+          .from("contact_requests")
+          .select(CONTACT_REQUEST_SELECT)
+          .eq("email", patient.contact_email)
+          .order("created_at", { ascending: false }),
+      );
+    }
+
+    const contactAccumulator: ContactRequestDetail[] = [];
+
+    for (const query of contactQueries) {
+      const { data, error } = await query;
+      if (error) {
+        throw new ApiError(
+          500,
+          "Failed to load contact requests",
+          error.message,
+        );
+      }
+      if (Array.isArray(data)) {
+        contactAccumulator.push(...(data as ContactRequestDetail[]));
+      }
+    }
+
+    const startJourneyQueries = [
+      supabase
+        .from("start_journey_submissions")
+        .select(START_JOURNEY_SELECT)
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
+    ];
+
+    if (patient.user_id) {
+      startJourneyQueries.push(
+        supabase
+          .from("start_journey_submissions")
+          .select(START_JOURNEY_SELECT)
+          .eq("user_id", patient.user_id)
+          .order("created_at", { ascending: false }),
+      );
+    }
+
+    const startJourneyAccumulator: StartJourneySubmissionDetail[] = [];
+
+    for (const query of startJourneyQueries) {
+      const { data, error } = await query;
+      if (error) {
+        throw new ApiError(
+          500,
+          "Failed to load Start Journey submissions",
+          error.message,
+        );
+      }
+      if (Array.isArray(data)) {
+        startJourneyAccumulator.push(
+          ...(data as StartJourneySubmissionDetail[]),
+        );
+      }
+    }
+
+    const [
+      consultationsResult,
+      appointmentsResult,
+      reviewsResult,
+      storiesResult,
+    ] = await Promise.all([
+      supabase
+        .from("patient_consultations")
+        .select(CONSULTATION_SELECT)
+        .eq("patient_id", patientId)
+        .order("scheduled_at", { ascending: true }),
+      supabase
+        .from("patient_appointments")
+        .select(APPOINTMENT_SELECT)
+        .eq("patient_id", patientId)
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("doctor_reviews")
+        .select(REVIEW_SELECT)
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("patient_stories")
+        .select(STORY_SELECT)
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (consultationsResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load consultations",
+        consultationsResult.error.message,
+      );
+    }
+
+    if (appointmentsResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load appointments",
+        appointmentsResult.error.message,
+      );
+    }
+
+    if (reviewsResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load doctor reviews",
+        reviewsResult.error.message,
+      );
+    }
+
+    if (storiesResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load patient stories",
+        storiesResult.error.message,
+      );
+    }
+
+    let portalProfile: ProfileSummary | null = null;
+
+    if (patient.user_id) {
+      const { data: portalProfileData, error: portalProfileError } =
+        await supabase
+          .from("profiles")
+          .select("id, username, email, avatar_url, phone, job_title")
+          .eq("user_id", patient.user_id)
+          .maybeSingle();
+
+      if (portalProfileError && portalProfileError.code !== "PGRST116") {
+        throw new ApiError(
+          500,
+          "Failed to load patient portal profile",
+          portalProfileError.message,
+        );
+      }
+
+      portalProfile = (portalProfileData as ProfileSummary | null) ?? null;
+    }
+
+    let authUser: PatientDetails["patient"]["auth_user"] = null;
+
+    if (patient.user_id) {
+      const { data: authUserData, error: authUserError } =
+        await supabase.auth.admin.getUserById(patient.user_id);
+
+      if (!authUserError && authUserData?.user) {
+        authUser = {
+          id: authUserData.user.id,
+          email: authUserData.user.email ?? null,
+          created_at: authUserData.user.created_at ?? null,
+          last_sign_in_at: authUserData.user.last_sign_in_at ?? null,
+        };
+      } else if (authUserError && authUserError.status !== 404) {
+        throw new ApiError(
+          500,
+          "Failed to load linked portal user",
+          authUserError.message,
+        );
+      }
+    }
+
+    const contactRequests = dedupeById(contactAccumulator);
+    const startJourneySubmissions = dedupeById(startJourneyAccumulator);
+
+    const documentsMap = new Map<string, PatientDocumentSummary>();
+
+    for (const submission of startJourneySubmissions) {
+      const rawDocuments = submission.documents;
+      if (!rawDocuments) continue;
+
+      const documentsArray = Array.isArray(rawDocuments)
+        ? (rawDocuments as StartJourneyDocumentRecord[])
+        : [];
+
+      for (const raw of documentsArray) {
+        if (!raw || typeof raw !== "object") {
+          continue;
+        }
+        const path =
+          typeof raw.path === "string" && raw.path.length > 0 ? raw.path : null;
+        const docId =
+          typeof raw.id === "string" && raw.id.length > 0
+            ? raw.id
+            : `${submission.id}-${path ?? randomUUID()}`;
+
+        const label =
+          typeof raw.originalName === "string" && raw.originalName.length > 0
+            ? raw.originalName
+            : (path ?? "Uploaded document");
+
+        const document: PatientDocumentSummary = {
+          id: docId,
+          source: "start_journey",
+          label,
+          type:
+            typeof raw.type === "string" && raw.type.length > 0
+              ? raw.type
+              : null,
+          uploaded_at:
+            typeof raw.uploadedAt === "string" && raw.uploadedAt.length > 0
+              ? raw.uploadedAt
+              : (submission.created_at ?? null),
+          request_id: submission.id,
+          bucket:
+            typeof raw.bucket === "string" && raw.bucket.length > 0
+              ? raw.bucket
+              : PATIENT_DOCUMENT_BUCKET,
+          path,
+          size:
+            typeof raw.size === "number" && Number.isFinite(raw.size)
+              ? raw.size
+              : null,
+          signed_url:
+            typeof raw.url === "string" && raw.url.length > 0 ? raw.url : null,
+          metadata: {
+            storedName:
+              typeof raw.storedName === "string" && raw.storedName.length > 0
+                ? raw.storedName
+                : null,
+          },
+        };
+
+        const key = path ?? docId;
+        const existingDoc = documentsMap.get(key);
+        if (existingDoc) {
+          documentsMap.set(key, {
+            ...existingDoc,
+            request_id: existingDoc.request_id ?? document.request_id,
+            size: existingDoc.size ?? document.size ?? null,
+            signed_url: existingDoc.signed_url ?? document.signed_url ?? null,
+            metadata: {
+              ...(existingDoc.metadata ?? {}),
+              ...(document.metadata ?? {}),
+            },
+          });
+        } else {
+          documentsMap.set(key, document);
+        }
+      }
+    }
+
+    try {
+      const { data: storageEntries, error: storageError } =
+        await supabase.storage
+          .from(PATIENT_DOCUMENT_BUCKET)
+          .list(`start-journey/${patient.id}`, {
+            limit: 200,
+            offset: 0,
+            sortBy: { column: "created_at", order: "desc" },
+          });
+
+      if (!storageError && Array.isArray(storageEntries)) {
+        for (const entry of storageEntries) {
+          if (!entry || entry.id == null || entry.name.endsWith("/")) {
+            continue;
+          }
+
+          const path = `start-journey/${patient.id}/${entry.name}`;
+          const key = path;
+
+          const document: PatientDocumentSummary = {
+            id: entry.id,
+            source: "storage",
+            label: entry.name,
+            type: null,
+            uploaded_at: entry.created_at ?? entry.updated_at ?? null,
+            bucket: PATIENT_DOCUMENT_BUCKET,
+            path,
+            size:
+              typeof entry.metadata?.size === "number"
+                ? entry.metadata.size
+                : null,
+            signed_url: null,
+            metadata: entry.metadata ?? null,
+          };
+
+          const existingDoc = documentsMap.get(key);
+          if (existingDoc) {
+            documentsMap.set(key, {
+              ...existingDoc,
+              source: existingDoc.source ?? document.source,
+              size: existingDoc.size ?? document.size ?? null,
+              uploaded_at:
+                existingDoc.uploaded_at ?? document.uploaded_at ?? null,
+              metadata: {
+                ...(existingDoc.metadata ?? {}),
+                ...(document.metadata ?? {}),
+              },
+            });
+          } else {
+            documentsMap.set(key, document);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[patients][details] Failed to list storage documents",
+        error,
+      );
+    }
+
+    const documents = Array.from(documentsMap.values());
+
+    const pathsNeedingSignedUrl = Array.from(
+      new Set(
+        documents
+          .filter(
+            (doc) =>
+              doc.bucket === PATIENT_DOCUMENT_BUCKET &&
+              doc.path &&
+              !doc.signed_url,
+          )
+          .map((doc) => doc.path as string),
+      ),
+    );
+
+    if (pathsNeedingSignedUrl.length > 0) {
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(PATIENT_DOCUMENT_BUCKET)
+        .createSignedUrls(pathsNeedingSignedUrl, 3600);
+
+      if (!signedError && Array.isArray(signedData)) {
+        const signedMap = new Map<string, string>();
+        for (const entry of signedData) {
+          if (entry?.path && entry.signedUrl) {
+            signedMap.set(entry.path, entry.signedUrl);
+          }
+        }
+
+        for (const doc of documents) {
+          if (doc.path && signedMap.has(doc.path)) {
+            doc.signed_url = signedMap.get(doc.path) ?? doc.signed_url ?? null;
+          }
+        }
+      }
+    }
+
+    documents.sort((a, b) => {
+      const aTime = a.uploaded_at ? new Date(a.uploaded_at).getTime() : 0;
+      const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return {
+      patient: {
+        ...patient,
+        portal_profile: portalProfile,
+        auth_user: authUser,
+      },
+      contact_requests: contactRequests,
+      start_journey_submissions: startJourneySubmissions,
+      consultations: (consultationsResult.data ?? []) as ConsultationDetail[],
+      appointments: (appointmentsResult.data ?? []) as AppointmentDetail[],
+      reviews: (reviewsResult.data ?? []) as ReviewDetail[],
+      stories: (storiesResult.data ?? []) as StoryDetail[],
+      documents,
+    };
+  },
+
   async create(payload: unknown, auth?: AuthorizationContext) {
     const parsed = createPatientSchema.parse(payload);
     const supabase = getSupabaseAdmin();
@@ -359,6 +1066,24 @@ export const patientController = {
       typeof parsed.portal_password === "string"
         ? parsed.portal_password.trim()
         : undefined;
+    const requestedCreatedBy =
+      parsed.created_by_profile_id === undefined
+        ? undefined
+        : (parsed.created_by_profile_id ?? null);
+    const resolvedCreatedBy =
+      requestedCreatedBy !== undefined
+        ? requestedCreatedBy
+        : (auth?.profileId ?? null);
+    const resolvedSource = resolvePatientSource(
+      parsed.source as PatientSource | undefined,
+      resolvedCreatedBy,
+    );
+    const effectiveCreatedBy =
+      resolvedSource === "organic" ? null : resolvedCreatedBy;
+    const resolvedChannel = resolveCreatedChannel(
+      parsed.created_channel as PatientCreationChannel | undefined,
+      auth,
+    );
     const canManageStatus =
       auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
     const requestedStatus: PatientStatus = parsed.status ?? "potential";
@@ -414,6 +1139,9 @@ export const patientController = {
       notes: trimOptionalString(parsed.notes),
       email_verified: parsed.email_verified ?? false,
       status: resolvedStatus,
+      source: resolvedSource,
+      created_by_profile_id: effectiveCreatedBy,
+      created_channel: resolvedChannel,
       confirmed_at:
         resolvedStatus === "confirmed" ? new Date().toISOString() : null,
       confirmed_by:
@@ -538,10 +1266,22 @@ export const patientController = {
 
     const supabase = getSupabaseAdmin();
     const existing = await patientService.getById(patientId);
+    const existingPatient =
+      existing as Database["public"]["Tables"]["patients"]["Row"];
     const canManageStatus =
       auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
     const existingStatus =
       (existing as { status?: PatientStatus | null }).status ?? "potential";
+    const existingSource =
+      (existingPatient as { source?: PatientSource | null }).source ??
+      "organic";
+    const existingCreatedBy = existingPatient.created_by_profile_id ?? null;
+    const existingChannel =
+      (
+        existingPatient as {
+          created_channel?: PatientCreationChannel | null;
+        }
+      ).created_channel ?? "unknown";
 
     const updatePayload: PatientUpdate = {};
 
@@ -561,6 +1301,55 @@ export const patientController = {
       typeof parsed.portal_password === "string"
         ? parsed.portal_password.trim()
         : undefined;
+    const providedSource = parsed.source as PatientSource | undefined;
+    const providedCreatedBy =
+      parsed.created_by_profile_id !== undefined
+        ? (parsed.created_by_profile_id ?? null)
+        : undefined;
+    const providedChannel = parsed.created_channel as
+      | PatientCreationChannel
+      | undefined;
+
+    let nextSource = existingSource;
+    let nextCreatedBy = existingCreatedBy;
+    let nextChannel = existingChannel;
+
+    if (providedCreatedBy !== undefined) {
+      nextCreatedBy = providedCreatedBy;
+    }
+
+    if (providedSource !== undefined || providedCreatedBy !== undefined) {
+      const fallbackCreatedBy = nextCreatedBy ?? auth?.profileId ?? null;
+      nextSource = resolvePatientSource(providedSource, fallbackCreatedBy);
+
+      if (nextSource !== "organic" && !nextCreatedBy) {
+        nextCreatedBy = auth?.profileId ?? null;
+      }
+
+      if (nextSource === "organic") {
+        nextCreatedBy = null;
+      }
+
+      if (providedChannel !== undefined) {
+        nextChannel = providedChannel;
+      } else if (nextSource !== existingSource) {
+        nextChannel = resolveCreatedChannel(undefined, auth);
+      }
+    } else if (providedChannel !== undefined) {
+      nextChannel = providedChannel;
+    }
+
+    if (nextSource !== existingSource) {
+      updatePayload.source = nextSource;
+    }
+
+    if (nextCreatedBy !== existingCreatedBy) {
+      updatePayload.created_by_profile_id = nextCreatedBy;
+    }
+
+    if (nextChannel !== existingChannel) {
+      updatePayload.created_channel = nextChannel;
+    }
 
     // Prevent staff accounts from being linked to patient records
     const targetUserId = parsed.user_id ?? existing.user_id ?? null;
@@ -720,6 +1509,9 @@ export const patientController = {
           (existing as { confirmed_at?: string | null }).confirmed_at ?? null,
         confirmed_by:
           (existing as { confirmed_by?: string | null }).confirmed_by ?? null,
+        source: existingSource,
+        created_by_profile_id: existingCreatedBy,
+        created_channel: existingChannel,
       };
 
       await patientService.update(patientId, revertPayload).catch(() => {});
