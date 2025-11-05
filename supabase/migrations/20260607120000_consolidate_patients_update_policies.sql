@@ -16,6 +16,7 @@ DROP POLICY IF EXISTS referral_users_view_own_patients ON public.patients;
 DROP POLICY IF EXISTS staff_users_full_patient_access ON public.patients;
 DROP POLICY IF EXISTS staff_users_select_patients ON public.patients;
 
+DROP POLICY IF EXISTS manage_patient_updates ON public.patients;
 -- Combined UPDATE policy covering patients, referral users, and staff members
 CREATE POLICY manage_patient_updates
 ON public.patients
@@ -86,6 +87,7 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS manage_patient_selects ON public.patients;
 -- Combined SELECT policy covering patients, referral users, and staff members
 CREATE POLICY manage_patient_selects
 ON public.patients
@@ -153,6 +155,7 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS staff_users_insert_patients ON public.patients;
 CREATE POLICY staff_users_insert_patients
 ON public.patients
 FOR INSERT
@@ -177,6 +180,7 @@ WITH CHECK (
     )
 );
 
+DROP POLICY IF EXISTS staff_users_delete_patients ON public.patients;
 CREATE POLICY staff_users_delete_patients
 ON public.patients
 FOR DELETE
