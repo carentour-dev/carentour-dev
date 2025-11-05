@@ -159,7 +159,7 @@ const patientSchema = z
 
 type PatientFormValues = z.infer<typeof patientSchema>;
 
-type PatientPayload = {
+type PatientBasePayload = {
   user_id?: string | null;
   full_name: string;
   contact_email?: string | null;
@@ -175,7 +175,11 @@ type PatientPayload = {
   status?: PatientStatus;
 };
 
-type PatientRecord = Omit<PatientPayload, "portal_password" | "status"> & {
+type PatientCreatePayload = PatientBasePayload;
+
+type PatientUpdatePayload = Partial<PatientBasePayload>;
+
+type PatientRecord = Omit<PatientBasePayload, "portal_password" | "status"> & {
   id: string;
   created_at?: string;
   updated_at?: string;
@@ -268,7 +272,7 @@ export default function AdminPatientsPage() {
   });
 
   const createPatient = useMutation({
-    mutationFn: (payload: PatientPayload) =>
+    mutationFn: (payload: PatientCreatePayload) =>
       adminFetch<PatientRecord>("/api/admin/patients", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -319,7 +323,7 @@ export default function AdminPatientsPage() {
   });
 
   const updatePatient = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PatientPayload }) =>
+    mutationFn: ({ id, data }: { id: string; data: PatientUpdatePayload }) =>
       adminFetch<PatientRecord>(`/api/admin/patients/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
@@ -556,7 +560,7 @@ export default function AdminPatientsPage() {
       ? rest.contact_email.trim().toLowerCase()
       : null;
 
-    const payload: PatientPayload = {
+    const payload: PatientCreatePayload = {
       user_id: rest.user_id?.trim() ? rest.user_id.trim() : null,
       full_name: trimmedFullName,
       contact_email: normalizedEmail ?? undefined,
