@@ -65,12 +65,17 @@ import {
   Undo2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   PatientStatusEnum,
-  PATIENT_STATUS,
   type PatientStatus,
+  PATIENT_STATUS,
+  PatientSourceEnum,
+  type PatientSource,
+  PatientCreationChannelEnum,
+  type PatientCreationChannel,
 } from "@/lib/patients/status";
 
 const optionalUuid = z.preprocess((value) => {
@@ -127,6 +132,9 @@ const patientSchema = z
       z.string().optional(),
     ),
     status: PatientStatusEnum.default(PATIENT_STATUS.potential),
+    source: PatientSourceEnum.optional(),
+    created_channel: PatientCreationChannelEnum.optional(),
+    created_by_profile_id: optionalUuid,
   })
   .superRefine((data, ctx) => {
     const password = data.portal_password;
@@ -173,6 +181,9 @@ type PatientBasePayload = {
   email_verified?: boolean;
   portal_password?: string;
   status?: PatientStatus;
+  source?: PatientSource;
+  created_channel?: PatientCreationChannel;
+  created_by_profile_id?: string | null;
 };
 
 type PatientCreatePayload = PatientBasePayload;
@@ -185,6 +196,9 @@ type PatientRecord = Omit<PatientBasePayload, "portal_password" | "status"> & {
   updated_at?: string;
   email_verified?: boolean | null;
   status: PatientStatus;
+  source: PatientSource;
+  created_channel: PatientCreationChannel;
+  created_by_profile_id?: string | null;
   confirmed_at?: string | null;
   confirmed_by?: string | null;
 };
@@ -203,6 +217,10 @@ const STATUS_BADGE_VARIANT: Record<PatientStatus, "outline" | "success"> = {
 
 export default function AdminPatientsPage() {
   const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const basePath = pathname.startsWith("/operations")
+    ? "/operations"
+    : "/admin";
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState("all");
@@ -942,9 +960,12 @@ export default function AdminPatientsPage() {
                   <TableRow key={patient.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
+                        <Link
+                          href={`${basePath}/patients/${patient.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
                           {patient.full_name}
-                        </span>
+                        </Link>
                         {patient.date_of_birth ? (
                           <span className="text-xs text-muted-foreground">
                             DOB: {patient.date_of_birth}
