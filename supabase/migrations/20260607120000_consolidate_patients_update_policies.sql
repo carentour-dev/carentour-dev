@@ -8,6 +8,7 @@ DO $$
 BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Patients can update their own record" ON public.patients';
     EXECUTE 'DROP POLICY IF EXISTS "Patients can view their own record" ON public.patients';
+    EXECUTE 'DROP POLICY IF EXISTS "Patients can insert their own record" ON public.patients';
 END;
 $$;
 
@@ -15,6 +16,9 @@ DROP POLICY IF EXISTS referral_users_update_own_patients ON public.patients;
 DROP POLICY IF EXISTS referral_users_view_own_patients ON public.patients;
 DROP POLICY IF EXISTS staff_users_full_patient_access ON public.patients;
 DROP POLICY IF EXISTS staff_users_select_patients ON public.patients;
+DROP POLICY IF EXISTS referral_users_create_patients ON public.patients;
+DROP POLICY IF EXISTS patients_can_insert_own_record ON public.patients;
+DROP POLICY IF EXISTS staff_users_insert_patients ON public.patients;
 
 DROP POLICY IF EXISTS manage_patient_updates ON public.patients;
 -- Combined UPDATE policy covering patients, referral users, and staff members
@@ -155,28 +159,72 @@ USING (
     )
 );
 
-DROP POLICY IF EXISTS staff_users_insert_patients ON public.patients;
-CREATE POLICY staff_users_insert_patients
+DROP POLICY IF EXISTS manage_patient_inserts ON public.patients;
+-- Combined INSERT policy covering patients, referral users, and staff members
+CREATE POLICY manage_patient_inserts
 ON public.patients
 FOR INSERT
 WITH CHECK (
-    public.has_permission(auth.uid(), 'operations.patients')
-    AND EXISTS (
-        SELECT 1
-        FROM public.profile_roles AS pr
-        INNER JOIN public.roles AS r
-            ON pr.role_id = r.id
-        INNER JOIN public.profiles AS p
-            ON pr.profile_id = p.id
-        WHERE
-            p.user_id = auth.uid()
-            AND r.slug IN (
-                'admin',
-                'coordinator',
-                'employee',
-                'doctor',
-                'management'
+    -- Patients can insert their own record, excluding staff accounts
+    (
+        (auth.uid() = user_id)
+        AND NOT public.is_staff_account(auth.uid())
+    )
+    OR (
+        public.has_permission(auth.uid(), 'operations.patients')
+        AND (
+            -- Referral users may insert patients when they are referral-only
+            (
+                EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug = 'referral'
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug IN (
+                            'admin',
+                            'coordinator',
+                            'employee',
+                            'doctor',
+                            'management'
+                        )
+                )
             )
+            OR (
+                -- Staff roles retain full insert access
+                EXISTS (
+                    SELECT 1
+                    FROM public.profile_roles AS pr
+                    INNER JOIN public.roles AS r
+                        ON pr.role_id = r.id
+                    INNER JOIN public.profiles AS p
+                        ON pr.profile_id = p.id
+                    WHERE
+                        p.user_id = auth.uid()
+                        AND r.slug IN (
+                            'admin',
+                            'coordinator',
+                            'employee',
+                            'doctor',
+                            'management'
+                        )
+                )
+            )
+        )
     )
 );
 
