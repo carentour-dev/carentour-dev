@@ -3,6 +3,33 @@
 -- policy per action.
 BEGIN;
 
+-- Ensure the helper function exists so patient self-insert checks work
+CREATE OR REPLACE FUNCTION public.is_staff_account(p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    account_type_value TEXT;
+BEGIN
+    IF p_user_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    SELECT raw_user_meta_data->>'account_type'
+    INTO account_type_value
+    FROM auth.users
+    WHERE id = p_user_id;
+
+    RETURN account_type_value = 'staff';
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_staff_account(UUID)
+TO authenticated, service_role;
+
 -- Drop legacy policies with spaces in the name via dynamic SQL
 DO $$
 BEGIN
