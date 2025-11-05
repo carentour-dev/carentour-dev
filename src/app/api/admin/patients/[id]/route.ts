@@ -22,6 +22,7 @@ export const PATCH = adminRoute(async (req: NextRequest, ctx) => {
   const patient = await patientController.update(
     getRouteParam(ctx.params, "id"),
     body,
+    ctx.auth,
   );
   return jsonResponse(patient);
 }, PATIENTS_PERMISSIONS);
