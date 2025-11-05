@@ -26,6 +26,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type OperationsTask = Tables<"operations_tasks">;
 
@@ -45,7 +52,7 @@ const STATUS_DETAILS: Record<
   },
   done: {
     label: "Done",
-    description: "Completed work ready to archive or review.",
+    description: "Finished work ready to wrap up.",
   },
 };
 
@@ -55,12 +62,55 @@ const STATUS_ORDER: OperationsTask["status"][] = [
   "done",
 ];
 
+const TASK_SORT_OPTIONS = [
+  { value: "created_desc", label: "Newest created" },
+  { value: "created_asc", label: "Oldest created" },
+  { value: "updated_desc", label: "Recently updated" },
+  { value: "updated_asc", label: "Least recently updated" },
+  { value: "title_asc", label: "Title (A–Z)" },
+  { value: "title_desc", label: "Title (Z–A)" },
+] as const;
+
+type TaskSortOption = (typeof TASK_SORT_OPTIONS)[number]["value"];
+
+const DEFAULT_TASK_SORT: TaskSortOption = "created_desc";
+
+const toTime = (value: string | null | undefined) =>
+  value ? new Date(value).getTime() : 0;
+
+const TASK_SORT_COMPARATORS: Record<
+  TaskSortOption,
+  (a: OperationsTask, b: OperationsTask) => number
+> = {
+  created_desc: (a, b) => toTime(b.created_at) - toTime(a.created_at),
+  created_asc: (a, b) => toTime(a.created_at) - toTime(b.created_at),
+  updated_desc: (a, b) => toTime(b.updated_at) - toTime(a.updated_at),
+  updated_asc: (a, b) => toTime(a.updated_at) - toTime(b.updated_at),
+  title_asc: (a, b) =>
+    a.title.localeCompare(b.title, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  title_desc: (a, b) =>
+    b.title.localeCompare(a.title, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+};
+
 export default function OperationsTasksPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [sortSelections, setSortSelections] = useState<
+    Record<OperationsTask["status"], TaskSortOption>
+  >({
+    pending: DEFAULT_TASK_SORT,
+    in_progress: DEFAULT_TASK_SORT,
+    done: DEFAULT_TASK_SORT,
+  });
 
   const tasksQuery = useQuery({
     queryKey: TASKS_QUERY_KEY,
@@ -172,6 +222,22 @@ export default function OperationsTasksPage() {
     return grouped;
   }, [tasksQuery.data]);
 
+  const sortedTasksByStatus = useMemo(() => {
+    const sorted: Record<OperationsTask["status"], OperationsTask[]> = {
+      pending: [],
+      in_progress: [],
+      done: [],
+    };
+
+    for (const status of STATUS_ORDER) {
+      const tasks = tasksByStatus[status] ?? [];
+      const comparator = TASK_SORT_COMPARATORS[sortSelections[status]];
+      sorted[status] = comparator ? [...tasks].sort(comparator) : [...tasks];
+    }
+
+    return sorted;
+  }, [sortSelections, tasksByStatus]);
+
   const handleCreateTask = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim()) {
@@ -279,13 +345,13 @@ export default function OperationsTasksPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           {STATUS_ORDER.map((status) => {
-            const columnTasks = tasksByStatus[status];
+            const columnTasks = sortedTasksByStatus[status];
 
             return (
               <Card key={status} className="flex flex-col">
-                <CardHeader className="border-b border-border pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                <CardHeader className="space-y-3 border-b border-border pb-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
                       <CardTitle className="text-base font-semibold">
                         {STATUS_DETAILS[status].label}
                       </CardTitle>
@@ -293,7 +359,34 @@ export default function OperationsTasksPage() {
                         {STATUS_DETAILS[status].description}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">{columnTasks.length}</Badge>
+                    <Badge variant="secondary" className="shrink-0">
+                      {columnTasks.length}
+                    </Badge>
+                  </div>
+                  <div className="sm:flex sm:justify-end">
+                    <Select
+                      value={sortSelections[status]}
+                      onValueChange={(value) =>
+                        setSortSelections((previous) => ({
+                          ...previous,
+                          [status]: value as TaskSortOption,
+                        }))
+                      }
+                    >
+                      <SelectTrigger
+                        aria-label={`Sort ${STATUS_DETAILS[status].label} tasks`}
+                        className="w-full sm:w-[220px]"
+                      >
+                        <SelectValue placeholder="Select sort order" />
+                      </SelectTrigger>
+                      <SelectContent align="end">
+                        {TASK_SORT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-3 py-4">
