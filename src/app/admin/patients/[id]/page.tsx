@@ -265,7 +265,10 @@ export default function PatientDetailsPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to patients
         </Link>
-        <Badge variant={STATUS_BADGE_VARIANT[patient.status] ?? "outline"}>
+        <Badge
+          variant={STATUS_BADGE_VARIANT[patient.status] ?? "outline"}
+          className="self-start"
+        >
           {STATUS_LABELS[patient.status] ?? patient.status}
         </Badge>
         <Badge variant={SOURCE_BADGE_VARIANT[patient.source] ?? "secondary"}>
