@@ -76,6 +76,47 @@ export const useUserProfile = () => {
         console.error("Error fetching permissions:", permissionsResult.error);
       }
 
+      // Sync auth metadata to profile if fields are missing
+      const profile = profileResult.data;
+      const hasIncompleteProfile =
+        profile &&
+        (!profile.date_of_birth ||
+          !profile.sex ||
+          !profile.nationality ||
+          !profile.phone);
+
+      if (hasIncompleteProfile && user.user_metadata) {
+        const metadata = user.user_metadata;
+        const updatePayload: Record<string, string | null> = {};
+
+        if (!profile.date_of_birth && metadata.date_of_birth) {
+          updatePayload.date_of_birth = metadata.date_of_birth;
+        }
+        if (!profile.sex && metadata.sex) {
+          updatePayload.sex = metadata.sex;
+        }
+        if (!profile.nationality && metadata.nationality) {
+          updatePayload.nationality = metadata.nationality;
+        }
+        if (!profile.phone && metadata.phone) {
+          updatePayload.phone = metadata.phone;
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update(updatePayload)
+            .eq("user_id", user.id);
+
+          if (updateError) {
+            console.error("Error syncing metadata to profile:", updateError);
+          } else {
+            // Merge the updated fields back into profile data
+            Object.assign(profile, updatePayload);
+          }
+        }
+      }
+
       const rawRoles = normalizeRoles(
         Array.isArray(rolesResult.data) ? rolesResult.data : [],
       );
@@ -110,7 +151,7 @@ export const useUserProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.user_metadata?.username]);
+  }, [user?.id, user?.user_metadata]);
 
   useEffect(() => {
     fetchProfile();
