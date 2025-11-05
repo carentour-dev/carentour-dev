@@ -1148,6 +1148,8 @@ export type Database = {
       };
       patients: {
         Row: {
+          created_by_profile_id: string | null;
+          created_channel: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at: string | null;
           confirmed_by: string | null;
           contact_email: string | null;
@@ -1164,12 +1166,15 @@ export type Database = {
           preferred_currency: string | null;
           preferred_language: string | null;
           sex: string | null;
+          source: Database["public"]["Enums"]["patient_source"];
           status: Database["public"]["Enums"]["patient_status"];
           travel_year: number | null;
           updated_at: string;
           user_id: string | null;
         };
         Insert: {
+          created_by_profile_id?: string | null;
+          created_channel?: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at?: string | null;
           confirmed_by?: string | null;
           contact_email?: string | null;
@@ -1186,12 +1191,15 @@ export type Database = {
           preferred_currency?: string | null;
           preferred_language?: string | null;
           sex?: string | null;
+          source?: Database["public"]["Enums"]["patient_source"];
           status?: Database["public"]["Enums"]["patient_status"];
           travel_year?: number | null;
           updated_at?: string;
           user_id?: string | null;
         };
         Update: {
+          created_by_profile_id?: string | null;
+          created_channel?: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at?: string | null;
           confirmed_by?: string | null;
           contact_email?: string | null;
@@ -1208,6 +1216,7 @@ export type Database = {
           preferred_currency?: string | null;
           preferred_language?: string | null;
           sex?: string | null;
+          source?: Database["public"]["Enums"]["patient_source"];
           status?: Database["public"]["Enums"]["patient_status"];
           travel_year?: number | null;
           updated_at?: string;
@@ -1224,6 +1233,20 @@ export type Database = {
           {
             foreignKeyName: "patients_confirmed_by_fkey";
             columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
             isOneToOne: false;
             referencedRelation: "secure_profiles";
             referencedColumns: ["id"];
@@ -2284,7 +2307,15 @@ export type Database = {
         | "consultation_scheduled"
         | "completed"
         | "archived";
+      patient_creation_channel:
+        | "portal_signup"
+        | "admin_console"
+        | "operations_dashboard"
+        | "api"
+        | "import"
+        | "unknown";
       patient_status: "potential" | "confirmed";
+      patient_source: "organic" | "staff" | "imported";
       subscription_status: "pending" | "active" | "unsubscribed" | "bounced";
       treatment_grade: "grade_a" | "grade_b" | "grade_c";
     };
@@ -2440,7 +2471,16 @@ export const Constants = {
         "completed",
         "archived",
       ],
+      patient_creation_channel: [
+        "portal_signup",
+        "admin_console",
+        "operations_dashboard",
+        "api",
+        "import",
+        "unknown",
+      ],
       patient_status: ["potential", "confirmed"],
+      patient_source: ["organic", "staff", "imported"],
       subscription_status: ["pending", "active", "unsubscribed", "bounced"],
       treatment_grade: ["grade_a", "grade_b", "grade_c"],
     },
