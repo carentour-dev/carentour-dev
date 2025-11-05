@@ -798,6 +798,54 @@ export type Database = {
           },
         ];
       };
+      operations_tasks: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          owner_profile_id: string | null;
+          owner_user_id: string;
+          status: Database["public"]["Enums"]["operations_task_status"];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          owner_profile_id?: string | null;
+          owner_user_id: string;
+          status?: Database["public"]["Enums"]["operations_task_status"];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          owner_profile_id?: string | null;
+          owner_user_id?: string;
+          status?: Database["public"]["Enums"]["operations_task_status"];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "operations_tasks_owner_profile_id_fkey";
+            columns: ["owner_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "operations_tasks_owner_profile_id_fkey";
+            columns: ["owner_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       newsletter_subscriptions: {
         Row: {
           confirmed_at: string | null;
@@ -2307,6 +2355,7 @@ export type Database = {
         | "consultation_scheduled"
         | "completed"
         | "archived";
+      operations_task_status: "pending" | "in_progress" | "done";
       patient_creation_channel:
         | "portal_signup"
         | "admin_console"
