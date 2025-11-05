@@ -26,6 +26,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -92,6 +100,7 @@ export default function AccessManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [roleFilters, setRoleFilters] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -173,18 +182,23 @@ export default function AccessManagementPage() {
     if (!data?.users) {
       return [];
     }
-    if (!search.trim()) {
-      return data.users;
-    }
-    const query = search.toLowerCase();
+
+    const query = search.trim().toLowerCase();
+
     return data.users.filter((user) => {
-      return (
+      const roles = user.roles.length ? user.roles : ["user"];
+      const matchesSearch =
+        !query ||
         user.username?.toLowerCase().includes(query) ||
         user.email?.toLowerCase().includes(query) ||
-        user.roles.some((role) => role.toLowerCase().includes(query))
-      );
+        roles.some((role) => role.toLowerCase().includes(query));
+
+      const matchesRole =
+        !roleFilters.length || roleFilters.some((role) => roles.includes(role));
+
+      return matchesSearch && matchesRole;
     });
-  }, [data?.users, search]);
+  }, [data?.users, roleFilters, search]);
 
   const availablePermissions = useMemo(() => {
     if (!data) {
@@ -279,6 +293,54 @@ export default function AccessManagementPage() {
       );
     });
   }, [availablePermissions, createPermissionSearch]);
+
+  const roleOptions = useMemo(() => {
+    const entries = new Map<string, { slug: string; name: string }>();
+
+    for (const role of data?.roles ?? []) {
+      if (!role?.slug) {
+        continue;
+      }
+      const label = role.name?.trim().length ? role.name.trim() : role.slug;
+      entries.set(role.slug, { slug: role.slug, name: label });
+    }
+
+    if (!entries.has("user")) {
+      entries.set("user", { slug: "user", name: "User" });
+    }
+
+    return Array.from(entries.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [data?.roles]);
+
+  useEffect(() => {
+    if (!roleOptions.length) {
+      setRoleFilters([]);
+      return;
+    }
+    setRoleFilters((current) => {
+      const next = current.filter((role) =>
+        roleOptions.some((option) => option.slug === role),
+      );
+      return next.length === current.length ? current : next;
+    });
+  }, [roleOptions]);
+
+  const selectedRoleNames = useMemo(() => {
+    if (!roleFilters.length) {
+      return [];
+    }
+    return roleOptions
+      .filter((option) => roleFilters.includes(option.slug))
+      .map((option) => option.name);
+  }, [roleFilters, roleOptions]);
+
+  const roleFilterLabel = selectedRoleNames.length
+    ? selectedRoleNames.length === 1
+      ? selectedRoleNames[0]
+      : `${selectedRoleNames.length} roles`
+    : "All roles";
 
   const openEditor = (user: UserRecord) => {
     const roles = user.roles.includes("user")
@@ -760,6 +822,58 @@ export default function AccessManagementPage() {
             className="pl-9"
           />
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full gap-2 text-left transition-colors md:w-auto"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span className="truncate">{roleFilterLabel}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>Filter by role</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={roleFilters.length === 0}
+              onCheckedChange={(checked) => {
+                if (checked === true) {
+                  setRoleFilters([]);
+                }
+              }}
+            >
+              All roles
+            </DropdownMenuCheckboxItem>
+            {roleOptions.length ? (
+              <>
+                <DropdownMenuSeparator />
+                {roleOptions.map((role) => (
+                  <DropdownMenuCheckboxItem
+                    key={role.slug}
+                    checked={roleFilters.includes(role.slug)}
+                    onCheckedChange={(checked) => {
+                      setRoleFilters((current) => {
+                        if (checked === true) {
+                          if (current.includes(role.slug)) {
+                            return current;
+                          }
+                          return [...current, role.slug];
+                        }
+                        return current.filter(
+                          (roleSlug) => roleSlug !== role.slug,
+                        );
+                      });
+                    }}
+                    className="capitalize"
+                  >
+                    {role.name}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </section>
 
       {loading ? (
