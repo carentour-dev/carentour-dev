@@ -1163,10 +1163,13 @@ export const patientController = {
         ? requestedStatus
         : "potential";
 
+    // Always use admin client for auth operations
+    const adminSupabase = getSupabaseAdmin();
+
     // Prevent staff accounts from being registered as patients
     if (parsed.user_id) {
       const { data: userData, error: userError } =
-        await supabase.auth.admin.getUserById(parsed.user_id);
+        await adminSupabase.auth.admin.getUserById(parsed.user_id);
 
       if (userError) {
         throw new ApiError(
@@ -1221,15 +1224,13 @@ export const patientController = {
       }
 
       if (parsed.user_id) {
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          parsed.user_id,
-          {
+        const { error: updateError } =
+          await adminSupabase.auth.admin.updateUserById(parsed.user_id, {
             password: portalPassword,
             email: contactEmail,
             email_confirm: true,
             user_metadata: { full_name: trimmedFullName },
-          },
-        );
+          });
 
         if (updateError) {
           throw new ApiError(
@@ -1242,7 +1243,7 @@ export const patientController = {
         portalAccount = { userId: parsed.user_id, createdNew: false };
         createPayload.user_id = parsed.user_id;
       } else {
-        portalAccount = await createOrUpdatePortalAccount(supabase, {
+        portalAccount = await createOrUpdatePortalAccount(adminSupabase, {
           email: contactEmail,
           password: portalPassword,
           fullName: trimmedFullName,
@@ -1256,12 +1257,26 @@ export const patientController = {
 
     createPayload.email_verified = effectiveEmailVerified;
 
-    let patient;
+    let patient: PatientRow;
     try {
-      patient = await patientService.create(createPayload);
+      // For referral users, use RLS-enabled client; for others, use admin service
+      if (isReferralOnlyUser(auth)) {
+        const { data, error } = await supabase
+          .from("patients")
+          .insert(createPayload)
+          .select()
+          .single();
+
+        if (error) {
+          throw new ApiError(500, "Failed to create patient", error.message);
+        }
+        patient = data as PatientRow;
+      } else {
+        patient = await patientService.create(createPayload);
+      }
     } catch (error) {
       if (portalAccount?.createdNew) {
-        await supabase.auth.admin
+        await adminSupabase.auth.admin
           .deleteUser(portalAccount.userId)
           .catch(() => {});
       }
@@ -1269,7 +1284,7 @@ export const patientController = {
     }
 
     try {
-      await syncProfileWithPatient(supabase, {
+      await syncProfileWithPatient(adminSupabase, {
         userId: patient.user_id,
         fullName: patient.full_name,
         dateOfBirth: patient.date_of_birth,
@@ -1279,7 +1294,7 @@ export const patientController = {
       });
     } catch (error) {
       if (portalAccount?.createdNew) {
-        await supabase.auth.admin
+        await adminSupabase.auth.admin
           .deleteUser(portalAccount.userId)
           .catch(() => {});
       }
@@ -1296,14 +1311,14 @@ export const patientController = {
 
     if (portalPassword && contactEmail) {
       try {
-        await sendPortalPasswordEmail(supabase, {
+        await sendPortalPasswordEmail(adminSupabase, {
           email: contactEmail,
           fullName: trimmedFullName,
           password: portalPassword,
         });
       } catch (error) {
         if (portalAccount?.createdNew) {
-          await supabase.auth.admin
+          await adminSupabase.auth.admin
             .deleteUser(portalAccount.userId)
             .catch(() => {});
         }
@@ -1327,6 +1342,8 @@ export const patientController = {
     const supabase = isReferralOnlyUser(auth)
       ? await getSupabaseWithAuth()
       : getSupabaseAdmin();
+    // Always use admin client for auth operations
+    const adminSupabase = getSupabaseAdmin();
     const existing = await patientService.getById(patientId);
     const existingPatient =
       existing as Database["public"]["Tables"]["patients"]["Row"];
@@ -1417,7 +1434,7 @@ export const patientController = {
     const targetUserId = parsed.user_id ?? existing.user_id ?? null;
     if (targetUserId && targetUserId !== existing.user_id) {
       const { data: userData, error: userError } =
-        await supabase.auth.admin.getUserById(targetUserId);
+        await adminSupabase.auth.admin.getUserById(targetUserId);
 
       if (userError) {
         throw new ApiError(
@@ -1499,15 +1516,13 @@ export const patientController = {
       }
 
       if (targetUserId) {
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          targetUserId,
-          {
+        const { error: updateError } =
+          await adminSupabase.auth.admin.updateUserById(targetUserId, {
             password: portalPassword,
             email: effectiveContactEmail,
             email_confirm: true,
             user_metadata: { full_name: fullName },
-          },
-        );
+          });
 
         if (updateError) {
           throw new ApiError(
@@ -1520,7 +1535,7 @@ export const patientController = {
         portalAccount = { userId: targetUserId, createdNew: false };
         updatePayload.user_id = targetUserId;
       } else {
-        portalAccount = await createOrUpdatePortalAccount(supabase, {
+        portalAccount = await createOrUpdatePortalAccount(adminSupabase, {
           email: effectiveContactEmail,
           password: portalPassword,
           fullName,
@@ -1534,10 +1549,26 @@ export const patientController = {
 
     updatePayload.email_verified = effectiveEmailVerified;
 
-    const updated = await patientService.update(patientId, updatePayload);
+    let updated: PatientRow;
+    // For referral users, use RLS-enabled client; for others, use admin service
+    if (isReferralOnlyUser(auth)) {
+      const { data, error } = await supabase
+        .from("patients")
+        .update(updatePayload)
+        .eq("id", patientId)
+        .select()
+        .single();
+
+      if (error) {
+        throw new ApiError(500, "Failed to update patient", error.message);
+      }
+      updated = data as PatientRow;
+    } else {
+      updated = await patientService.update(patientId, updatePayload);
+    }
 
     try {
-      await syncProfileWithPatient(supabase, {
+      await syncProfileWithPatient(adminSupabase, {
         userId: updated.user_id,
         fullName: updated.full_name,
         dateOfBirth: updated.date_of_birth,
@@ -1547,7 +1578,7 @@ export const patientController = {
       });
     } catch (error) {
       if (portalAccount?.createdNew) {
-        await supabase.auth.admin
+        await adminSupabase.auth.admin
           .deleteUser(portalAccount.userId)
           .catch(() => {});
         portalAccount = null;
@@ -1590,14 +1621,14 @@ export const patientController = {
 
     if (portalPassword && effectiveContactEmail) {
       try {
-        await sendPortalPasswordEmail(supabase, {
+        await sendPortalPasswordEmail(adminSupabase, {
           email: effectiveContactEmail,
           fullName,
           password: portalPassword,
         });
       } catch (error) {
         if (portalAccount?.createdNew) {
-          await supabase.auth.admin
+          await adminSupabase.auth.admin
             .deleteUser(portalAccount.userId)
             .catch(() => {});
           await patientService
@@ -1620,26 +1651,53 @@ export const patientController = {
     const supabase = isReferralOnlyUser(auth)
       ? await getSupabaseWithAuth()
       : getSupabaseAdmin();
+    // Always use admin client for auth operations
+    const adminSupabase = getSupabaseAdmin();
 
     // First, fetch the patient to get user_id for cleanup
-    const patient = await patientService.getById(patientId);
+    let patient: PatientRow;
+    if (isReferralOnlyUser(auth)) {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", patientId)
+        .single();
+
+      if (error) {
+        throw new ApiError(500, "Failed to fetch patient", error.message);
+      }
+      patient = data as PatientRow;
+    } else {
+      patient = await patientService.getById(patientId);
+    }
 
     // Delete the patient record (this will cascade to consultations and appointments)
-    await patientService.remove(patientId);
+    if (isReferralOnlyUser(auth)) {
+      const { error } = await supabase
+        .from("patients")
+        .delete()
+        .eq("id", patientId);
+
+      if (error) {
+        throw new ApiError(500, "Failed to delete patient", error.message);
+      }
+    } else {
+      await patientService.remove(patientId);
+    }
 
     // If patient has a user_id, delete the auth user (which will cascade delete the profile)
     // Only delete if it's not a staff account
     if (patient.user_id) {
       try {
         const { data: userData, error: userError } =
-          await supabase.auth.admin.getUserById(patient.user_id);
+          await adminSupabase.auth.admin.getUserById(patient.user_id);
 
         if (!userError && userData?.user) {
           const accountType = userData.user.user_metadata?.account_type;
 
           // Only delete if it's not a staff account
           if (accountType !== "staff") {
-            await supabase.auth.admin.deleteUser(patient.user_id);
+            await adminSupabase.auth.admin.deleteUser(patient.user_id);
             // Profile will be automatically deleted due to ON DELETE CASCADE
           }
         }
