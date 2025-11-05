@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -45,9 +56,22 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
-import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Pencil,
+  PlusCircle,
+  ShieldCheck,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import {
+  PatientStatusEnum,
+  PATIENT_STATUS,
+  type PatientStatus,
+} from "@/lib/patients/status";
 
 const optionalUuid = z.preprocess((value) => {
   if (typeof value === "string" && value.trim() === "") {
@@ -102,6 +126,7 @@ const patientSchema = z
       (value) => (typeof value === "string" ? value : ""),
       z.string().optional(),
     ),
+    status: PatientStatusEnum.default(PATIENT_STATUS.potential),
   })
   .superRefine((data, ctx) => {
     const password = data.portal_password;
@@ -147,22 +172,39 @@ type PatientPayload = {
   notes?: string | null;
   email_verified?: boolean;
   portal_password?: string;
+  status?: PatientStatus;
 };
 
-type PatientRecord = Omit<PatientPayload, "portal_password"> & {
+type PatientRecord = Omit<PatientPayload, "portal_password" | "status"> & {
   id: string;
   created_at?: string;
   updated_at?: string;
   email_verified?: boolean | null;
+  status: PatientStatus;
+  confirmed_at?: string | null;
+  confirmed_by?: string | null;
 };
 
 const QUERY_KEY = ["admin", "patients"] as const;
+
+const STATUS_LABELS: Record<PatientStatus, string> = {
+  potential: "Potential",
+  confirmed: "Confirmed",
+};
+
+const STATUS_BADGE_VARIANT: Record<PatientStatus, "outline" | "success"> = {
+  potential: "outline",
+  confirmed: "success",
+};
 
 export default function AdminPatientsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">(
+    "all",
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(
     null,
@@ -170,8 +212,16 @@ export default function AdminPatientsPage() {
   const [startJourneyLinkId, setStartJourneyLinkId] = useState<string | null>(
     null,
   );
+  const [statusChangeTarget, setStatusChangeTarget] = useState<{
+    patient: PatientRecord;
+    nextStatus: PatientStatus;
+  } | null>(null);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  const canConfirmPatients =
+    profile?.hasPermission("operations.patients.confirm") ?? false;
+  const statusOptions = Object.values(PATIENT_STATUS) as PatientStatus[];
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientSchema),
@@ -189,6 +239,7 @@ export default function AdminPatientsPage() {
       email_verified: false,
       portal_password: "",
       portal_password_confirm: "",
+      status: PATIENT_STATUS.potential,
     },
   });
   const watchPortalPassword = form.watch("portal_password");
@@ -203,8 +254,17 @@ export default function AdminPatientsPage() {
   }, [watchPortalPassword, form]);
 
   const patientsQuery = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: () => adminFetch<PatientRecord[]>("/api/admin/patients"),
+    queryKey: [...QUERY_KEY, statusFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") {
+        params.set("status", statusFilter);
+      }
+      const url = params.size
+        ? `/api/admin/patients?${params.toString()}`
+        : "/api/admin/patients";
+      return adminFetch<PatientRecord[]>(url);
+    },
   });
 
   const createPatient = useMutation({
@@ -331,10 +391,12 @@ export default function AdminPatientsPage() {
         nationalityFilter === "all" ||
         (patient.nationality ?? "").toLowerCase() ===
           nationalityFilter.toLowerCase();
+      const matchesStatus =
+        statusFilter === "all" || patient.status === statusFilter;
 
-      return matchesSearch && matchesNationality;
+      return matchesSearch && matchesNationality && matchesStatus;
     });
-  }, [patientsQuery.data, search, nationalityFilter]);
+  }, [patientsQuery.data, search, nationalityFilter, statusFilter]);
 
   const openCreateDialog = () => {
     setEditingPatient(null);
@@ -352,6 +414,7 @@ export default function AdminPatientsPage() {
       email_verified: false,
       portal_password: "",
       portal_password_confirm: "",
+      status: PATIENT_STATUS.potential,
     });
     setDialogOpen(true);
   };
@@ -372,6 +435,7 @@ export default function AdminPatientsPage() {
       email_verified: patient.email_verified ?? false,
       portal_password: "",
       portal_password_confirm: "",
+      status: patient.status,
     });
     setDialogOpen(true);
   };
@@ -455,6 +519,7 @@ export default function AdminPatientsPage() {
       email_verified: portalPassword.length > 0,
       portal_password: portalPassword,
       portal_password_confirm: portalPassword,
+      status: PATIENT_STATUS.potential,
     });
 
     const params = new URLSearchParams(searchParams.toString());
@@ -508,6 +573,10 @@ export default function AdminPatientsPage() {
     const trimmedPassword = portal_password?.trim();
     if (trimmedPassword && trimmedPassword.length > 0) {
       payload.portal_password = trimmedPassword;
+    }
+
+    if (canConfirmPatients) {
+      payload.status = rest.status;
     }
 
     if (editingPatient) {
@@ -809,6 +878,26 @@ export default function AdminPatientsPage() {
                 className="sm:w-48 lg:w-72"
               />
               <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(
+                    value === "all" ? "all" : (value as PatientStatus),
+                  )
+                }
+              >
+                <SelectTrigger className="sm:w-44">
+                  <SelectValue placeholder="Filter status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
                 value={nationalityFilter}
                 onValueChange={setNationalityFilter}
               >
@@ -840,7 +929,8 @@ export default function AdminPatientsPage() {
                   <TableHead>Contact</TableHead>
                   <TableHead>Nationality</TableHead>
                   <TableHead>Language</TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-36 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -873,7 +963,59 @@ export default function AdminPatientsPage() {
                     </TableCell>
                     <TableCell>{patient.nationality || "—"}</TableCell>
                     <TableCell>{patient.preferred_language || "—"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={STATUS_BADGE_VARIANT[patient.status]}>
+                          {STATUS_LABELS[patient.status]}
+                        </Badge>
+                        {patient.status === PATIENT_STATUS.confirmed &&
+                        patient.confirmed_at ? (
+                          <span className="text-xs text-muted-foreground">
+                            Confirmed{" "}
+                            {new Date(
+                              patient.confirmed_at,
+                            ).toLocaleDateString()}
+                          </span>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="flex justify-end gap-2">
+                      {canConfirmPatients &&
+                        patient.status === PATIENT_STATUS.potential && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Mark as confirmed"
+                            title="Mark as confirmed"
+                            disabled={updatePatient.isPending}
+                            onClick={() =>
+                              setStatusChangeTarget({
+                                patient,
+                                nextStatus: PATIENT_STATUS.confirmed,
+                              })
+                            }
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                          </Button>
+                        )}
+                      {canConfirmPatients &&
+                        patient.status === PATIENT_STATUS.confirmed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Revert to potential"
+                            title="Revert to potential"
+                            disabled={updatePatient.isPending}
+                            onClick={() =>
+                              setStatusChangeTarget({
+                                patient,
+                                nextStatus: PATIENT_STATUS.potential,
+                              })
+                            }
+                          >
+                            <Undo2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -897,7 +1039,7 @@ export default function AdminPatientsPage() {
                 {filteredPatients.length === 0 && !patientsQuery.isLoading && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       No patients found. Adjust filters or add a new record.
@@ -909,6 +1051,58 @@ export default function AdminPatientsPage() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog
+        open={statusChangeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStatusChangeTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusChangeTarget?.nextStatus === PATIENT_STATUS.confirmed
+                ? "Mark patient as confirmed?"
+                : "Revert patient to potential?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusChangeTarget?.nextStatus === PATIENT_STATUS.confirmed
+                ? `This will mark ${statusChangeTarget?.patient.full_name} as confirmed so they appear in confirmed-only workflows.`
+                : `This will move ${statusChangeTarget?.patient.full_name} back to potential and clear their confirmation metadata.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setStatusChangeTarget(null)}
+              disabled={updatePatient.isPending}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={updatePatient.isPending}
+              onClick={() => {
+                if (!statusChangeTarget) {
+                  return;
+                }
+                const target = statusChangeTarget;
+                setStatusChangeTarget(null);
+                updatePatient.mutate({
+                  id: target.patient.id,
+                  data: { status: target.nextStatus },
+                });
+              }}
+            >
+              {updatePatient.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {statusChangeTarget?.nextStatus === PATIENT_STATUS.confirmed
+                ? "Confirm patient"
+                : "Revert to potential"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
