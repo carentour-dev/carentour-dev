@@ -305,13 +305,13 @@ const sendPortalPasswordEmail = async (
 export const patientController = {
   async list(options?: { status?: PatientStatus }) {
     const supabase = getSupabaseAdmin();
-    let query = supabase
+    const query = supabase
       .from("patients")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (options?.status) {
-      query = query.eq("status", options.status);
+      query.eq("status", options.status);
     }
 
     const { data, error } = await query;
@@ -327,7 +327,7 @@ export const patientController = {
     const supabase = getSupabaseAdmin();
     const searchTerm = `%${query.trim()}%`;
 
-    let request = supabase
+    const request = supabase
       .from("patients")
       .select(
         "id, full_name, contact_email, nationality, home_city, has_testimonial, status",
@@ -337,7 +337,7 @@ export const patientController = {
       .limit(20);
 
     if (options?.status) {
-      request = request.eq("status", options.status);
+      request.eq("status", options.status);
     }
 
     const { data, error } = await request;
