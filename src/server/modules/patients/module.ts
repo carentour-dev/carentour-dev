@@ -310,11 +310,9 @@ export const patientController = {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (options?.status) {
-      query.eq("status", options.status);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await (options?.status
+      ? (query as any).eq("status", options.status)
+      : query);
 
     if (error) {
       throw new ApiError(500, "Failed to fetch patient list", error.message);
@@ -336,11 +334,9 @@ export const patientController = {
       .order("full_name", { ascending: true })
       .limit(20);
 
-    if (options?.status) {
-      request.eq("status", options.status);
-    }
-
-    const { data, error } = await request;
+    const { data, error } = await (options?.status
+      ? (request as any).eq("status", options.status)
+      : request);
 
     if (error) {
       throw new ApiError(500, "Failed to search patients", error.message);
