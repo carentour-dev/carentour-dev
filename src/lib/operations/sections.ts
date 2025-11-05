@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Inbox,
   LayoutDashboard,
+  ListTodo,
   Plane,
   Users,
   Sparkles,
@@ -45,6 +46,10 @@ const sectionRequirement = (permission: string): AccessRequirement => ({
   allPermissions: [OPERATIONS_SHARED_PERMISSION, permission],
 });
 
+const tasksRequirement: AccessRequirement = {
+  allPermissions: [OPERATIONS_ACCESS_PERMISSION, OPERATIONS_SHARED_PERMISSION],
+};
+
 export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
   {
     id: "overview",
@@ -55,6 +60,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: LayoutDashboard,
     adminHref: "/admin",
     required: overviewRequirement,
+  },
+  {
+    id: "tasks",
+    label: "My Tasks",
+    description:
+      "Capture personal follow-ups and move items across Pending, In Progress, and Done.",
+    href: "/operations/tasks",
+    icon: ListTodo,
+    adminHref: "/admin",
+    required: tasksRequirement,
   },
   {
     id: "requests",
