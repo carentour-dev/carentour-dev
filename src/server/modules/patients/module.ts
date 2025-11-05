@@ -678,6 +678,40 @@ export const patientController = {
 
   async delete(id: unknown) {
     const patientId = patientIdSchema.parse(id);
-    return patientService.remove(patientId);
+    const supabase = getSupabaseAdmin();
+
+    // First, fetch the patient to get user_id for cleanup
+    const patient = await patientService.getById(patientId);
+
+    // Delete the patient record (this will cascade to consultations and appointments)
+    await patientService.remove(patientId);
+
+    // If patient has a user_id, delete the auth user (which will cascade delete the profile)
+    // Only delete if it's not a staff account
+    if (patient.user_id) {
+      try {
+        const { data: userData, error: userError } =
+          await supabase.auth.admin.getUserById(patient.user_id);
+
+        if (!userError && userData?.user) {
+          const accountType = userData.user.user_metadata?.account_type;
+
+          // Only delete if it's not a staff account
+          if (accountType !== "staff") {
+            await supabase.auth.admin.deleteUser(patient.user_id);
+            // Profile will be automatically deleted due to ON DELETE CASCADE
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the deletion - patient record is already deleted
+        // This ensures patient deletion succeeds even if user cleanup fails
+        console.error(
+          `Failed to delete auth user for patient ${patientId}:`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+
+    return { success: true };
   },
 };
