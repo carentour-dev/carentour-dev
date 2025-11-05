@@ -23,6 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import type { PatientStatus } from "@/lib/patients/status";
 
 interface Patient {
   id: string;
@@ -31,6 +32,7 @@ interface Patient {
   nationality: string | null;
   home_city: string | null;
   has_testimonial: boolean | null;
+  status: PatientStatus;
 }
 
 interface PatientSelectorProps {
@@ -38,13 +40,20 @@ interface PatientSelectorProps {
   onValueChange: (value: string | null) => void;
   placeholder?: string;
   className?: string;
+  status?: PatientStatus;
 }
+
+const STATUS_LABELS: Record<PatientStatus, string> = {
+  potential: "Potential",
+  confirmed: "Confirmed",
+};
 
 export function PatientSelector({
   value,
   onValueChange,
   placeholder = "Select patient...",
   className,
+  status,
 }: PatientSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -62,13 +71,21 @@ export function PatientSelector({
   }, [search]);
 
   const { data: patients = [], isLoading } = useQuery({
-    queryKey: ["patients-search", debouncedSearch],
-    queryFn: () =>
-      debouncedSearch.length >= 2
-        ? adminFetch<Patient[]>(
-            `/api/admin/patients/search?q=${encodeURIComponent(debouncedSearch)}`,
-          )
-        : Promise.resolve([]),
+    queryKey: ["patients-search", debouncedSearch, status ?? "all"],
+    queryFn: () => {
+      if (debouncedSearch.length < 2) {
+        return Promise.resolve([] as Patient[]);
+      }
+
+      const params = new URLSearchParams({ q: debouncedSearch });
+      if (status) {
+        params.set("status", status);
+      }
+
+      return adminFetch<Patient[]>(
+        `/api/admin/patients/search?${params.toString()}`,
+      );
+    },
     enabled: debouncedSearch.length >= 2,
     staleTime: 30000,
   });
@@ -195,7 +212,7 @@ export function PatientSelector({
                                 : "opacity-0",
                             )}
                           />
-                          <div className="flex flex-col min-w-0">
+                          <div className="flex flex-col min-w-0 gap-1">
                             <span className="font-medium truncate">
                               {patient.full_name}
                             </span>
@@ -207,6 +224,9 @@ export function PatientSelector({
                               ]
                                 .filter(Boolean)
                                 .join(" • ")}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Status: {STATUS_LABELS[patient.status]}
                             </span>
                           </div>
                         </div>
