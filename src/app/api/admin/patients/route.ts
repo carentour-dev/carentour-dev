@@ -20,9 +20,9 @@ const parseStatusQuery = (value: string | null): PatientStatus | undefined => {
   return result.success ? result.data : undefined;
 };
 
-export const GET = adminRoute(async (req: NextRequest) => {
+export const GET = adminRoute(async (req: NextRequest, ctx) => {
   const status = parseStatusQuery(req.nextUrl.searchParams.get("status"));
-  const patients = await patientController.list({ status });
+  const patients = await patientController.list({ status }, ctx.auth);
   return jsonResponse(patients);
 }, SHARED_PERMISSIONS);
 

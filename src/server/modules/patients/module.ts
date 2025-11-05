@@ -2,7 +2,10 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
-import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import {
+  getSupabaseAdmin,
+  getSupabaseWithAuth,
+} from "@/server/supabase/adminClient";
 import type { AuthorizationContext } from "@/server/auth/requireAdmin";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -581,9 +584,48 @@ const sendPortalPasswordEmail = async (
   }
 };
 
+/**
+ * Determines if a user should have scoped (RLS-filtered) patient access.
+ * Returns true if the user has ONLY the referral role without any privileged roles.
+ *
+ * Users with both referral + privileged roles (e.g., referral + coordinator)
+ * will return false, meaning they get full access (more permissive role wins).
+ *
+ * @param auth - Authorization context containing user roles
+ * @returns true if user should see only their own patients, false for full access
+ */
+function isReferralOnlyUser(auth?: AuthorizationContext): boolean {
+  if (!auth?.roles || auth.roles.length === 0) {
+    return false;
+  }
+
+  const hasReferralRole = auth.roles.includes("referral");
+  const privilegedRoles = [
+    "admin",
+    "coordinator",
+    "employee",
+    "doctor",
+    "management",
+    "editor",
+  ];
+  const hasPrivilegedRole = auth.roles.some((role) =>
+    privilegedRoles.includes(role),
+  );
+
+  // User must have referral role AND no privileged roles
+  return hasReferralRole && !hasPrivilegedRole;
+}
+
 export const patientController = {
-  async list(options?: { status?: PatientStatus }) {
-    const supabase = getSupabaseAdmin();
+  async list(
+    options?: { status?: PatientStatus },
+    auth?: AuthorizationContext,
+  ) {
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
+
     const query = supabase
       .from("patients")
       .select("*")
@@ -600,8 +642,16 @@ export const patientController = {
     return data ?? [];
   },
 
-  async search(query: string, options?: { status?: PatientStatus }) {
-    const supabase = getSupabaseAdmin();
+  async search(
+    query: string,
+    options?: { status?: PatientStatus },
+    auth?: AuthorizationContext,
+  ) {
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
+
     const searchTerm = `%${query.trim()}%`;
 
     const request = supabase
@@ -629,9 +679,15 @@ export const patientController = {
     return patientService.getById(patientId);
   },
 
-  async details(id: unknown): Promise<PatientDetails> {
+  async details(
+    id: unknown,
+    auth?: AuthorizationContext,
+  ): Promise<PatientDetails> {
     const patientId = patientIdSchema.parse(id);
-    const supabase = getSupabaseAdmin();
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
 
     const { data: patientRow, error: patientError } = await supabase
       .from("patients")
@@ -1059,7 +1115,10 @@ export const patientController = {
 
   async create(payload: unknown, auth?: AuthorizationContext) {
     const parsed = createPatientSchema.parse(payload);
-    const supabase = getSupabaseAdmin();
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
     const trimmedFullName = trimString(parsed.full_name);
     const contactEmail = normalizeOptionalEmail(parsed.contact_email);
     const portalPassword =
@@ -1264,7 +1323,10 @@ export const patientController = {
       throw new ApiError(400, "No fields provided for update");
     }
 
-    const supabase = getSupabaseAdmin();
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
     const existing = await patientService.getById(patientId);
     const existingPatient =
       existing as Database["public"]["Tables"]["patients"]["Row"];
@@ -1552,9 +1614,12 @@ export const patientController = {
     return updated;
   },
 
-  async delete(id: unknown) {
+  async delete(id: unknown, auth?: AuthorizationContext) {
     const patientId = patientIdSchema.parse(id);
-    const supabase = getSupabaseAdmin();
+    // Use RLS-enabled client for referral-only users, admin client for others
+    const supabase = isReferralOnlyUser(auth)
+      ? await getSupabaseWithAuth()
+      : getSupabaseAdmin();
 
     // First, fetch the patient to get user_id for cleanup
     const patient = await patientService.getById(patientId);
