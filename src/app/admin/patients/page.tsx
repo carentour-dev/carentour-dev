@@ -990,7 +990,10 @@ export default function AdminPatientsPage() {
                     <TableCell>{patient.preferred_language || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <Badge variant={STATUS_BADGE_VARIANT[patient.status]}>
+                        <Badge
+                          variant={STATUS_BADGE_VARIANT[patient.status]}
+                          className="self-start"
+                        >
                           {STATUS_LABELS[patient.status]}
                         </Badge>
                         {patient.status === PATIENT_STATUS.confirmed &&
