@@ -65,9 +65,17 @@ const CHANNEL_LABELS: Record<string, string> = {
   portal_signup: "Portal signup",
   admin_console: "Admin console",
   operations_dashboard: "Operations dashboard",
-  api: "API",
+  api: "API integration",
   import: "Data import",
   unknown: "Unknown channel",
+};
+
+const CREATED_BY_FALLBACK_LABELS: Record<string, string> = {
+  portal_signup: "Self signup",
+  admin_console: "Admin console",
+  operations_dashboard: "Operations team",
+  api: "API client",
+  import: "Data import",
 };
 
 type TimelineEvent = {
@@ -254,6 +262,13 @@ export default function PatientDetailsPage() {
   }
 
   const patient = details.patient;
+  const createdByFallback = getCreatedByFallback(patient);
+  const creatorName =
+    patient.creator_profile?.username ?? patient.creator_profile?.email ?? null;
+  const creatorMeta =
+    patient.creator_profile?.job_title ??
+    patient.creator_profile?.email ??
+    (patient.creator_profile ? "Team member" : null);
 
   return (
     <div className="space-y-6 pb-20">
@@ -409,20 +424,15 @@ export default function PatientDetailsPage() {
               <InfoItem
                 label="Created by"
                 value={
-                  patient.creator_profile ? (
+                  patient.creator_profile && creatorName ? (
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        {patient.creator_profile.username ??
-                          patient.creator_profile.email}
-                      </span>
+                      <span className="text-sm font-medium">{creatorName}</span>
                       <span className="text-xs text-muted-foreground">
-                        {patient.creator_profile.job_title ??
-                          patient.creator_profile.email ??
-                          "Team member"}
+                        {creatorMeta}
                       </span>
                     </div>
                   ) : (
-                    "—"
+                    (createdByFallback ?? "—")
                   )
                 }
               />
@@ -1002,6 +1012,12 @@ export default function PatientDetailsPage() {
 function buildTimeline(details: PatientDetails): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   const patient = details.patient;
+  const createdByFallback = getCreatedByFallback(patient);
+  const creatorLabel =
+    patient.creator_profile?.username ??
+    patient.creator_profile?.email ??
+    createdByFallback ??
+    "—";
 
   events.push({
     id: "patient-created",
@@ -1022,10 +1038,7 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
       },
       {
         label: "Created by",
-        value:
-          patient.creator_profile?.username ??
-          patient.creator_profile?.email ??
-          "—",
+        value: creatorLabel,
       },
     ],
   });
@@ -1164,4 +1177,27 @@ function dedupeDocuments(documents: PatientDocumentSummary[]) {
     });
   }
   return Array.from(map.values());
+}
+
+function getCreatedByFallback(
+  patient: PatientDetails["patient"],
+): string | null {
+  if (patient.creator_profile) {
+    return null;
+  }
+
+  const specificLabel = CREATED_BY_FALLBACK_LABELS[patient.created_channel];
+  if (specificLabel) {
+    return specificLabel;
+  }
+
+  if (patient.source === "organic") {
+    return "Self signup";
+  }
+
+  if (patient.source === "staff") {
+    return "Team member";
+  }
+
+  return null;
 }
