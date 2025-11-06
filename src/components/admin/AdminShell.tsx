@@ -74,11 +74,18 @@ const NAV_ITEMS = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
 
   const isCheckingAccess = authLoading || profileLoading;
+  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
+  useEffect(() => {
+    if (!isCheckingAccess) {
+      setInitialAccessResolved(true);
+    }
+  }, [isCheckingAccess]);
   const hasAdminAccess = profile?.hasPermission("admin.access");
+  const hasResolvedProfile = !profileLoading && profile !== null;
   const operationsEntitlements = useMemo(
     () =>
       profile
@@ -99,7 +106,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     router.replace("/auth");
   };
 
-  if (isCheckingAccess) {
+  if (!initialAccessResolved) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -108,7 +115,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!hasAdminAccess) {
+  if (initialAccessResolved && !authLoading && !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Session required
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Your session has ended. Please sign in again to continue.
+          </p>
+        </div>
+        <Button onClick={() => router.replace("/auth")}>Go to sign in</Button>
+      </div>
+    );
+  }
+
+  if (initialAccessResolved && hasResolvedProfile && hasAdminAccess === false) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -128,85 +151,97 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
-      <Sidebar
-        collapsible="icon"
-        className="bg-sidebar text-sidebar-foreground"
-      >
-        <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-          <AdminBranding />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Management</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/admin" && pathname.startsWith(item.href));
+    <>
+      <SidebarProvider>
+        <Sidebar
+          collapsible="icon"
+          className="bg-sidebar text-sidebar-foreground"
+        >
+          <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+            <AdminBranding />
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Management</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {NAV_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/admin" &&
+                        pathname.startsWith(item.href));
 
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.label}
-                      >
-                        <Link href={item.href}>
-                          <Icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <div className="flex items-center gap-3 rounded-md bg-sidebar-accent/30 px-3 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Users className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {profile?.displayName ?? "Admin"}
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {(profile?.roles ?? ["user"]).map((role) => (
-                  <Badge
-                    key={role}
-                    variant="outline"
-                    className="w-fit text-xs capitalize"
-                  >
-                    {role.replace(/[-_]/g, " ")}
-                  </Badge>
-                ))}
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={item.label}
+                        >
+                          <Link href={item.href}>
+                            <Icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border">
+            <div className="flex items-center gap-3 rounded-md bg-sidebar-accent/30 px-3 py-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">
+                  {profile?.displayName ?? "Admin"}
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {(profile?.roles ?? ["user"]).map((role) => (
+                    <Badge
+                      key={role}
+                      variant="outline"
+                      className="w-fit text-xs capitalize"
+                    >
+                      {role.replace(/[-_]/g, " ")}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
 
-      <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-        <AdminTopbar hasOperationsAccess={hasOperationsAccess} />
-        <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
+          <AdminTopbar hasOperationsAccess={hasOperationsAccess} />
+          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+
+      {isCheckingAccess && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/60 backdrop-blur-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Refreshing admin access…
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 
