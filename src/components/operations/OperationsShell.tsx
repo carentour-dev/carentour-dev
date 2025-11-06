@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -44,12 +44,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/auth");
-    }
-  }, [authLoading, router, user]);
+  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
 
   const entitlements = useMemo(
     () =>
@@ -73,12 +68,24 @@ export function OperationsShell({ children }: OperationsShellProps) {
 
   const isLoading = authLoading || profileLoading;
 
+  useEffect(() => {
+    if (!isLoading) {
+      setInitialAccessResolved(true);
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (initialAccessResolved && !authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, initialAccessResolved, router, user]);
+
   const handleSignOut = async () => {
     await signOut();
     router.replace("/auth");
   };
 
-  if (isLoading) {
+  if (!initialAccessResolved) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -89,7 +96,23 @@ export function OperationsShell({ children }: OperationsShellProps) {
     );
   }
 
-  if (!isAuthorized) {
+  if (!authLoading && !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Session required
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Your session has ended. Please sign in again to continue.
+          </p>
+        </div>
+        <Button onClick={() => router.replace("/auth")}>Go to sign in</Button>
+      </div>
+    );
+  }
+
+  if (!isAuthorized && !isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -117,54 +140,65 @@ export function OperationsShell({ children }: OperationsShellProps) {
   }
 
   return (
-    <SidebarProvider>
-      <Sidebar
-        collapsible="icon"
-        className="bg-sidebar text-sidebar-foreground"
-      >
-        <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-          <OperationsBranding />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Operations</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navSections.map((section) => (
-                  <OperationsNavItem
-                    key={section.id}
-                    section={section}
-                    pathname={pathname}
-                  />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <OperationsProfileSummary
-            displayName={profile?.displayName ?? "Team member"}
-            roles={profile?.roles ?? []}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
+    <>
+      <SidebarProvider>
+        <Sidebar
+          collapsible="icon"
+          className="bg-sidebar text-sidebar-foreground"
+        >
+          <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+            <OperationsBranding />
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Operations</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navSections.map((section) => (
+                    <OperationsNavItem
+                      key={section.id}
+                      section={section}
+                      pathname={pathname}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border">
+            <OperationsProfileSummary
+              displayName={profile?.displayName ?? "Team member"}
+              roles={profile?.roles ?? []}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
 
-      <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-        <OperationsTopbar />
-        <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
+          <OperationsTopbar />
+          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+
+      {isLoading && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/60 backdrop-blur-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Refreshing operations access…
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 
