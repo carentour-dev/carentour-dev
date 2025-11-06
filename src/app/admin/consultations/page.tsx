@@ -390,8 +390,8 @@ export default function AdminConsultationsPage() {
     setEditingConsultation(null);
     setDialogOpen(true);
 
-    router.replace("/admin/consultations", { scroll: false });
-  }, [resetForm, router, searchParams]);
+    router.replace(pathname, { scroll: false });
+  }, [pathname, resetForm, router, searchParams]);
 
   const contactRequestIdField = form.watch("contact_request_id");
   const normalizedContactRequestId = useMemo(() => {
