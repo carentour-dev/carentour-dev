@@ -221,6 +221,7 @@ export default function AdminPatientsPage() {
   const basePath = pathname.startsWith("/operations")
     ? "/operations"
     : "/admin";
+  const patientsPath = `${basePath}/patients`;
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState("all");
@@ -561,11 +562,9 @@ export default function AdminPatientsPage() {
       "fromStartJourneyId",
     ].forEach((key) => params.delete(key));
     const nextUrl =
-      params.size > 0
-        ? `/admin/patients?${params.toString()}`
-        : "/admin/patients";
+      params.size > 0 ? `${patientsPath}?${params.toString()}` : patientsPath;
     router.replace(nextUrl, { scroll: false });
-  }, [searchParams, dialogOpen, form, router]);
+  }, [searchParams, dialogOpen, form, router, patientsPath]);
 
   const onSubmit = (values: PatientFormValues) => {
     const {
@@ -627,7 +626,13 @@ export default function AdminPatientsPage() {
               Add Patient
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent
+            className="max-w-2xl"
+            onPointerDownOutside={(event) => event.preventDefault()}
+            onInteractOutside={(event) => event.preventDefault()}
+            onFocusOutside={(event) => event.preventDefault()}
+            onEscapeKeyDown={(event) => event.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingPatient ? "Edit Patient" : "Add Patient"}
