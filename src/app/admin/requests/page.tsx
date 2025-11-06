@@ -255,6 +255,11 @@ const formatAssignee = (
 export default function AdminRequestsPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const baseNamespace = pathname.startsWith("/operations")
+    ? "/operations"
+    : "/admin";
+  const patientsPath = `${baseNamespace}/patients`;
+  const consultationsPath = `${baseNamespace}/consultations`;
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<RequestTab>("consultation");
   const initialAssignmentParam = searchParams.get("assigned");
@@ -666,7 +671,8 @@ export default function AdminRequestsPage() {
         if (request.phone) {
           params.set("phone", request.phone);
         }
-        router.push(`/admin/patients?${params.toString()}`);
+        const query = params.toString();
+        router.push(query ? `${patientsPath}?${query}` : patientsPath);
         return;
       }
 
@@ -679,7 +685,8 @@ export default function AdminRequestsPage() {
       contactRequestId: request.id,
       patientId: request.patient_id,
     });
-    router.push(`/admin/consultations?${params.toString()}`);
+    const query = params.toString();
+    router.push(query ? `${consultationsPath}?${query}` : consultationsPath);
   };
 
   const getScheduleButtonLabel = (request: ContactRequest) => {
