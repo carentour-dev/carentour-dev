@@ -324,6 +324,11 @@ const getActionButtonLabel = (submission: StartJourneySubmission) => {
 export default function AdminStartJourneyPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const baseNamespace = pathname.startsWith("/operations")
+    ? "/operations"
+    : "/admin";
+  const patientsPath = `${baseNamespace}/patients`;
+  const consultationsPath = `${baseNamespace}/consultations`;
   const searchParams = useSearchParams();
   const initialAssignmentParam = searchParams.get("assigned");
   const initialAssignmentFilter: AssignmentFilter =
@@ -522,7 +527,8 @@ export default function AdminStartJourneyPage() {
     if (!hasLinkedPatient) {
       if (isGuestSubmission(submission)) {
         const params = buildPatientPrefillParams(submission);
-        router.push(`/admin/patients?${params.toString()}`);
+        const query = params.toString();
+        router.push(query ? `${patientsPath}?${query}` : patientsPath);
         return;
       }
 
@@ -535,7 +541,8 @@ export default function AdminStartJourneyPage() {
       startJourneyId: submission.id,
       patientId: submission.patient_id!,
     });
-    router.push(`/admin/consultations?${params.toString()}`);
+    const query = params.toString();
+    router.push(query ? `${consultationsPath}?${query}` : consultationsPath);
   };
 
   const handleAssignmentChange = async (
