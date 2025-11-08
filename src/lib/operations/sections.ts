@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Bot,
   CalendarCheck,
   CalendarDays,
   Inbox,
@@ -50,6 +51,10 @@ const tasksRequirement: AccessRequirement = {
   allPermissions: [OPERATIONS_ACCESS_PERMISSION, OPERATIONS_SHARED_PERMISSION],
 };
 
+const cntAiRequirement: AccessRequirement = {
+  allPermissions: [OPERATIONS_ACCESS_PERMISSION, OPERATIONS_SHARED_PERMISSION],
+};
+
 export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
   {
     id: "overview",
@@ -70,6 +75,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: ListTodo,
     adminHref: "/admin",
     required: tasksRequirement,
+  },
+  {
+    id: "cnt-ai",
+    label: "CNT AI",
+    description:
+      "Use the Gemini-powered assistant to draft quick, on-brand replies.",
+    href: "/operations/cnt-ai",
+    icon: Bot,
+    adminHref: "/admin",
+    required: cntAiRequirement,
   },
   {
     id: "requests",
