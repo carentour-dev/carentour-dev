@@ -264,20 +264,25 @@ npm run start
 
 ## 🔐 Environment Variables
 
-| Variable                               | Description                                                                                         | Required |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------- | -------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                                                           | ✅       |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                                                            | ✅       |
-| `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                                                                 | ✅       |
-| `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs)                                    | ✅\*     |
-| `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email                                            | ✅\*     |
-| `RESEND_FROM_ADDRESS`                  | Optional default sender identity for Resend emails                                                  | Optional |
-| `RESEND_STAFF_INVITE_FROM`             | Optional override for the staff invite sender address                                               | Optional |
-| `TEAM_ACCOUNT_INVITE_REDIRECT_URL`     | Optional: exact URL staff invites should open (defaults to `ADMIN_CONSOLE_URL + /staff/onboarding`) | Optional |
+| Variable                               | Description                                                                                         | Required  |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------- | --------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                                                           | ✅        |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key                                                                            | ✅        |
+| `NEXT_PUBLIC_SUPABASE_PROJECT_ID`      | Supabase project ID                                                                                 | ✅        |
+| `SUPABASE_SERVICE_ROLE_KEY`            | Supabase service-role key (server only, required for admin APIs)                                    | ✅\*      |
+| `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email                                            | ✅\*      |
+| `RESEND_FROM_ADDRESS`                  | Optional default sender identity for Resend emails                                                  | Optional  |
+| `RESEND_STAFF_INVITE_FROM`             | Optional override for the staff invite sender address                                               | Optional  |
+| `TEAM_ACCOUNT_INVITE_REDIRECT_URL`     | Optional: exact URL staff invites should open (defaults to `ADMIN_CONSOLE_URL + /staff/onboarding`) | Optional  |
+| `CNT_AI_PROVIDER`                      | Set to `gemini` to enable the CNT AI assistant in the Operations dashboard                          | Optional† |
+| `CNT_AI_GEMINI_KEY`                    | Google AI Studio API key used server-side by CNT AI                                                 | Optional† |
+| `CNT_AI_GEMINI_MODEL`                  | Optional Gemini model override (defaults to `gemini-1.5-flash`)                                     | Optional  |
+| `CNT_AI_MAX_OUTPUT_TOKENS`             | Optional override for Gemini's max reply tokens (defaults to `1024`)                                | Optional  |
 
 > **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
 > Staff invite links default to `${ADMIN_CONSOLE_URL}/staff/onboarding` when `TEAM_ACCOUNT_INVITE_REDIRECT_URL` is unset, so configure one of those values to control where teammates land after accepting the email.
 > If you have verified only specific sender identities in Resend, set `RESEND_STAFF_INVITE_FROM` (or the shared `RESEND_FROM_ADDRESS`) to one of those identities, for example `Care N Tour Team <contact@carentour.com>`, before deploying the function.
+> † CNT AI is optional. If any of the CNT AI variables are missing, the new assistant tab will display a configuration message and Gemini requests will be disabled.
 
 ### Supabase Edge Function Secrets
 
@@ -306,6 +311,11 @@ For local development, copy `supabase/functions/send-staff-invite/.env.example` 
    - `TEAM_ACCOUNT_INVITE_REDIRECT_URL` → `https://www.carentour.com/staff/onboarding`
    - `RESEND_STAFF_INVITE_FROM` (if you want your branded sender) → e.g. `Care N Tour Admin <admin@carentour.com>`
    - Ensure `RESEND_API_KEY` and any other existing secrets are still present.
+   - CNT AI (if you plan to use the new assistant):
+     - `CNT_AI_PROVIDER=gemini`
+     - `CNT_AI_GEMINI_KEY=your Google AI Studio key`
+     - Optional: `CNT_AI_GEMINI_MODEL=gemini-1.5-flash`
+     - Optional: `CNT_AI_MAX_OUTPUT_TOKENS=2048` (or higher if long replies are truncated)
 3. Save the variables, then trigger a redeploy (either by pressing **Redeploy** on the latest deployment or by pushing a new commit) so the updated values are available to the API route.
 4. After the redeploy, send yourself a new staff invite to confirm the link opens the onboarding flow and the email uses the desired sender.
 
