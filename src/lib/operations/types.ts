@@ -6,6 +6,7 @@ export type OperationsSectionId =
   | "appointments"
   | "patients"
   | "testimonials"
-  | "tasks";
+  | "tasks"
+  | "cnt-ai";
 
 export type OperationsSectionSlug = OperationsSectionId;
