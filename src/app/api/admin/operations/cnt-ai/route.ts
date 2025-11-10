@@ -23,6 +23,28 @@ const requestSchema = z.object({
     .min(2, "Tone must be at least 2 characters")
     .max(50, "Tone is too long")
     .optional(),
+  channel: z.enum(["email", "whatsapp", "sms"]).optional(),
+  language: z
+    .string()
+    .min(2, "Language must be at least 2 characters")
+    .max(40, "Language is too long")
+    .optional(),
+  guidance: z.string().max(600, "Guidance is too long").optional(),
+  checklist: z
+    .array(
+      z
+        .string()
+        .min(2, "Checklist entry is too short")
+        .max(400, "Checklist entry is too long"),
+    )
+    .max(6, "Too many checklist entries")
+    .optional(),
+  mode: z.enum(["draft", "rewrite", "insights"]).optional(),
+  previousDraft: z.string().max(4000, "Previous draft is too long").optional(),
+  rewriteStyle: z
+    .string()
+    .max(400, "Rewrite instructions are too long")
+    .optional(),
 });
 
 export const POST = adminRoute(async (req: NextRequest) => {
