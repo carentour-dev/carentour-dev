@@ -227,7 +227,7 @@ export default function TravelInfoFallbackClient() {
     ],
     currency: {
       name: "Egyptian Pound (EGP)",
-      exchange: "1 USD ≈ 31 EGP (varies)",
+      exchange: "1 USD ≈ 50 EGP (varies)",
       cards: "Visa, Mastercard widely accepted",
       cash: "ATMs available throughout cities",
     },
