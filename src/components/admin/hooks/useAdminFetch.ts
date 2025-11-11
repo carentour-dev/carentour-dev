@@ -34,10 +34,13 @@ export async function adminFetch<T>(
     ? { Authorization: `Bearer ${session.access_token}` }
     : {};
 
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
+
   const response = await fetch(input, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...authHeaders,
       ...(init?.headers ?? {}),
     },
