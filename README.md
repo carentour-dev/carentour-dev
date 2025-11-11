@@ -278,11 +278,16 @@ npm run start
 | `CNT_AI_GEMINI_KEY`                    | Google AI Studio API key used server-side by CNT AI                                                 | Optional† |
 | `CNT_AI_GEMINI_MODEL`                  | Optional Gemini model override (defaults to `gemini-1.5-flash`)                                     | Optional  |
 | `CNT_AI_MAX_OUTPUT_TOKENS`             | Optional override for Gemini's max reply tokens (defaults to `1024`)                                | Optional  |
+| `CNT_AI_KNOWLEDGE_BUCKET`              | Supabase Storage bucket used for CNT AI knowledge uploads (defaults to `operations-cnt-ai`)         | Optional  |
+| `CNT_AI_KNOWLEDGE_MODEL`               | Gemini model used for CNT AI document Q&A (defaults to `gemini-1.5-pro`)                            | Optional  |
+| `CNT_AI_MAX_FILE_SIZE_BYTES`           | Upload size limit (bytes) for CNT AI knowledge files (defaults to 10485760 / 10MB)                  | Optional  |
+| `CNT_AI_MAX_FILES_PER_USER`            | Max number of knowledge documents each coordinator can store (defaults to `6`)                      | Optional  |
 
 > **Note**: All variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server (e.g., `.env.local`) — it is required for the `/api/admin/*` routes.
 > Staff invite links default to `${ADMIN_CONSOLE_URL}/staff/onboarding` when `TEAM_ACCOUNT_INVITE_REDIRECT_URL` is unset, so configure one of those values to control where teammates land after accepting the email.
 > If you have verified only specific sender identities in Resend, set `RESEND_STAFF_INVITE_FROM` (or the shared `RESEND_FROM_ADDRESS`) to one of those identities, for example `Care N Tour Team <contact@carentour.com>`, before deploying the function.
 > † CNT AI is optional. If any of the CNT AI variables are missing, the new assistant tab will display a configuration message and Gemini requests will be disabled.
+> CNT AI knowledge uploads live in Supabase Storage. Create a bucket (default `operations-cnt-ai`) and allow the service-role key to read/write objects before enabling the new feature.
 
 ### Supabase Edge Function Secrets
 
