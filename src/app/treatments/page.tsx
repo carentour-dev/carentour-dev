@@ -272,6 +272,17 @@ export default function Treatments() {
                               Learn More
                             </Button>
 
+                            <Button
+                              className="w-full"
+                              onClick={() =>
+                                router.push(
+                                  `/start-journey?treatment=${category.id}`,
+                                )
+                              }
+                            >
+                              Start Your Journey
+                            </Button>
+
                             {category.comparison ? (
                               <Button
                                 className="w-full"
