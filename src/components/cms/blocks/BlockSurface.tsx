@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,7 @@ interface BlockSurfaceProps<TBlock extends BlockInstance> {
   block: TBlock;
   defaultPadding?: { top: string; bottom: string };
   className?: string;
+  style?: CSSProperties;
   container?: boolean;
   containerClassName?: string;
   innerSelector?: string;
@@ -29,6 +30,7 @@ export function BlockSurface<TBlock extends BlockInstance>({
   block,
   defaultPadding = { top: "4rem", bottom: "4rem" },
   className,
+  style,
   container = true,
   containerClassName,
   innerSelector = ".cms-block__inner",
@@ -90,6 +92,10 @@ export function BlockSurface<TBlock extends BlockInstance>({
     containerClassName,
   );
 
+  const mergedStyle = style
+    ? { ...backgroundStyle, ...style }
+    : backgroundStyle;
+
   return (
     <section
       id={domId}
@@ -100,7 +106,7 @@ export function BlockSurface<TBlock extends BlockInstance>({
         advancedClass,
         className,
       )}
-      style={backgroundStyle}
+      style={mergedStyle}
       {...animationAttributes}
     >
       {collectedCss ? (
