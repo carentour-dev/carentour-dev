@@ -17,7 +17,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useTeamMembers } from "@/components/admin/hooks/useTeamMembers";
+import {
+  useTeamMembers,
+  type TeamMember,
+} from "@/components/admin/hooks/useTeamMembers";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const getInitials = (name: string) => {
+  if (!name) return "?";
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  return `${parts[0]![0] ?? ""}${parts[parts.length - 1]![0] ?? ""}`.toUpperCase();
+};
+
+const getMemberDetails = (member: TeamMember) => {
+  const detailParts = [
+    member.email,
+    member.roles.length ? member.roles.join(" • ") : null,
+  ].filter(Boolean) as string[];
+  return Array.from(new Set(detailParts)).join(" • ");
+};
 
 type AssignmentControlProps = {
   assigneeId: string | null;
@@ -134,48 +157,98 @@ export function AssignmentControl({
                         onAssign(null);
                         setOpen(false);
                       }}
+                      className={cn(
+                        "items-start rounded-lg border border-transparent px-3 py-3 text-left transition-colors",
+                        "hover:border-muted hover:bg-muted/30",
+                        "data-[selected=true]:border-primary/50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground",
+                      )}
                     >
-                      <div className="flex items-center gap-2 text-foreground">
-                        <X className="h-4 w-4 opacity-50" />
-                        <span>Unassigned</span>
+                      <div className="flex w-full items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="font-semibold text-foreground">
+                            Unassigned
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Clear the current assignee
+                          </p>
+                        </div>
+                        <Check
+                          className={cn(
+                            "h-4 w-4 text-primary transition-opacity",
+                            assigneeId === null ? "opacity-100" : "opacity-0",
+                          )}
+                        />
                       </div>
-                      <Check
-                        className={cn(
-                          "ml-auto h-4 w-4",
-                          assigneeId === null ? "opacity-100" : "opacity-0",
-                        )}
-                      />
                     </CommandItem>
                   )}
-                  {filteredMembers.map((member) => (
-                    <CommandItem
-                      key={member.id}
-                      value={member.id}
-                      onSelect={() => {
-                        onAssign(member.id);
-                        setOpen(false);
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {member.displayName}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {member.jobTitle ??
-                            member.email ??
-                            member.roles.join(", ")}
-                        </span>
-                      </div>
-                      <Check
+                  {filteredMembers.map((member) => {
+                    const primaryRole =
+                      member.jobTitle ??
+                      (member.roles.length > 0 ? member.roles[0] : null);
+                    const secondaryDetails = getMemberDetails(member);
+                    return (
+                      <CommandItem
+                        key={member.id}
+                        value={member.id}
+                        onSelect={() => {
+                          onAssign(member.id);
+                          setOpen(false);
+                        }}
                         className={cn(
-                          "ml-auto h-4 w-4",
-                          member.id === assigneeId
-                            ? "opacity-100"
-                            : "opacity-0",
+                          "items-start rounded-lg border border-transparent px-3 py-3 text-left transition-colors",
+                          "hover:border-muted hover:bg-muted/30",
+                          "data-[selected=true]:border-primary/50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground",
                         )}
-                      />
-                    </CommandItem>
-                  ))}
+                      >
+                        <div className="flex w-full items-start gap-3">
+                          <div className="relative">
+                            <Avatar className="h-10 w-10">
+                              {member.avatarUrl ? (
+                                <AvatarImage
+                                  src={member.avatarUrl}
+                                  alt={member.displayName}
+                                />
+                              ) : null}
+                              <AvatarFallback>
+                                {getInitials(member.displayName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <Check
+                              className={cn(
+                                "absolute -right-1 -bottom-1 h-4 w-4 rounded-full bg-primary p-0.5 text-primary-foreground transition-opacity",
+                                member.id === assigneeId
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-foreground">
+                                {member.displayName}
+                              </span>
+                              {primaryRole && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-semibold tracking-wide text-muted-foreground"
+                                >
+                                  {primaryRole}
+                                </Badge>
+                              )}
+                            </div>
+                            {secondaryDetails && (
+                              <p className="text-sm text-muted-foreground">
+                                {secondaryDetails}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </>
             )}
