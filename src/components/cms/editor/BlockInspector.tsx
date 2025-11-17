@@ -23,6 +23,8 @@ import {
   type BlockType,
   type BlockValue,
   type BreakpointKey,
+  type TabbedGuideSection,
+  type TabbedGuideTab,
 } from "@/lib/cms/blocks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1808,6 +1810,1808 @@ function AdvancedSettingsSection({
   );
 }
 
+const tabbedGuideSectionOptions: {
+  value: TabbedGuideSection["type"];
+  label: string;
+}[] = [
+  { value: "cardGrid", label: "Card Grid" },
+  { value: "dataGrid", label: "Data Grid" },
+  { value: "callout", label: "Callout" },
+  { value: "mediaSpotlight", label: "Media Spotlight" },
+  { value: "infoPanels", label: "Info Panels" },
+  { value: "compactList", label: "Compact List" },
+  { value: "hotelShowcase", label: "Hotel Showcase" },
+  { value: "cta", label: "Call To Action" },
+];
+
+function makeTabId() {
+  return `tab-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createTabbedGuideSection(
+  type: TabbedGuideSection["type"],
+): TabbedGuideSection {
+  switch (type) {
+    case "cardGrid":
+      return {
+        type: "cardGrid",
+        columns: 2,
+        cards: [
+          {
+            title: "Card title",
+            description: "Short supporting description",
+            bullets: ["Key detail one", "Key detail two"],
+          },
+        ],
+      };
+    case "dataGrid":
+      return {
+        type: "dataGrid",
+        title: "Data grid title",
+        columns: [
+          { key: "detail", label: "Detail" },
+          { key: "value", label: "Value" },
+        ],
+        rows: [
+          {
+            title: "Row title",
+            values: { detail: "Requirement", value: "30 days" },
+          },
+        ],
+        layout: "cards",
+      };
+    case "callout":
+      return {
+        type: "callout",
+        tone: "info",
+        title: "Important information",
+        bullets: ["Add helpful reminders here."],
+      };
+    case "mediaSpotlight":
+      return {
+        type: "mediaSpotlight",
+        badge: "Spotlight",
+        title: "Media spotlight title",
+        body: "Describe the service or highlight the concierge benefit.",
+        bullets: ["First highlight", "Second highlight"],
+        image: {
+          src: "/accommodation-egypt.jpg",
+          alt: "Spotlight image",
+        },
+      };
+    case "infoPanels":
+      return {
+        type: "infoPanels",
+        panels: [
+          {
+            title: "Panel title",
+            items: ["Bullet point one", "Bullet point two"],
+          },
+        ],
+      };
+    case "compactList":
+      return {
+        type: "compactList",
+        title: "List title",
+        rows: [
+          {
+            title: "List item title",
+            description: "Supporting description goes here.",
+            pill: "15-25°C",
+          },
+        ],
+      };
+    case "hotelShowcase":
+      return {
+        type: "hotelShowcase",
+        title: "Featured hotels",
+        description: "Automatically pulls partner hotels, fallback below.",
+        layout: "grid",
+        limit: 4,
+        manualFallback: [
+          {
+            title: "Fallback stay",
+            description: "Recovery-friendly accommodation.",
+            amenities: ["Amenity one", "Amenity two"],
+            priceLabel: "$150/night",
+            locationLabel: "New Cairo",
+            icon: "Hotel",
+          },
+        ],
+      };
+    case "cta":
+      return {
+        type: "cta",
+        eyebrow: "Need help?",
+        title: "Coordinate your journey",
+        description: "Our travel specialists can handle every detail.",
+        actions: [
+          { label: "Contact us", href: "/contact" },
+          { label: "Download guide", href: "/travel-info", variant: "outline" },
+        ],
+      };
+    default:
+      return {
+        type: "callout",
+        title: "Update this section",
+        tone: "info",
+      };
+  }
+}
+
+function createTabbedGuideTab(): TabbedGuideTab {
+  return {
+    id: makeTabId(),
+    label: "New Tab",
+    heading: "Tab heading",
+    description: "Tab description",
+    sections: [createTabbedGuideSection("cardGrid")],
+  };
+}
+
+function TabbedGuideBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+}) {
+  const tabs = useFieldArray({
+    control: form.control,
+    name: "tabs",
+  });
+
+  return (
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input placeholder="Optional label" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="badge"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Badge</FormLabel>
+              <FormControl>
+                <Input placeholder="Badge text" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="heading"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Heading</FormLabel>
+            <FormControl>
+              <Input placeholder="Block heading" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional supporting copy"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-4">
+        {tabs.fields.map((field, index) => (
+          <TabbedGuideTabEditor
+            key={field.id}
+            form={form}
+            tabIndex={index}
+            tabCount={tabs.fields.length}
+            onRemove={() => tabs.remove(index)}
+            onMove={(direction) => {
+              const target = index + direction;
+              if (target >= 0 && target < tabs.fields.length) {
+                tabs.move(index, target);
+              }
+            }}
+          />
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => tabs.append(createTabbedGuideTab())}
+        >
+          Add tab
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TabbedGuideTabEditor({
+  form,
+  tabIndex,
+  tabCount,
+  onRemove,
+  onMove,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  tabIndex: number;
+  tabCount: number;
+  onRemove: () => void;
+  onMove: (direction: -1 | 1) => void;
+}) {
+  const sections = useFieldArray({
+    control: form.control,
+    name: `tabs.${tabIndex}.sections` as const,
+  });
+  const [nextSectionType, setNextSectionType] =
+    useState<TabbedGuideSection["type"]>("cardGrid");
+  const tabLabel = form.watch(`tabs.${tabIndex}.label`);
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border/60 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h4 className="text-lg font-semibold text-foreground">
+            {tabLabel || `Tab ${tabIndex + 1}`}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            Configure tab metadata and sections.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onMove(-1)}
+            disabled={tabIndex === 0}
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onMove(1)}
+            disabled={tabIndex === tabCount - 1}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`tabs.${tabIndex}.id`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tab ID</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="visa-entry"
+                  {...field}
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                  }}
+                />
+              </FormControl>
+              <FormDescription>
+                Used for anchors and internal linking.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`tabs.${tabIndex}.label`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tab label</FormLabel>
+              <FormControl>
+                <Input placeholder="Visa & Entry" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`tabs.${tabIndex}.icon`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Icon (Lucide name)</FormLabel>
+              <FormControl>
+                <Input placeholder="FileText" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <div />
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`tabs.${tabIndex}.heading`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Tab heading</FormLabel>
+            <FormControl>
+              <Input placeholder="Tab heading" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`tabs.${tabIndex}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Tab description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional description"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-4">
+        {sections.fields.map((section, sectionIndex) => (
+          <TabbedGuideSectionEditor
+            key={section.id}
+            form={form}
+            tabIndex={tabIndex}
+            sectionIndex={sectionIndex}
+            sectionsCount={sections.fields.length}
+            onRemove={() => sections.remove(sectionIndex)}
+            onMove={(direction) => {
+              const target = sectionIndex + direction;
+              if (target >= 0 && target < sections.fields.length) {
+                sections.move(sectionIndex, target);
+              }
+            }}
+          />
+        ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={nextSectionType}
+            onValueChange={(value) =>
+              setNextSectionType(value as TabbedGuideSection["type"])
+            }
+          >
+            <FormControl>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Section type" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {tabbedGuideSectionOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              sections.append(createTabbedGuideSection(nextSectionType))
+            }
+          >
+            Add section
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabbedGuideSectionEditor({
+  form,
+  tabIndex,
+  sectionIndex,
+  sectionsCount,
+  onRemove,
+  onMove,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  tabIndex: number;
+  sectionIndex: number;
+  sectionsCount: number;
+  onRemove: () => void;
+  onMove: (direction: -1 | 1) => void;
+}) {
+  const path = `tabs.${tabIndex}.sections.${sectionIndex}` as const;
+  const sectionType = form.watch(`${path}.type`) as TabbedGuideSection["type"];
+
+  const handleTypeChange = (nextType: string) => {
+    const replacement = createTabbedGuideSection(
+      nextType as TabbedGuideSection["type"],
+    );
+    form.setValue(path as any, replacement, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  return (
+    <div className="space-y-4 rounded-lg border border-dashed border-border/60 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <Select
+          value={sectionType}
+          onValueChange={(value) => handleTypeChange(value)}
+        >
+          <FormControl>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            {tabbedGuideSectionOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onMove(-1)}
+            disabled={sectionIndex === 0}
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onMove(1)}
+            disabled={sectionIndex === sectionsCount - 1}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`${path}.displayWidth`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Section width</FormLabel>
+            <Select
+              value={field.value ?? "full"}
+              onValueChange={(value) => field.onChange(value)}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="full">Full width</SelectItem>
+                <SelectItem value="half">
+                  Half width (side-by-side on desktop)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <FormDescription>
+              Choose “Half width” to place this section in a two-column layout
+              beside other half-width sections.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+
+      <TabbedGuideSectionFields
+        form={form}
+        sectionPath={path}
+        sectionType={sectionType}
+      />
+    </div>
+  );
+}
+
+function TabbedGuideSectionFields({
+  form,
+  sectionPath,
+  sectionType,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+  sectionType: TabbedGuideSection["type"];
+}) {
+  switch (sectionType) {
+    case "cardGrid":
+      return <CardGridSectionFields form={form} sectionPath={sectionPath} />;
+    case "dataGrid":
+      return <DataGridSectionFields form={form} sectionPath={sectionPath} />;
+    case "compactList":
+      return <CompactListSectionFields form={form} sectionPath={sectionPath} />;
+    case "callout":
+      return (
+        <div className="space-y-3">
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.title`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input placeholder="Callout title" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.body`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Optional details"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.tone`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tone</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="muted">Muted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.bullets`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bullets</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="One item per line"
+                    value={(field.value ?? []).join("\n")}
+                    onChange={(event) =>
+                      field.onChange(
+                        event.target.value
+                          .split("\n")
+                          .map((line) => line.trim()),
+                      )
+                    }
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      );
+    case "mediaSpotlight":
+      return (
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.badge`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Badge</FormLabel>
+                <FormControl>
+                  <Input placeholder="Optional badge" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.title`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input placeholder="Spotlight title" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.body`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Spotlight description"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`${sectionPath}.bullets`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bullets</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="One bullet per line"
+                    value={(field.value ?? []).join("\n")}
+                    onChange={(event) =>
+                      field.onChange(
+                        event.target.value
+                          .split("\n")
+                          .map((line) => line.trim()),
+                      )
+                    }
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.image.src`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="/media.jpg" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.image.alt`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image alt text</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Descriptive alt text" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      );
+    case "infoPanels":
+      return <InfoPanelsSectionFields form={form} sectionPath={sectionPath} />;
+    case "hotelShowcase":
+      return <HotelSectionFields form={form} sectionPath={sectionPath} />;
+    case "cta":
+      return <CtaSectionFields form={form} sectionPath={sectionPath} />;
+    default:
+      return null;
+  }
+}
+
+function CardGridSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const cards = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.cards` as const,
+  });
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.title`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Card grid title" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.columns`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Columns</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={3}
+                  value={typeof field.value === "number" ? field.value : 2}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional description"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="space-y-3">
+        {cards.fields.map((card, index) => (
+          <div
+            key={card.id}
+            className="space-y-3 rounded-md border border-border/50 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Card {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => cards.remove(index)}
+                disabled={cards.fields.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.cards.${index}.title`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Card title" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.cards.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Card description"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.cards.${index}.markdown`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Markdown body</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="Supports headings, emphasis, and lists via Markdown"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Optional rich text area. When provided, it renders before
+                    the bullet list so you can mix headings, paragraphs, or
+                    custom lists.
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.cards.${index}.icon`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Globe" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.cards.${index}.badge`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Optional badge" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.cards.${index}.bullets`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bullets</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="One bullet per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim()),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            cards.append({
+              title: "Card title",
+              description: "Description",
+              bullets: [],
+            })
+          }
+        >
+          Add card
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DataGridSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const columns = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.columns` as const,
+  });
+  const rows = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.rows` as const,
+  });
+  const watchedColumns = form.watch(`${sectionPath}.columns`);
+  const safeColumns = Array.isArray(watchedColumns) ? watchedColumns : [];
+  const layoutValue = form.watch(`${sectionPath}.layout`) ?? "cards";
+  const pillOptions = safeColumns.filter(
+    (column): column is { key: string; label?: string } =>
+      typeof column?.key === "string" && column.key.trim().length > 0,
+  );
+  const NONE_PILL_VALUE = "__none__";
+
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.title`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl>
+              <Input placeholder="Section title" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional description"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.layout`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Layout</FormLabel>
+            <Select
+              value={field.value ?? "cards"}
+              onValueChange={field.onChange}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select layout" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="cards">Card grid</SelectItem>
+                <SelectItem value="stacked">Stacked list</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormDescription>
+              Choose how rows are displayed. “Stacked list” renders a single
+              card with timeline-style rows.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+      {layoutValue === "stacked" ? (
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.pillColumnKey`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pill column (optional)</FormLabel>
+              <Select
+                value={field.value ?? NONE_PILL_VALUE}
+                onValueChange={(value) =>
+                  field.onChange(value === NONE_PILL_VALUE ? undefined : value)
+                }
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No pill" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={NONE_PILL_VALUE}>None</SelectItem>
+                  {pillOptions.map((column, index) => (
+                    <SelectItem
+                      key={`${sectionPath}-pill-${column?.key ?? index}`}
+                      value={column.key}
+                    >
+                      {column.label ?? column.key ?? `Column ${index + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                The selected column’s value appears as a badge next to each row
+                title—perfect for temperatures or price tags.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+      ) : null}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-muted-foreground">Columns</p>
+        {columns.fields.map((column, index) => {
+          const fieldKey =
+            (column as { id?: string | number | null })?.id ??
+            `${sectionPath}-column-${index}`;
+          return (
+            <div
+              key={fieldKey}
+              className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+            >
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.columns.${index}.label`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Duration" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.columns.${index}.key`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key</FormLabel>
+                    <FormControl>
+                      <Input placeholder="duration" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => columns.remove(index)}
+                disabled={columns.fields.length <= 2}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            columns.append({
+              label: "Column label",
+              key: `column-${columns.fields.length + 1}`,
+            } as any)
+          }
+        >
+          Add column
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-muted-foreground">Rows</p>
+        {rows.fields.map((row, rowIndex) => (
+          <div
+            key={row.id}
+            className="space-y-3 rounded-md border border-border/50 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.rows.${rowIndex}.title`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Row title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Row title" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => rows.remove(rowIndex)}
+                className="ml-3"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.rows.${rowIndex}.badge`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Badge</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Optional badge" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              {safeColumns.map((column, columnIndex) => (
+                <FormField
+                  key={`${column?.key ?? columnIndex}`}
+                  control={form.control}
+                  name={`${sectionPath}.rows.${rowIndex}.values.${
+                    column?.key ?? `column-${columnIndex}`
+                  }`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {column?.label ?? `Column ${columnIndex + 1}`}
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Value" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            rows.append({
+              title: "Row title",
+              values: {},
+            })
+          }
+        >
+          Add row
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function InfoPanelsSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const panels = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.panels` as const,
+  });
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.title`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Heading</FormLabel>
+            <FormControl>
+              <Input placeholder="Optional headline" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="space-y-3">
+        {panels.fields.map((panel, index) => (
+          <div
+            key={panel.id}
+            className="space-y-3 rounded-md border border-border/60 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Panel {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => panels.remove(index)}
+                disabled={panels.fields.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.panels.${index}.title`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Panel title" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.panels.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Optional description"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.panels.${index}.items`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Items</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="One bullet per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim()),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            panels.append({
+              title: "Panel title",
+              items: [],
+            })
+          }
+        >
+          Add panel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function HotelSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const fallbackEntries = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.manualFallback` as const,
+  });
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.title`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl>
+              <Input placeholder="Hotel section title" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional description"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.layout`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Layout</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="grid">Grid</SelectItem>
+                  <SelectItem value="carousel">Carousel</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.limit`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dynamic limit</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={8}
+                  value={field.value ?? 4}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-muted-foreground">
+          Manual fallback (used if no partner hotels available)
+        </p>
+        {fallbackEntries.fields.map((entry, index) => (
+          <div
+            key={entry.id}
+            className="space-y-3 rounded-md border border-border/50 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Fallback {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fallbackEntries.remove(index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.title`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Stay name" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Short description"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.heroImage`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hero image</FormLabel>
+                  <FormControl>
+                    <Input placeholder="/images/hotel.jpg" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.addressDetails`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address details</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Nile St, Cairo" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.contactPhone`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+20 2 1234 5678" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.contactEmail`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="stay@hotel.com" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.website`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://partner-hotel.com" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.manualFallback.${index}.amenities`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amenities</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="One amenity per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim()),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.priceLabel`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price label</FormLabel>
+                    <FormControl>
+                      <Input placeholder="$150 - $300/night" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.locationLabel`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location label</FormLabel>
+                    <FormControl>
+                      <Input placeholder="New Cairo" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.icon`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Hotel" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.starRating`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Star rating</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={5}
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.rating`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Guest rating</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        max={5}
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`${sectionPath}.manualFallback.${index}.reviewCount`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Review count</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            fallbackEntries.append({
+              title: "Fallback stay",
+              amenities: [],
+            })
+          }
+        >
+          Add fallback
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CtaSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const actions = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.actions` as const,
+  });
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.eyebrow`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Eyebrow</FormLabel>
+            <FormControl>
+              <Input placeholder="Optional label" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.title`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl>
+              <Input placeholder="CTA title" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional description"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="space-y-3">
+        {actions.fields.map((action, index) => (
+          <div
+            key={action.id}
+            className="grid gap-3 rounded-md border border-border/50 p-3 md:grid-cols-2"
+          >
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.actions.${index}.label`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Label</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Button label" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.actions.${index}.href`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="/contact" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.actions.${index}.variant`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Variant</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {blockActionVariants.map((variant) => (
+                        <SelectItem key={variant} value={variant}>
+                          {variant}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <div className="flex items-end justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => actions.remove(index)}
+                disabled={actions.fields.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {actions.fields.length < 2 ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              actions.append({
+                label: "Button label",
+                href: "/contact",
+                variant: "outline",
+              })
+            }
+          >
+            Add action
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function normalizeForCompare(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(normalizeForCompare);
@@ -2661,6 +4465,138 @@ function StatGridBlockFields({
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CompactListSectionFields({
+  form,
+  sectionPath,
+}: {
+  form: UseFormReturn<BlockValue<"tabbedGuide">>;
+  sectionPath: `tabs.${number}.sections.${number}`;
+}) {
+  const rows = useFieldArray({
+    control: form.control,
+    name: `${sectionPath}.rows` as const,
+  });
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.title`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Section title" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${sectionPath}.icon`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Icon (optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g. Sun" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name={`${sectionPath}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Optional supporting copy"
+                {...field}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-muted-foreground">Items</p>
+        {rows.fields.map((row, index) => (
+          <div
+            key={row.id}
+            className="space-y-3 rounded-md border border-border/50 p-3"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Item {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => rows.remove(index)}
+                disabled={rows.fields.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.rows.${index}.title`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Item title" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.rows.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Supporting details"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`${sectionPath}.rows.${index}.pill`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pill label (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 15-25°C" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            rows.append({
+              title: "List item",
+            })
+          }
+        >
+          Add item
+        </Button>
       </div>
     </div>
   );
@@ -4551,6 +6487,7 @@ const blockEditors: Record<
   quote: (form) => <QuoteBlockFields form={form} />,
   treatments: (form) => <TreatmentsBlockFields form={form} />,
   doctors: (form) => <DoctorsBlockFields form={form} />,
+  tabbedGuide: (form) => <TabbedGuideBlockFields form={form} />,
 };
 
 export function BlockInspector({
@@ -4724,6 +6661,8 @@ export function blockSummary(block: BlockInstance): string {
       return block.title ?? `${block.limit} treatments`;
     case "doctors":
       return block.title ?? `${block.limit} doctors`;
+    case "tabbedGuide":
+      return `${block.tabs.length} tab${block.tabs.length === 1 ? "" : "s"}`;
     default:
       return "";
   }
