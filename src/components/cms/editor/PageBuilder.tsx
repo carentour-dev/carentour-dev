@@ -328,6 +328,22 @@ export function PageBuilder({
     </Card>
   );
 
+  const renderPreviewSurface = (keySuffix = "") => (
+    <div className="h-full overflow-auto bg-muted/20 p-4 sm:p-6">
+      <div
+        className="mx-auto w-full min-h-full bg-background"
+        style={previewFrameStyle}
+      >
+        <div className="min-h-screen">
+          <BlockPreviewRenderer
+            blocks={previewBlocks}
+            key={`${previewInstanceKey}${keySuffix}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const renderPreviewCard = () => (
     <Card className="flex h-full flex-col">
       <CardHeader className="flex flex-col gap-4 pb-0 sm:flex-row sm:items-center sm:justify-between">
@@ -375,18 +391,7 @@ export function PageBuilder({
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden p-0">
         {previewBlocks.length ? (
-          <div className="h-full overflow-auto p-4 sm:p-6">
-            <div className="mx-auto w-full max-w-full rounded-xl border border-border/60 bg-background shadow-sm">
-              <div className="flex justify-center bg-muted/20 p-4 sm:p-6">
-                <div className="w-full max-w-full" style={previewFrameStyle}>
-                  <BlockPreviewRenderer
-                    blocks={previewBlocks}
-                    key={previewInstanceKey}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          renderPreviewSurface()
         ) : (
           <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
             Add blocks to see a live preview.
@@ -447,16 +452,8 @@ export function PageBuilder({
             <DialogTitle>Live preview</DialogTitle>
           </DialogHeader>
           {previewBlocks.length ? (
-            <div className="max-h-[70vh] overflow-auto rounded-lg border border-border/60 bg-background p-6">
-              <div
-                className="mx-auto w-full max-w-full"
-                style={previewFrameStyle}
-              >
-                <BlockPreviewRenderer
-                  blocks={previewBlocks}
-                  key={`${previewInstanceKey}-dialog`}
-                />
-              </div>
+            <div className="max-h-[70vh] overflow-hidden rounded-lg">
+              {renderPreviewSurface("-dialog")}
             </div>
           ) : (
             <div className="flex h-[240px] items-center justify-center text-sm text-muted-foreground">
