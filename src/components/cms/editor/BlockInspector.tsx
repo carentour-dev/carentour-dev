@@ -3900,6 +3900,10 @@ function HeroBlockFields({
                   <SelectItem value="muted">Muted</SelectItem>
                   <SelectItem value="gradient">Gradient</SelectItem>
                   <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="layeredLinear">
+                    Layered Gradient
+                  </SelectItem>
+                  <SelectItem value="layeredGlow">Radial Glow</SelectItem>
                 </SelectContent>
               </Select>
             </FormItem>
