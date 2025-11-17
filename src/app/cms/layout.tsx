@@ -183,7 +183,16 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main
+        className={cn(
+          "py-8",
+          pathname?.startsWith("/cms/preview")
+            ? "px-0"
+            : "container mx-auto px-4",
+        )}
+      >
+        {children}
+      </main>
     </div>
   );
 }
