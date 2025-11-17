@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 import type { PatientStatus } from "@/lib/patients/status";
+import { Badge } from "@/components/ui/badge";
 
 interface Patient {
   id: string;
@@ -46,6 +47,16 @@ interface PatientSelectorProps {
 const STATUS_LABELS: Record<PatientStatus, string> = {
   potential: "Potential",
   confirmed: "Confirmed",
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "?";
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  return `${parts[0]![0] ?? ""}${parts[parts.length - 1]![0] ?? ""}`.toUpperCase();
 };
 
 export function PatientSelector({
@@ -196,47 +207,68 @@ export function PatientSelector({
                       : "No patients found."}
                   </CommandEmpty>
                   <CommandGroup>
-                    {patients.map((patient) => (
-                      <CommandItem
-                        key={patient.id}
-                        value={patient.id}
-                        onSelect={handleSelect}
-                        className="flex items-center justify-between gap-2"
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Check
-                            className={cn(
-                              "h-4 w-4 shrink-0",
-                              value === patient.id
-                                ? "opacity-100"
-                                : "opacity-0",
-                            )}
-                          />
-                          <div className="flex flex-col min-w-0 gap-1">
-                            <span className="font-medium truncate">
-                              {patient.full_name}
-                            </span>
-                            <span className="text-xs text-foreground/70 truncate">
-                              {[
-                                patient.contact_email,
-                                patient.nationality,
-                                patient.home_city,
-                              ]
-                                .filter(Boolean)
-                                .join(" • ")}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              Status: {STATUS_LABELS[patient.status]}
-                            </span>
+                    {patients.map((patient) => {
+                      const detailLine = [
+                        patient.contact_email,
+                        patient.home_city,
+                        patient.nationality,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ");
+
+                      return (
+                        <CommandItem
+                          key={patient.id}
+                          value={patient.id}
+                          onSelect={handleSelect}
+                          className={cn(
+                            "items-start rounded-lg border border-transparent px-3 py-3 text-left transition-colors",
+                            "data-[selected=true]:border-primary/50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground",
+                            "hover:border-muted hover:bg-muted/30",
+                          )}
+                        >
+                          <div className="flex w-full items-start gap-3">
+                            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold uppercase text-muted-foreground">
+                              {getInitials(patient.full_name)}
+                              <Check
+                                className={cn(
+                                  "absolute -right-1 -bottom-1 h-4 w-4 rounded-full bg-primary p-0.5 text-primary-foreground transition-opacity",
+                                  value === patient.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-base font-semibold text-foreground">
+                                  {patient.full_name}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-semibold tracking-wide text-muted-foreground"
+                                >
+                                  {STATUS_LABELS[patient.status]}
+                                </Badge>
+                                {patient.has_testimonial && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] font-semibold text-foreground"
+                                  >
+                                    Testimonial
+                                  </Badge>
+                                )}
+                              </div>
+                              {detailLine && (
+                                <p className="text-sm text-muted-foreground">
+                                  {detailLine}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        {patient.has_testimonial && (
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                            Has testimonial
-                          </span>
-                        )}
-                      </CommandItem>
-                    ))}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </>
               )}
