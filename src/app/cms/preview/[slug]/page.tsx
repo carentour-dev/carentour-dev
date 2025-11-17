@@ -61,7 +61,7 @@ export default async function CmsPreviewPage({
   }
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="py-8">
       <BlockRenderer blocks={(data.content as any[]) ?? []} />
     </main>
   );
