@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
@@ -126,9 +127,15 @@ export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
             )}
           >
             {block.eyebrow ? (
-              <span className="text-sm font-semibold tracking-wide uppercase text-primary">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-foreground/30 bg-foreground/5 text-[0.62rem] font-semibold uppercase tracking-[0.4em] text-foreground/80 shadow-none backdrop-blur-sm dark:border-white/20 dark:bg-white/5 dark:text-white/85",
+                  block.alignment === "center" ? "mx-auto" : "self-start",
+                )}
+              >
                 {block.eyebrow}
-              </span>
+              </Badge>
             ) : null}
 
             <div className="space-y-4">
