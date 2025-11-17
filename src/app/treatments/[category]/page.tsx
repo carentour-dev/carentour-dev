@@ -595,6 +595,20 @@ export default function TreatmentDetails() {
                             />
                           </div>
                         ) : null}
+
+                        {/* Start Your Journey CTA */}
+                        <div className="mt-8 pt-6 border-t border-border/50">
+                          <Button
+                            className="w-full"
+                            onClick={() =>
+                              router.push(
+                                `/start-journey?treatment=${category}`,
+                              )
+                            }
+                          >
+                            Start Your Journey
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   );
