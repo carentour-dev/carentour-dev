@@ -15,6 +15,306 @@ export type CmsTemplate = {
 
 export const cmsTemplates: CmsTemplate[] = [
   {
+    slug: "travel-info",
+    name: "Travel Info Guide",
+    description:
+      "Four-tab travel guide covering visas, accommodation, culture, and logistics.",
+    defaultSlug: "travel-info",
+    defaultTitle: "Travel Information",
+    seo: {
+      title: "Travel Info | Care N Tour",
+      description:
+        "Plan your medical journey to Egypt with visa requirements, partner hotels, culture insights, and transport tips.",
+    },
+    blocks: [
+      {
+        type: "tabbedGuide",
+        eyebrow: "Travel Information",
+        badge: "Medical Tourism",
+        heading: "Your complete guide to traveling for care in Egypt",
+        description:
+          "Everything patients and families need before boarding their flight: visas, recovery-ready stays, cultural tips, and logistics.",
+        tabs: [
+          {
+            id: "visa-entry",
+            label: "Visa & Entry",
+            icon: "FileText",
+            heading: "Visa & Entry Requirements",
+            description:
+              "Simple application paths for every passport, including medical stay extensions.",
+            sections: [
+              {
+                type: "cardGrid",
+                columns: 2,
+                cards: [
+                  {
+                    title: "E-Visa (Recommended)",
+                    description:
+                      "Apply online before travel for the smoothest arrival experience.",
+                    icon: "Globe",
+                    bullets: [
+                      "Processing: 7 business days",
+                      "Valid: 30 days single entry",
+                      "Cost: $25 USD",
+                      "Extension possible for medical plans",
+                    ],
+                    actions: [
+                      {
+                        label: "Apply online",
+                        href: "https://visa2egypt.gov.eg/",
+                        target: "_blank",
+                        variant: "outline",
+                      },
+                    ],
+                  },
+                  {
+                    title: "Visa on Arrival",
+                    description:
+                      "Pick up a tourist visa at Cairo International Airport.",
+                    icon: "Plane",
+                    bullets: [
+                      "Processing: Instant at airport kiosks",
+                      "Valid: 30 days single entry",
+                      "Cost: $25 USD cash",
+                      "Requirements: Passport + return ticket",
+                    ],
+                  },
+                ],
+              },
+              {
+                type: "dataGrid",
+                title: "Visa requirements by country",
+                columns: [
+                  { key: "requirement", label: "Requirement" },
+                  { key: "duration", label: "Duration" },
+                  { key: "process", label: "Process" },
+                  { key: "cost", label: "Cost" },
+                ],
+                rows: [
+                  {
+                    title: "European Union",
+                    badge: "Tourist visa",
+                    values: {
+                      requirement: "Tourist visa",
+                      duration: "30 days",
+                      process: "Visa on arrival or e-visa",
+                      cost: "$25 USD",
+                    },
+                  },
+                  {
+                    title: "United States",
+                    badge: "Tourist visa",
+                    values: {
+                      requirement: "Tourist visa",
+                      duration: "30 days",
+                      process: "E-visa recommended",
+                      cost: "$25 USD",
+                    },
+                  },
+                  {
+                    title: "Canada",
+                    badge: "Tourist visa",
+                    values: {
+                      requirement: "Tourist visa",
+                      duration: "30 days",
+                      process: "Visa on arrival / e-visa",
+                      cost: "$25 USD",
+                    },
+                  },
+                  {
+                    title: "Australia",
+                    badge: "Tourist visa",
+                    values: {
+                      requirement: "Tourist visa",
+                      duration: "30 days",
+                      process: "E-visa only",
+                      cost: "$25 USD",
+                    },
+                  },
+                  {
+                    title: "GCC Countries",
+                    badge: "Visa free",
+                    values: {
+                      requirement: "Visa free",
+                      duration: "90 days",
+                      process: "Passport only",
+                      cost: "Free",
+                    },
+                  },
+                ],
+              },
+              {
+                type: "callout",
+                tone: "warning",
+                title: "Important notes",
+                bullets: [
+                  "Passport must be valid 6+ months beyond entry date.",
+                  "Medical visa extensions available for extended treatment.",
+                  "Travel insurance recommended (medical + trip).",
+                  "Check current health regulations before flying.",
+                ],
+              },
+            ],
+          },
+          {
+            id: "accommodation",
+            label: "Accommodation",
+            icon: "Hotel",
+            heading: "Recovery-ready accommodation",
+            description:
+              "Partner hotels, premium apartments, and concierge booking support for smooth recoveries.",
+            sections: [
+              {
+                type: "mediaSpotlight",
+                badge: "Concierge",
+                title: "Accommodation booking service",
+                body: "Share your treatment schedule and preferences—we secure rooms, transfers, and special requests.",
+                bullets: [
+                  "Pre-arrival confirmations",
+                  "Medical-friendly locations",
+                  "Airport transfer coordination",
+                  "24/7 local support",
+                ],
+                image: {
+                  src: "/accommodation-egypt.jpg",
+                  alt: "Accommodation in Egypt",
+                },
+              },
+              {
+                type: "hotelShowcase",
+                title: "Featured partner stays",
+                description:
+                  "Live data pulls from the partner hotels table. Manual fallback ensures preview fidelity.",
+                limit: 4,
+                layout: "grid",
+                manualFallback: [
+                  {
+                    title: "Luxury Medical Hotels",
+                    description:
+                      "5-star hotels with private nursing, recovery suites, and dietary support.",
+                    amenities: [
+                      "Medical concierge",
+                      "24/7 nursing",
+                      "Recovery suites",
+                      "Specialized diet",
+                    ],
+                    priceLabel: "$150 - $300/night",
+                    locationLabel: "New Cairo • Zamalek",
+                    icon: "Hotel",
+                  },
+                  {
+                    title: "Serviced Apartments",
+                    description:
+                      "Fully furnished apartments ideal for extended family stays.",
+                    amenities: [
+                      "Kitchen facilities",
+                      "Laundry",
+                      "Living areas",
+                    ],
+                    priceLabel: "$50 - $120/night",
+                    locationLabel: "Maadi • Zamalek",
+                    icon: "Building",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: "about-egypt",
+            label: "About Egypt",
+            icon: "MapPin",
+            heading: "Culture, climate & currency",
+            description:
+              "Set expectations around weather, language, and payment options before you arrive.",
+            sections: [
+              {
+                type: "infoPanels",
+                panels: [
+                  {
+                    title: "Climate",
+                    items: [
+                      "Winter (Dec-Feb): 15-25°C, mild and comfortable.",
+                      "Spring (Mar-May): 20-30°C, pleasant for recovery.",
+                      "Summer (Jun-Aug): 25-35°C, dry heat with AC in clinics.",
+                      "Autumn (Sep-Nov): 20-30°C, ideal sightseeing weather.",
+                    ],
+                  },
+                  {
+                    title: "Culture & Language",
+                    items: [
+                      "English widely spoken in medical settings.",
+                      "Warm hospitality and family-centric care.",
+                      "Respectful attire in religious spaces.",
+                    ],
+                  },
+                  {
+                    title: "Currency & Payments",
+                    items: [
+                      "Egyptian Pound (EGP).",
+                      "1 USD ≈ 50 EGP (market dependent).",
+                      "Visa/Mastercard widely accepted.",
+                      "ATMs across Cairo + Giza.",
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: "practical",
+            label: "Practical Info",
+            icon: "Plane",
+            heading: "Transportation & communications",
+            description:
+              "Ground transport, connectivity, emergency contacts, and CTA for concierge support.",
+            sections: [
+              {
+                type: "cardGrid",
+                columns: 2,
+                cards: [
+                  {
+                    title: "Transportation",
+                    icon: "Car",
+                    bullets: [
+                      "Airport transfer: $20-30",
+                      "Taxi/Uber: $5-15 per ride",
+                      "Metro: $0.50 per trip",
+                      "Private driver: $40-60/day",
+                    ],
+                  },
+                  {
+                    title: "Communication & Tech",
+                    icon: "Wifi",
+                    bullets: [
+                      "Free WiFi in clinics & partner hotels.",
+                      "Tourist SIM cards at airport arrivals.",
+                      "Emergency numbers: Police 122, Ambulance 123, Tourist Police 126.",
+                    ],
+                  },
+                ],
+              },
+              {
+                type: "cta",
+                eyebrow: "Need assistance?",
+                title: "Talk to travel coordination",
+                description:
+                  "Visa paperwork, accommodation, and local logistics handled by our concierge team.",
+                actions: [
+                  { label: "Contact travel team", href: "/contact" },
+                  {
+                    label: "Download travel guide",
+                    href: "/travel-info",
+                    variant: "outline",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: "operations-overview",
     name: "Operations Overview",
     description: "Hero, stat highlights, and CTA ready for team pages.",
