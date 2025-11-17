@@ -9,4 +9,6 @@ export { FaqBlock } from "./FaqBlock";
 export { QuoteBlock } from "./QuoteBlock";
 export { TreatmentsBlock } from "./TreatmentsBlock";
 export { DoctorsBlock } from "./DoctorsBlock";
+export { TabbedGuideBlock } from "./TabbedGuideBlock";
+export { TabbedGuidePreview } from "./TabbedGuidePreview";
 export { resolveIcon } from "./utils";
