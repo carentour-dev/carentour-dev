@@ -207,6 +207,16 @@ carentour-dev/
 
 ---
 
+## 🧱 Content Management System
+
+- The marketing and informational pages (including `travel-info`) are powered by the block-based CMS stored in the `cms_pages` table. Editors manage pages at `/cms`, build layouts with drag-and-drop blocks, and preview changes securely before publishing.
+- Each block is defined in `src/lib/cms/blocks.ts` and rendered via `src/components/cms/blocks/*`. The builder handles SEO metadata, custom backgrounds, responsive settings, and inline CTAs.
+- **New:** The `Tabbed Travel Guide` block (`tabbedGuide`) lets you recreate the exact multi-tab layout used on the Travel Info page—visa cards, data grids, accommodation spotlight, dynamic partner hotel showcase, cultural info panels, and CTA rows.
+- A ready-to-use `Travel Info Guide` template has been added to `src/lib/cms/templates.ts`. When creating a new page (or refreshing the existing `travel-info` entry), pick this template to auto-populate all four tabs with editable content.
+- Manual fallback data is available for the hotel showcase so previews always render, while the live page automatically pulls partner hotels from Supabase when available.
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
