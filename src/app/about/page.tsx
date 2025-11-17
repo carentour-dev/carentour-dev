@@ -29,7 +29,7 @@ export default async function About() {
     return (
       <div className="min-h-screen">
         <Header />
-        <main className="py-10 container mx-auto px-4">
+        <main className="py-10">
           <BlockRenderer blocks={cmsPage.content} />
         </main>
         <Footer />
