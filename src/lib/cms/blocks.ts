@@ -427,6 +427,170 @@ const doctorsBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const tabbedGuideCardSchema = z.object({
+  title: z.string().min(1, "Card title is required"),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+  badge: z.string().optional(),
+  bullets: z.array(z.string()).optional(),
+  markdown: z.string().optional(),
+  helper: z.string().optional(),
+  actions: z.array(actionSchema).max(2).optional(),
+});
+
+const tabbedGuideDataGridColumnSchema = z.object({
+  key: z
+    .string()
+    .min(1, "Column key is required")
+    .regex(/^[a-z0-9_-]+$/i, "Use letters, numbers, dash, or underscore"),
+  label: z.string().min(1, "Column label is required"),
+});
+
+const tabbedGuideDataGridRowSchema = z.object({
+  title: z.string().min(1, "Row title is required"),
+  badge: z.string().optional(),
+  values: z.record(z.string()),
+});
+
+const tabbedGuideCalloutSchema = z.object({
+  type: z.literal("callout"),
+  tone: z.enum(["info", "warning", "muted"]).default("info"),
+  title: z.string().min(1, "Callout title is required"),
+  body: z.string().optional(),
+  bullets: z.array(z.string()).optional(),
+});
+
+const tabbedGuideMediaSpotlightSchema = z.object({
+  type: z.literal("mediaSpotlight"),
+  badge: z.string().optional(),
+  title: z.string().min(1, "Spotlight title is required"),
+  body: z.string().optional(),
+  bullets: z.array(z.string()).optional(),
+  image: z.object({
+    src: z.string().min(1, "Image source is required"),
+    alt: z.string().optional(),
+    aspectRatio: z.string().optional(),
+  }),
+});
+
+const tabbedGuideInfoPanelSchema = z.object({
+  type: z.literal("infoPanels"),
+  title: z.string().optional(),
+  panels: z
+    .array(
+      z.object({
+        title: z.string().min(1, "Panel title is required"),
+        description: z.string().optional(),
+        items: z.array(z.string()).optional(),
+        badge: z.string().optional(),
+      }),
+    )
+    .min(1, "Add at least one info panel"),
+});
+
+const tabbedGuideCompactListRowSchema = z.object({
+  title: z.string().min(1, "Item title is required"),
+  description: z.string().optional(),
+  pill: z.string().optional(),
+});
+
+const tabbedGuideCompactListSchema = z.object({
+  type: z.literal("compactList"),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+  rows: z
+    .array(tabbedGuideCompactListRowSchema)
+    .min(1, "Add at least one item"),
+});
+
+const tabbedGuideHotelFallbackSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  amenities: z.array(z.string()).optional(),
+  medicalServices: z.array(z.string()).optional(),
+  priceLabel: z.string().optional(),
+  locationLabel: z.string().optional(),
+  icon: z.string().optional(),
+  starRating: z.number().min(0).max(5).optional(),
+  heroImage: z.string().optional(),
+  contactPhone: z.string().optional(),
+  contactEmail: z.string().optional(),
+  website: z.string().optional(),
+  rating: z.number().min(0).max(5).optional(),
+  reviewCount: z.number().min(0).optional(),
+  addressDetails: z.string().optional(),
+});
+
+const tabbedGuideSectionLayoutSchema = z.object({
+  displayWidth: z.enum(["full", "half"]).optional(),
+});
+
+const tabbedGuideSectionSchema = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("cardGrid"),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      columns: z.number().min(1).max(3).default(2),
+      cards: z.array(tabbedGuideCardSchema).min(1, "Add at least one card"),
+    }),
+    z.object({
+      type: z.literal("dataGrid"),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      columns: z.array(tabbedGuideDataGridColumnSchema).min(2).max(5),
+      rows: z.array(tabbedGuideDataGridRowSchema).min(1),
+      layout: z.enum(["cards", "stacked"]).default("cards"),
+      pillColumnKey: z.string().optional(),
+    }),
+    tabbedGuideCalloutSchema,
+    tabbedGuideMediaSpotlightSchema,
+    tabbedGuideInfoPanelSchema,
+    tabbedGuideCompactListSchema,
+    z.object({
+      type: z.literal("hotelShowcase"),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      layout: z.enum(["grid", "carousel"]).default("grid"),
+      limit: z.number().min(1).max(8).default(4),
+      manualFallback: z.array(tabbedGuideHotelFallbackSchema).optional(),
+    }),
+    z.object({
+      type: z.literal("cta"),
+      eyebrow: z.string().optional(),
+      title: z.string().min(1, "CTA title is required"),
+      description: z.string().optional(),
+      actions: z.array(actionSchema).min(1).max(2),
+    }),
+  ])
+  .and(tabbedGuideSectionLayoutSchema);
+
+const tabbedGuideTabSchema = z.object({
+  id: z
+    .string()
+    .min(1, "Tab ID is required")
+    .regex(/^[a-z0-9-]+$/i, "Tab ID must be URL friendly"),
+  label: z.string().min(1, "Tab label is required"),
+  icon: z.string().optional(),
+  heading: z.string().optional(),
+  description: z.string().optional(),
+  sections: z
+    .array(tabbedGuideSectionSchema)
+    .min(1, "Add at least one section"),
+});
+
+const tabbedGuideBlockSchema = z
+  .object({
+    type: z.literal("tabbedGuide"),
+    eyebrow: z.string().optional(),
+    badge: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    tabs: z.array(tabbedGuideTabSchema).min(1, "Add at least one tab"),
+  })
+  .extend(blockMetaShape);
+
 const blockSchemas = [
   heroBlockSchema,
   statGridBlockSchema,
@@ -439,6 +603,7 @@ const blockSchemas = [
   quoteBlockSchema,
   treatmentsBlockSchema,
   doctorsBlockSchema,
+  tabbedGuideBlockSchema,
 ] as const;
 
 type BlockDefinition<TSchema extends z.ZodTypeAny> = {
@@ -640,6 +805,268 @@ export const blockRegistry = {
       featuredOnly: true,
     },
   } satisfies BlockDefinition<typeof doctorsBlockSchema>,
+  tabbedGuide: {
+    type: "tabbedGuide",
+    label: "Tabbed Travel Guide",
+    description:
+      "Create multi-tab travel or operations guides with rich content sections.",
+    category: "content",
+    schema: tabbedGuideBlockSchema,
+    defaultItem: {
+      type: "tabbedGuide",
+      eyebrow: "Travel Information",
+      badge: "Medical Tourism",
+      heading: "Everything you need before flying to Egypt",
+      description:
+        "Visas, accommodation, culture insights, and practical logistics organized into intuitive tabs.",
+      tabs: [
+        {
+          id: "visa-entry",
+          label: "Visa & Entry",
+          icon: "FileText",
+          heading: "Visa & Entry Requirements",
+          description:
+            "Simple options whether you prefer to apply in advance or on arrival.",
+          sections: [
+            {
+              type: "cardGrid",
+              columns: 2,
+              cards: [
+                {
+                  title: "E-Visa (Recommended)",
+                  description:
+                    "Apply online before travel for a smoother arrival.",
+                  icon: "Globe",
+                  bullets: [
+                    "Processing: 7 business days",
+                    "Valid: 30 days single entry",
+                    "Cost: $25 USD",
+                  ],
+                  actions: [
+                    {
+                      label: "Apply online",
+                      href: "https://visa2egypt.gov.eg/",
+                      variant: "outline",
+                      target: "_blank",
+                    },
+                  ],
+                },
+                {
+                  title: "Visa on Arrival",
+                  description:
+                    "Quick processing directly at Cairo International Airport.",
+                  icon: "Plane",
+                  bullets: [
+                    "Processing: Instant at airport",
+                    "Valid: 30 days single entry",
+                    "Cost: $25 USD cash",
+                  ],
+                  actions: [
+                    {
+                      label: "Learn more",
+                      href: "/contact",
+                      variant: "outline",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "dataGrid",
+              title: "Visa Requirements by Country",
+              columns: [
+                { key: "requirement", label: "Requirement" },
+                { key: "duration", label: "Duration" },
+                { key: "process", label: "Process" },
+                { key: "cost", label: "Cost" },
+              ],
+              rows: [
+                {
+                  title: "European Union",
+                  values: {
+                    requirement: "Tourist visa",
+                    duration: "30 days",
+                    process: "Visa on arrival / e-visa",
+                    cost: "$25",
+                  },
+                },
+                {
+                  title: "United States",
+                  values: {
+                    requirement: "Tourist visa",
+                    duration: "30 days",
+                    process: "E-visa recommended",
+                    cost: "$25",
+                  },
+                },
+                {
+                  title: "GCC Countries",
+                  values: {
+                    requirement: "Visa free",
+                    duration: "90 days",
+                    process: "Passport only",
+                    cost: "Free",
+                  },
+                },
+              ],
+            },
+            {
+              type: "callout",
+              tone: "warning",
+              title: "Important notes",
+              bullets: [
+                "Passport must be valid for 6+ months.",
+                "Medical visa extensions available for treatment plans.",
+                "Travel insurance strongly recommended.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "accommodation",
+          label: "Accommodation",
+          icon: "Hotel",
+          heading: "Recovery-ready accommodation",
+          description:
+            "Hand-picked partner hotels and serviced apartments near leading hospitals.",
+          sections: [
+            {
+              type: "mediaSpotlight",
+              badge: "Concierge",
+              title: "Accommodation booking service",
+              body: "We handle reservations, airport transfers, and special requests so you can focus on recovery.",
+              bullets: [
+                "Pre-arrival confirmation",
+                "Medical-friendly locations",
+                "Airport transfers",
+                "24/7 support",
+              ],
+              image: {
+                src: "/accommodation-egypt.jpg",
+                alt: "Premium accommodation",
+              },
+            },
+            {
+              type: "hotelShowcase",
+              title: "Featured partner stays",
+              description:
+                "Automatically pulls partner hotels. Provide manual entries as fallback.",
+              limit: 4,
+              manualFallback: [
+                {
+                  title: "Luxury Medical Hotels",
+                  description:
+                    "5-star partners with on-site nursing and recovery suites.",
+                  amenities: [
+                    "Medical concierge",
+                    "24/7 nursing",
+                    "Specialized diet",
+                  ],
+                  priceLabel: "$150 - $300/night",
+                  locationLabel: "New Cairo, Zamalek",
+                  icon: "Hotel",
+                },
+                {
+                  title: "Serviced Apartments",
+                  description: "Fully furnished stays for extended recovery.",
+                  amenities: ["Kitchen", "Laundry", "Living areas"],
+                  priceLabel: "$50 - $120/night",
+                  locationLabel: "Maadi, Zamalek",
+                  icon: "Building",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: "about-egypt",
+          label: "About Egypt",
+          icon: "MapPin",
+          heading: "What to expect in Egypt",
+          description:
+            "Climate snapshots, cultural nuances, and financial basics to make planning easy.",
+          sections: [
+            {
+              type: "infoPanels",
+              panels: [
+                {
+                  title: "Climate",
+                  items: [
+                    "Winter (Dec-Feb): 15-25°C, ideal for recovery",
+                    "Summer (Jun-Aug): 25-35°C, dry heat with AC everywhere",
+                  ],
+                },
+                {
+                  title: "Culture & Language",
+                  items: [
+                    "English widely spoken in medical settings",
+                    "Warm hospitality and family-friendly care",
+                  ],
+                },
+                {
+                  title: "Currency",
+                  items: [
+                    "Egyptian Pound (EGP)",
+                    "1 USD ≈ 50 EGP",
+                    "Cards + ATMs widely available",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: "practical",
+          label: "Practical Info",
+          icon: "Plane",
+          heading: "Transportation & logistics",
+          description:
+            "On-ground transportation, communication, and emergency contacts.",
+          sections: [
+            {
+              type: "cardGrid",
+              columns: 2,
+              cards: [
+                {
+                  title: "Transportation",
+                  icon: "Car",
+                  bullets: [
+                    "Airport transfer: $20-30",
+                    "Taxi/Uber across Cairo: $5-15",
+                    "Private driver daily service available",
+                  ],
+                },
+                {
+                  title: "Communication",
+                  icon: "Wifi",
+                  bullets: [
+                    "Free WiFi in partner hotels and clinics",
+                    "Tourist SIM cards at airport arrivals",
+                    "Emergency numbers: Police 122, Ambulance 123",
+                  ],
+                },
+              ],
+            },
+            {
+              type: "cta",
+              eyebrow: "Need assistance?",
+              title: "Speak with our travel coordination team",
+              description:
+                "Visa paperwork, accommodation, and recovery support handled end-to-end.",
+              actions: [
+                { label: "Contact travel team", href: "/contact" },
+                {
+                  label: "Download travel guide",
+                  href: "/travel-info",
+                  variant: "outline",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof tabbedGuideBlockSchema>,
 } as const;
 
 type Registry = typeof blockRegistry;
@@ -676,6 +1103,12 @@ export type BlockInstance<TType extends BlockType = BlockType> =
     blockId: string;
   };
 export type BlockSchema<TType extends BlockType = BlockType> = SchemaFor<TType>;
+export type TabbedGuideSection = z.infer<typeof tabbedGuideSectionSchema>;
+export type TabbedGuideTab = z.infer<typeof tabbedGuideTabSchema>;
+export type TabbedGuideHotelSection = Extract<
+  TabbedGuideSection,
+  { type: "hotelShowcase" }
+>;
 
 export const blockUnionSchema = z.discriminatedUnion("type", blockSchemas);
 
