@@ -13,6 +13,7 @@ import { LogoGridBlock } from "./blocks/LogoGridBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
 import { RichTextBlock } from "./blocks/RichTextBlock";
 import { StatGridBlock } from "./blocks/StatGridBlock";
+import { TabbedGuidePreview } from "./blocks/TabbedGuidePreview";
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -106,6 +107,13 @@ export function BlockPreviewRenderer({
               return <Placeholder key={blockKey} title="Treatments" />;
             case "doctors":
               return <Placeholder key={blockKey} title="Doctors" />;
+            case "tabbedGuide":
+              return (
+                <TabbedGuidePreview
+                  key={blockKey}
+                  block={block as BlockInstance<"tabbedGuide">}
+                />
+              );
             default:
               return (
                 <pre
