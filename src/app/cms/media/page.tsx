@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,20 +95,51 @@ export default function CmsMediaPage() {
     load();
   }, []);
 
+  const ensureSession = async (): Promise<Session> => {
+    let {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) return session;
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error || !data.session) {
+      throw new Error("Please sign in again to upload media.");
+    }
+    return data.session;
+  };
+
   const onUpload = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     const file = ev.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
+      const session = await ensureSession();
       const form = new FormData();
       form.append("file", file);
       const res = await fetch("/api/cms/upload", {
         method: "POST",
         body: form,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
       if (res.ok) {
         await load();
+      } else {
+        const payload = await res.json().catch(() => null);
+        const message =
+          payload?.error ??
+          `Upload failed (${res.status})${
+            payload?.details ? `: ${payload.details}` : ""
+          }`;
+        throw new Error(message);
       }
+    } catch (error) {
+      console.error("Failed to upload media asset", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading the file.";
+      alert(message);
     } finally {
       setUploading(false);
       ev.target.value = "";
