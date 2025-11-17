@@ -228,7 +228,14 @@ const heroBlockSchema = z
     description: z.string().optional(),
     alignment: z.enum(["left", "center"]).default("center"),
     background: z
-      .enum(["white", "muted", "gradient", "primary"])
+      .enum([
+        "white",
+        "muted",
+        "gradient",
+        "primary",
+        "layeredLinear",
+        "layeredGlow",
+      ])
       .default("white"),
     containerWidth: z.enum(["default", "wide", "narrow"]).default("default"),
     primaryAction: actionSchema.optional(),
