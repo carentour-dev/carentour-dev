@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
@@ -9,11 +10,41 @@ import {
   hasResponsiveValue,
 } from "./styleUtils";
 
-const backgroundMap: Record<BlockValue<"hero">["background"], string> = {
-  white: "bg-background",
-  muted: "bg-muted/40",
-  gradient: "bg-gradient-card",
-  primary: "bg-primary text-primary-foreground",
+type HeroBackgroundPreset = BlockValue<"hero">["background"];
+
+const backgroundPresets: Record<
+  HeroBackgroundPreset,
+  { className: string; layered?: "linear" | "glow" }
+> = {
+  white: { className: "bg-background" },
+  muted: { className: "bg-muted/40" },
+  gradient: { className: "bg-gradient-card" },
+  primary: { className: "bg-primary text-primary-foreground" },
+  layeredLinear: {
+    className: "bg-[#040812] text-primary-foreground",
+    layered: "linear",
+  },
+  layeredGlow: {
+    className: "bg-[#03050e] text-primary-foreground",
+    layered: "glow",
+  },
+};
+
+const layeredSurfaceStyles: Partial<
+  Record<HeroBackgroundPreset, CSSProperties>
+> = {
+  layeredLinear: {
+    backgroundImage:
+      "radial-gradient(circle at 15% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% -10%, rgba(14,165,233,0.3), transparent 50%), linear-gradient(160deg, #0c1628 0%, #060a16 55%, #03050a 100%)",
+    backgroundRepeat: "no-repeat",
+    backgroundBlendMode: "screen",
+  },
+  layeredGlow: {
+    backgroundImage:
+      "radial-gradient(circle at 30% 25%, rgba(59,130,246,0.45), transparent 60%), radial-gradient(circle at 75% 70%, rgba(16,185,129,0.4), transparent 65%), linear-gradient(125deg, #050713 0%, #080f1f 45%, #04060d 100%)",
+    backgroundRepeat: "no-repeat",
+    backgroundBlendMode: "screen",
+  },
 };
 
 const containerWidthMap: Record<BlockValue<"hero">["containerWidth"], string> =
@@ -65,13 +96,17 @@ export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
   const backgroundVariant = block.style?.background?.variant;
   const useDefaultBackground =
     !backgroundVariant || backgroundVariant === "none";
+  const backgroundPreset = backgroundPresets[block.background];
+  const surfaceStyle =
+    useDefaultBackground && layeredSurfaceStyles[block.background]
+      ? layeredSurfaceStyles[block.background]
+      : undefined;
 
   return (
     <BlockSurface
       block={block}
-      className={
-        useDefaultBackground ? backgroundMap[block.background] : undefined
-      }
+      className={useDefaultBackground ? backgroundPreset?.className : undefined}
+      style={surfaceStyle}
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
       contentClassName={cn(
         "grid gap-10 items-center",
