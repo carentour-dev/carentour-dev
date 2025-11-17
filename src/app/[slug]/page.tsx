@@ -41,7 +41,7 @@ export default async function GenericCmsPage({
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="container mx-auto px-4 py-10">
+      <main className="py-10">
         <BlockRenderer blocks={cmsPage.content} />
       </main>
       <Footer />
