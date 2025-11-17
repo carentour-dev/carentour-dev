@@ -628,14 +628,14 @@ function SectionRenderer({
     case "mediaSpotlight": {
       const spotlightBullets = cleanList(section.bullets);
       return (
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="relative h-72 overflow-hidden rounded-2xl shadow-elegant lg:h-full">
             <Image
               src={section.image.src}
               alt={section.image.alt ?? section.title}
               fill
               className="object-cover"
-              sizes="(min-width: 1024px) 60vw, 100vw"
+              sizes="(min-width: 1024px) 50vw, 100vw"
             />
           </div>
           <Card className="self-center">
