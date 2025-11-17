@@ -14,6 +14,7 @@ import {
   QuoteBlock,
   TreatmentsBlock,
   DoctorsBlock,
+  TabbedGuideBlock,
 } from "./blocks";
 
 interface BlockRendererProps {
@@ -54,6 +55,8 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
               return <TreatmentsBlock key={key} block={block} />;
             case "doctors":
               return <DoctorsBlock key={key} block={block} />;
+            case "tabbedGuide":
+              return <TabbedGuideBlock key={key} block={block} />;
             default:
               return (
                 <pre
