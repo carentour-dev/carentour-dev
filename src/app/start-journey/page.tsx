@@ -461,6 +461,12 @@ function PatientJourneyContent() {
     insurance: null,
     other: null,
   });
+  const lastPrefilledQuery = useRef<{
+    treatment: string | null;
+    procedure: string | null;
+  } | null>(null);
+  const pendingProcedureId = useRef<string | null>(null);
+  const isApplyingPrefill = useRef(false);
 
   const form = useForm<StartJourneyFormValues>({
     resolver: zodResolver(startJourneyFormSchema),
@@ -489,6 +495,10 @@ function PatientJourneyContent() {
   );
 
   useEffect(() => {
+    if (isApplyingPrefill.current || pendingProcedureId.current) {
+      return;
+    }
+
     if (!treatmentId || !procedureOptions.length) {
       form.setValue("procedureId", "");
       return;
@@ -504,14 +514,138 @@ function PatientJourneyContent() {
   }, [procedureOptions, form, treatmentId]);
 
   useEffect(() => {
-    const treatmentSlug = searchParams.get("treatment");
-    if (!treatmentSlug || !treatments.length) return;
-    const matched = treatments.find(
-      (treatment) => treatment.slug === treatmentSlug,
+    const treatmentParam = searchParams.get("treatment");
+    const procedureParam = searchParams.get("procedure");
+    if (!treatments.length || (!treatmentParam && !procedureParam)) {
+      return;
+    }
+
+    const treatmentDirty = form.getFieldState("treatmentId").isDirty;
+    const procedureDirty = form.getFieldState("procedureId").isDirty;
+    const currentTreatmentValue = form.getValues("treatmentId");
+    const currentProcedureValue = form.getValues("procedureId");
+
+    const normalize = (value?: string | null) =>
+      typeof value === "string" ? value.trim().toLowerCase() : "";
+    const slugifyLoose = (value?: string | null) =>
+      normalize(value)
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+
+    const normalizedTreatmentParam = normalize(treatmentParam);
+    const sluggedTreatmentParam = slugifyLoose(treatmentParam);
+
+    const matchedTreatment =
+      treatments.find((treatment) => {
+        const slugMatches =
+          normalizedTreatmentParam &&
+          (normalize(treatment.slug) === normalizedTreatmentParam ||
+            slugifyLoose(treatment.slug) === sluggedTreatmentParam);
+        const nameMatches =
+          normalizedTreatmentParam &&
+          slugifyLoose(treatment.name) === sluggedTreatmentParam;
+        const categoryMatches =
+          normalizedTreatmentParam &&
+          (normalize(treatment.category) === normalizedTreatmentParam ||
+            slugifyLoose(treatment.category) === sluggedTreatmentParam);
+        const idMatches = treatmentParam
+          ? treatment.id === treatmentParam
+          : false;
+        return slugMatches || nameMatches || categoryMatches || idMatches;
+      }) ??
+      (procedureParam
+        ? treatments.find((treatment) =>
+            treatment.procedures.some(
+              (procedure) =>
+                procedure.id === procedureParam ||
+                slugifyLoose(procedure.id) === slugifyLoose(procedureParam),
+            ),
+          )
+        : null);
+
+    if (!matchedTreatment) {
+      return;
+    }
+
+    // Respect user changes: if they already picked a different treatment, do not override.
+    if (
+      treatmentDirty &&
+      currentTreatmentValue &&
+      currentTreatmentValue !== matchedTreatment.id
+    ) {
+      return;
+    }
+
+    isApplyingPrefill.current = true;
+    pendingProcedureId.current = null;
+
+    if (currentTreatmentValue !== matchedTreatment.id) {
+      form.setValue("treatmentId", matchedTreatment.id, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    const matchedProcedure =
+      procedureParam &&
+      matchedTreatment.procedures.find(
+        (procedure) =>
+          procedure.id === procedureParam ||
+          normalize(procedure.id) === normalize(procedureParam) ||
+          slugifyLoose(procedure.name) === slugifyLoose(procedureParam),
+      );
+
+    const targetProcedureId =
+      matchedProcedure?.id ?? (procedureParam ? procedureParam : null);
+
+    if (
+      targetProcedureId &&
+      (!procedureDirty ||
+        currentProcedureValue === "" ||
+        currentProcedureValue === targetProcedureId)
+    ) {
+      form.setValue("procedureId", targetProcedureId, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      pendingProcedureId.current = targetProcedureId;
+    } else if (!procedureDirty && currentProcedureValue) {
+      form.setValue("procedureId", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    isApplyingPrefill.current = false;
+  }, [form, procedureOptions, searchParams, treatments]);
+
+  useEffect(() => {
+    if (!pendingProcedureId.current) return;
+    if (isApplyingPrefill.current) return;
+
+    const procedureId = pendingProcedureId.current;
+    const exists = procedureOptions.some(
+      (procedure) => procedure.id === procedureId,
     );
-    if (!matched) return;
-    form.setValue("treatmentId", matched.id);
-  }, [form, searchParams, treatments]);
+
+    if (exists) {
+      form.setValue("procedureId", procedureId, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      pendingProcedureId.current = null;
+      return;
+    }
+
+    if (!form.getFieldState("procedureId").isDirty && procedureOptions.length) {
+      form.setValue("procedureId", procedureOptions[0]?.id ?? "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    pendingProcedureId.current = null;
+  }, [form, procedureOptions]);
 
   useEffect(() => {
     if (languagePreference !== "other") {
