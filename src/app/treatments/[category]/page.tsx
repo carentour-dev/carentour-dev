@@ -600,11 +600,15 @@ export default function TreatmentDetails() {
                         <div className="mt-8 pt-6 border-t border-border/50">
                           <Button
                             className="w-full"
-                            onClick={() =>
+                            onClick={() => {
+                              const params = new URLSearchParams({
+                                treatment: category,
+                                procedure: procedure.id,
+                              });
                               router.push(
-                                `/start-journey?treatment=${category}`,
-                              )
-                            }
+                                `/start-journey?${params.toString()}`,
+                              );
+                            }}
                           >
                             Start Your Journey
                           </Button>
