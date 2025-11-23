@@ -175,6 +175,14 @@ export default function CmsIndexPage() {
                 >
                   <Link href="/cms/navigation">Manage navigation</Link>
                 </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="sm:w-auto"
+                >
+                  <Link href="/cms/faqs">Manage FAQs</Link>
+                </Button>
               </div>
             </CardHeader>
             <CardFooter className="border-none bg-transparent pt-0">
