@@ -661,6 +661,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      faqs: {
+        Row: {
+          answer: string;
+          category: string;
+          created_at: string;
+          id: string;
+          position: number;
+          question: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          answer: string;
+          category: string;
+          created_at?: string;
+          id?: string;
+          position?: number;
+          question: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          answer?: string;
+          category?: string;
+          created_at?: string;
+          id?: string;
+          position?: number;
+          question?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      faq_categories: {
+        Row: {
+          color: string | null;
+          created_at: string;
+          description: string | null;
+          fragment: string | null;
+          icon: string | null;
+          position: number;
+          slug: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          color?: string | null;
+          created_at?: string;
+          description?: string | null;
+          fragment?: string | null;
+          icon?: string | null;
+          position?: number;
+          slug: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          color?: string | null;
+          created_at?: string;
+          description?: string | null;
+          fragment?: string | null;
+          icon?: string | null;
+          position?: number;
+          slug?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       hotels: {
         Row: {
           address: Json | null;
