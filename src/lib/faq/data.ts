@@ -403,6 +403,15 @@ function toTitleCase(input: string): string {
 
 const ICON_COMPONENT_CACHE: Record<string, LucideIcon> = {};
 
+function isLucideIcon(candidate: unknown): candidate is LucideIcon {
+  if (!candidate) return false;
+  if (typeof candidate === "function") return true;
+  if (typeof candidate === "object") {
+    return "$$typeof" in (candidate as Record<string, unknown>);
+  }
+  return false;
+}
+
 function resolveIcon(iconName?: string | null): LucideIcon {
   if (!iconName) return CircleHelp;
   const normalized = iconName.trim();
@@ -422,12 +431,12 @@ function resolveIcon(iconName?: string | null): LucideIcon {
       return ICON_COMPONENT_CACHE[key];
     }
 
-    const fromNamespace = (Icons as Record<string, LucideIcon>)[key];
-    // Lucide icons are forwardRef components which are objects in React 19,
-    // so we just need a truthy export rather than a function check.
-    if (fromNamespace) {
-      ICON_COMPONENT_CACHE[key] = fromNamespace as LucideIcon;
-      return fromNamespace as LucideIcon;
+    const fromNamespace = (Icons as Record<string, unknown>)[key];
+    // Lucide icons are forwardRef components (objects in React 19), so we verify
+    // the export shape instead of assuming every export is an icon.
+    if (isLucideIcon(fromNamespace)) {
+      ICON_COMPONENT_CACHE[key] = fromNamespace;
+      return fromNamespace;
     }
   }
 
