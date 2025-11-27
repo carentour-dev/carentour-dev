@@ -202,6 +202,16 @@ const storySchema = z.object({
 type StoryFormValues = z.infer<typeof storySchema>;
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const sanitizePatientCountry = (value?: string | null) => {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+
+  const allowed = ["International Patient", "Overseas Patient"];
+  return allowed.includes(trimmed) ? trimmed : "International Patient";
+};
+
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return "Not set";
   const date = new Date(value);
@@ -636,7 +646,7 @@ export default function DashboardPage() {
             ? values.procedure_name.trim()
             : null,
           patient_name: fallbackPatientName,
-          patient_country: patient.nationality ?? null,
+          patient_country: sanitizePatientCountry(patient.nationality),
           locale: preferredLocale,
           published: false,
           highlight: false,
