@@ -121,7 +121,7 @@ export default function Contact() {
     {
       icon: Phone,
       title: "Phone Support",
-      content: "+20 100 1741666",
+      content: "+20 122 9503333",
       description: "Available 24/7 for emergencies",
     },
     {
@@ -133,8 +133,8 @@ export default function Contact() {
     {
       icon: MapPin,
       title: "Visit Our Office",
-      content: "Cairo Medical District, Egypt",
-      description: "Monday - Saturday: 9AM - 6PM",
+      content: "Office 23, Building D, Agora Mall, New Cairo, Egypt",
+      description: "Sunday - Thursday: 9AM - 6PM",
     },
     {
       icon: MessageCircle,
@@ -385,7 +385,7 @@ export default function Contact() {
                           your treatment
                         </p>
                         <p className="text-accent font-semibold">
-                          Emergency Hotline: +20 100 1741666
+                          Emergency Hotline: +20 122 9503333
                         </p>
                       </div>
                     </div>
