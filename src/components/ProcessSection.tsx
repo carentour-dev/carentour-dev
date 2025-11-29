@@ -12,39 +12,39 @@ const ProcessSection = () => {
   const steps = [
     {
       icon: MessageCircle,
-      title: "Free Consultation",
+      title: "Explore Your Options",
       description:
-        "Connect with our medical coordinators for personalized treatment planning",
+        "Review treatments through our platform, and speak directly with a care manager. You receive tailored recommendations based on your medical needs, goals, and preferences.",
     },
     {
       icon: Calendar,
-      title: "Schedule Treatment",
+      title: "Receive a Personalized Treatment Plan",
       description:
-        "Book your procedure with our partner hospitals and specialist doctors",
+        "Once your medical information is reviewed, we prepare a clear plan that outlines procedures, timelines, expected results, and associated costs. This gives you full clarity before making any decision.",
     },
     {
       icon: Plane,
-      title: "Travel Arrangements",
+      title: "Prepare for Your Trip",
       description:
-        "We handle visa, flights, accommodation, and airport transfers",
+        "We assist with visa requirements, documentation, and travel planning. You also receive guidance on what to bring, how to prepare, and what to expect upon arrival.",
     },
     {
       icon: Heart,
-      title: "Medical Treatment",
+      title: "Arrive with Confidence",
       description:
-        "Receive world-class care from state-of-the-art medical service providers",
+        "Our team arranges airport pickup, transportation, and accommodation. We ensure you feel settled and comfortable before your consultations and treatment begin.",
     },
     {
       icon: Home,
-      title: "Recovery Support",
+      title: "Undergo Treatment with Full Support",
       description:
-        "Comfortable recovery with 24/7 medical support and concierge services",
+        "Your chosen specialist and medical facility will guide you through the procedure and follow-up visits. Your care manager remains available to support communication and logistics.",
     },
     {
       icon: CheckCircle,
-      title: "Follow-up Care",
+      title: "Recover Safely and Comfortably",
       description:
-        "Continued monitoring and support even after you return home",
+        "We provide personalized aftercare instructions, follow-up appointments, and check-ins. Even after you return home, our team helps you stay connected with your doctor for ongoing support.",
     },
   ];
 
