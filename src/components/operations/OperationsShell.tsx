@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   SidebarProvider,
   Sidebar,
@@ -282,22 +283,26 @@ function OperationsTopbar() {
 }
 
 function OperationsBranding() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === "dark";
+  const logoSrc = isDark
+    ? "/carentour-logo-light-alt.png"
+    : "/carentour-logo-dark-alt.png";
+
   return (
     <div className="flex items-center gap-3 px-1">
       <Image
-        src="/carentour-logo-dark.png"
+        src={logoSrc}
         alt="Care N Tour"
-        width={200}
-        height={60}
-        className="h-10 w-auto object-contain dark:hidden"
-        priority
-      />
-      <Image
-        src="/carentour-logo-light.png"
-        alt="Care N Tour"
-        width={200}
-        height={60}
-        className="hidden h-10 w-auto object-contain dark:block"
+        width={600}
+        height={400}
+        className="h-10 w-auto object-contain"
         priority
       />
       <div className="flex flex-col">
