@@ -8,6 +8,9 @@ import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import { AuthProvider } from "@/contexts/AuthContext";
 import QueryProvider from "@/components/QueryProvider";
 import WhatsAppWidgetGate from "@/components/WhatsAppWidgetGate";
+import { NavigationProvider } from "@/components/navigation/NavigationProvider";
+import { loadPublicNavigationLinks } from "@/server/navigation";
+import { isNavigationVisible } from "@/lib/navigation";
 
 export const metadata: Metadata = {
   title: "Care N Tour | World-Class Medical Care in Egypt",
@@ -37,26 +40,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const navigationResult = await loadPublicNavigationLinks();
+  const initialNavigationLinks =
+    navigationResult.links.filter(isNavigationVisible);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <MicrosoftClarity />
         <ThemeProvider defaultTheme="system" storageKey="care-n-tour-theme">
-          <QueryProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                {children}
-                <WhatsAppWidgetGate />
-              </TooltipProvider>
-            </AuthProvider>
-          </QueryProvider>
+          <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
+            <QueryProvider>
+              <AuthProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  {children}
+                  <WhatsAppWidgetGate />
+                </TooltipProvider>
+              </AuthProvider>
+            </QueryProvider>
+          </NavigationProvider>
         </ThemeProvider>
       </body>
     </html>
