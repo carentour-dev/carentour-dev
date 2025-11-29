@@ -88,7 +88,7 @@ Please change this password after your first login.
             📞 Need assistance? Our team is here to help 24/7
           </p>
           <p style="color: #cbd5f5; margin: 5px 0 0 0;">
-            Emergency Hotline: +20 100 1741666
+            Emergency Hotline: +20 122 9503333
           </p>
         </div>
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #334155; text-align: center;">
