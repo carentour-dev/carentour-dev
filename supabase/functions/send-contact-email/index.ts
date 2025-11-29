@@ -52,7 +52,7 @@ const handler = async (req) => {
           </p>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b;">
-            <p>For urgent matters, contact our 24/7 emergency hotline: +20 100 1741666</p>
+            <p>For urgent matters, contact our 24/7 emergency hotline: +20 122 9503333</p>
             <p>Email: info@carentour.com | Website: www.carentour.com</p>
           </div>
         </div>
