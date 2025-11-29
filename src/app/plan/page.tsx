@@ -387,7 +387,7 @@ export default function PlanTrip() {
                   any urgent needs during your stay
                 </p>
                 <p className="text-accent font-semibold text-xl">
-                  Emergency Hotline: +20 100 1741666
+                  Emergency Hotline: +20 122 9503333
                 </p>
               </CardContent>
             </Card>
