@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -17,26 +17,30 @@ const Hero = () => {
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 py-20">
-        <div className="max-w-4xl">
+        <div className="max-w-5xl">
           <div className="flex items-center space-x-2 mb-6">
             <Shield className="h-6 w-6 text-accent" />
             <span className="text-accent font-semibold">
-              Certified Excellence in Medical Tourism
+              Experience a New Standard in Medical Travel
             </span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-primary-foreground mb-6 leading-tight">
-            World-Class
+            Premium
             <span className="block bg-gradient-accent bg-clip-text text-transparent">
               Medical Care
             </span>
             in Egypt
           </h1>
 
-          <p className="text-xl md:text-2xl text-primary-foreground/90 mb-8 max-w-2xl leading-relaxed">
-            Experience premium healthcare treatments with luxury accommodations,
-            professional care, and significant cost savings in Egypt&apos;s top
-            medical service providers.
+          <p className="text-xl md:text-2xl text-primary-foreground/90 mb-8 max-w-3xl leading-relaxed">
+            Access trusted doctors and accredited hospitals with complete travel
+            coordination and personal guidance at every step. We make your
+            medical journey safe, clear, and comfortable from inquiry to
+            recovery.
+            <br />
+            <br />
+            Verified specialists. Transparent packages. Concierge-level support.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
@@ -62,7 +66,7 @@ const Hero = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 hidden">
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start space-x-2 mb-2">
                 <Star className="h-5 w-5 text-accent fill-current" />
@@ -95,7 +99,7 @@ const Hero = () => {
       </div>
 
       {/* Floating Elements */}
-      <div className="absolute bottom-10 right-10 hidden lg:block">
+      <div className="absolute bottom-10 right-10 hidden">
         <div className="bg-background/10 backdrop-blur-sm rounded-lg p-4 border border-background/20">
           <p className="text-primary-foreground/90 text-sm mb-2">
             Starting from
