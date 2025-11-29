@@ -24,6 +24,25 @@ import {
 } from "@/lib/navigation";
 import { useInitialNavigationLinks } from "@/components/navigation/NavigationProvider";
 
+const socialLinks = [
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/carentour",
+    Icon: Facebook,
+  },
+  { label: "X (Twitter)", href: "https://x.com/carentour", Icon: Twitter },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/carentoureg",
+    Icon: Instagram,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/carentour",
+    Icon: Linkedin,
+  },
+];
+
 const Footer = () => {
   const { resolvedTheme } = useTheme();
   const [email, setEmail] = useState("");
@@ -88,14 +107,22 @@ const Footer = () => {
               className="mb-4 h-[72px] w-auto max-w-[280px] object-contain"
             />
             <p className="text-background/80 mb-6">
-              Your trusted partner for world-class medical treatments in Egypt.
-              Combining excellence in healthcare with exceptional hospitality.
+              Your trusted partner for premium medical care in Egypt. Combining
+              excellence in healthcare with exceptional hospitality.
             </p>
             <div className="flex space-x-4">
-              <Facebook className="h-5 w-5 text-background/60 hover:text-accent cursor-pointer transition-smooth" />
-              <Twitter className="h-5 w-5 text-background/60 hover:text-accent cursor-pointer transition-smooth" />
-              <Instagram className="h-5 w-5 text-background/60 hover:text-accent cursor-pointer transition-smooth" />
-              <Linkedin className="h-5 w-5 text-background/60 hover:text-accent cursor-pointer transition-smooth" />
+              {socialLinks.map(({ label, href, Icon }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={`Visit our ${label}`}
+                  className="text-background/60 hover:text-accent transition-smooth"
+                >
+                  <Icon className="h-5 w-5" />
+                </Link>
+              ))}
             </div>
           </div>
 
