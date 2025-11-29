@@ -18,18 +18,21 @@ import { useTheme } from "next-themes";
 import { useNewsletter } from "@/hooks/useNewsletter";
 import {
   fetchNavigationLinks,
-  getFallbackNavigationLinks,
   mergeWithFallback,
   selectQuickLinks,
   type NavigationLink,
 } from "@/lib/navigation";
+import { useInitialNavigationLinks } from "@/components/navigation/NavigationProvider";
 
 const Footer = () => {
   const { resolvedTheme } = useTheme();
   const [email, setEmail] = useState("");
   const [mounted, setMounted] = useState(false);
   const { subscribe, loading } = useNewsletter();
-  const [quickLinks, setQuickLinks] = useState<NavigationLink[]>([]);
+  const initialNavigationLinks = useInitialNavigationLinks();
+  const [quickLinks, setQuickLinks] = useState<NavigationLink[]>(() =>
+    selectQuickLinks(initialNavigationLinks),
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -37,6 +40,12 @@ const Footer = () => {
 
   useEffect(() => {
     let isSubscribed = true;
+    if (initialNavigationLinks.length > 0) {
+      setQuickLinks(selectQuickLinks(initialNavigationLinks));
+      return () => {
+        isSubscribed = false;
+      };
+    }
     const loadNavigation = async () => {
       const result = await fetchNavigationLinks();
       if (!isSubscribed) return;
@@ -49,7 +58,7 @@ const Footer = () => {
     return () => {
       isSubscribed = false;
     };
-  }, []);
+  }, [initialNavigationLinks]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +126,7 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-accent" />
-                <span className="text-background/80">+20 100 1741666</span>
+                <span className="text-background/80">+20 122 9503333</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-accent" />
