@@ -22,7 +22,7 @@ type NavigationQueryOptions = {
   includeHidden?: boolean;
 };
 
-type NavigationQueryResult = {
+export type NavigationQueryResult = {
   links: NavigationLink[];
   fallback: boolean;
   error?: string;
@@ -137,11 +137,17 @@ export async function fetchNavigationLinks(
       };
     }
 
-    const json = (await response.json()) as { links?: NavigationRow[] };
+    const json = (await response.json()) as {
+      links?: Array<NavigationLink | NavigationRow>;
+    };
     const data = Array.isArray(json.links) ? json.links : [];
 
+    const normalizedLinks = data.map((link) =>
+      "cms_page_id" in link ? mapNavigationRow(link as NavigationRow) : link,
+    );
+
     return {
-      links: sortNavigationLinks(data.map(mapNavigationRow)),
+      links: sortNavigationLinks(normalizedLinks),
       fallback: false,
     };
   } catch (error: any) {
