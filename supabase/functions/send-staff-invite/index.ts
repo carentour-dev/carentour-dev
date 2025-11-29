@@ -112,7 +112,7 @@ function createStaffInviteHTML(params: StaffInviteParams): string {
               Your Trusted Partner in Medical Tourism
             </p>
             <p style="color: #64748b; font-size: 13px; line-height: 18px; margin: 0;">
-              24/7 Emergency Hotline: +20 100 1741666<br>
+              24/7 Emergency Hotline: +20 122 9503333<br>
               Email: <a href="mailto:info@carentour.com" style="color: #93c5fd; text-decoration: none;">info@carentour.com</a>
             </p>
           </div>
