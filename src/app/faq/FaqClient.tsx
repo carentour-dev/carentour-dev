@@ -363,7 +363,7 @@ export function FaqClient({ faqs, categories, source }: Props) {
           <div className="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
             <Button size="lg" className="flex items-center gap-2">
               <Phone className="h-4 w-4" />
-              Call Now: +20 100 1741666
+              Call Now: +20 122 9503333
             </Button>
             <Button
               variant="outline"
