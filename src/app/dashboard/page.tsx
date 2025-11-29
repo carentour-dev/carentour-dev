@@ -1780,7 +1780,7 @@ export default function DashboardPage() {
                       className="w-full"
                       asChild
                     >
-                      <Link href="tel:+201001741666">
+                      <Link href="tel:+201229503333">
                         <Phone className="mr-2 h-4 w-4" />
                         +20 100 174 1666
                       </Link>
