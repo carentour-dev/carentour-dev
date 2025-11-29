@@ -22,6 +22,7 @@ import {
   mergeWithFallback,
   type NavigationLink,
 } from "@/lib/navigation";
+import { useInitialNavigationLinks } from "@/components/navigation/NavigationProvider";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,8 +35,13 @@ const Header = () => {
       ? "/carentour-logo-light.png"
       : "/carentour-logo-dark.png";
 
-  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>([]);
-  const [loadingNavigation, setLoadingNavigation] = useState(true);
+  const initialNavigationLinks = useInitialNavigationLinks();
+  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>(() =>
+    initialNavigationLinks.filter(isNavigationVisible),
+  );
+  const [loadingNavigation, setLoadingNavigation] = useState(
+    () => initialNavigationLinks.filter(isNavigationVisible).length === 0,
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -43,8 +49,11 @@ const Header = () => {
 
   useEffect(() => {
     let isSubscribed = true;
+    const hasInitialNavigation = initialNavigationLinks.length > 0;
     const loadNavigation = async () => {
-      setLoadingNavigation(true);
+      if (!hasInitialNavigation) {
+        setLoadingNavigation(true);
+      }
       const result = await fetchNavigationLinks();
       if (!isSubscribed) return;
       const merged = mergeWithFallback(result.links);
@@ -57,7 +66,14 @@ const Header = () => {
     return () => {
       isSubscribed = false;
     };
-  }, []);
+  }, [initialNavigationLinks.length]);
+
+  const displayedNavigationLinks =
+    navigationLinks.length > 0
+      ? navigationLinks
+      : loadingNavigation
+        ? []
+        : getFallbackNavigationLinks();
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -67,7 +83,7 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Phone className="h-4 w-4 text-primary" />
-              <span className="text-muted-foreground">+20 100 1741666</span>
+              <span className="text-muted-foreground">+20 122 9503333</span>
             </div>
             <div className="flex items-center space-x-2">
               <Mail className="h-4 w-4 text-primary" />
@@ -120,10 +136,7 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex flex-1 flex-nowrap items-center justify-center gap-3 md:gap-4 lg:gap-6 xl:gap-8 ml-10">
-            {(loadingNavigation
-              ? getFallbackNavigationLinks()
-              : navigationLinks
-            ).map((item) => (
+            {displayedNavigationLinks.map((item) => (
               <Link
                 key={item.id}
                 href={item.href}
@@ -183,10 +196,7 @@ const Header = () => {
                   </div>
                   <div className="flex-1 overflow-y-auto px-5 pb-6">
                     <div className="space-y-2">
-                      {(loadingNavigation
-                        ? getFallbackNavigationLinks()
-                        : navigationLinks
-                      ).map((item) => (
+                      {displayedNavigationLinks.map((item) => (
                         <DrawerClose asChild key={item.id}>
                           <Link
                             href={item.href}
@@ -233,11 +243,11 @@ const Header = () => {
                     </div>
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6 text-sm text-muted-foreground">
                       <a
-                        href="tel:+201001741666"
+                        href="tel:+201229503333"
                         className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
                       >
                         <Phone className="h-5 w-5 text-primary" />
-                        +20 100 1741666
+                        +20 122 9503333
                       </a>
                       <a
                         href="mailto:info@carentour.com"
