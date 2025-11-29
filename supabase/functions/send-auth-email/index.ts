@@ -65,7 +65,7 @@ function createConfirmationEmailHTML(params) {
           <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #64748b; font-size: 14px; line-height: 20px;">
             <strong>Care N Tour Team</strong><br>
             <span>Your Trusted Partner in Medical Tourism</span><br>
-            24/7 Emergency Hotline: +20 100 1741666<br>
+            24/7 Emergency Hotline: +20 122 9503333<br>
             Email: info@carentour.com
           </div>
         </div>
