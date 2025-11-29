@@ -157,7 +157,7 @@ const USPSection = () => {
         </div>
 
         {/* Achievements Bar */}
-        <div className="bg-gradient-hero rounded-xl p-8">
+        <div className="bg-gradient-hero rounded-xl p-8 hidden">
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-background mb-2">
               Proven Excellence in Medical Tourism
@@ -189,7 +189,7 @@ const USPSection = () => {
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-16">
+        <div className="text-center mt-16 hidden">
           <h3 className="text-2xl font-bold text-foreground mb-4">
             Ready to Experience the Care N Tour Difference?
           </h3>
