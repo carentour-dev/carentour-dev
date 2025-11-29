@@ -52,7 +52,7 @@ export interface WhatsAppWidgetProps {
   onClick?: FloatingWhatsAppProps["onClick"];
 }
 
-const DEFAULT_PHONE_NUMBER = "+201001741666";
+const DEFAULT_PHONE_NUMBER = "+201229503333";
 const DEFAULT_ACCOUNT_NAME = "Care N Tour Concierge";
 const DEFAULT_CHAT_MESSAGE =
   "Hello! How can we support your care journey today?";
