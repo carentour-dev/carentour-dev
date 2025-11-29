@@ -648,7 +648,7 @@ This project is proprietary and confidential.
 For questions or support, please contact:
 
 - **Email**: info@carentour.com
-- **Phone**: +20 100 1741666
+- **Phone**: +20 122 9503333
 
 ---
 
