@@ -40,6 +40,35 @@ function formatValidationError(error: z.ZodError) {
   return path ? `${issue.message} (field: ${path})` : issue.message;
 }
 
+type SupabaseError = { code?: string; message?: string };
+
+function isDuplicateFaqError(error: SupabaseError | null) {
+  if (!error) return false;
+  const { code, message } = error;
+  return (
+    code === "23505" ||
+    (typeof message === "string" &&
+      message.includes("uq_faqs_category_question"))
+  );
+}
+
+function handleFaqWriteError(error: SupabaseError | null) {
+  if (isDuplicateFaqError(error)) {
+    return NextResponse.json(
+      {
+        error:
+          "A FAQ with this question already exists in this category. Edit the existing entry or change the question text.",
+      },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json(
+    { error: error?.message ?? "Failed to save FAQ" },
+    { status: 500 },
+  );
+}
+
 async function resolvePosition(
   category: string,
   position: number | undefined,
@@ -100,18 +129,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const position = await resolvePosition(
-    parsed.data.category,
-    parsed.data.position,
-  );
+  const category = parsed.data.category.trim();
+  const question = parsed.data.question.trim();
+  const answer = parsed.data.answer.trim();
+  const position = await resolvePosition(category, parsed.data.position);
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("faqs")
     .insert({
-      category: parsed.data.category,
-      question: parsed.data.question,
-      answer: parsed.data.answer,
+      category,
+      question,
+      answer,
       status: parsed.data.status,
       position,
     })
@@ -119,7 +148,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return handleFaqWriteError(error);
   }
 
   revalidateFaqCaches();
