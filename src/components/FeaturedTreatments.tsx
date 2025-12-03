@@ -116,6 +116,7 @@ const FeaturedTreatments = () => {
       }
 
       const presentation = getPresentation(treatment.slug, treatment.category);
+      const cardImage = treatment.cardImageUrl ?? presentation.image;
       const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
 
       const basePriceCandidate =
@@ -159,7 +160,7 @@ const FeaturedTreatments = () => {
             ? `From ${formatCurrency(basePriceCandidate, treatment.currency)}`
             : "Contact us for pricing",
         durationLabel,
-        image: presentation.image,
+        image: cardImage,
         Icon: presentation.Icon,
         isFeatured: true,
         priceValue:
