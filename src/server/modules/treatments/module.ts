@@ -61,6 +61,8 @@ const baseTreatmentSchema = z.object({
   overview: z.string().optional(),
   download_url: z.string().nullable().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
+  card_image_url: z.string().nullable().optional(),
+  hero_image_url: z.string().nullable().optional(),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
   duration_days: z.coerce.number().int().min(0).optional(),
@@ -308,6 +310,8 @@ export const treatmentController = {
       description: parsed.description ?? null,
       overview: parsed.overview ?? null,
       download_url: parsed.download_url ?? null,
+      card_image_url: parsed.card_image_url ?? null,
+      hero_image_url: parsed.hero_image_url ?? null,
       base_price: parsed.base_price ?? null,
       currency: parsed.currency ?? null,
       duration_days: parsed.duration_days ?? null,
@@ -356,6 +360,10 @@ export const treatmentController = {
       updatePayload.overview = parsed.overview ?? null;
     if (parsed.download_url !== undefined)
       updatePayload.download_url = parsed.download_url ?? null;
+    if (parsed.card_image_url !== undefined)
+      updatePayload.card_image_url = parsed.card_image_url ?? null;
+    if (parsed.hero_image_url !== undefined)
+      updatePayload.hero_image_url = parsed.hero_image_url ?? null;
     if (parsed.base_price !== undefined)
       updatePayload.base_price = parsed.base_price ?? null;
     if (parsed.currency !== undefined)
