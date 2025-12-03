@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Heart, Award, Users, Globe, Shield, Clock } from "lucide-react";
-import Image from "next/image";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { getPublishedPageBySlug } from "@/lib/cms/server";
 
@@ -36,13 +35,13 @@ export default async function About() {
       </div>
     );
   }
+  const showStats = false;
   const stats = [
     { icon: Heart, label: "Successful Procedures", value: "5000+" },
     { icon: Users, label: "Medical Specialists", value: "200+" },
     { icon: Globe, label: "Countries Served", value: "50+" },
     { icon: Award, label: "Years of Experience", value: "10+" },
   ];
-
   const values = [
     {
       icon: Shield,
@@ -92,27 +91,29 @@ export default async function About() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {stats.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <div key={index} className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4">
-                      <Icon className="h-8 w-8 text-primary" />
+        {/* Stats Section (hidden for now) */}
+        {showStats && (
+          <section className="py-16 bg-background">
+            <div className="container mx-auto px-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                {stats.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={index} className="text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-light rounded-full mb-4">
+                        <Icon className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {stat.value}
+                      </p>
+                      <p className="text-muted-foreground">{stat.label}</p>
                     </div>
-                    <p className="text-3xl font-bold text-foreground">
-                      {stat.value}
-                    </p>
-                    <p className="text-muted-foreground">{stat.label}</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Our Story Section */}
         <section className="py-20 bg-muted/30">
