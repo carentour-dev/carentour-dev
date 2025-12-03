@@ -52,7 +52,7 @@ type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type HotelRow = Database["public"]["Tables"]["hotels"]["Row"];
 
 const TREATMENT_SELECT =
-  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, ideal_candidates, treatment_procedures:treatment_procedures(*)";
+  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, ideal_candidates, card_image_url, hero_image_url, treatment_procedures:treatment_procedures(*)";
 const DOCTOR_SELECT =
   "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
