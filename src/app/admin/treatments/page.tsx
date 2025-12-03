@@ -115,6 +115,8 @@ const treatmentSchema = z.object({
   overview: z.string().optional(),
   download_url: z.string().nullable().optional(),
   ideal_candidates: z.array(z.string().min(1)).default([]),
+  card_image_url: z.string().nullable().optional(),
+  hero_image_url: z.string().nullable().optional(),
   base_price: z.coerce.number().min(0).optional(),
   currency: z.string().optional(),
   duration_days: z.coerce.number().int().min(0).optional(),
@@ -142,6 +144,8 @@ type TreatmentPayload = {
   duration_days?: number;
   recovery_time_days?: number;
   success_rate?: number;
+  card_image_url?: string | null;
+  hero_image_url?: string | null;
   is_featured?: boolean;
   is_active?: boolean;
   grade: TreatmentGrade;
@@ -196,6 +200,8 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   description: "",
   overview: "",
   download_url: null,
+  card_image_url: null,
+  hero_image_url: null,
   base_price: undefined,
   currency: "USD",
   duration_days: undefined,
@@ -366,6 +372,8 @@ const mapRecordToFormValues = (
     description: treatment.description ?? "",
     overview: treatment.overview ?? "",
     download_url: treatment.download_url ?? null,
+    card_image_url: treatment.card_image_url ?? null,
+    hero_image_url: treatment.hero_image_url ?? null,
     base_price: treatment.base_price ?? undefined,
     currency: treatment.currency ?? "USD",
     duration_days: treatment.duration_days ?? undefined,
@@ -409,6 +417,8 @@ const buildPayloadFromValues = (
     .filter((entry) => entry.length > 0);
 
   const downloadUrl = normalizeUploadValue(values.download_url);
+  const cardImageUrl = normalizeUploadValue(values.card_image_url);
+  const heroImageUrl = normalizeUploadValue(values.hero_image_url);
 
   const procedures = values.procedures.map((procedure) => {
     const candidateRequirements = procedure.candidateRequirements
@@ -478,6 +488,8 @@ const buildPayloadFromValues = (
     description: trimString(values.description),
     overview: trimString(values.overview),
     download_url: downloadUrl === undefined ? undefined : downloadUrl,
+    card_image_url: cardImageUrl === undefined ? undefined : cardImageUrl,
+    hero_image_url: heroImageUrl === undefined ? undefined : heroImageUrl,
     base_price: values.base_price ?? undefined,
     currency: trimString(values.currency),
     duration_days: values.duration_days ?? undefined,
@@ -966,6 +978,46 @@ export default function AdminTreatmentsPage() {
                         placeholder="Narrative overview shown near the top of the detail page."
                         {...field}
                       />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="card_image_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ImageUploader
+                          label="Card image"
+                          description="Shown on featured cards and listings."
+                          value={field.value ?? null}
+                          onChange={(value) => field.onChange(value)}
+                          bucket="media"
+                          folder="admin/treatments/cards"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hero_image_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ImageUploader
+                          label="Hero image (detail page)"
+                          description="Optional cover image used on treatment detail pages."
+                          value={field.value ?? null}
+                          onChange={(value) => field.onChange(value)}
+                          bucket="media"
+                          folder="admin/treatments/heroes"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
