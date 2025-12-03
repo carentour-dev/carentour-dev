@@ -53,6 +53,8 @@ export type NormalizedTreatment = {
   isActive?: boolean | null;
   idealCandidates: string[];
   downloadUrl?: string | null;
+  cardImageUrl?: string | null;
+  heroImageUrl?: string | null;
   procedures: TreatmentProcedure[];
 };
 
@@ -180,6 +182,12 @@ export const normalizeTreatment = (
     treatment.download_url.trim().length > 0
       ? treatment.download_url.trim()
       : null;
+  const cardImageUrl = isNonEmptyString(treatment.card_image_url)
+    ? treatment.card_image_url.trim()
+    : null;
+  const heroImageUrl = isNonEmptyString(treatment.hero_image_url)
+    ? treatment.hero_image_url.trim()
+    : null;
 
   return {
     id: treatment.id,
@@ -198,6 +206,8 @@ export const normalizeTreatment = (
     isActive: treatment.is_active,
     idealCandidates,
     downloadUrl,
+    cardImageUrl,
+    heroImageUrl,
     procedures,
   };
 };
