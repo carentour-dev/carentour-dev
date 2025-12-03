@@ -16,6 +16,8 @@ WITH inserted AS (
         recovery_time_days,
         success_rate,
         ideal_candidates,
+        card_image_url,
+        hero_image_url,
         is_active,
         is_featured
     )
@@ -43,6 +45,8 @@ WITH inserted AS (
                 'Patients seeking an accelerated IVF timeline ' ||
                 'with concierge care'
             ],
+            '/consultation.webp',
+            '/consultation.webp',
             TRUE,
             TRUE
         ),
@@ -69,6 +73,8 @@ WITH inserted AS (
                 'Candidates cleared by pre-operative nutrition and ' ||
                 'psychological screening'
             ],
+            '/surgery-suite.webp',
+            '/surgery-suite.webp',
             TRUE,
             TRUE
         ),
@@ -97,6 +103,8 @@ WITH inserted AS (
                 'Patients with realistic expectations and commitment to ' ||
                 'post-op protocols'
             ],
+            '/consultation.webp',
+            '/consultation.webp',
             TRUE,
             TRUE
         ),
@@ -124,6 +132,8 @@ WITH inserted AS (
                 'Visitors wanting minimal clinic visits with predictable ' ||
                 'smile design'
             ],
+            '/surgery-suite.webp',
+            '/surgery-suite.webp',
             TRUE,
             TRUE
         )
