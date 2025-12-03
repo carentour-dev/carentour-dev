@@ -117,46 +117,129 @@ export default async function About() {
         {/* Our Story Section */}
         <section className="py-20 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+            <div className="max-w-5xl mx-auto space-y-10">
+              <div className="space-y-4">
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground">
                   Our Story
                 </h2>
-                <div className="prose prose-lg max-w-none">
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    Founded in 2014, Care N Tour emerged from a simple vision:
-                    to make world-class medical care accessible to everyone,
-                    regardless of geographical boundaries. What started as a
-                    small initiative has grown into Egypt&apos;s premier medical
-                    tourism facilitator.
+                <div className="space-y-4 text-muted-foreground leading-relaxed">
+                  <p>
+                    Care N Tour is a leading medical tourism provider based in
+                    Egypt, dedicated to helping patients access premium
+                    healthcare with confidence, comfort, and ease. Formally
+                    established in 2025, the company grew from years of
+                    groundwork, partnerships, and practical experience in the
+                    medical, digital transformation, and service-delivery
+                    fields. We connect trusted Egyptian medical experts with
+                    patients seeking world-class treatment abroad and guide them
+                    through a seamless journey from consultation to recovery.
                   </p>
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    Our founders, having witnessed firsthand the challenges
-                    patients face when seeking quality healthcare abroad, were
-                    determined to create a seamless bridge between international
-                    patients and Egypt&apos;s exceptional medical
-                    infrastructure.
+                  <p>
+                    Care N Tour is led by a founding team with diverse
+                    backgrounds in healthcare, medical tourism, digital
+                    platforms, customer experience, and international travel
+                    services. The team has worked with accredited hospitals,
+                    reputable medical institutions, and major transformation
+                    programs, which ensures a strong foundation in governance,
+                    quality, and operational excellence.
                   </p>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Today, we partner with over 50 accredited hospitals and
-                    clinics across Egypt, working with more than 200 certified
-                    specialists to provide comprehensive medical tourism
-                    services that have transformed thousands of lives.
+                  <p>
+                    We collaborate with top hospitals, accredited specialists,
+                    and experienced medical professionals across Egypt to
+                    provide care that is tailored to each patient&apos;s needs.
+                    Our role includes helping patients choose the right doctors,
+                    providing support for travel and accommodation arrangements,
+                    and providing follow-up support. Every detail is handled
+                    with precision and compassion.
+                  </p>
+                  <p>
+                    The idea for Care N Tour emerged from a clear need in the
+                    market. Many medical travelers previously had to manage
+                    everything on their own, from verifying hospitals and
+                    comparing costs to arranging travel and coordinating
+                    appointments. This often led to unclear pricing, fragmented
+                    services, and a stressful experience. Care N Tour brings
+                    everything together in one trusted place, offering verified
+                    medical providers, transparent treatment packages,
+                    integrated travel arrangements, and dedicated case
+                    management.
+                  </p>
+                  <div>
+                    <p className="font-semibold text-foreground mb-2">
+                      Our approach is built on three main strengths:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>Carefully selected and verified medical partners</li>
+                      <li>
+                        Complete end-to-end coordination supported by technology
+                      </li>
+                      <li>A personalized, concierge-style experience</li>
+                    </ul>
+                  </div>
+                  <p>
+                    We believe that medical care should feel accessible,
+                    transparent, and worry-free. By combining medical expertise
+                    with personal guidance, we help patients and their families
+                    feel supported before, during, and after treatment.
+                  </p>
+                  <p>
+                    At Care N Tour, we are not just coordinators. We are
+                    partners in your health journey. Our mission is to help you
+                    access safe, advanced, and affordable treatment in Egypt.
+                    Our vision is to be leaders in the medical tourism industry
+                    and to help position the country as the trusted go-to global
+                    destination for high-quality healthcare.
+                  </p>
+                  <p>
+                    Your health, comfort, and peace of mind come first, and we
+                    are here to guide you every step of the way.
                   </p>
                 </div>
-                <Button size="lg" className="mt-8">
-                  Learn About Our Team
-                </Button>
               </div>
-              <div className="relative">
-                <Image
-                  src="/consultation.webp"
-                  alt="Medical consultation"
-                  width={720}
-                  height={480}
-                  className="rounded-lg shadow-elegant w-full object-cover"
-                  priority
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-semibold text-foreground">
+                    Mission
+                  </h3>
+                  <div className="text-muted-foreground leading-relaxed space-y-3">
+                    <p>
+                      Care N Tour is committed to guiding patients from around
+                      the world to premium and accessible medical care in Egypt.
+                      We connect them with trusted doctors and accredited
+                      hospitals, while coordinating travel, accommodation, and
+                      follow-up in a simple and supportive way.
+                    </p>
+                    <p>
+                      Our mission is to create a safe and smooth medical journey
+                      that feels personal, well-organized, and reassuring. With
+                      a team that understands healthcare, digital services, and
+                      patient needs, we work to make every step clear,
+                      comfortable, and truly empowering.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-semibold text-foreground">
+                    Vision
+                  </h3>
+                  <div className="text-muted-foreground leading-relaxed space-y-3">
+                    <p>
+                      Our vision is to lead the medical tourism industry in a
+                      way that helps position Egypt as a trusted first-choice
+                      global destination for high-quality healthcare. We aim to
+                      offer exceptional patient experiences through verified
+                      medical partners, clear and honest information, and
+                      thoughtful, concierge-style support.
+                    </p>
+                    <p>
+                      By combining strong medical expertise and cutting-edge
+                      digital innovation with reliable coordination and a
+                      personal touch, we hope to become the most trusted partner
+                      for people seeking world-class treatment in Egypt.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
