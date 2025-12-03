@@ -1962,6 +1962,8 @@ export type Database = {
           currency: string | null;
           description: string | null;
           download_url: string | null;
+          card_image_url: string | null;
+          hero_image_url: string | null;
           duration_days: number | null;
           id: string;
           ideal_candidates: string[] | null;
@@ -1982,6 +1984,8 @@ export type Database = {
           currency?: string | null;
           description?: string | null;
           download_url?: string | null;
+          card_image_url?: string | null;
+          hero_image_url?: string | null;
           duration_days?: number | null;
           id?: string;
           ideal_candidates?: string[] | null;
@@ -2002,6 +2006,8 @@ export type Database = {
           currency?: string | null;
           description?: string | null;
           download_url?: string | null;
+          card_image_url?: string | null;
+          hero_image_url?: string | null;
           duration_days?: number | null;
           id?: string;
           ideal_candidates?: string[] | null;
