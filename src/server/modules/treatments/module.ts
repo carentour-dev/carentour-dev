@@ -16,6 +16,8 @@ type TreatmentProcedureInsert =
   Database["public"]["Tables"]["treatment_procedures"]["Insert"] & {
     pdf_url?: string | null;
     additional_notes?: string | null;
+    is_public?: boolean;
+    created_by_provider_id?: string | null;
   };
 
 const METADATA_TABLE = "treatment_metadata";
@@ -45,6 +47,8 @@ const procedureSchema = z.object({
   egyptPrice: z.coerce.number().min(0).optional(),
   successRate: z.string().optional(),
   displayOrder: z.coerce.number().int().min(0).optional(),
+  isPublic: z.boolean().optional(),
+  createdByProviderId: z.string().uuid().nullable().optional(),
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
   internationalPrices: z.array(internationalPriceSchema).default([]),
@@ -82,6 +86,11 @@ const updateTreatmentSchema = baseTreatmentSchema.partial().extend({
 });
 
 const treatmentIdSchema = z.string().uuid();
+
+const providerProcedureSchema = z.object({
+  treatmentId: z.string().uuid(),
+  procedure: procedureSchema.omit({ id: true }),
+});
 
 const upsertTreatmentGrade = async (
   treatmentId: string,
@@ -155,6 +164,79 @@ const fetchTreatmentMetadataMap = async () => {
   }
 };
 
+const buildProcedurePayloads = (
+  treatmentId: string,
+  procedures: z.infer<typeof procedureSchema>[],
+  options: {
+    startDisplayOrder?: number;
+    defaultCreatedByProviderId?: string | null;
+  } = {},
+): TreatmentProcedureInsert[] => {
+  const { startDisplayOrder = 0, defaultCreatedByProviderId = null } = options;
+
+  return procedures.map((procedure, index) => {
+    const pdfUrl =
+      typeof procedure.pdfUrl === "string" && procedure.pdfUrl.trim().length > 0
+        ? procedure.pdfUrl.trim()
+        : null;
+    const additionalNotes =
+      typeof procedure.additionalNotes === "string" &&
+      procedure.additionalNotes.trim().length > 0
+        ? procedure.additionalNotes.trim()
+        : null;
+    const createdByProviderId =
+      typeof procedure.createdByProviderId === "string" &&
+      procedure.createdByProviderId.trim().length > 0
+        ? procedure.createdByProviderId.trim()
+        : defaultCreatedByProviderId;
+
+    const displayOrder =
+      typeof procedure.displayOrder === "number"
+        ? procedure.displayOrder
+        : startDisplayOrder + index;
+
+    return {
+      treatment_id: treatmentId,
+      name: procedure.name,
+      description: procedure.description ?? null,
+      duration: procedure.duration ?? null,
+      recovery: procedure.recovery ?? null,
+      price: procedure.price ?? null,
+      egypt_price: procedure.egyptPrice ?? null,
+      success_rate: procedure.successRate ?? null,
+      candidate_requirements: procedure.candidateRequirements,
+      recovery_stages: procedure.recoveryStages,
+      international_prices: procedure.internationalPrices,
+      display_order: displayOrder,
+      pdf_url: pdfUrl,
+      additional_notes: additionalNotes,
+      is_public: procedure.isPublic ?? true,
+      created_by_provider_id: createdByProviderId,
+    };
+  });
+};
+
+const fetchNextDisplayOrder = async (treatmentId: string) => {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("treatment_procedures")
+    .select("display_order")
+    .eq("treatment_id", treatmentId)
+    .order("display_order", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to compute next procedure order",
+      error.message,
+    );
+  }
+
+  const top = data?.[0]?.display_order ?? -1;
+  return top + 1;
+};
+
 const detachLegacyProcedures = async (treatmentId: string) => {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
@@ -182,37 +264,7 @@ const upsertProcedures = async (
     throw new ApiError(400, "Treatments must include at least one procedure");
   }
 
-  const payload: TreatmentProcedureInsert[] = procedures.map(
-    (procedure, index) => {
-      const pdfUrl =
-        typeof procedure.pdfUrl === "string" &&
-        procedure.pdfUrl.trim().length > 0
-          ? procedure.pdfUrl.trim()
-          : null;
-      const additionalNotes =
-        typeof procedure.additionalNotes === "string" &&
-        procedure.additionalNotes.trim().length > 0
-          ? procedure.additionalNotes.trim()
-          : null;
-
-      return {
-        treatment_id: treatmentId,
-        name: procedure.name,
-        description: procedure.description ?? null,
-        duration: procedure.duration ?? null,
-        recovery: procedure.recovery ?? null,
-        price: procedure.price ?? null,
-        egypt_price: procedure.egyptPrice ?? null,
-        success_rate: procedure.successRate ?? null,
-        candidate_requirements: procedure.candidateRequirements,
-        recovery_stages: procedure.recoveryStages,
-        international_prices: procedure.internationalPrices,
-        display_order: procedure.displayOrder ?? index,
-        pdf_url: pdfUrl,
-        additional_notes: additionalNotes,
-      };
-    },
-  );
+  const payload = buildProcedurePayloads(treatmentId, procedures);
 
   const { error } = await supabase.from("treatment_procedures").insert(payload);
 
@@ -398,6 +450,165 @@ export const treatmentController = {
     const treatment = await fetchTreatmentWithProcedures(treatmentId);
 
     return { ...treatment, grade };
+  },
+
+  async createProviderProcedure(providerId: unknown, payload: unknown) {
+    const providerIdSchema = z.string().uuid();
+    const parsedProviderId = providerIdSchema.parse(providerId);
+    const parsed = providerProcedureSchema.parse(payload);
+
+    const supabase = getSupabaseAdmin();
+
+    const { data: provider, error: providerError } = await supabase
+      .from("service_providers")
+      .select("procedure_ids")
+      .eq("id", parsedProviderId)
+      .maybeSingle();
+
+    if (providerError) {
+      throw new ApiError(
+        500,
+        "Failed to load service provider",
+        providerError.message,
+      );
+    }
+
+    if (!provider) {
+      throw new ApiError(404, "Service provider not found");
+    }
+
+    const startOrder = await fetchNextDisplayOrder(parsed.treatmentId);
+    const [payloadToInsert] = buildProcedurePayloads(
+      parsed.treatmentId,
+      [
+        {
+          ...parsed.procedure,
+          createdByProviderId: parsedProviderId,
+          isPublic: parsed.procedure.isPublic ?? true,
+        },
+      ],
+      {
+        startDisplayOrder: startOrder,
+        defaultCreatedByProviderId: parsedProviderId,
+      },
+    );
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("treatment_procedures")
+      .insert([payloadToInsert])
+      .select("*")
+      .single();
+
+    if (insertError) {
+      throw new ApiError(
+        500,
+        "Failed to create procedure for provider",
+        insertError.message,
+      );
+    }
+
+    const existingIds = Array.isArray(provider.procedure_ids)
+      ? provider.procedure_ids.filter((id): id is string => Boolean(id))
+      : [];
+
+    if (!existingIds.includes(inserted.id)) {
+      const { error: updateError } = await supabase
+        .from("service_providers")
+        .update({ procedure_ids: [...existingIds, inserted.id] })
+        .eq("id", parsedProviderId);
+
+      if (updateError) {
+        throw new ApiError(
+          500,
+          "Failed to link procedure to provider",
+          updateError.message,
+        );
+      }
+    }
+
+    return inserted;
+  },
+
+  async deleteProviderProcedure(providerId: unknown, procedureId: unknown) {
+    const providerIdSchema = z.string().uuid();
+    const parsedProviderId = providerIdSchema.parse(providerId);
+    const parsedProcedureId = z.string().uuid().parse(procedureId);
+
+    const supabase = getSupabaseAdmin();
+
+    const { data: procedure, error: procedureError } = await supabase
+      .from("treatment_procedures")
+      .select("id, created_by_provider_id")
+      .eq("id", parsedProcedureId)
+      .maybeSingle();
+
+    if (procedureError) {
+      throw new ApiError(
+        500,
+        "Failed to load provider procedure",
+        procedureError.message,
+      );
+    }
+
+    if (!procedure) {
+      throw new ApiError(404, "Procedure not found");
+    }
+
+    if (procedure.created_by_provider_id !== parsedProviderId) {
+      throw new ApiError(403, "Procedure is not owned by this provider");
+    }
+
+    const { data: provider, error: providerError } = await supabase
+      .from("service_providers")
+      .select("procedure_ids")
+      .eq("id", parsedProviderId)
+      .maybeSingle();
+
+    if (providerError) {
+      throw new ApiError(
+        500,
+        "Failed to load service provider",
+        providerError.message,
+      );
+    }
+
+    if (!provider) {
+      throw new ApiError(404, "Service provider not found");
+    }
+
+    const sanitizedProcedureIds = (
+      Array.isArray(provider.procedure_ids) ? provider.procedure_ids : []
+    )
+      .filter((id): id is string => typeof id === "string" && id.length > 0)
+      .filter((id) => id !== parsedProcedureId);
+
+    const { error: updateError } = await supabase
+      .from("service_providers")
+      .update({ procedure_ids: sanitizedProcedureIds })
+      .eq("id", parsedProviderId);
+
+    if (updateError) {
+      throw new ApiError(
+        500,
+        "Failed to unlink procedure from provider",
+        updateError.message,
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from("treatment_procedures")
+      .delete()
+      .eq("id", parsedProcedureId);
+
+    if (deleteError) {
+      throw new ApiError(
+        500,
+        "Failed to delete provider procedure",
+        deleteError.message,
+      );
+    }
+
+    return { success: true };
   },
 
   async delete(id: unknown) {
