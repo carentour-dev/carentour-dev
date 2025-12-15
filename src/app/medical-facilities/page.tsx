@@ -35,6 +35,7 @@ type ApiResponse = {
   filters: {
     countries: string[];
     cities: string[];
+    specialties: string[];
     procedures: ProcedureOption[];
   };
 };
@@ -90,16 +91,7 @@ export default function MedicalFacilitiesPage() {
       fetchFacilities({ search, country, city, specialty, procedureId }),
   });
 
-  const specialtyOptions = useMemo(() => {
-    if (!data?.providers) return [];
-    const set = new Set<string>();
-    data.providers.forEach((provider) => {
-      (provider.specialties ?? []).forEach((spec) => {
-        if (spec) set.add(spec);
-      });
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [data?.providers]);
+  const specialtyOptions = data?.filters?.specialties ?? [];
 
   const proceduresMap = useMemo(() => {
     return buildProcedureMap(data?.filters?.procedures ?? []);
@@ -162,7 +154,7 @@ export default function MedicalFacilitiesPage() {
 
             <div className="mt-10 space-y-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
               <Input
-                placeholder="Search by facility, city, or treatment..."
+                placeholder="Search by facility, country, city, specialty or procedure..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
