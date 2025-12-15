@@ -143,6 +143,7 @@ type TreatmentWithProcedures = TreatmentRow & {
 };
 
 const QUERY_KEY = ["admin", "service-providers"] as const;
+const TREATMENTS_QUERY_KEY = ["admin", "treatments"] as const;
 
 function csvToArray(value?: string | null) {
   if (!value) return [];
@@ -159,6 +160,9 @@ export default function AdminServiceProvidersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingServiceProvider, setEditingServiceProvider] =
     useState<ServiceProviderRecord | null>(null);
+  const [deletingProcedureId, setDeletingProcedureId] = useState<string | null>(
+    null,
+  );
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -204,7 +208,7 @@ export default function AdminServiceProvidersPage() {
   });
 
   const treatmentsQuery = useQuery({
-    queryKey: ["admin", "treatments"],
+    queryKey: TREATMENTS_QUERY_KEY,
     queryFn: () =>
       adminFetch<TreatmentWithProcedures[]>("/api/admin/treatments"),
   });
@@ -217,9 +221,155 @@ export default function AdminServiceProvidersPage() {
         id: procedure.id,
         name: procedure.name,
         treatmentName: treatment.name,
+        treatmentId: treatment.id,
       })),
     );
   }, [treatmentsQuery.data]);
+
+  const providerId = editingServiceProvider?.id;
+
+  const providerProcedures = useMemo(() => {
+    if (!providerId || !treatmentsQuery.data) return [];
+
+    return treatmentsQuery.data.flatMap((treatment) =>
+      (treatment.procedures ?? [])
+        .filter((procedure) => procedure.created_by_provider_id === providerId)
+        .map((procedure) => ({
+          id: procedure.id,
+          name: procedure.name,
+          treatmentName: treatment.name,
+        })),
+    );
+  }, [providerId, treatmentsQuery.data]);
+
+  const providerProcedureForm = useForm<{
+    treatmentId: string;
+    name: string;
+    description: string;
+    price: string;
+    duration: string;
+    recovery: string;
+    egyptPrice?: number;
+    successRate: string;
+    pdfUrl: string;
+    additionalNotes: string;
+  }>({
+    resolver: zodResolver(
+      z.object({
+        treatmentId: z.string().uuid("Select a treatment"),
+        name: z.string().min(2, "Name is required"),
+        description: z.string().optional(),
+        price: z.string().optional(),
+        duration: z.string().optional(),
+        recovery: z.string().optional(),
+        egyptPrice: z.coerce.number().min(0).optional(),
+        successRate: z.string().optional(),
+        pdfUrl: z.string().optional(),
+        additionalNotes: z.string().optional(),
+      }),
+    ),
+    defaultValues: {
+      treatmentId: "",
+      name: "",
+      description: "",
+      price: "",
+      duration: "",
+      recovery: "",
+      egyptPrice: undefined,
+      successRate: "",
+      pdfUrl: "",
+      additionalNotes: "",
+    },
+  });
+
+  const createProviderProcedure = useMutation({
+    mutationFn: (payload: {
+      providerId: string;
+      data: {
+        treatmentId: string;
+        procedure: {
+          name: string;
+          description?: string;
+          price?: string;
+          duration?: string;
+          recovery?: string;
+          egyptPrice?: number;
+          successRate?: string;
+          pdfUrl?: string | null;
+          additionalNotes?: string;
+        };
+      };
+    }) =>
+      adminFetch<Database["public"]["Tables"]["treatment_procedures"]["Row"]>(
+        `/api/admin/service-providers/${payload.providerId}/procedures`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload.data),
+        },
+      ),
+    onSuccess: (procedure, variables) => {
+      invalidate(QUERY_KEY);
+      invalidate(TREATMENTS_QUERY_KEY);
+      void treatmentsQuery.refetch();
+      const newProcedureId = procedure?.id;
+      if (newProcedureId) {
+        const currentProcedures = form.getValues("procedure_ids") ?? [];
+        if (!currentProcedures.includes(newProcedureId)) {
+          form.setValue("procedure_ids", [
+            ...currentProcedures,
+            newProcedureId,
+          ]);
+        }
+      }
+      providerProcedureForm.reset();
+      toast({
+        title: "Procedure added",
+        description: "The procedure was created and linked to this provider.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add procedure",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProviderProcedure = useMutation({
+    mutationFn: (payload: { providerId: string; procedureId: string }) =>
+      adminFetch(
+        `/api/admin/service-providers/${payload.providerId}/procedures/${payload.procedureId}`,
+        {
+          method: "DELETE",
+        },
+      ),
+    onMutate: ({ procedureId }) => {
+      setDeletingProcedureId(procedureId);
+    },
+    onSuccess: (_procedure, variables) => {
+      invalidate(QUERY_KEY);
+      invalidate(TREATMENTS_QUERY_KEY);
+      void treatmentsQuery.refetch();
+      const currentProcedures = form.getValues("procedure_ids") ?? [];
+      form.setValue(
+        "procedure_ids",
+        currentProcedures.filter((id) => id !== variables.procedureId),
+      );
+      toast({
+        title: "Procedure removed",
+        description: "The provider procedure was deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete procedure",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setDeletingProcedureId(null),
+  });
 
   const createServiceProvider = useMutation({
     mutationFn: (payload: ServiceProviderPayload) =>
@@ -316,6 +466,7 @@ export default function AdminServiceProvidersPage() {
 
   const openCreateDialog = () => {
     setEditingServiceProvider(null);
+    providerProcedureForm.reset();
     form.reset({
       name: "",
       slug: "",
@@ -352,6 +503,7 @@ export default function AdminServiceProvidersPage() {
 
   const openEditDialog = (provider: ServiceProviderRecord) => {
     setEditingServiceProvider(provider);
+    providerProcedureForm.reset();
     const address = (provider.address ?? {}) as Record<string, unknown>;
     const contact = (provider.contact_info ?? {}) as Record<string, unknown>;
     const infrastructure = (provider.infrastructure ?? {}) as Record<
@@ -426,6 +578,7 @@ export default function AdminServiceProvidersPage() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingServiceProvider(null);
+    providerProcedureForm.reset();
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -505,6 +658,43 @@ export default function AdminServiceProvidersPage() {
       createServiceProvider.mutate(payload);
     }
   };
+
+  const onCreateProviderProcedure = providerProcedureForm.handleSubmit(
+    (values) => {
+      if (!editingServiceProvider?.id) {
+        toast({
+          title: "Save the provider first",
+          description: "Create the provider before adding procedures.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const payload = {
+        treatmentId: values.treatmentId.trim(),
+        procedure: {
+          name: values.name.trim(),
+          description: values.description.trim() || undefined,
+          price: values.price.trim() || undefined,
+          duration: values.duration.trim() || undefined,
+          recovery: values.recovery.trim() || undefined,
+          egyptPrice:
+            typeof values.egyptPrice === "number" &&
+            !Number.isNaN(values.egyptPrice)
+              ? values.egyptPrice
+              : undefined,
+          successRate: values.successRate.trim() || undefined,
+          pdfUrl: values.pdfUrl.trim() || undefined,
+          additionalNotes: values.additionalNotes.trim() || undefined,
+        },
+      };
+
+      createProviderProcedure.mutate({
+        providerId: editingServiceProvider.id,
+        data: payload,
+      });
+    },
+  );
 
   return (
     <div className="space-y-6">
@@ -1045,6 +1235,290 @@ export default function AdminServiceProvidersPage() {
                     );
                   }}
                 />
+
+                <div className="rounded-lg border border-border/60 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Create a procedure for this provider
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Adds a provider-owned procedure and links it to this
+                        profile.
+                      </p>
+                    </div>
+                  </div>
+                  {editingServiceProvider?.id ? (
+                    <div className="space-y-4">
+                      <Form {...providerProcedureForm}>
+                        <div
+                          className="space-y-3"
+                          role="group"
+                          aria-label="Create provider procedure"
+                        >
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="treatmentId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Treatment</FormLabel>
+                                  <Select
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select treatment" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(treatmentsQuery.data ?? []).map(
+                                        (treatment) => (
+                                          <SelectItem
+                                            key={treatment.id}
+                                            value={treatment.id}
+                                          >
+                                            {treatment.name}
+                                          </SelectItem>
+                                        ),
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Procedure name</FormLabel>
+                                  <Input
+                                    placeholder="Coronary Bypass (provider specific)"
+                                    {...field}
+                                  />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <Textarea
+                                  rows={3}
+                                  placeholder="Brief details for this provider's procedure."
+                                  {...field}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="price"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Price label</FormLabel>
+                                  <Input placeholder="$12,000" {...field} />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="egyptPrice"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Egypt price (USD)</FormLabel>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    value={
+                                      typeof field.value === "number"
+                                        ? field.value
+                                        : (field.value ?? "")
+                                    }
+                                    onChange={(event) =>
+                                      field.onChange(
+                                        event.target.value === ""
+                                          ? undefined
+                                          : Number(event.target.value),
+                                      )
+                                    }
+                                  />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="duration"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Duration</FormLabel>
+                                  <Input placeholder="4-6 hours" {...field} />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="recovery"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Recovery</FormLabel>
+                                  <Input placeholder="6-8 weeks" {...field} />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="successRate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Success rate</FormLabel>
+                                  <Input placeholder="95%" {...field} />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="pdfUrl"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    Procedure PDF (optional)
+                                  </FormLabel>
+                                  <Input
+                                    placeholder="https://..."
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={providerProcedureForm.control}
+                              name="additionalNotes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Additional notes</FormLabel>
+                                  <Input
+                                    placeholder="Notes for provider patients"
+                                    {...field}
+                                  />
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              onClick={onCreateProviderProcedure}
+                              disabled={createProviderProcedure.isPending}
+                            >
+                              {createProviderProcedure.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : null}
+                              Add provider procedure
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => providerProcedureForm.reset()}
+                              disabled={createProviderProcedure.isPending}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                        </div>
+                      </Form>
+
+                      <div className="space-y-2 border-t border-border/60 pt-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-foreground">
+                            Provider procedures
+                          </h4>
+                          <span className="text-xs text-muted-foreground">
+                            {providerProcedures.length} total
+                          </span>
+                        </div>
+                        {treatmentsQuery.isLoading ? (
+                          <p className="text-xs text-muted-foreground">
+                            Loading procedures...
+                          </p>
+                        ) : providerProcedures.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No provider-owned procedures yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {providerProcedures.map((procedure) => (
+                              <div
+                                key={procedure.id}
+                                className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2"
+                              >
+                                <div className="space-y-0.5">
+                                  <p className="text-sm font-medium text-foreground">
+                                    {procedure.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {procedure.treatmentName}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={deleteProviderProcedure.isPending}
+                                  onClick={() => {
+                                    if (!providerId) return;
+                                    deleteProviderProcedure.mutate({
+                                      providerId,
+                                      procedureId: procedure.id,
+                                    });
+                                  }}
+                                  aria-label={`Delete ${procedure.name}`}
+                                >
+                                  {deleteProviderProcedure.isPending &&
+                                  deletingProcedureId === procedure.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Save the provider before adding provider-owned procedures.
+                    </p>
+                  )}
+                </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
