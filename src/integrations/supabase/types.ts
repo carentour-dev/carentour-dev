@@ -1914,6 +1914,7 @@ export type Database = {
         Row: {
           additional_notes: string | null;
           candidate_requirements: string[] | null;
+          created_by_provider_id: string | null;
           created_at: string;
           description: string | null;
           display_order: number;
@@ -1921,6 +1922,7 @@ export type Database = {
           egypt_price: number | null;
           id: string;
           international_prices: Json | null;
+          is_public: boolean;
           name: string;
           pdf_url: string | null;
           price: string | null;
@@ -1933,6 +1935,7 @@ export type Database = {
         Insert: {
           additional_notes?: string | null;
           candidate_requirements?: string[] | null;
+          created_by_provider_id?: string | null;
           created_at?: string;
           description?: string | null;
           display_order?: number;
@@ -1940,6 +1943,7 @@ export type Database = {
           egypt_price?: number | null;
           id?: string;
           international_prices?: Json | null;
+          is_public?: boolean;
           name: string;
           pdf_url?: string | null;
           price?: string | null;
@@ -1952,6 +1956,7 @@ export type Database = {
         Update: {
           additional_notes?: string | null;
           candidate_requirements?: string[] | null;
+          created_by_provider_id?: string | null;
           created_at?: string;
           description?: string | null;
           display_order?: number;
@@ -1959,6 +1964,7 @@ export type Database = {
           egypt_price?: number | null;
           id?: string;
           international_prices?: Json | null;
+          is_public?: boolean;
           name?: string;
           pdf_url?: string | null;
           price?: string | null;
@@ -1974,6 +1980,13 @@ export type Database = {
             columns: ["treatment_id"];
             isOneToOne: false;
             referencedRelation: "treatments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treatment_procedures_created_by_provider_id_fkey";
+            columns: ["created_by_provider_id"];
+            isOneToOne: false;
+            referencedRelation: "service_providers";
             referencedColumns: ["id"];
           },
         ];
