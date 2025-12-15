@@ -37,6 +37,11 @@ export const DEFAULT_NAVIGATION_ENTRIES: Array<{
   { slug: "home", href: "/", label: "Home" },
   { slug: "about", href: "/about", label: "About Us" },
   { slug: "treatments", href: "/treatments", label: "Treatments" },
+  {
+    slug: "medical-facilities",
+    href: "/medical-facilities",
+    label: "Medical Facilities",
+  },
   { slug: "doctors", href: "/doctors", label: "Our Doctors" },
   { slug: "stories", href: "/stories", label: "Patient Stories" },
   { slug: "plan", href: "/plan", label: "Plan Your Trip" },
