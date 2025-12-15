@@ -21,21 +21,37 @@ const jsonSchema: z.ZodType<Json> = z.lazy(() =>
 
 const jsonRecord = jsonSchema.optional();
 const stringArray = z.array(z.string()).optional();
+const nullableString = z.string().optional().nullable();
+const nullableRating = z.coerce.number().min(0).max(5).optional().nullable();
+const nullableReviewCount = z.coerce
+  .number()
+  .int()
+  .min(0)
+  .optional()
+  .nullable();
 
 const createServiceProviderSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
   facility_type: z.string().min(2),
-  description: z.string().optional(),
+  country_code: nullableString,
+  city: nullableString,
+  description: nullableString,
+  overview: nullableString,
   address: jsonRecord,
   contact_info: jsonRecord,
   coordinates: jsonRecord,
   amenities: stringArray,
   specialties: stringArray,
+  facilities: stringArray,
+  infrastructure: jsonRecord,
+  logo_url: z.string().optional().nullable(),
+  gallery_urls: stringArray,
+  procedure_ids: stringArray,
   images: jsonRecord,
-  is_partner: z.boolean().optional(),
-  rating: z.coerce.number().min(0).max(5).optional(),
-  review_count: z.coerce.number().int().min(0).optional(),
+  is_partner: z.boolean().optional().nullable(),
+  rating: nullableRating,
+  review_count: nullableReviewCount,
 });
 
 const updateServiceProviderSchema = createServiceProviderSchema.partial();
@@ -55,12 +71,23 @@ function normalizeServiceProviderForCreate(payload: ParsedServiceProvider) {
     name: trimString(payload.name),
     slug: trimString(payload.slug),
     facility_type: trimString(payload.facility_type),
+    country_code: payload.country_code?.trim() ?? null,
+    city: payload.city?.trim() ?? null,
     description: payload.description?.trim() ?? null,
+    overview: payload.overview?.trim() ?? null,
     address: payload.address ?? null,
     contact_info: payload.contact_info ?? null,
     coordinates: payload.coordinates ?? null,
     amenities: sanitizeStringArray(payload.amenities) ?? [],
     specialties: sanitizeStringArray(payload.specialties) ?? [],
+    facilities: sanitizeStringArray(payload.facilities) ?? [],
+    infrastructure: payload.infrastructure ?? null,
+    logo_url:
+      typeof payload.logo_url === "string" && payload.logo_url.trim().length > 0
+        ? payload.logo_url.trim()
+        : null,
+    gallery_urls: sanitizeStringArray(payload.gallery_urls) ?? [],
+    procedure_ids: sanitizeStringArray(payload.procedure_ids) ?? [],
     images: (payload.images as Json | null | undefined) ?? null,
     is_partner: payload.is_partner ?? true,
     rating: payload.rating ?? null,
@@ -83,6 +110,24 @@ function normalizeServiceProviderForUpdate(
     sanitized.address = payload.address ?? null;
   if (payload.contact_info !== undefined)
     sanitized.contact_info = payload.contact_info ?? null;
+  if (payload.country_code !== undefined)
+    sanitized.country_code = payload.country_code?.trim() ?? null;
+  if (payload.city !== undefined) sanitized.city = payload.city?.trim() ?? null;
+  if (payload.overview !== undefined)
+    sanitized.overview = payload.overview?.trim() ?? null;
+  if (payload.facilities !== undefined)
+    sanitized.facilities = sanitizeStringArray(payload.facilities) ?? [];
+  if (payload.infrastructure !== undefined)
+    sanitized.infrastructure = payload.infrastructure ?? null;
+  if (payload.logo_url !== undefined)
+    sanitized.logo_url =
+      typeof payload.logo_url === "string" && payload.logo_url.trim().length > 0
+        ? payload.logo_url.trim()
+        : null;
+  if (payload.gallery_urls !== undefined)
+    sanitized.gallery_urls = sanitizeStringArray(payload.gallery_urls) ?? [];
+  if (payload.procedure_ids !== undefined)
+    sanitized.procedure_ids = sanitizeStringArray(payload.procedure_ids) ?? [];
   if (payload.coordinates !== undefined)
     sanitized.coordinates = payload.coordinates ?? null;
   if (payload.amenities !== undefined)
