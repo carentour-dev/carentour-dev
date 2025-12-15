@@ -39,6 +39,45 @@ export const GET = async (req: NextRequest) => {
 
     const supabase = getSupabaseAdmin();
 
+    const searchTerm = cleanSearchTerm(parsed.search);
+
+    const procedureSearchIds = new Set<string>();
+
+    if (searchTerm) {
+      const [procedureNameMatches, treatmentNameMatches] = await Promise.all([
+        supabase
+          .from("treatment_procedures")
+          .select("id")
+          .eq("is_public", true)
+          .ilike("name", searchTerm),
+        supabase
+          .from("treatment_procedures")
+          .select("id, treatments!inner(name)")
+          .eq("is_public", true)
+          .ilike("treatments.name", searchTerm),
+      ]);
+
+      if (procedureNameMatches.error) {
+        throw procedureNameMatches.error;
+      }
+
+      if (treatmentNameMatches.error) {
+        throw treatmentNameMatches.error;
+      }
+
+      procedureNameMatches.data?.forEach((match) => {
+        if (match?.id) {
+          procedureSearchIds.add(match.id);
+        }
+      });
+
+      treatmentNameMatches.data?.forEach((match) => {
+        if (match?.id) {
+          procedureSearchIds.add(match.id);
+        }
+      });
+    }
+
     let query = supabase
       .from("service_providers")
       .select("*")
@@ -60,17 +99,9 @@ export const GET = async (req: NextRequest) => {
       query = query.contains("procedure_ids", [parsed.procedureId]);
     }
 
-    const searchTerm = cleanSearchTerm(parsed.search);
-    if (searchTerm) {
-      query = query.or(
-        [
-          `name.ilike.${searchTerm}`,
-          `city.ilike.${searchTerm}`,
-          `country_code.ilike.${searchTerm}`,
-          `facility_type.ilike.${searchTerm}`,
-        ].join(","),
-      );
-    }
+    // For search, we need to handle specialty matching separately since PostgREST
+    // doesn't support partial matching (ilike) on array columns
+    const searchLower = parsed.search?.trim().toLowerCase() ?? "";
 
     if (parsed.limit) {
       query = query.limit(parsed.limit);
@@ -82,7 +113,72 @@ export const GET = async (req: NextRequest) => {
       throw error;
     }
 
-    const providers = data ?? [];
+    let providers = data ?? [];
+
+    // Apply search filter client-side to support specialty partial matching
+    if (searchTerm && searchLower) {
+      providers = providers.filter((provider) => {
+        // Check name
+        if (
+          provider.name &&
+          (provider.name as string).toLowerCase().includes(searchLower)
+        ) {
+          return true;
+        }
+
+        // Check city
+        if (
+          provider.city &&
+          (provider.city as string).toLowerCase().includes(searchLower)
+        ) {
+          return true;
+        }
+
+        // Check country_code
+        if (
+          provider.country_code &&
+          (provider.country_code as string).toLowerCase().includes(searchLower)
+        ) {
+          return true;
+        }
+
+        // Check facility_type
+        if (
+          provider.facility_type &&
+          (provider.facility_type as string).toLowerCase().includes(searchLower)
+        ) {
+          return true;
+        }
+
+        // Check specialties (partial match)
+        const specialtiesArr = provider.specialties as string[] | null;
+        if (Array.isArray(specialtiesArr)) {
+          if (
+            specialtiesArr.some((spec) =>
+              spec.toLowerCase().includes(searchLower),
+            )
+          ) {
+            return true;
+          }
+        }
+
+        // Check procedure IDs
+        if (procedureSearchIds.size > 0) {
+          const providerProcedureIds = provider.procedure_ids as
+            | string[]
+            | null;
+          if (Array.isArray(providerProcedureIds)) {
+            if (
+              providerProcedureIds.some((id) => procedureSearchIds.has(id))
+            ) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      });
+    }
 
     const distinctProcedureIds = Array.from(
       new Set(
@@ -119,6 +215,7 @@ export const GET = async (req: NextRequest) => {
 
     const countries = new Set<string>();
     const cities = new Set<string>();
+    const specialties = new Set<string>();
 
     for (const provider of providers) {
       const address = (provider.address ?? {}) as Record<string, unknown>;
@@ -132,6 +229,15 @@ export const GET = async (req: NextRequest) => {
       if (country && country.trim()) {
         countries.add(country.trim());
       }
+
+      const providerSpecialties = provider.specialties as string[] | null;
+      if (Array.isArray(providerSpecialties)) {
+        providerSpecialties.forEach((spec) => {
+          if (spec && spec.trim()) {
+            specialties.add(spec.trim());
+          }
+        });
+      }
     }
 
     return jsonResponse({
@@ -139,6 +245,7 @@ export const GET = async (req: NextRequest) => {
       filters: {
         countries: Array.from(countries).sort((a, b) => a.localeCompare(b)),
         cities: Array.from(cities).sort((a, b) => a.localeCompare(b)),
+        specialties: Array.from(specialties).sort((a, b) => a.localeCompare(b)),
         procedures: procedureMeta.sort((a, b) => a.name.localeCompare(b.name)),
       },
     });
