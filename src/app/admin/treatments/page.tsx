@@ -63,6 +63,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 const internationalPriceSchema = z.object({
   country: z.string().min(1),
@@ -88,6 +89,9 @@ const procedureSchema = z.object({
   displayOrder: z.coerce.number().int().min(0).optional(),
   pdfUrl: z.string().nullable().optional(),
   additionalNotes: z.string().optional(),
+  createdByProviderId: z.string().uuid().nullable().optional(),
+  isPublic: z.boolean().optional(),
+  ownerProviderId: z.string().uuid().nullable().optional(),
   internationalPrices: z.array(internationalPriceSchema).default([]),
   candidateRequirements: z.array(z.string().min(1)).default([]),
   recoveryStages: z.array(recoveryStageSchema).default([]),
@@ -131,6 +135,8 @@ const treatmentSchema = z.object({
 type ProcedureFormValues = z.infer<typeof procedureSchema>;
 type TreatmentFormValues = z.infer<typeof treatmentSchema>;
 
+type ProcedurePayload = Omit<ProcedureFormValues, "ownerProviderId">;
+
 type TreatmentPayload = {
   name: string;
   slug: string;
@@ -150,13 +156,15 @@ type TreatmentPayload = {
   is_active?: boolean;
   grade: TreatmentGrade;
   ideal_candidates: string[];
-  procedures: ProcedureFormValues[];
+  procedures: ProcedurePayload[];
 };
 
 type TreatmentProcedureRecord =
   Database["public"]["Tables"]["treatment_procedures"]["Row"] & {
     pdf_url?: string | null;
     additional_notes?: string | null;
+    is_public?: boolean | null;
+    created_by_provider_id?: string | null;
   };
 
 type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"] & {
@@ -190,6 +198,9 @@ const createEmptyProcedure = (): ProcedureFormValues => ({
   internationalPrices: [],
   candidateRequirements: [],
   recoveryStages: [],
+  createdByProviderId: null,
+  ownerProviderId: null,
+  isPublic: true,
 });
 
 const createDefaultFormValues = (): TreatmentFormValues => ({
@@ -318,6 +329,21 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
   } else {
     rawPdfUrl = undefined;
   }
+
+  const createdByProviderId =
+    typeof value.created_by_provider_id === "string"
+      ? value.created_by_provider_id
+      : typeof value.createdByProviderId === "string"
+        ? value.createdByProviderId
+        : null;
+
+  const isPublic =
+    typeof value.is_public === "boolean"
+      ? value.is_public
+      : typeof value.isPublic === "boolean"
+        ? value.isPublic
+        : true;
+
   const rawAdditionalNotes =
     typeof value.additionalNotes === "string"
       ? value.additionalNotes
@@ -342,6 +368,9 @@ const sanitizeProcedure = (value: unknown): ProcedureFormValues => {
     recoveryStages,
     pdfUrl,
     additionalNotes,
+    createdByProviderId,
+    ownerProviderId: createdByProviderId,
+    isPublic,
   };
 };
 
@@ -458,6 +487,13 @@ const buildPayloadFromValues = (
     const cleanedSuccessRate = trimString(procedure.successRate);
     const pdfUrl = normalizeUploadValue(procedure.pdfUrl);
     const additionalNotes = trimString(procedure.additionalNotes);
+    const createdByProviderId =
+      typeof procedure.createdByProviderId === "string" &&
+      procedure.createdByProviderId.trim().length > 0
+        ? procedure.createdByProviderId.trim()
+        : null;
+    const isPublic =
+      typeof procedure.isPublic === "boolean" ? procedure.isPublic : true;
 
     return {
       name: procedure.name.trim(),
@@ -476,8 +512,10 @@ const buildPayloadFromValues = (
       recoveryStages,
       pdfUrl: pdfUrl === undefined ? undefined : pdfUrl,
       additionalNotes: additionalNotes ?? undefined,
+      createdByProviderId,
+      isPublic,
       id: procedure.id,
-    } satisfies ProcedureFormValues;
+    };
   });
 
   return {
@@ -1738,6 +1776,80 @@ function ProcedureFields({
           )}
         />
       </div>
+
+      <FormField
+        control={form.control}
+        name={`procedures.${index}.isPublic`}
+        render={({ field }) => {
+          const createdByProviderId = form.watch(
+            `procedures.${index}.createdByProviderId`,
+          );
+          const ownerProviderId = form.watch(
+            `procedures.${index}.ownerProviderId`,
+          );
+
+          const fallbackProviderId =
+            typeof createdByProviderId === "string" &&
+            createdByProviderId.length > 0
+              ? createdByProviderId
+              : typeof ownerProviderId === "string" &&
+                  ownerProviderId.length > 0
+                ? ownerProviderId
+                : null;
+
+          const isVisibleOnTreatments =
+            (field.value ?? true) && !createdByProviderId;
+
+          return (
+            <FormItem className="flex flex-col gap-2 rounded-lg border border-dashed border-border/80 p-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <FormLabel className="text-sm">
+                    Show on treatments pages
+                  </FormLabel>
+                  <FormDescription className="text-xs">
+                    Turn on to include this procedure on public treatment pages.
+                  </FormDescription>
+                </div>
+                <Switch
+                  checked={isVisibleOnTreatments}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+
+                    if (checked && createdByProviderId) {
+                      form.setValue(
+                        `procedures.${index}.createdByProviderId`,
+                        null,
+                        { shouldDirty: true, shouldTouch: true },
+                      );
+                    } else if (
+                      !checked &&
+                      !createdByProviderId &&
+                      fallbackProviderId
+                    ) {
+                      form.setValue(
+                        `procedures.${index}.createdByProviderId`,
+                        fallbackProviderId,
+                        { shouldDirty: true, shouldTouch: true },
+                      );
+                    }
+                  }}
+                />
+              </div>
+              {createdByProviderId ? (
+                <p className="text-xs text-muted-foreground">
+                  Linked to provider ID {createdByProviderId}
+                </p>
+              ) : null}
+              {!isVisibleOnTreatments && !createdByProviderId ? (
+                <p className="text-xs text-muted-foreground">
+                  Hidden from public treatment pages.
+                </p>
+              ) : null}
+            </FormItem>
+          );
+        }}
+      />
 
       <FormField
         control={form.control}
