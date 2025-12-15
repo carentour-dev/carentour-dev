@@ -6,11 +6,16 @@ import {
   type NavigationQueryResult,
 } from "@/lib/navigation";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { unstable_noStore as noStore } from "next/cache";
 
 const NAVIGATION_COLUMNS =
   "id,label,href,slug,status,position,kind,cms_page_id";
 
 export async function loadPublicNavigationLinks(): Promise<NavigationQueryResult> {
+  // Navigation updates (like hiding/showing links) should appear immediately.
+  // Disable Next.js fetch caching so we always render with fresh data.
+  noStore();
+
   try {
     const supabase = getSupabaseAdmin();
 
