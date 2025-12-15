@@ -39,7 +39,8 @@ export const fetchPublicServiceProviderBySlug = cache(
       const { data: rows, error: procedureError } = await supabase
         .from("treatment_procedures")
         .select("id, name, treatment_id, treatments(name)")
-        .in("id", procedureIds);
+        .in("id", procedureIds)
+        .eq("is_public", true);
 
       if (procedureError) {
         throw procedureError;
