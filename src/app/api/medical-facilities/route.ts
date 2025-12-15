@@ -100,7 +100,8 @@ export const GET = async (req: NextRequest) => {
       const { data: procedureRows, error: procedureError } = await supabase
         .from("treatment_procedures")
         .select("id, name, treatment_id, treatments(name)")
-        .in("id", distinctProcedureIds);
+        .in("id", distinctProcedureIds)
+        .eq("is_public", true);
 
       if (procedureError) {
         throw procedureError;
