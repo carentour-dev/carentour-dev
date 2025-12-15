@@ -9,6 +9,8 @@ type RawTreatmentRow = TreatmentRow & {
 type RawTreatmentProcedureRow = TreatmentProcedureRow & {
   pdf_url?: string | null;
   additional_notes?: string | null;
+  is_public?: boolean | null;
+  created_by_provider_id?: string | null;
 };
 
 export type TreatmentProcedure = {
@@ -34,6 +36,8 @@ export type TreatmentProcedure = {
     currency: string;
   }[];
   displayOrder: number;
+  createdByProviderId: string | null;
+  isPublic: boolean;
 };
 
 export type NormalizedTreatment = {
@@ -64,6 +68,14 @@ const isNonEmptyString = (value: unknown): value is string =>
 const normalizeProcedureRow = (
   row: RawTreatmentProcedureRow,
 ): TreatmentProcedure => {
+  const createdByProviderId =
+    typeof row.created_by_provider_id === "string" &&
+    row.created_by_provider_id.trim().length > 0
+      ? row.created_by_provider_id
+      : null;
+
+  const isPublic = row.is_public !== false;
+
   const recoveryStagesArray = Array.isArray(row.recovery_stages)
     ? (row.recovery_stages as unknown[])
         .map((stage) => {
@@ -161,6 +173,8 @@ const normalizeProcedureRow = (
     recoveryStages: recoveryStagesArray,
     internationalPrices: internationalPricesArray,
     displayOrder: typeof row.display_order === "number" ? row.display_order : 0,
+    createdByProviderId,
+    isPublic,
   };
 };
 
@@ -174,7 +188,12 @@ export const normalizeTreatment = (
         .map((entry) => entry.trim())
     : [];
 
-  const procedures = procedureRows
+  const visibleProcedures = procedureRows.filter(
+    (procedure) =>
+      procedure.created_by_provider_id == null && procedure.is_public !== false,
+  );
+
+  const procedures = visibleProcedures
     .map((row) => normalizeProcedureRow(row))
     .sort((a, b) => a.displayOrder - b.displayOrder);
   const downloadUrl =
