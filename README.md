@@ -598,23 +598,21 @@ The project can be deployed to any platform that supports Next.js:
 
 ---
 
-## ✅ WhatsApp Widget Verification
+## ✅ WhatsApp CTA Verification
 
-Follow these steps after installing dependencies (`npm install`) to confirm the widget works across breakpoints.
+Follow these steps after installing dependencies (`npm install`) to confirm the floating click-to-chat CTA works across breakpoints.
 
 ### Desktop
 
 1. Start the dev server with `npm run dev` and open `http://localhost:3000`.
-2. Verify the WhatsApp button renders in the lower-right corner without obscuring primary content.
-3. Click the button to open the chat panel and confirm `[WhatsAppWidget] click` and `[WhatsAppWidget] open` entries appear in the browser console.
-4. Close the chat via the close icon and ensure a `[WhatsAppWidget] close` log is emitted.
+2. Verify the WhatsApp CTA renders in the lower-right corner without obscuring primary content.
+3. Click the CTA and confirm WhatsApp Web (or the desktop app) opens in a new tab with the prefilled message; `[WhatsAppCTA] click` should appear in the console.
 
 ### Mobile (Responsive Emulation)
 
-1. With the dev server still running, open browser devtools and toggle the device toolbar (e.g., Chrome: `Cmd+Shift+M`).
-2. Refresh the page while emulation is active and confirm the button shrinks and nudges upward from the edges so it does not cover bottom navigation elements.
-3. Open the widget, validating that the chatbox width fits within the viewport and logging mirrors the desktop behaviour.
-4. Close the widget to ensure the `[WhatsAppWidget] close` log fires again.
+1. With the dev server running, open browser devtools and toggle the device toolbar (e.g., Chrome: `Cmd+Shift+M`).
+2. Refresh while emulation is active and confirm the CTA stays padded from edges and does not cover bottom navigation.
+3. Tap the CTA and confirm it opens WhatsApp (app/web) with the prefilled message; `[WhatsAppCTA] click` should appear in the console.
 
 ---
 
