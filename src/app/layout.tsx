@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import { AuthProvider } from "@/contexts/AuthContext";
 import QueryProvider from "@/components/QueryProvider";
-import WhatsAppWidgetGate from "@/components/WhatsAppWidgetGate";
+import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { loadPublicNavigationLinks } from "@/server/navigation";
 import { isNavigationVisible } from "@/lib/navigation";
@@ -73,7 +73,7 @@ export default async function RootLayout({
                   <Toaster />
                   <Sonner />
                   {children}
-                  <WhatsAppWidgetGate />
+                  <WhatsAppCtaGate />
                 </TooltipProvider>
               </AuthProvider>
             </QueryProvider>
