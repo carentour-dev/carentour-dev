@@ -105,7 +105,9 @@ const FeaturedTreatments = () => {
 
     const normalized = treatments.filter(
       (treatment) =>
-        treatment.isActive !== false && treatment.isFeatured === true,
+        treatment.isActive !== false &&
+        treatment.isFeatured === true &&
+        treatment.isListedPublic !== false,
     );
 
     const prepared = normalized.reduce<
