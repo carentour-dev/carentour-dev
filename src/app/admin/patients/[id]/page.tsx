@@ -70,6 +70,13 @@ const CHANNEL_LABELS: Record<string, string> = {
   unknown: "Unknown channel",
 };
 
+const DOCUMENT_SOURCE_LABELS: Record<PatientDocumentSummary["source"], string> =
+  {
+    contact_request: "Contact request",
+    start_journey: "Start Journey",
+    storage: "Storage",
+  };
+
 const CREATED_BY_FALLBACK_LABELS: Record<string, string> = {
   portal_signup: "Self signup",
   admin_console: "Admin console",
@@ -882,9 +889,8 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {document.source === "start_journey"
-                                ? "Start Journey"
-                                : "Storage"}
+                              {DOCUMENT_SOURCE_LABELS[document.source] ??
+                                document.source}
                             </Badge>
                           </TableCell>
                           <TableCell>
