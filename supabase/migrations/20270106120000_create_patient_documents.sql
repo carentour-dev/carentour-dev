@@ -35,18 +35,37 @@ BEGIN
             FOR ALL
             TO authenticated
             USING (
-                user_id = auth.uid()
+                user_id = (SELECT auth.uid())
                 OR (
                     patient_id IN (
-                        SELECT id FROM public.patients WHERE user_id = auth.uid()
+                        SELECT id FROM public.patients WHERE user_id = (SELECT auth.uid())
                     )
                 )
             )
             WITH CHECK (
-                user_id = auth.uid()
+                user_id = (SELECT auth.uid())
                 OR (
                     patient_id IN (
-                        SELECT id FROM public.patients WHERE user_id = auth.uid()
+                        SELECT id FROM public.patients WHERE user_id = (SELECT auth.uid())
+                    )
+                )
+            );
+    ELSE
+        ALTER POLICY "Allow patient to manage own documents"
+            ON public.patient_documents
+            USING (
+                user_id = (SELECT auth.uid())
+                OR (
+                    patient_id IN (
+                        SELECT id FROM public.patients WHERE user_id = (SELECT auth.uid())
+                    )
+                )
+            )
+            WITH CHECK (
+                user_id = (SELECT auth.uid())
+                OR (
+                    patient_id IN (
+                        SELECT id FROM public.patients WHERE user_id = (SELECT auth.uid())
                     )
                 )
             );
