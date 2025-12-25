@@ -74,6 +74,7 @@ const baseTreatmentSchema = z.object({
   success_rate: z.coerce.number().min(0).max(100).optional(),
   is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  is_listed_public: z.boolean().optional(),
   grade: gradeSchema.default("grade_c"),
 });
 
@@ -371,6 +372,7 @@ export const treatmentController = {
       success_rate: parsed.success_rate ?? null,
       is_featured: parsed.is_featured ?? false,
       is_active: parsed.is_active ?? true,
+      is_listed_public: parsed.is_listed_public ?? true,
       ideal_candidates: parsed.ideal_candidates ?? [],
     };
 
@@ -430,6 +432,8 @@ export const treatmentController = {
       updatePayload.is_featured = parsed.is_featured;
     if (parsed.is_active !== undefined)
       updatePayload.is_active = parsed.is_active;
+    if (parsed.is_listed_public !== undefined)
+      updatePayload.is_listed_public = parsed.is_listed_public;
     if (parsed.ideal_candidates !== undefined) {
       updatePayload.ideal_candidates = parsed.ideal_candidates ?? [];
     }
