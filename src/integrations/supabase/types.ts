@@ -2006,6 +2006,7 @@ export type Database = {
           ideal_candidates: string[] | null;
           is_active: boolean | null;
           is_featured: boolean;
+          is_listed_public: boolean;
           name: string;
           overview: string | null;
           recovery_time_days: number | null;
@@ -2028,6 +2029,7 @@ export type Database = {
           ideal_candidates?: string[] | null;
           is_active?: boolean | null;
           is_featured?: boolean;
+          is_listed_public?: boolean;
           name: string;
           overview?: string | null;
           recovery_time_days?: number | null;
@@ -2050,6 +2052,7 @@ export type Database = {
           ideal_candidates?: string[] | null;
           is_active?: boolean | null;
           is_featured?: boolean;
+          is_listed_public?: boolean;
           name?: string;
           overview?: string | null;
           recovery_time_days?: number | null;
