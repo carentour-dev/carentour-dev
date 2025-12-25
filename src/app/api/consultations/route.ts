@@ -25,6 +25,21 @@ const consultationSchema = z.object({
   medicalReports: z.string().optional(),
   contactPreference: z.string().optional(),
   additionalQuestions: z.string().optional(),
+  documents: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.literal("medical_records"),
+        originalName: z.string(),
+        storedName: z.string(),
+        path: z.string(),
+        bucket: z.string(),
+        size: z.number().nonnegative(),
+        url: z.string().nullable(),
+        uploadedAt: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 const splitFullName = (
@@ -97,6 +112,12 @@ export const POST = async (req: NextRequest) => {
     const { firstName, lastName } = splitFullName(payload.fullName);
 
     const healthBackground = payload.healthBackground.trim();
+    const documents = payload.documents ?? [];
+    const documentNames = documents
+      .map((doc) => doc.originalName)
+      .filter((name) => typeof name === "string" && name.length > 0);
+    const attachmentsSummary =
+      documentNames.length > 0 ? documentNames.join(", ") : null;
 
     const portalMetadata =
       payload.treatmentId || payload.procedure
@@ -120,7 +141,7 @@ export const POST = async (req: NextRequest) => {
       health_background: healthBackground,
       budget_range: payload.budgetRange,
       companions: payload.companions,
-      medical_reports: payload.medicalReports,
+      medical_reports: payload.medicalReports ?? attachmentsSummary,
       contact_preference: payload.contactPreference,
       additional_questions: payload.additionalQuestions,
       message: healthBackground,
@@ -129,6 +150,7 @@ export const POST = async (req: NextRequest) => {
       patient_id: patientId,
       origin: user ? "portal" : undefined,
       portal_metadata: portalMetadata,
+      documents: documents.length > 0 ? documents : null,
     });
 
     const { error: emailError } = await supabaseAdmin.functions.invoke(
@@ -151,6 +173,8 @@ export const POST = async (req: NextRequest) => {
           medicalReports: payload.medicalReports,
           contactPreference: payload.contactPreference,
           additionalQuestions: payload.additionalQuestions,
+          attachmentsSummary,
+          documents,
           requestType: "consultation",
           portalMetadata,
           skipLogging: true,
