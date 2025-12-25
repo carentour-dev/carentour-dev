@@ -235,6 +235,7 @@ export default function AdminPatientsPage() {
   const [startJourneyLinkId, setStartJourneyLinkId] = useState<string | null>(
     null,
   );
+  const [requestLinkId, setRequestLinkId] = useState<string | null>(null);
   const [statusChangeTarget, setStatusChangeTarget] = useState<{
     patient: PatientRecord;
     nextStatus: PatientStatus;
@@ -298,7 +299,28 @@ export default function AdminPatientsPage() {
       }),
     onSuccess: async (patient, payload) => {
       const startJourneyId = startJourneyLinkId;
-      let linkError: Error | null = null;
+      const contactRequestId = requestLinkId;
+      const linkIssues: string[] = [];
+
+      if (contactRequestId) {
+        try {
+          await adminFetch(`/api/admin/requests/${contactRequestId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ patient_id: patient.id }),
+          });
+          invalidate(["admin", "contact-requests"]);
+        } catch (error) {
+          linkIssues.push(
+            `Contact request: ${
+              error instanceof Error
+                ? error.message
+                : "Failed to link the request to the patient."
+            }`,
+          );
+        } finally {
+          setRequestLinkId(null);
+        }
+      }
 
       if (startJourneyId) {
         try {
@@ -308,10 +330,13 @@ export default function AdminPatientsPage() {
           });
           invalidate(["admin", "start-journey-submissions"]);
         } catch (error) {
-          linkError =
-            error instanceof Error
-              ? error
-              : new Error("Failed to link Start Journey submission.");
+          linkIssues.push(
+            `Start Journey: ${
+              error instanceof Error
+                ? error.message
+                : "Failed to link Start Journey submission."
+            }`,
+          );
         } finally {
           setStartJourneyLinkId(null);
         }
@@ -324,10 +349,12 @@ export default function AdminPatientsPage() {
         description: `${payload?.full_name ?? "Patient"} has been captured.`,
       });
 
-      if (linkError) {
+      if (linkIssues.length > 0) {
         toast({
           title: "Linking issue",
-          description: `${linkError.message} Link the Start Journey submission manually from the Start Journey tab.`,
+          description: `${linkIssues.join(
+            " ",
+          )} Link manually from the Requests or Start Journey tab.`,
           variant: "destructive",
         });
       }
@@ -439,6 +466,7 @@ export default function AdminPatientsPage() {
       portal_password_confirm: "",
       status: PATIENT_STATUS.potential,
     });
+    setRequestLinkId(null);
     setDialogOpen(true);
   };
 
@@ -467,6 +495,7 @@ export default function AdminPatientsPage() {
     setDialogOpen(false);
     setEditingPatient(null);
     setStartJourneyLinkId(null);
+    setRequestLinkId(null);
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -500,6 +529,7 @@ export default function AdminPatientsPage() {
     const fromStartJourneyId = (
       searchParams.get("fromStartJourneyId") ?? ""
     ).trim();
+    const fromRequestId = (searchParams.get("fromRequestId") ?? "").trim();
 
     const normalizedDateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirthParam)
       ? dateOfBirthParam
@@ -521,10 +551,14 @@ export default function AdminPatientsPage() {
     const normalizedStartJourneyId = UUID_PATTERN.test(fromStartJourneyId)
       ? fromStartJourneyId
       : null;
+    const normalizedRequestId = UUID_PATTERN.test(fromRequestId)
+      ? fromRequestId
+      : null;
 
     if (normalizedStartJourneyId) {
       setStartJourneyLinkId(normalizedStartJourneyId);
     }
+    setRequestLinkId(normalizedRequestId);
 
     setEditingPatient(null);
     setDialogOpen(true);
