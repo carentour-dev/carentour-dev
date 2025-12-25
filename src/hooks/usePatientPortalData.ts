@@ -56,6 +56,7 @@ type PatientPortalJourneySubmission = Pick<
   | "procedure_name"
   | "origin"
   | "notes"
+  | "documents"
   | "created_at"
   | "updated_at"
   | "resolved_at"
@@ -338,7 +339,7 @@ const fetchPatientPortalSnapshot = async (
     supabase
       .from("start_journey_submissions")
       .select(
-        "id, user_id, patient_id, status, treatment_name, procedure_name, origin, notes, created_at, updated_at, resolved_at",
+        "id, user_id, patient_id, status, treatment_name, procedure_name, origin, notes, documents, created_at, updated_at, resolved_at",
       )
       .or(`user_id.eq.${user.id},patient_id.eq.${patient.id}`)
       .order("created_at", { ascending: false }),
