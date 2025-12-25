@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
@@ -50,6 +51,7 @@ const createContactRequestSchema = z.object({
   patient_id: optionalUuid,
   origin: originSchema,
   portal_metadata: jsonSchema.optional(),
+  documents: jsonSchema.optional(),
   status: statusSchema.optional(),
 });
 
@@ -71,6 +73,7 @@ const updateContactRequestSchema = z
     patient_id: optionalUuid,
     origin: originSchema,
     portal_metadata: jsonSchema.optional(),
+    documents: jsonSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields provided for update",
@@ -118,6 +121,93 @@ const sanitizeOrigin = (
 };
 
 export const CONTACT_REQUEST_STATUSES = STATUS_VALUES;
+const PATIENT_DOCUMENT_BUCKET = "patient-documents";
+
+type ContactRequestDocument = {
+  id?: string;
+  type?: string;
+  originalName?: string;
+  storedName?: string;
+  path?: string;
+  bucket?: string;
+  size?: number;
+  url?: string | null;
+  uploadedAt?: string;
+};
+
+const normalizeDocuments = (value: unknown): ContactRequestDocument[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is ContactRequestDocument => {
+    if (!item || typeof item !== "object") return false;
+    const candidate = item as ContactRequestDocument;
+    return (
+      typeof candidate.path === "string" &&
+      candidate.path.length > 0 &&
+      typeof candidate.bucket === "string" &&
+      candidate.bucket.length > 0
+    );
+  });
+};
+
+const moveDocumentsToPatientFolder = async (
+  documents: ContactRequestDocument[],
+  patientId: string,
+) => {
+  if (!patientId || documents.length === 0) return documents;
+
+  const supabase = getSupabaseAdmin();
+  const moved: ContactRequestDocument[] = [];
+
+  for (const doc of documents) {
+    const bucket =
+      typeof doc.bucket === "string" && doc.bucket.length > 0
+        ? doc.bucket
+        : PATIENT_DOCUMENT_BUCKET;
+    const path = doc.path ?? "";
+    if (
+      !path.startsWith("consultations/") ||
+      path.startsWith(`consultations/${patientId}/`)
+    ) {
+      moved.push({ ...doc, bucket, path });
+      continue;
+    }
+
+    const fileName =
+      (doc.storedName && doc.storedName.trim().length > 0
+        ? doc.storedName
+        : path.split("/").pop()) ?? `file-${randomUUID().slice(0, 8)}`;
+
+    let targetPath = `consultations/${patientId}/${fileName}`;
+    let finalPath = path;
+
+    const moveOrCopy = async (from: string, to: string) => {
+      const moveResult = await supabase.storage.from(bucket).move(from, to);
+      if (!moveResult.error) return { path: to, success: true };
+
+      const copyResult = await supabase.storage.from(bucket).copy(from, to);
+      if (!copyResult.error) {
+        await supabase.storage.from(bucket).remove([from]);
+        return { path: to, success: true };
+      }
+
+      return { path: from, success: false };
+    };
+
+    const initialMove = await moveOrCopy(path, targetPath);
+
+    if (!initialMove.success) {
+      const fallbackPath = `consultations/${patientId}/${randomUUID().slice(0, 8)}-${fileName}`;
+      const fallbackMove = await moveOrCopy(path, fallbackPath);
+      finalPath = fallbackMove.path;
+    } else {
+      finalPath = initialMove.path;
+    }
+
+    moved.push({ ...doc, bucket, path: finalPath });
+  }
+
+  return moved;
+};
 
 export const contactRequestController = {
   async list(
@@ -181,8 +271,10 @@ export const contactRequestController = {
 
   async create(payload: unknown) {
     const parsed = createContactRequestSchema.parse(payload);
+    const normalizedDocuments = normalizeDocuments(parsed.documents);
 
     const insertPayload: ContactRequestInsert = {
+      documents: normalizedDocuments.length > 0 ? normalizedDocuments : null,
       first_name: trim(parsed.first_name),
       last_name: trim(parsed.last_name),
       email: trim(parsed.email).toLowerCase(),
@@ -218,6 +310,21 @@ export const contactRequestController = {
   async update(id: unknown, payload: unknown) {
     const contactRequestId = contactRequestIdSchema.parse(id);
     const parsed = updateContactRequestSchema.parse(payload);
+
+    const supabase = getSupabaseAdmin();
+    const { data: existingRequest, error: existingError } = await supabase
+      .from("contact_requests")
+      .select("patient_id, documents")
+      .eq("id", contactRequestId)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new ApiError(
+        500,
+        "Failed to load contact request",
+        existingError.message,
+      );
+    }
 
     const updatePayload: ContactRequestUpdate = {};
 
@@ -296,6 +403,29 @@ export const contactRequestController = {
       updatePayload.portal_metadata = parsed.portal_metadata ?? null;
     }
 
+    if (parsed.documents !== undefined) {
+      const normalized = normalizeDocuments(parsed.documents);
+      updatePayload.documents = normalized.length > 0 ? normalized : null;
+    }
+
+    const targetPatientId =
+      parsed.patient_id !== undefined
+        ? parsed.patient_id
+        : (existingRequest?.patient_id ?? null);
+
+    const currentDocuments =
+      updatePayload.documents !== undefined
+        ? normalizeDocuments(updatePayload.documents)
+        : normalizeDocuments(existingRequest?.documents);
+
+    if (targetPatientId && currentDocuments.length > 0) {
+      const moved = await moveDocumentsToPatientFolder(
+        currentDocuments,
+        targetPatientId,
+      );
+      updatePayload.documents = moved;
+    }
+
     if (Object.keys(updatePayload).length === 0) {
       throw new ApiError(400, "No fields provided for update");
     }
@@ -305,6 +435,33 @@ export const contactRequestController = {
 
   async delete(id: unknown) {
     const contactRequestId = contactRequestIdSchema.parse(id);
-    return contactRequestService.remove(contactRequestId);
+    const supabase = getSupabaseAdmin();
+
+    const { data: existing } = await supabase
+      .from("contact_requests")
+      .select("documents")
+      .eq("id", contactRequestId)
+      .maybeSingle();
+
+    const result = await contactRequestService.remove(contactRequestId);
+
+    const documents = normalizeDocuments(existing?.documents);
+    if (documents.length > 0) {
+      for (const doc of documents) {
+        try {
+          await supabase.storage
+            .from(doc.bucket ?? PATIENT_DOCUMENT_BUCKET)
+            .remove([doc.path ?? ""]);
+        } catch (error) {
+          console.error(
+            "[contactRequests][delete] Failed to remove attachment",
+            doc.path,
+            error,
+          );
+        }
+      }
+    }
+
+    return result;
   },
 };
