@@ -21,6 +21,7 @@ import {
   Sparkles,
   Star,
   Stethoscope,
+  FileText,
   Video,
 } from "lucide-react";
 import Header from "@/components/Header";
@@ -201,6 +202,17 @@ const storySchema = z.object({
 
 type StoryFormValues = z.infer<typeof storySchema>;
 type ProfileFormValues = z.infer<typeof profileSchema>;
+type PortalConsultationDocument = {
+  id: string;
+  originalName: string;
+  path: string;
+  bucket: string;
+  size?: number | null;
+  uploadedAt?: string | null;
+  requestId: string;
+  requestType: string | null;
+  createdAt?: string | null;
+};
 
 const sanitizePatientCountry = (value?: string | null) => {
   if (typeof value !== "string") return null;
@@ -220,6 +232,19 @@ const formatDateTime = (value: string | null | undefined) => {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+};
+
+const formatFileSize = (bytes?: number | null) => {
+  if (!Number.isFinite(bytes ?? NaN) || (bytes ?? 0) <= 0) return "";
+  const value = bytes as number;
+  const units = ["B", "KB", "MB", "GB"] as const;
+  const index = Math.min(
+    Math.floor(Math.log(value) / Math.log(1024)),
+    units.length - 1,
+  );
+  const size = value / Math.pow(1024, index);
+  const precision = size >= 10 || index === 0 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[index]}`;
 };
 
 const formatRelativeTime = (value: string | null | undefined) => {
@@ -303,7 +328,7 @@ const STAFF_ROLES = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const {
     profile,
     loading: profileLoading,
@@ -355,6 +380,9 @@ export default function DashboardPage() {
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [openingDocumentPath, setOpeningDocumentPath] = useState<string | null>(
+    null,
+  );
 
   const {
     data: treatmentOptions = [],
@@ -790,6 +818,69 @@ export default function DashboardPage() {
 
   const isLoading = authLoading || profileLoading || portalLoading;
 
+  const consultationDocuments = useMemo(() => {
+    if (!patient?.id) return [];
+    const docs: PortalConsultationDocument[] = [];
+
+    requests.forEach((request) => {
+      if (request.source !== "contact") return;
+      const contact = request.contact_request as
+        | (typeof requests)[number]["contact_request"]
+        | undefined;
+      if (!contact || contact.request_type !== "consultation") return;
+
+      const rawDocuments = Array.isArray(
+        (contact as { documents?: unknown }).documents,
+      )
+        ? ((contact as { documents?: unknown[] }).documents as unknown[])
+        : [];
+
+      rawDocuments.forEach((item) => {
+        if (!item || typeof item !== "object") return;
+        const path = (item as { path?: string }).path;
+        const bucket = (item as { bucket?: string }).bucket;
+
+        if (
+          typeof path !== "string" ||
+          path.length === 0 ||
+          typeof bucket !== "string" ||
+          bucket.length === 0
+        ) {
+          return;
+        }
+
+        const originalName =
+          (item as { originalName?: string }).originalName ||
+          (item as { storedName?: string }).storedName ||
+          path.split("/").pop() ||
+          "Attachment";
+        const size =
+          typeof (item as { size?: number }).size === "number" &&
+          Number.isFinite((item as { size?: number }).size)
+            ? (item as { size?: number }).size
+            : null;
+        const uploadedAt =
+          (item as { uploadedAt?: string }).uploadedAt ??
+          contact.created_at ??
+          null;
+
+        docs.push({
+          id: (item as { id?: string }).id ?? path,
+          originalName,
+          path,
+          bucket,
+          size,
+          uploadedAt,
+          requestId: contact.id,
+          requestType: contact.request_type ?? null,
+          createdAt: contact.created_at ?? null,
+        });
+      });
+    });
+
+    return docs;
+  }, [patient?.id, requests]);
+
   const pendingRequests = useMemo(
     () => requests.filter((request) => isActiveRequestStatus(request.status)),
     [requests],
@@ -887,6 +978,46 @@ export default function DashboardPage() {
       nationality: "",
       phone: "",
     });
+  };
+
+  const handleOpenConsultationDocument = async (
+    document: PortalConsultationDocument,
+  ) => {
+    setOpeningDocumentPath(document.path);
+    try {
+      const params = new URLSearchParams({
+        bucket: document.bucket,
+        path: document.path,
+      });
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const response = await fetch(
+        `/api/consultations/documents/view?${params.toString()}`,
+        {
+          credentials: "include",
+          headers,
+        },
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result?.url) {
+        throw new Error(result?.error ?? "Failed to generate download link.");
+      }
+
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error("Failed to open consultation document", error);
+      toast({
+        title: "Unable to open document",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setOpeningDocumentPath(null);
+    }
   };
 
   const quickActions = [
@@ -1382,6 +1513,75 @@ export default function DashboardPage() {
                           for older submissions.
                         </p>
                       ) : null}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card id="documents">
+                <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      My documents
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Download the files you attached to consultation requests.
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    {consultationDocuments.length} file
+                    {consultationDocuments.length === 1 ? "" : "s"}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  {consultationDocuments.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
+                      <p className="font-medium text-foreground">
+                        No consultation attachments
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        You can upload reports when submitting a consultation
+                        request.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {consultationDocuments.map((document) => (
+                        <div
+                          key={document.id}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              {document.originalName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDateTime(
+                                document.uploadedAt ?? document.createdAt,
+                              )}
+                              {formatFileSize(document.size)
+                                ? ` • ${formatFileSize(document.size)}`
+                                : ""}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              void handleOpenConsultationDocument(document);
+                            }}
+                            disabled={openingDocumentPath === document.path}
+                          >
+                            {openingDocumentPath === document.path ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="mr-2 h-4 w-4" />
+                            )}
+                            Download
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
