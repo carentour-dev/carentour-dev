@@ -274,6 +274,7 @@ const CONTACT_REQUEST_SELECT = `
   companions,
   assigned_to,
   portal_metadata,
+  documents,
   medical_reports,
   resolved_at,
   created_at,
@@ -919,6 +920,95 @@ export const patientController = {
     const startJourneySubmissions = dedupeById(startJourneyAccumulator);
 
     const documentsMap = new Map<string, PatientDocumentSummary>();
+
+    // Consultation request documents (contact_requests.documents)
+    for (const request of contactRequests) {
+      const rawDocuments = request.documents;
+      if (!rawDocuments || !Array.isArray(rawDocuments)) continue;
+
+      for (const raw of rawDocuments) {
+        if (!raw || typeof raw !== "object") continue;
+
+        const path =
+          typeof (raw as { path?: string }).path === "string" &&
+          (raw as { path?: string }).path!.length > 0
+            ? (raw as { path?: string }).path!
+            : null;
+        if (!path) continue;
+
+        const docId =
+          typeof (raw as { id?: string }).id === "string" &&
+          (raw as { id?: string }).id!.length > 0
+            ? (raw as { id?: string }).id!
+            : `${request.id}-${path}`;
+
+        const label =
+          typeof (raw as { originalName?: string }).originalName === "string" &&
+          (raw as { originalName?: string }).originalName!.length > 0
+            ? (raw as { originalName?: string }).originalName!
+            : typeof (raw as { storedName?: string }).storedName === "string" &&
+                (raw as { storedName?: string }).storedName!.length > 0
+              ? (raw as { storedName?: string }).storedName!
+              : (path.split("/").pop() ?? "Uploaded document");
+
+        const document: PatientDocumentSummary = {
+          id: docId,
+          source: "contact_request",
+          label,
+          type:
+            typeof (raw as { type?: string }).type === "string" &&
+            (raw as { type?: string }).type!.length > 0
+              ? (raw as { type?: string }).type
+              : null,
+          uploaded_at:
+            typeof (raw as { uploadedAt?: string }).uploadedAt === "string" &&
+            (raw as { uploadedAt?: string }).uploadedAt!.length > 0
+              ? (raw as { uploadedAt?: string }).uploadedAt
+              : (request.created_at ?? null),
+          request_id: request.id,
+          bucket:
+            typeof (raw as { bucket?: string }).bucket === "string" &&
+            (raw as { bucket?: string }).bucket!.length > 0
+              ? (raw as { bucket?: string }).bucket
+              : PATIENT_DOCUMENT_BUCKET,
+          path,
+          size:
+            typeof (raw as { size?: number }).size === "number" &&
+            Number.isFinite((raw as { size?: number }).size)
+              ? (raw as { size?: number }).size
+              : null,
+          signed_url:
+            typeof (raw as { url?: string }).url === "string" &&
+            (raw as { url?: string }).url!.length > 0
+              ? (raw as { url?: string }).url
+              : null,
+          metadata: {
+            storedName:
+              typeof (raw as { storedName?: string }).storedName === "string" &&
+              (raw as { storedName?: string }).storedName!.length > 0
+                ? (raw as { storedName?: string }).storedName
+                : null,
+          },
+        };
+
+        const key = path ?? docId;
+        const existingDoc = documentsMap.get(key);
+        if (existingDoc) {
+          documentsMap.set(key, {
+            ...existingDoc,
+            request_id: existingDoc.request_id ?? document.request_id,
+            size: existingDoc.size ?? document.size ?? null,
+            signed_url: existingDoc.signed_url ?? document.signed_url ?? null,
+            metadata: {
+              ...(existingDoc.metadata ?? {}),
+              ...(document.metadata ?? {}),
+            },
+          });
+        } else {
+          documentsMap.set(key, document);
+        }
+      }
+    }
 
     for (const submission of startJourneySubmissions) {
       const rawDocuments = submission.documents;
