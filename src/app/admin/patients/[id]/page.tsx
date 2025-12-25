@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import {
   Phone,
   ShieldCheck,
   User,
+  Trash2,
 } from "lucide-react";
 import type {
   PatientDetails,
@@ -75,6 +76,7 @@ const DOCUMENT_SOURCE_LABELS: Record<PatientDocumentSummary["source"], string> =
     contact_request: "Contact request",
     start_journey: "Start Journey",
     storage: "Storage",
+    patient_portal: "Patient portal",
   };
 
 const CREATED_BY_FALLBACK_LABELS: Record<string, string> = {
@@ -164,6 +166,9 @@ export default function PatientDetailsPage() {
   const basePath = pathname.startsWith("/operations")
     ? "/operations"
     : "/admin";
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null,
+  );
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: patientDetailsKey(patientId),
@@ -181,6 +186,27 @@ export default function PatientDetailsPage() {
     () => (details ? dedupeDocuments(details.documents) : []),
     [details],
   );
+
+  const handleDeleteDocument = async (document: PatientDocumentSummary) => {
+    setDeletingDocumentId(document.id);
+    try {
+      await adminFetch(`/api/admin/patient-documents/${document.id}`, {
+        method: "DELETE",
+        body: JSON.stringify({
+          id: document.id,
+          bucket: document.bucket ?? "patient-documents",
+          path: document.path,
+          request_id: document.request_id,
+          source: document.source,
+        }),
+      });
+      await refetch();
+    } catch (err) {
+      console.error("Failed to delete patient document", err);
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
 
   if (!patientId) {
     return (
@@ -898,25 +924,42 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>{formatFileSize(document.size)}</TableCell>
                           <TableCell>
-                            {document.signed_url ? (
-                              <Button
-                                asChild
-                                size="sm"
-                                variant="outline"
-                                className="gap-1"
-                              >
-                                <a
-                                  href={document.signed_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                            <div className="flex items-center gap-2">
+                              {document.signed_url ? (
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-1"
                                 >
-                                  <FileDown className="h-4 w-4" />
-                                  Download
-                                </a>
+                                  <a
+                                    href={document.signed_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                    Download
+                                  </a>
+                                </Button>
+                              ) : (
+                                <Badge variant="ghost">Unavailable</Badge>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  void handleDeleteDocument(document);
+                                }}
+                                disabled={deletingDocumentId === document.id}
+                              >
+                                {deletingDocumentId === document.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
-                            ) : (
-                              <Badge variant="ghost">Unavailable</Badge>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
