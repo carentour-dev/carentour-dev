@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,11 +43,25 @@ import {
   HeartPulse,
   MapPin,
   Stethoscope,
+  Upload,
+  FileText,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTreatments } from "@/hooks/useTreatments";
 import { COUNTRY_OPTIONS } from "@/constants/countries";
+
+const consultationDocumentSchema = z.object({
+  id: z.string(),
+  type: z.literal("medical_records"),
+  originalName: z.string(),
+  storedName: z.string(),
+  path: z.string(),
+  bucket: z.string(),
+  size: z.number().nonnegative(),
+  url: z.string().nullable(),
+  uploadedAt: z.string(),
+});
 
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Share your full name"),
@@ -65,9 +79,11 @@ const consultationSchema = z.object({
   medicalReports: z.string().optional(),
   contactPreference: z.string().optional(),
   additionalQuestions: z.string().optional(),
+  documents: z.array(consultationDocumentSchema).optional(),
 });
 
 type ConsultationFormValues = z.infer<typeof consultationSchema>;
+type ConsultationDocument = z.infer<typeof consultationDocumentSchema>;
 
 const TRAVEL_HINTS = [
   {
@@ -90,6 +106,9 @@ const TRAVEL_HINTS = [
   },
 ];
 
+const DOCUMENT_UPLOAD_ENDPOINT = "/api/consultations/documents";
+const ALLOWED_FILE_TYPES = "application/pdf,image/png,image/jpeg,image/jpg";
+
 const splitFullName = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
 
@@ -111,7 +130,9 @@ export default function ConsultationPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const { session } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<ConsultationFormValues>({
     resolver: zodResolver(consultationSchema),
@@ -129,6 +150,7 @@ export default function ConsultationPage() {
       medicalReports: "",
       contactPreference: "",
       additionalQuestions: "",
+      documents: [],
     },
   });
   const today = new Date();
@@ -140,6 +162,7 @@ export default function ConsultationPage() {
   const treatments = useMemo(() => treatmentRows, [treatmentRows]);
 
   const selectedTreatmentId = form.watch("treatmentId");
+  const documents = form.watch("documents") ?? [];
 
   const selectedTreatment = useMemo(
     () => treatments.find((treatment) => treatment.id === selectedTreatmentId),
@@ -158,10 +181,149 @@ export default function ConsultationPage() {
     }
   }, [selectedTreatmentId, form]);
 
+  const uploadDocument = async (file: File): Promise<ConsultationDocument> => {
+    setUploadingDocuments(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const headers: Record<string, string> = {};
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(DOCUMENT_UPLOAD_ENDPOINT, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+
+    const result = (await response.json()) as {
+      document?: ConsultationDocument;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(result?.error ?? "Document upload failed");
+    }
+
+    if (!result.document) {
+      throw new Error("Upload succeeded but document was not returned.");
+    }
+
+    return result.document;
+  };
+
+  const removeDocument = async (document: ConsultationDocument) => {
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const response = await fetch(DOCUMENT_UPLOAD_ENDPOINT, {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({
+          path: document.path,
+          bucket: document.bucket,
+        }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result?.error ?? "Failed to delete document");
+      }
+
+      const remainingDocuments = (form.getValues("documents") ?? []).filter(
+        (doc) => doc.path !== document.path,
+      );
+      form.setValue("documents", remainingDocuments, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      toast({
+        title: "Attachment removed",
+        description: `${document.originalName} was deleted.`,
+      });
+    } catch (error) {
+      console.error("Failed to delete consultation document", error);
+      toast({
+        title: "Unable to delete file",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again or contact support.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDocumentSelection = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+
+    setUploadingDocuments(true);
+    try {
+      const uploads: ConsultationDocument[] = [];
+      for (const file of Array.from(fileList)) {
+        const uploaded = await uploadDocument(file);
+        uploads.push(uploaded);
+      }
+
+      const existing = form.getValues("documents") ?? [];
+      const all = [...existing, ...uploads];
+      form.setValue("documents", all, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      toast({
+        title: "Upload complete",
+        description:
+          uploads.length > 1
+            ? `${uploads.length} files uploaded successfully`
+            : `${uploads[0]?.originalName ?? "File"} uploaded successfully`,
+      });
+    } catch (error) {
+      console.error("Document upload failed:", error);
+      toast({
+        title: "Upload failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "We could not upload this file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingDocuments(false);
+    }
+  };
+
+  const formatFileSize = (bytes?: number | null) => {
+    if (!Number.isFinite(bytes ?? NaN) || (bytes ?? 0) <= 0) return "";
+    const units = ["B", "KB", "MB"];
+    const value = bytes as number;
+    const index = Math.min(
+      Math.floor(Math.log(value) / Math.log(1024)),
+      units.length - 1,
+    );
+    const size = value / Math.pow(1024, index);
+    const precision = size >= 10 || index === 0 ? 0 : 1;
+    return `${size.toFixed(precision)} ${units[index]}`;
+  };
+
   const handleSubmit = async (values: ConsultationFormValues) => {
     setIsSubmitting(true);
 
     try {
+      const documentNames =
+        values.documents
+          ?.map((doc) => doc.originalName)
+          .filter((name) => typeof name === "string" && name.length > 0) ?? [];
+      const medicalReportsInput = values.medicalReports?.trim() ?? "";
+      const medicalReports =
+        medicalReportsInput ||
+        (documentNames.length > 0 ? documentNames.join(", ") : "");
+
       const selectedTreatmentName =
         treatments.find((treatment) => treatment.id === values.treatmentId)
           ?.name ?? "";
@@ -174,6 +336,8 @@ export default function ConsultationPage() {
 
       const submissionPayload = {
         ...rest,
+        documents: values.documents ?? [],
+        medicalReports,
         treatmentId,
         procedure,
         treatment: combinedTreatment || selectedTreatmentName || procedure,
@@ -567,6 +731,102 @@ export default function ConsultationPage() {
                         )}
                       />
 
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              Upload medical reports (optional)
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              PDF, JPG, or PNG up to 10MB each. You can also
+                              paste links above.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 p-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploadingDocuments}
+                            >
+                              {uploadingDocuments
+                                ? "Uploading..."
+                                : "Add attachments"}
+                              <Upload className="ml-2 h-4 w-4" />
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              Attachments are optional and help our surgeons
+                              review faster.
+                            </p>
+                          </div>
+
+                          <Input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept={ALLOWED_FILE_TYPES}
+                            className="hidden"
+                            disabled={uploadingDocuments}
+                            onChange={(event) => {
+                              void handleDocumentSelection(event.target.files);
+                              if (event.target) {
+                                event.target.value = "";
+                              }
+                            }}
+                          />
+
+                          {documents.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              No files uploaded yet.
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {documents.map((document) => (
+                                <div
+                                  key={document.path}
+                                  className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/80 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                      <FileText className="h-4 w-4" />
+                                    </div>
+                                    <div className="text-sm">
+                                      <p className="text-foreground">
+                                        {document.originalName}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatFileSize(document.size)} •{" "}
+                                        {new Date(
+                                          document.uploadedAt,
+                                        ).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      void removeDocument(document);
+                                    }}
+                                    disabled={uploadingDocuments}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="grid gap-6 md:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -611,7 +871,7 @@ export default function ConsultationPage() {
                         type="submit"
                         size="lg"
                         className="w-full md:w-auto"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || uploadingDocuments}
                       >
                         {isSubmitting
                           ? "Submitting..."
