@@ -1173,6 +1173,107 @@ export type Database = {
           },
         ];
       };
+      patient_documents: {
+        Row: {
+          bucket: string;
+          created_at: string;
+          created_by_profile_id: string | null;
+          id: string;
+          label: string;
+          metadata: Json | null;
+          path: string;
+          patient_id: string;
+          request_id: string | null;
+          size: number | null;
+          type: string;
+          updated_at: string;
+          uploaded_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          bucket?: string;
+          created_at?: string;
+          created_by_profile_id?: string | null;
+          id?: string;
+          label: string;
+          metadata?: Json | null;
+          path: string;
+          patient_id: string;
+          request_id?: string | null;
+          size?: number | null;
+          type?: string;
+          updated_at?: string;
+          uploaded_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          bucket?: string;
+          created_at?: string;
+          created_by_profile_id?: string | null;
+          id?: string;
+          label?: string;
+          metadata?: Json | null;
+          path?: string;
+          patient_id?: string;
+          request_id?: string | null;
+          size?: number | null;
+          type?: string;
+          updated_at?: string;
+          uploaded_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_documents_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_testimonial_public";
+            referencedColumns: ["patient_id"];
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_testimonial_rollup";
+            referencedColumns: ["patient_id"];
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_documents_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "contact_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_documents_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       patient_stories: {
         Row: {
           body_markdown: string;
