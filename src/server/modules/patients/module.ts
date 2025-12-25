@@ -145,10 +145,12 @@ type StoryDetail = PatientStoryRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
   treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
 };
+type PatientDocumentRow =
+  Database["public"]["Tables"]["patient_documents"]["Row"];
 
 export type PatientDocumentSummary = {
   id: string;
-  source: "contact_request" | "start_journey" | "storage";
+  source: "contact_request" | "start_journey" | "storage" | "patient_portal";
   label: string;
   type: string | null;
   uploaded_at: string | null;
@@ -818,6 +820,7 @@ export const patientController = {
       appointmentsResult,
       reviewsResult,
       storiesResult,
+      portalDocumentsResult,
     ] = await Promise.all([
       supabase
         .from("patient_consultations")
@@ -839,6 +842,13 @@ export const patientController = {
         .select(STORY_SELECT)
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("patient_documents")
+        .select(
+          "id, label, type, bucket, path, size, uploaded_at, created_at, request_id, metadata",
+        )
+        .eq("patient_id", patientId)
+        .order("uploaded_at", { ascending: false }),
     ]);
 
     if (consultationsResult.error) {
@@ -870,6 +880,14 @@ export const patientController = {
         500,
         "Failed to load patient stories",
         storiesResult.error.message,
+      );
+    }
+
+    if (portalDocumentsResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load patient documents",
+        portalDocumentsResult.error.message,
       );
     }
 
@@ -918,6 +936,8 @@ export const patientController = {
 
     const contactRequests = dedupeById(contactAccumulator);
     const startJourneySubmissions = dedupeById(startJourneyAccumulator);
+    const portalDocuments = (portalDocumentsResult.data ??
+      []) as PatientDocumentRow[];
 
     const documentsMap = new Map<string, PatientDocumentSummary>();
 
@@ -1082,6 +1102,48 @@ export const patientController = {
         } else {
           documentsMap.set(key, document);
         }
+      }
+    }
+
+    for (const doc of portalDocuments) {
+      const key = doc.path ?? doc.id;
+      const document: PatientDocumentSummary = {
+        id: doc.id,
+        source: "patient_portal",
+        label: doc.label ?? doc.path ?? "Uploaded document",
+        type: doc.type ?? null,
+        uploaded_at: doc.uploaded_at ?? doc.created_at ?? null,
+        request_id: doc.request_id ?? null,
+        bucket: doc.bucket ?? PATIENT_DOCUMENT_BUCKET,
+        path: doc.path ?? null,
+        size:
+          typeof doc.size === "number" && Number.isFinite(doc.size)
+            ? doc.size
+            : null,
+        signed_url: null,
+        metadata:
+          doc.metadata &&
+          typeof doc.metadata === "object" &&
+          !Array.isArray(doc.metadata)
+            ? (doc.metadata as Record<string, unknown>)
+            : null,
+      };
+
+      const existingDoc = documentsMap.get(key);
+      if (existingDoc) {
+        documentsMap.set(key, {
+          ...existingDoc,
+          source: existingDoc.source ?? document.source,
+          request_id: existingDoc.request_id ?? document.request_id ?? null,
+          size: existingDoc.size ?? document.size ?? null,
+          metadata: {
+            ...(existingDoc.metadata ?? {}),
+            ...(document.metadata ?? {}),
+          },
+          uploaded_at: existingDoc.uploaded_at ?? document.uploaded_at ?? null,
+        });
+      } else {
+        documentsMap.set(key, document);
       }
     }
 
