@@ -55,6 +55,7 @@ export type NormalizedTreatment = {
   successRate?: number | null;
   isFeatured?: boolean | null;
   isActive?: boolean | null;
+  isListedPublic?: boolean | null;
   idealCandidates: string[];
   downloadUrl?: string | null;
   cardImageUrl?: string | null;
@@ -228,6 +229,7 @@ export const normalizeTreatment = (
     cardImageUrl,
     heroImageUrl,
     procedures,
+    isListedPublic: treatment.is_listed_public ?? true,
   };
 };
 
