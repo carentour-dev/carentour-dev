@@ -330,6 +330,7 @@ export type Database = {
           country: string | null;
           created_at: string;
           destination: string | null;
+          documents: Json | null;
           email: string;
           first_name: string;
           health_background: string | null;
@@ -359,6 +360,7 @@ export type Database = {
           country?: string | null;
           created_at?: string;
           destination?: string | null;
+          documents?: Json | null;
           email: string;
           first_name: string;
           health_background?: string | null;
@@ -388,6 +390,7 @@ export type Database = {
           country?: string | null;
           created_at?: string;
           destination?: string | null;
+          documents?: Json | null;
           email?: string;
           first_name?: string;
           health_background?: string | null;
