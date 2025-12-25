@@ -112,7 +112,7 @@ export const GET = async (req: NextRequest) => {
       const { data: requests } = await supabaseAdmin
         .from("contact_requests")
         .select("id, documents")
-        .or(`patient_id.eq.${patient.id},user_id.eq.${patient.user_id}`)
+        .or(`patient_id.eq.${patient.id},user_id.eq.${user.id}`)
         .not("documents", "is", null);
 
       const matched = (requests ?? []).find((request) => {
