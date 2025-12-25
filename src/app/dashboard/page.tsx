@@ -2365,7 +2365,7 @@ export default function DashboardPage() {
                     >
                       <Link href="tel:+201229503333">
                         <Phone className="mr-2 h-4 w-4" />
-                        +20 100 174 1666
+                        +20 122 9503333
                       </Link>
                     </Button>
                   </div>
