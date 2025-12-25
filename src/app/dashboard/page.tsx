@@ -995,7 +995,7 @@ export default function DashboardPage() {
           size,
           uploadedAt,
           source: "start_journey",
-          deletable: false,
+          deletable: true,
         });
       });
     });
@@ -1253,8 +1253,8 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeletePatientDocument = async (documentId: string) => {
-    setDeletingDocumentId(documentId);
+  const handleDeleteDocument = async (document: DashboardDocument) => {
+    setDeletingDocumentId(document.id);
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -1263,19 +1263,39 @@ export default function DashboardPage() {
         headers.Authorization = `Bearer ${session.access_token}`;
       }
 
-      const response = await fetch("/api/patient/documents", {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({ id: documentId }),
-      });
+      if (document.source === "start_journey") {
+        const response = await fetch("/api/patient/start-journey/documents", {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({
+            path: document.path,
+            bucket: document.bucket,
+          }),
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result?.error ?? "Failed to delete document");
+        if (!response.ok) {
+          throw new Error(result?.error ?? "Failed to delete document");
+        }
+
+        await refetch();
+      } else {
+        const response = await fetch("/api/patient/documents", {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({ id: document.id }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error ?? "Failed to delete document");
+        }
+
+        await refetchPatientDocuments();
       }
 
-      await refetchPatientDocuments();
       toast({
         title: "Document deleted",
         description: "The file was removed from your portal.",
@@ -1928,7 +1948,7 @@ export default function DashboardPage() {
                                 size="icon"
                                 variant="ghost"
                                 onClick={() => {
-                                  void handleDeletePatientDocument(document.id);
+                                  void handleDeleteDocument(document);
                                 }}
                                 disabled={
                                   deletingDocumentId === document.id ||
