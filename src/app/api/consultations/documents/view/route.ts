@@ -19,10 +19,12 @@ const moveDocumentIfNeeded = async (
   path: string,
   bucket: string,
   patientId: string,
+  targetFolder: "consultations" | "start-journey" = "consultations",
 ) => {
   const supabaseAdmin = getSupabaseAdmin();
   const fileName = path.split("/").pop() ?? `file-${randomUUID().slice(0, 8)}`;
-  const targetPath = `consultations/${patientId}/${fileName}`;
+  const targetPrefix = `${targetFolder}/${patientId}/`;
+  const targetPath = `${targetPrefix}${fileName}`;
 
   const moveOrCopy = async (from: string, to: string) => {
     const moveResult = await supabaseAdmin.storage.from(bucket).move(from, to);
@@ -42,7 +44,7 @@ const moveDocumentIfNeeded = async (
     return initial.path;
   }
 
-  const fallbackPath = `consultations/${patientId}/${randomUUID().slice(0, 8)}-${fileName}`;
+  const fallbackPath = `${targetPrefix}${randomUUID().slice(0, 8)}-${fileName}`;
   const fallback = await moveOrCopy(path, fallbackPath);
   return fallback.path;
 };
@@ -105,9 +107,16 @@ export const GET = async (req: NextRequest) => {
     }
 
     let effectivePath = parsed.path;
+    const allowedPrefixes = [
+      `consultations/${patient.id}/`,
+      `start-journey/${patient.id}/`,
+    ];
 
-    const allowedPrefix = `consultations/${patient.id}/`;
-    if (!parsed.path.startsWith(allowedPrefix)) {
+    let hasAccess = allowedPrefixes.some((prefix) =>
+      parsed.path.startsWith(prefix),
+    );
+
+    if (!hasAccess) {
       // Attempt to locate the document on a guest path and migrate it into the patient folder.
       const { data: requests } = await supabaseAdmin
         .from("contact_requests")
@@ -115,7 +124,7 @@ export const GET = async (req: NextRequest) => {
         .or(`patient_id.eq.${patient.id},user_id.eq.${user.id}`)
         .not("documents", "is", null);
 
-      const matched = (requests ?? []).find((request) => {
+      const matchedRequest = (requests ?? []).find((request) => {
         const docs = (request as { documents?: unknown }).documents;
         if (!Array.isArray(docs)) return false;
         return docs.some(
@@ -128,53 +137,104 @@ export const GET = async (req: NextRequest) => {
         | { id: string; documents?: Array<{ path?: string; bucket?: string }> }
         | undefined;
 
-      if (!matched?.documents) {
-        return NextResponse.json(
-          { error: "You do not have access to this document." },
-          { status: 403 },
+      if (matchedRequest?.documents) {
+        const targetDoc = matchedRequest.documents.find(
+          (doc) => doc?.path === parsed.path,
         );
-      }
 
-      const updatedDocs = matched.documents.map((doc) => {
-        if (!doc?.path || doc.path !== parsed.path) {
-          return doc;
-        }
-        return doc;
-      });
+        if (targetDoc?.path) {
+          const movedPath = await moveDocumentIfNeeded(
+            targetDoc.path,
+            targetDoc.bucket ?? BUCKET_ID,
+            patient.id,
+          );
+          effectivePath = movedPath;
+          hasAccess = true;
 
-      const targetDoc = matched.documents.find(
-        (doc) => doc?.path === parsed.path,
-      );
-
-      if (targetDoc?.path) {
-        const movedPath = await moveDocumentIfNeeded(
-          targetDoc.path,
-          targetDoc.bucket ?? BUCKET_ID,
-          patient.id,
-        );
-        effectivePath = movedPath;
-
-        for (let i = 0; i < updatedDocs.length; i += 1) {
-          const doc = updatedDocs[i];
-          if (doc?.path === parsed.path) {
-            updatedDocs[i] = {
+          const updatedDocs = matchedRequest.documents.map((doc) => {
+            if (!doc?.path || doc.path !== parsed.path) {
+              return doc;
+            }
+            return {
               ...doc,
               path: movedPath,
               bucket: doc.bucket ?? BUCKET_ID,
             };
+          });
+
+          await supabaseAdmin
+            .from("contact_requests")
+            .update({ documents: updatedDocs })
+            .eq("id", matchedRequest.id);
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      const { data: submissions } = await supabaseAdmin
+        .from("start_journey_submissions")
+        .select("id, documents")
+        .or(`patient_id.eq.${patient.id},user_id.eq.${user.id}`)
+        .not("documents", "is", null);
+
+      const matchedSubmission = (submissions ?? []).find((submission) => {
+        const docs = (submission as { documents?: unknown }).documents;
+        if (!Array.isArray(docs)) return false;
+        return docs.some(
+          (doc) =>
+            doc &&
+            typeof doc === "object" &&
+            (doc as { path?: string }).path === parsed.path,
+        );
+      }) as
+        | {
+            id: string;
+            documents?: Array<{ path?: string; bucket?: string | null }>;
+          }
+        | undefined;
+
+      if (matchedSubmission?.documents) {
+        const targetDoc = matchedSubmission.documents.find(
+          (doc) => doc?.path === parsed.path,
+        );
+
+        if (targetDoc?.path) {
+          hasAccess = true;
+
+          if (!parsed.path.startsWith(`start-journey/${patient.id}/`)) {
+            const movedPath = await moveDocumentIfNeeded(
+              targetDoc.path,
+              targetDoc.bucket ?? BUCKET_ID,
+              patient.id,
+              "start-journey",
+            );
+            effectivePath = movedPath;
+
+            const updatedDocs = matchedSubmission.documents.map((doc) => {
+              if (!doc?.path || doc.path !== parsed.path) {
+                return doc;
+              }
+              return {
+                ...doc,
+                path: movedPath,
+                bucket: doc.bucket ?? BUCKET_ID,
+              };
+            });
+
+            await supabaseAdmin
+              .from("start_journey_submissions")
+              .update({ documents: updatedDocs })
+              .eq("id", matchedSubmission.id);
           }
         }
-
-        await supabaseAdmin
-          .from("contact_requests")
-          .update({ documents: updatedDocs })
-          .eq("id", matched.id);
-      } else {
-        return NextResponse.json(
-          { error: "You do not have access to this document." },
-          { status: 403 },
-        );
       }
+    }
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "You do not have access to this document." },
+        { status: 403 },
+      );
     }
 
     const { data, error: signedError } = await supabaseAdmin.storage
