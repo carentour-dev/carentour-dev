@@ -233,7 +233,7 @@ type DashboardDocument = {
   bucket: string;
   size?: number | null;
   uploadedAt?: string | null;
-  source: "patient_portal" | "consultation";
+  source: "patient_portal" | "consultation" | "start_journey";
   deletable?: boolean;
 };
 
@@ -947,6 +947,62 @@ export default function DashboardPage() {
     return docs;
   }, [patient?.id, requests]);
 
+  const startJourneyDocuments = useMemo(() => {
+    const docs: DashboardDocument[] = [];
+
+    requests.forEach((request) => {
+      if (request.source !== "start_journey") return;
+      const submission = request.journey_submission;
+      if (!submission) return;
+
+      const rawDocuments = Array.isArray(
+        (submission as { documents?: unknown }).documents,
+      )
+        ? ((submission as { documents?: unknown[] }).documents as unknown[])
+        : [];
+
+      rawDocuments.forEach((item) => {
+        if (!item || typeof item !== "object") return;
+
+        const path = (item as { path?: string }).path;
+        const bucket =
+          (item as { bucket?: string }).bucket ?? "patient-documents";
+
+        if (typeof path !== "string" || path.length === 0) {
+          return;
+        }
+
+        const name =
+          (item as { originalName?: string }).originalName ||
+          (item as { storedName?: string }).storedName ||
+          path.split("/").pop() ||
+          "Uploaded document";
+        const size =
+          typeof (item as { size?: number }).size === "number" &&
+          Number.isFinite((item as { size?: number }).size)
+            ? (item as { size?: number }).size
+            : null;
+        const uploadedAt =
+          (item as { uploadedAt?: string }).uploadedAt ??
+          submission.created_at ??
+          null;
+
+        docs.push({
+          id: (item as { id?: string }).id ?? path,
+          name,
+          path,
+          bucket,
+          size,
+          uploadedAt,
+          source: "start_journey",
+          deletable: false,
+        });
+      });
+    });
+
+    return docs;
+  }, [requests]);
+
   const portalDocumentSummaries = useMemo(
     () =>
       (patientDocuments ?? []).map((doc) => ({
@@ -982,7 +1038,11 @@ export default function DashboardPage() {
 
   const combinedDocuments = useMemo(() => {
     const map = new Map<string, DashboardDocument>();
-    [...portalDocumentSummaries, ...legacyConsultationDocs].forEach((doc) => {
+    [
+      ...portalDocumentSummaries,
+      ...startJourneyDocuments,
+      ...legacyConsultationDocs,
+    ].forEach((doc) => {
       const key = doc.path ?? doc.id;
       if (!key) return;
       if (!map.has(key)) {
@@ -995,7 +1055,7 @@ export default function DashboardPage() {
         new Date(b.uploadedAt ?? "").getTime() -
         new Date(a.uploadedAt ?? "").getTime(),
     );
-  }, [portalDocumentSummaries, legacyConsultationDocs]);
+  }, [portalDocumentSummaries, startJourneyDocuments, legacyConsultationDocs]);
 
   const pendingRequests = useMemo(
     () => requests.filter((request) => isActiveRequestStatus(request.status)),
@@ -1834,13 +1894,17 @@ export default function DashboardPage() {
                               {document.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {formatDateTime(document.uploadedAt ?? null)}
-                              {formatFileSize(document.size)
-                                ? ` • ${formatFileSize(document.size)}`
-                                : ""}
-                              {document.source === "patient_portal"
-                                ? " • Uploaded in portal"
-                                : " • Consultation attachment"}
+                              {[
+                                formatDateTime(document.uploadedAt ?? null),
+                                formatFileSize(document.size),
+                                document.source === "patient_portal"
+                                  ? "Uploaded in portal"
+                                  : document.source === "start_journey"
+                                    ? "Start Your Journey upload"
+                                    : "Consultation attachment",
+                              ]
+                                .filter(Boolean)
+                                .join(" • ")}
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
