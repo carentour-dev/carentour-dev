@@ -148,7 +148,7 @@ type StoryDetail = PatientStoryRow & {
 
 export type PatientDocumentSummary = {
   id: string;
-  source: "start_journey" | "storage";
+  source: "contact_request" | "start_journey" | "storage";
   label: string;
   type: string | null;
   uploaded_at: string | null;
