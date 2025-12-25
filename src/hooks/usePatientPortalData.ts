@@ -331,9 +331,9 @@ const fetchPatientPortalSnapshot = async (
     supabase
       .from("contact_requests")
       .select(
-        "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, created_at, updated_at, resolved_at",
+        "id, user_id, patient_id, first_name, last_name, email, phone, country, treatment, message, status, request_type, notes, origin, travel_window, health_background, budget_range, companions, medical_reports, documents, created_at, updated_at, resolved_at",
       )
-      .eq("user_id", user.id)
+      .or(`user_id.eq.${user.id},patient_id.eq.${patient.id}`)
       .order("created_at", { ascending: false }),
     supabase
       .from("start_journey_submissions")
