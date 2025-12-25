@@ -129,6 +129,7 @@ const treatmentSchema = z.object({
   procedures: z.array(procedureSchema).min(1, "Add at least one procedure"),
   is_featured: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  is_listed_public: z.boolean().optional(),
   grade: gradeSchema.default("grade_c"),
 });
 
@@ -154,6 +155,7 @@ type TreatmentPayload = {
   hero_image_url?: string | null;
   is_featured?: boolean;
   is_active?: boolean;
+  is_listed_public?: boolean;
   grade: TreatmentGrade;
   ideal_candidates: string[];
   procedures: ProcedurePayload[];
@@ -220,6 +222,7 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   success_rate: undefined,
   is_featured: false,
   is_active: true,
+  is_listed_public: true,
   grade: "grade_c",
   ideal_candidates: [],
   procedures: [createEmptyProcedure()],
@@ -410,6 +413,7 @@ const mapRecordToFormValues = (
     success_rate: treatment.success_rate ?? undefined,
     is_featured: treatment.is_featured ?? false,
     is_active: treatment.is_active ?? true,
+    is_listed_public: treatment.is_listed_public ?? true,
     grade: treatment.grade ?? "grade_c",
     ideal_candidates: Array.isArray(treatment.ideal_candidates)
       ? treatment.ideal_candidates.filter(
@@ -535,6 +539,7 @@ const buildPayloadFromValues = (
     success_rate: values.success_rate ?? undefined,
     is_featured: values.is_featured ?? false,
     is_active: values.is_active ?? true,
+    is_listed_public: values.is_listed_public ?? true,
     grade: values.grade,
     ideal_candidates: idealCandidates,
     procedures,
@@ -1197,6 +1202,31 @@ export default function AdminTreatmentsPage() {
                       <FormControl>
                         <Checkbox
                           checked={field.value ?? false}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="is_listed_public"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1">
+                        <FormLabel>List on public pages</FormLabel>
+                        <FormDescription>
+                          Turn off to hide this treatment from the public
+                          treatments catalog while keeping it available in
+                          consultation forms.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? true}
                           onCheckedChange={(checked) =>
                             field.onChange(checked === true)
                           }
