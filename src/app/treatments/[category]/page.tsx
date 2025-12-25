@@ -35,6 +35,14 @@ export default function TreatmentDetails() {
   const { treatments, loading: treatmentsLoading } = useTreatments();
 
   const slug = (category || "").toLowerCase();
+  const visibleTreatments = useMemo(
+    () =>
+      treatments.filter(
+        (treatment) =>
+          treatment.isListedPublic !== false && treatment.isActive !== false,
+      ),
+    [treatments],
+  );
 
   const formatCurrency = (value: number, currency?: string | null) => {
     try {
@@ -49,9 +57,9 @@ export default function TreatmentDetails() {
   };
 
   const dynamicTreatment = useMemo(() => {
-    if (!slug || treatments.length === 0) return null;
+    if (!slug || visibleTreatments.length === 0) return null;
     return (
-      treatments.find((treatment) => {
+      visibleTreatments.find((treatment) => {
         const treatmentSlug = (
           treatment.slug ||
           treatment.category ||
@@ -60,7 +68,7 @@ export default function TreatmentDetails() {
         return treatmentSlug === slug;
       }) || null
     );
-  }, [slug, treatments]);
+  }, [slug, visibleTreatments]);
 
   const normalizedTreatment = dynamicTreatment;
 
