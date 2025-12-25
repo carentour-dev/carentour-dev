@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,6 +23,8 @@ import {
   Stethoscope,
   FileText,
   Video,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -213,6 +215,27 @@ type PortalConsultationDocument = {
   requestType: string | null;
   createdAt?: string | null;
 };
+type PortalPatientDocument = {
+  id: string;
+  label: string;
+  type: string | null;
+  bucket: string;
+  path: string;
+  size?: number | null;
+  uploaded_at?: string | null;
+  created_at?: string | null;
+  request_id?: string | null;
+};
+type DashboardDocument = {
+  id: string;
+  name: string;
+  path: string;
+  bucket: string;
+  size?: number | null;
+  uploadedAt?: string | null;
+  source: "patient_portal" | "consultation";
+  deletable?: boolean;
+};
 
 const sanitizePatientCountry = (value?: string | null) => {
   if (typeof value !== "string") return null;
@@ -270,6 +293,9 @@ const formatRelativeTime = (value: string | null | undefined) => {
 
   return "";
 };
+
+const PORTAL_DOCUMENT_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
+const MAX_PATIENT_DOCUMENT_SIZE = 10 * 1024 * 1024;
 
 const scrollToSection = (id: string) => {
   if (typeof window === "undefined") return;
@@ -383,6 +409,12 @@ export default function DashboardPage() {
   const [openingDocumentPath, setOpeningDocumentPath] = useState<string | null>(
     null,
   );
+  const [uploadingPatientDocuments, setUploadingPatientDocuments] =
+    useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null,
+  );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     data: treatmentOptions = [],
@@ -427,6 +459,40 @@ export default function DashboardPage() {
       }
 
       return (data ?? []) as DoctorOption[];
+    },
+  });
+
+  const {
+    data: patientDocuments = [],
+    isLoading: patientDocumentsLoading,
+    isFetching: patientDocumentsFetching,
+    refetch: refetchPatientDocuments,
+  } = useQuery({
+    queryKey: ["dashboard", "patient-documents"],
+    enabled: !!user && !isStaffAccount,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch("/api/patient/documents", {
+        headers,
+        credentials: "include",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? "Failed to load patient documents");
+      }
+
+      const documents = Array.isArray(result?.documents)
+        ? (result.documents as PortalPatientDocument[])
+        : [];
+
+      return documents;
     },
   });
 
@@ -881,6 +947,56 @@ export default function DashboardPage() {
     return docs;
   }, [patient?.id, requests]);
 
+  const portalDocumentSummaries = useMemo(
+    () =>
+      (patientDocuments ?? []).map((doc) => ({
+        id: doc.id,
+        name: doc.label ?? doc.path ?? "Uploaded document",
+        path: doc.path,
+        bucket: doc.bucket ?? "patient-documents",
+        size:
+          typeof doc.size === "number" && Number.isFinite(doc.size)
+            ? doc.size
+            : null,
+        uploadedAt: doc.uploaded_at ?? doc.created_at ?? null,
+        source: "patient_portal" as const,
+        deletable: true,
+      })),
+    [patientDocuments],
+  );
+
+  const legacyConsultationDocs = useMemo(
+    () =>
+      consultationDocuments.map((document) => ({
+        id: document.id,
+        name: document.originalName,
+        path: document.path,
+        bucket: document.bucket,
+        size: document.size ?? null,
+        uploadedAt: document.uploadedAt ?? document.createdAt ?? null,
+        source: "consultation" as const,
+        deletable: false,
+      })),
+    [consultationDocuments],
+  );
+
+  const combinedDocuments = useMemo(() => {
+    const map = new Map<string, DashboardDocument>();
+    [...portalDocumentSummaries, ...legacyConsultationDocs].forEach((doc) => {
+      const key = doc.path ?? doc.id;
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, doc);
+      }
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) =>
+        new Date(b.uploadedAt ?? "").getTime() -
+        new Date(a.uploadedAt ?? "").getTime(),
+    );
+  }, [portalDocumentSummaries, legacyConsultationDocs]);
+
   const pendingRequests = useMemo(
     () => requests.filter((request) => isActiveRequestStatus(request.status)),
     [requests],
@@ -980,9 +1096,7 @@ export default function DashboardPage() {
     });
   };
 
-  const handleOpenConsultationDocument = async (
-    document: PortalConsultationDocument,
-  ) => {
+  const handleOpenDocument = async (document: DashboardDocument) => {
     setOpeningDocumentPath(document.path);
     try {
       const params = new URLSearchParams({
@@ -1017,6 +1131,107 @@ export default function DashboardPage() {
       });
     } finally {
       setOpeningDocumentPath(null);
+    }
+  };
+
+  const handlePatientDocumentSelection = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setUploadingPatientDocuments(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const files = Array.from(fileList);
+
+      for (const file of files) {
+        if (file.size > MAX_PATIENT_DOCUMENT_SIZE) {
+          throw new Error(
+            "File exceeds 10MB limit. Please choose a smaller file.",
+          );
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("documentType", "medical_records");
+
+        const response = await fetch("/api/patient/documents", {
+          method: "POST",
+          body: formData,
+          headers,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error ?? "Document upload failed");
+        }
+      }
+
+      fileInputRef.current?.value && (fileInputRef.current.value = "");
+      await refetchPatientDocuments();
+      toast({
+        title: "Upload complete",
+        description:
+          files.length > 1
+            ? `${files.length} files uploaded successfully`
+            : `${files[0]?.name ?? "File"} uploaded successfully`,
+      });
+    } catch (error) {
+      console.error("Patient document upload failed:", error);
+      toast({
+        title: "Upload failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "We could not upload this file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPatientDocuments(false);
+    }
+  };
+
+  const handleDeletePatientDocument = async (documentId: string) => {
+    setDeletingDocumentId(documentId);
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch("/api/patient/documents", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ id: documentId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? "Failed to delete document");
+      }
+
+      await refetchPatientDocuments();
+      toast({
+        title: "Document deleted",
+        description: "The file was removed from your portal.",
+      });
+    } catch (error) {
+      console.error("Failed to delete portal document", error);
+      toast({
+        title: "Unable to delete file",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -1526,60 +1741,144 @@ export default function DashboardPage() {
                       My documents
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Download the files you attached to consultation requests.
+                      Upload and download your medical reports or IDs safely.
                     </p>
                   </div>
                   <Badge variant="outline">
-                    {consultationDocuments.length} file
-                    {consultationDocuments.length === 1 ? "" : "s"}
+                    {combinedDocuments.length} file
+                    {combinedDocuments.length === 1 ? "" : "s"}
                   </Badge>
                 </CardHeader>
-                <CardContent>
-                  {consultationDocuments.length === 0 ? (
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Upload new documents
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PDF, JPG, or PNG up to 10MB. Stored securely in your
+                          portal.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept={PORTAL_DOCUMENT_ACCEPT}
+                          multiple
+                          className="hidden"
+                          onChange={(event) => {
+                            void handlePatientDocumentSelection(
+                              event.target.files,
+                            );
+                          }}
+                        />
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={
+                            uploadingPatientDocuments || patientDocumentsLoading
+                          }
+                        >
+                          {uploadingPatientDocuments ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                          )}
+                          {uploadingPatientDocuments
+                            ? "Uploading..."
+                            : "Upload files"}
+                        </Button>
+                        {patientDocumentsFetching ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Refreshing list
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  {patientDocumentsLoading && combinedDocuments.length === 0 ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading your documents...
+                    </div>
+                  ) : combinedDocuments.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
                       <p className="font-medium text-foreground">
-                        No consultation attachments
+                        No documents yet
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        You can upload reports when submitting a consultation
-                        request.
+                        Upload medical reports, passports, or imaging to share
+                        with your coordinator.
                       </p>
+                      <Button
+                        className="mt-3"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload documents
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {consultationDocuments.map((document) => (
+                      {combinedDocuments.map((document) => (
                         <div
                           key={document.id}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3"
+                          className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3 md:flex-row md:items-center md:justify-between"
                         >
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-foreground">
-                              {document.originalName}
+                              {document.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {formatDateTime(
-                                document.uploadedAt ?? document.createdAt,
-                              )}
+                              {formatDateTime(document.uploadedAt ?? null)}
                               {formatFileSize(document.size)
                                 ? ` • ${formatFileSize(document.size)}`
                                 : ""}
+                              {document.source === "patient_portal"
+                                ? " • Uploaded in portal"
+                                : " • Consultation attachment"}
                             </p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              void handleOpenConsultationDocument(document);
-                            }}
-                            disabled={openingDocumentPath === document.path}
-                          >
-                            {openingDocumentPath === document.path ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <FileText className="mr-2 h-4 w-4" />
-                            )}
-                            Download
-                          </Button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                void handleOpenDocument(document);
+                              }}
+                              disabled={openingDocumentPath === document.path}
+                            >
+                              {openingDocumentPath === document.path ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <FileText className="mr-2 h-4 w-4" />
+                              )}
+                              Download
+                            </Button>
+                            {document.deletable ? (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  void handleDeletePatientDocument(document.id);
+                                }}
+                                disabled={
+                                  deletingDocumentId === document.id ||
+                                  uploadingPatientDocuments
+                                }
+                              >
+                                {deletingDocumentId === document.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
                       ))}
                     </div>
