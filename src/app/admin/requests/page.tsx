@@ -60,6 +60,17 @@ type ContactRequest = ContactRequestRow & {
 type ContactRequestStatus = ContactRequest["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
 type RequestTab = "contact" | "consultation";
+type ContactRequestDocument = {
+  id?: string | null;
+  type?: string | null;
+  originalName?: string | null;
+  storedName?: string | null;
+  path: string;
+  bucket: string;
+  size?: number | null;
+  uploadedAt?: string | null;
+  url?: string | null;
+};
 type PatientConsultationRow =
   Database["public"]["Tables"]["patient_consultations"]["Row"] & {
     contact_requests?: Pick<
@@ -70,6 +81,38 @@ type PatientConsultationRow =
 
 const isRecord = (value: unknown): value is Record<string, unknown | null> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const parseDocuments = (value: unknown): ContactRequestDocument[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const doc = item as ContactRequestDocument;
+      if (
+        typeof doc.path !== "string" ||
+        doc.path.length === 0 ||
+        typeof doc.bucket !== "string" ||
+        doc.bucket.length === 0
+      ) {
+        return null;
+      }
+      return {
+        id: doc.id ?? doc.path,
+        type: doc.type ?? null,
+        originalName: doc.originalName ?? doc.storedName ?? doc.path,
+        storedName: doc.storedName ?? null,
+        path: doc.path,
+        bucket: doc.bucket,
+        size:
+          typeof doc.size === "number" && Number.isFinite(doc.size)
+            ? doc.size
+            : null,
+        uploadedAt: doc.uploadedAt ?? null,
+        url: typeof doc.url === "string" ? doc.url : null,
+      };
+    })
+    .filter(Boolean) as ContactRequestDocument[];
 };
 
 const coerceArchivedFlag = (value: unknown): boolean => {
@@ -183,6 +226,21 @@ const formatDateTime = (value: string | null | undefined) => {
   }).format(date);
 };
 
+const formatFileSize = (bytes?: number | null) => {
+  if (!Number.isFinite(bytes ?? NaN) || (bytes ?? 0) <= 0) {
+    return "";
+  }
+  const value = bytes as number;
+  const units = ["B", "KB", "MB", "GB"] as const;
+  const index = Math.min(
+    Math.floor(Math.log(value) / Math.log(1024)),
+    units.length - 1,
+  );
+  const size = value / Math.pow(1024, index);
+  const precision = size >= 10 || index === 0 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[index]}`;
+};
+
 const capitalize = (value: string | null) => {
   if (!value) return "General";
   return value
@@ -290,6 +348,12 @@ export default function AdminRequestsPage() {
     Record<string, boolean>
   >({});
   const [showArchivedOnly, setShowArchivedOnly] = useState(false);
+  const [documentLinks, setDocumentLinks] = useState<Record<string, string>>(
+    {},
+  );
+  const [openingDocumentPath, setOpeningDocumentPath] = useState<string | null>(
+    null,
+  );
 
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
@@ -482,6 +546,56 @@ export default function AdminRequestsPage() {
     setPatientIdDraft(request.patient_id ?? null);
     setDialogOpen(true);
   };
+
+  const handleOpenDocument = async (document: ContactRequestDocument) => {
+    if (!document.path || !document.bucket) {
+      toast({
+        title: "Document unavailable",
+        description: "Missing storage path for this attachment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const cached = documentLinks[document.path] ?? document.url ?? null;
+    if (cached) {
+      window.open(cached, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setOpeningDocumentPath(document.path);
+    try {
+      const params = new URLSearchParams({
+        bucket: document.bucket,
+        path: document.path,
+      });
+      const { url } = await adminFetch<{ url: string }>(
+        `/api/admin/consultations/documents?${params.toString()}`,
+      );
+
+      if (!url) {
+        throw new Error("Download link was not provided.");
+      }
+
+      setDocumentLinks((prev) => ({ ...prev, [document.path]: url }));
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error("Failed to open consultation document", error);
+      toast({
+        title: "Unable to open attachment",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setOpeningDocumentPath(null);
+    }
+  };
+
+  const activeDocuments = useMemo(
+    () => parseDocuments(activeRequest?.documents),
+    [activeRequest?.documents],
+  );
 
   const handleStatusChange = async (
     requestId: string,
@@ -1641,6 +1755,47 @@ export default function AdminRequestsPage() {
                       </h3>
                       <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm text-foreground whitespace-pre-line">
                         {activeRequest.medical_reports}
+                      </div>
+                    </div>
+                  )}
+                  {activeDocuments.length > 0 && (
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-muted-foreground">
+                        Attachments
+                      </h3>
+                      <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 p-3">
+                        {activeDocuments.map((document) => (
+                          <div
+                            key={document.path}
+                            className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background px-3 py-2"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                {document.originalName ?? "Attachment"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatFileSize(document.size)}{" "}
+                                {document.uploadedAt
+                                  ? `• ${formatDateTime(document.uploadedAt)}`
+                                  : ""}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                void handleOpenDocument(document);
+                              }}
+                              disabled={openingDocumentPath === document.path}
+                            >
+                              {openingDocumentPath === document.path ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Open"
+                              )}
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
