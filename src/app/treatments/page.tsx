@@ -65,8 +65,17 @@ export default function Treatments() {
   );
   const [searchTerm, setSearchTerm] = useState("");
 
+  const visibleTreatments = useMemo(
+    () =>
+      treatments.filter(
+        (treatment) =>
+          treatment.isListedPublic !== false && treatment.isActive !== false,
+      ),
+    [treatments],
+  );
+
   const cards = useMemo(() => {
-    return treatments.map((treatment) => {
+    return visibleTreatments.map((treatment) => {
       const key = treatment.slug || treatment.category || treatment.name;
       const iconKey = treatment.slug || treatment.category || "";
       const Icon = iconMap[iconKey.toLowerCase()] || Stethoscope;
@@ -96,7 +105,7 @@ export default function Treatments() {
         comparison,
       };
     });
-  }, [treatments]);
+  }, [visibleTreatments]);
 
   const filteredCards = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
