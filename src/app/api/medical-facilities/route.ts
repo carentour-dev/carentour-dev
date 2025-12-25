@@ -168,9 +168,7 @@ export const GET = async (req: NextRequest) => {
             | string[]
             | null;
           if (Array.isArray(providerProcedureIds)) {
-            if (
-              providerProcedureIds.some((id) => procedureSearchIds.has(id))
-            ) {
+            if (providerProcedureIds.some((id) => procedureSearchIds.has(id))) {
               return true;
             }
           }
