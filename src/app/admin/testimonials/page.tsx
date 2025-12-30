@@ -165,6 +165,27 @@ export default function TestimonialsAdminPage() {
     },
   });
 
+  const hasUnsavedReviewChanges = reviewForm.formState.isDirty;
+  const hasUnsavedStoryChanges = storyForm.formState.isDirty;
+
+  const attemptCloseReviewDialog = () => {
+    if (
+      !hasUnsavedReviewChanges ||
+      window.confirm("Discard unsaved review changes?")
+    ) {
+      setReviewDialogOpen(false);
+    }
+  };
+
+  const attemptCloseStoryDialog = () => {
+    if (
+      !hasUnsavedStoryChanges ||
+      window.confirm("Discard unsaved story changes?")
+    ) {
+      setStoryDialogOpen(false);
+    }
+  };
+
   const createReview = useMutation({
     mutationFn: (payload: ReviewFormValues) =>
       adminFetch("/api/admin/testimonials/reviews", {
@@ -610,7 +631,10 @@ export default function TestimonialsAdminPage() {
 
       {/* Review Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          unsaved={hasUnsavedReviewChanges}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingReview ? "Edit Review" : "Add Review"}
@@ -839,7 +863,7 @@ export default function TestimonialsAdminPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setReviewDialogOpen(false)}
+                  onClick={attemptCloseReviewDialog}
                 >
                   Cancel
                 </Button>
@@ -852,7 +876,10 @@ export default function TestimonialsAdminPage() {
 
       {/* Story Dialog */}
       <Dialog open={storyDialogOpen} onOpenChange={setStoryDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          unsaved={hasUnsavedStoryChanges}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingStory ? "Edit Story" : "Add Story"}
@@ -1012,7 +1039,7 @@ export default function TestimonialsAdminPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStoryDialogOpen(false)}
+                  onClick={attemptCloseStoryDialog}
                 >
                   Cancel
                 </Button>
