@@ -286,6 +286,14 @@ export default function AdminDoctorsPage() {
     setEditingDoctor(null);
   };
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
+  const attemptCloseDialog = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      closeDialog();
+    }
+  };
+
   // Allow the Radix dialog to control visibility while resetting form state on close.
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
@@ -348,7 +356,7 @@ export default function AdminDoctorsPage() {
               Add Doctor
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
             <DialogHeader>
               <DialogTitle>
                 {editingDoctor ? "Edit Doctor" : "Add Doctor"}
@@ -621,7 +629,11 @@ export default function AdminDoctorsPage() {
                 />
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={closeDialog}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={attemptCloseDialog}
+                  >
                     Cancel
                   </Button>
                   <Button
