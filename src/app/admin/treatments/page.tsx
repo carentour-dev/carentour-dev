@@ -651,6 +651,46 @@ export default function AdminTreatmentsPage() {
     [toast],
   );
 
+  const areSetsEqual = (first: string[], second: string[]) => {
+    if (first.length !== second.length) return false;
+    const set = new Set(second);
+    return first.every((value) => set.has(value));
+  };
+
+  const initialAssignedDoctorIds = useMemo(
+    () =>
+      specialists
+        .filter((doctor) => doctor.isAssigned)
+        .map((doctor) => doctor.id),
+    [specialists],
+  );
+
+  const initialPrimaryDoctorId = useMemo(() => {
+    const primary = specialists.find((doctor) => doctor.isPrimary);
+    return primary ? primary.id : null;
+  }, [specialists]);
+
+  const hasUnsavedSpecialistChanges = useMemo(() => {
+    if (!specialistsDialogOpen) return false;
+
+    const initialPrimary = ensurePrimaryId(
+      initialAssignedDoctorIds,
+      initialPrimaryDoctorId,
+    );
+    const currentPrimary = ensurePrimaryId(selectedDoctorIds, primaryDoctorId);
+
+    return (
+      !areSetsEqual(initialAssignedDoctorIds, selectedDoctorIds) ||
+      currentPrimary !== initialPrimary
+    );
+  }, [
+    initialAssignedDoctorIds,
+    initialPrimaryDoctorId,
+    primaryDoctorId,
+    selectedDoctorIds,
+    specialistsDialogOpen,
+  ]);
+
   const createTreatment = useMutation({
     mutationFn: (payload: TreatmentPayload) =>
       adminFetch<TreatmentRecord>("/api/admin/treatments", {
@@ -787,9 +827,29 @@ export default function AdminTreatmentsPage() {
     resetSpecialistsState();
   };
 
+  const attemptCloseSpecialistsDialog = () => {
+    if (
+      !hasUnsavedSpecialistChanges ||
+      window.confirm("Discard unsaved specialist assignments?")
+    ) {
+      closeSpecialistsDialog();
+    }
+  };
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingTreatment(null);
+  };
+
+  const hasUnsavedTreatmentChanges = form.formState.isDirty;
+
+  const attemptCloseDialog = () => {
+    if (
+      !hasUnsavedTreatmentChanges ||
+      window.confirm("Discard unsaved treatment changes?")
+    ) {
+      closeDialog();
+    }
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -891,7 +951,10 @@ export default function AdminTreatmentsPage() {
               Add Treatment
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent
+            className="max-w-2xl"
+            unsaved={hasUnsavedTreatmentChanges}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingTreatment ? "Edit Treatment" : "Add Treatment"}
@@ -1264,7 +1327,11 @@ export default function AdminTreatmentsPage() {
                 />
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={closeDialog}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={attemptCloseDialog}
+                  >
                     Cancel
                   </Button>
                   <Button
@@ -1439,6 +1506,8 @@ export default function AdminTreatmentsPage() {
         loading={specialistsLoading}
         saving={savingSpecialists}
         onSave={saveSpecialists}
+        unsaved={hasUnsavedSpecialistChanges}
+        onCancel={attemptCloseSpecialistsDialog}
       />
     </div>
   );
@@ -1456,6 +1525,8 @@ function SpecialistsDialog({
   loading,
   saving,
   onSave,
+  unsaved,
+  onCancel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1468,10 +1539,12 @@ function SpecialistsDialog({
   loading: boolean;
   saving: boolean;
   onSave: () => void;
+  unsaved: boolean;
+  onCancel: () => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" unsaved={unsaved}>
         <DialogHeader>
           <DialogTitle>Assign Specialists</DialogTitle>
           <DialogDescription>
@@ -1551,11 +1624,7 @@ function SpecialistsDialog({
         )}
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button type="button" variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
           <Button
