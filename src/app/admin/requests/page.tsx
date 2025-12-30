@@ -358,6 +358,32 @@ export default function AdminRequestsPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
+  const hasUnsavedDialogChanges = useMemo(() => {
+    if (!activeRequest) return false;
+
+    const initialType = activeRequest.request_type ?? "general";
+    const initialCustomType = REQUEST_TYPE_OPTIONS.some(
+      (option) => option.value === (activeRequest.request_type ?? ""),
+    )
+      ? ""
+      : initialType;
+    const initialPatient = activeRequest.patient_id ?? null;
+    const initialNotes = activeRequest.notes ?? "";
+
+    return (
+      notesDraft.trim() !== initialNotes.trim() ||
+      requestTypeDraft !== initialType ||
+      customRequestType.trim() !== initialCustomType.trim() ||
+      (patientIdDraft ?? null) !== initialPatient
+    );
+  }, [
+    activeRequest,
+    customRequestType,
+    notesDraft,
+    patientIdDraft,
+    requestTypeDraft,
+  ]);
+
   useEffect(() => {
     const param = searchParams.get("assigned");
     const nextFilter: AssignmentFilter =
@@ -531,6 +557,15 @@ export default function AdminRequestsPage() {
     setRequestTypeDraft("general");
     setCustomRequestType("");
     setPatientIdDraft(null);
+  };
+
+  const attemptCloseDialog = () => {
+    if (
+      !hasUnsavedDialogChanges ||
+      window.confirm("Discard unsaved changes to this request?")
+    ) {
+      closeDialog();
+    }
   };
 
   const openDialogFor = (request: ContactRequest) => {
@@ -1616,7 +1651,7 @@ export default function AdminRequestsPage() {
         open={dialogOpen}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl" unsaved={hasUnsavedDialogChanges}>
           <DialogHeader>
             <DialogTitle>
               {activeRequest?.request_type === "consultation"
@@ -1883,7 +1918,7 @@ export default function AdminRequestsPage() {
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDialog}>
+            <Button variant="outline" onClick={attemptCloseDialog}>
               Cancel
             </Button>
             <Button
