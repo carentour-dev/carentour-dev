@@ -336,10 +336,18 @@ export default function AdminConsultationsPage() {
     [form],
   );
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingConsultation(null);
     resetForm();
+  };
+
+  const attemptCloseDialog = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      closeDialog();
+    }
   };
 
   const openCreateDialog = () => {
@@ -959,7 +967,7 @@ export default function AdminConsultationsPage() {
         open={dialogOpen}
         onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(open))}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl" unsaved={hasUnsavedChanges}>
           <DialogHeader>
             <DialogTitle>
               {editingConsultation
@@ -1157,7 +1165,11 @@ export default function AdminConsultationsPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={closeDialog}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={attemptCloseDialog}
+                >
                   Cancel
                 </Button>
                 <Button
