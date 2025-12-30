@@ -498,6 +498,17 @@ export default function AdminPatientsPage() {
     setRequestLinkId(null);
   };
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
+  const attemptCloseDialog = () => {
+    if (
+      !hasUnsavedChanges ||
+      window.confirm("Discard unsaved patient changes?")
+    ) {
+      closeDialog();
+    }
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
       closeDialog();
@@ -660,13 +671,7 @@ export default function AdminPatientsPage() {
               Add Patient
             </Button>
           </DialogTrigger>
-          <DialogContent
-            className="max-w-2xl"
-            onPointerDownOutside={(event) => event.preventDefault()}
-            onInteractOutside={(event) => event.preventDefault()}
-            onFocusOutside={(event) => event.preventDefault()}
-            onEscapeKeyDown={(event) => event.preventDefault()}
-          >
+          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
             <DialogHeader>
               <DialogTitle>
                 {editingPatient ? "Edit Patient" : "Add Patient"}
@@ -906,7 +911,11 @@ export default function AdminPatientsPage() {
                 />
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={closeDialog}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={attemptCloseDialog}
+                  >
                     Cancel
                   </Button>
                   <Button
