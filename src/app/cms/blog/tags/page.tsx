@@ -227,8 +227,11 @@ function TagChip({ tag, maxCount }: { tag: any; maxCount: number }) {
 }
 
 function TagDialog({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  const initialName = "";
+  const initialSlug = "";
+
+  const [name, setName] = useState(initialName);
+  const [slug, setSlug] = useState(initialSlug);
   const [autoSlug, setAutoSlug] = useState(true);
 
   const { toast } = useToast();
@@ -296,8 +299,17 @@ function TagDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const hasUnsavedChanges =
+    name.trim() !== initialName || slug.trim() !== initialSlug;
+
+  const handleClose = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      onClose();
+    }
+  };
+
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
         <DialogTitle>Create Tag</DialogTitle>
       </DialogHeader>
@@ -336,7 +348,7 @@ function TagDialog({ onClose }: { onClose: () => void }) {
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
         </div>
