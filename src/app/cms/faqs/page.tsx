@@ -235,10 +235,12 @@ function FaqFormDialog({
     },
   });
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Edit FAQ entry" : "Add FAQ entry"}
