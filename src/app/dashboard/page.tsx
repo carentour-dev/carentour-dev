@@ -702,6 +702,8 @@ export default function DashboardPage() {
   const reviewForm = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewSchema),
     defaultValues: {
+      doctor_id: undefined,
+      treatment_id: undefined,
       rating: 5,
       review_text: "",
       procedure_name: "",
@@ -709,14 +711,66 @@ export default function DashboardPage() {
     },
   });
 
+  const reviewDefaultValues: ReviewFormValues = {
+    doctor_id: undefined,
+    treatment_id: undefined,
+    rating: 5,
+    review_text: "",
+    procedure_name: "",
+    recovery_time: "",
+  };
+
   const storyForm = useForm<StoryFormValues>({
     resolver: zodResolver(storySchema),
     defaultValues: {
+      doctor_id: undefined,
+      treatment_id: undefined,
       headline: "",
       excerpt: "",
       body_markdown: "",
     },
   });
+
+  const storyDefaultValues: StoryFormValues = {
+    doctor_id: undefined,
+    treatment_id: undefined,
+    headline: "",
+    excerpt: "",
+    body_markdown: "",
+  };
+
+  const hasUnsavedReviewChanges = reviewForm.formState.isDirty;
+  const hasUnsavedStoryChanges = storyForm.formState.isDirty;
+
+  const resetReviewDialogState = () => {
+    reviewMutation.reset();
+    reviewForm.reset(reviewDefaultValues);
+  };
+
+  const resetStoryDialogState = () => {
+    storyMutation.reset();
+    storyForm.reset(storyDefaultValues);
+  };
+
+  const attemptCloseReviewDialog = () => {
+    if (
+      !hasUnsavedReviewChanges ||
+      window.confirm("Discard your review draft?")
+    ) {
+      setReviewDialogOpen(false);
+      resetReviewDialogState();
+    }
+  };
+
+  const attemptCloseStoryDialog = () => {
+    if (
+      !hasUnsavedStoryChanges ||
+      window.confirm("Discard your story draft?")
+    ) {
+      setStoryDialogOpen(false);
+      resetStoryDialogState();
+    }
+  };
 
   const reviewMutation = useMutation({
     mutationFn: async (values: ReviewFormValues) => {
@@ -2407,19 +2461,14 @@ export default function DashboardPage() {
         onOpenChange={(open) => {
           setReviewDialogOpen(open);
           if (!open) {
-            reviewMutation.reset();
-            reviewForm.reset({
-              doctor_id: undefined,
-              treatment_id: undefined,
-              rating: 5,
-              review_text: "",
-              procedure_name: "",
-              recovery_time: "",
-            });
+            resetReviewDialogState();
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent
+          className="sm:max-w-lg"
+          unsaved={hasUnsavedReviewChanges}
+        >
           <DialogHeader>
             <DialogTitle>Share a patient review</DialogTitle>
             <DialogDescription>
@@ -2612,7 +2661,7 @@ export default function DashboardPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setReviewDialogOpen(false)}
+                  onClick={attemptCloseReviewDialog}
                   disabled={reviewSubmitting}
                 >
                   Cancel
@@ -2643,18 +2692,11 @@ export default function DashboardPage() {
         onOpenChange={(open) => {
           setStoryDialogOpen(open);
           if (!open) {
-            storyMutation.reset();
-            storyForm.reset({
-              doctor_id: undefined,
-              treatment_id: undefined,
-              headline: "",
-              excerpt: "",
-              body_markdown: "",
-            });
+            resetStoryDialogState();
           }
         }}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl" unsaved={hasUnsavedStoryChanges}>
           <DialogHeader>
             <DialogTitle>Share your Care N Tour story</DialogTitle>
             <DialogDescription>
@@ -2825,7 +2867,7 @@ export default function DashboardPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStoryDialogOpen(false)}
+                  onClick={attemptCloseStoryDialog}
                   disabled={storySubmitting}
                 >
                   Cancel
