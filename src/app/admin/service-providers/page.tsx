@@ -285,13 +285,6 @@ export default function AdminServiceProvidersPage() {
   const hasUnsavedChanges =
     form.formState.isDirty || providerProcedureForm.formState.isDirty;
 
-  const confirmDialogClose = () => {
-    if (!hasUnsavedChanges) return true;
-    return window.confirm(
-      "You have unsaved changes. Close the form without saving?",
-    );
-  };
-
   const createProviderProcedure = useMutation({
     mutationFn: (payload: {
       providerId: string;
@@ -597,11 +590,7 @@ export default function AdminServiceProvidersPage() {
       return;
     }
 
-    if (confirmDialogClose()) {
-      closeDialog();
-    } else {
-      setDialogOpen(true);
-    }
+    closeDialog();
   };
 
   const onSubmit = (values: ServiceProviderFormValues) => {
@@ -730,18 +719,7 @@ export default function AdminServiceProvidersPage() {
               Add Service Provider
             </Button>
           </DialogTrigger>
-          <DialogContent
-            className="max-w-2xl"
-            onPointerDownOutside={(event) => event.preventDefault()}
-            onInteractOutside={(event) => event.preventDefault()}
-            onFocusOutside={(event) => event.preventDefault()}
-            onEscapeKeyDown={(event) => {
-              event.preventDefault();
-              if (confirmDialogClose()) {
-                closeDialog();
-              }
-            }}
-          >
+          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
             <DialogHeader>
               <DialogTitle>
                 {editingServiceProvider
