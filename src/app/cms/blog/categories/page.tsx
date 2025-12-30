@@ -253,10 +253,15 @@ function CategoryDialog({
   category?: any;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(category?.name || "");
-  const [slug, setSlug] = useState(category?.slug || "");
-  const [description, setDescription] = useState(category?.description || "");
-  const [color, setColor] = useState(category?.color || PRESET_COLORS[0]);
+  const initialName = category?.name || "";
+  const initialSlug = category?.slug || "";
+  const initialDescription = category?.description || "";
+  const initialColor = category?.color || PRESET_COLORS[0];
+
+  const [name, setName] = useState(initialName);
+  const [slug, setSlug] = useState(initialSlug);
+  const [description, setDescription] = useState(initialDescription);
+  const [color, setColor] = useState(initialColor);
   const [autoSlug, setAutoSlug] = useState(!category);
 
   const { toast } = useToast();
@@ -332,8 +337,20 @@ function CategoryDialog({
     }
   };
 
+  const hasUnsavedChanges =
+    name.trim() !== initialName.trim() ||
+    slug.trim() !== initialSlug.trim() ||
+    description.trim() !== initialDescription.trim() ||
+    color !== initialColor;
+
+  const handleClose = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      onClose();
+    }
+  };
+
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
         <DialogTitle>
           {category ? "Edit Category" : "Create Category"}
@@ -404,7 +421,7 @@ function CategoryDialog({
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {category ? "Update" : "Create"}
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
         </div>
