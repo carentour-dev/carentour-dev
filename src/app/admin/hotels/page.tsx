@@ -299,6 +299,14 @@ export default function AdminHotelsPage() {
     setEditingHotel(null);
   };
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
+  const attemptCloseDialog = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      closeDialog();
+    }
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
       closeDialog();
@@ -366,7 +374,7 @@ export default function AdminHotelsPage() {
               Add Hotel
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
             <DialogHeader>
               <DialogTitle>
                 {editingHotel ? "Edit Hotel" : "Add Hotel"}
@@ -688,7 +696,11 @@ export default function AdminHotelsPage() {
                 />
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={closeDialog}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={attemptCloseDialog}
+                  >
                     Cancel
                   </Button>
                   <Button
