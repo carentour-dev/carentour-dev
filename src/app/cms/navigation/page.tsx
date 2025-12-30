@@ -249,6 +249,14 @@ export default function CmsNavigationPage() {
     },
   });
 
+  const hasUnsavedChanges = form.formState.isDirty;
+
+  const attemptCloseDialog = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      setDialogOpen(false);
+    }
+  };
+
   useEffect(() => {
     if (!dialogOpen) {
       form.reset({
@@ -606,7 +614,7 @@ export default function CmsNavigationPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent unsaved={hasUnsavedChanges}>
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit navigation link" : "Add navigation link"}
@@ -776,7 +784,7 @@ export default function CmsNavigationPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setDialogOpen(false)}
+                  onClick={attemptCloseDialog}
                 >
                   Cancel
                 </Button>
