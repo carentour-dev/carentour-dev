@@ -356,6 +356,18 @@ export default function AdminStartJourneyPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
+  const hasUnsavedDialogChanges = useMemo(() => {
+    if (!activeSubmission) return false;
+
+    const initialNotes = activeSubmission.notes ?? "";
+    const initialPatient = activeSubmission.patient_id ?? null;
+
+    return (
+      notesDraft.trim() !== initialNotes.trim() ||
+      (patientIdDraft ?? null) !== initialPatient
+    );
+  }, [activeSubmission, notesDraft, patientIdDraft]);
+
   useEffect(() => {
     const param = searchParams.get("assigned");
     const nextFilter: AssignmentFilter =
@@ -474,6 +486,15 @@ export default function AdminStartJourneyPage() {
     setPatientIdDraft(null);
     setDocumentLinks({});
     setOpeningDocumentId(null);
+  };
+
+  const attemptCloseDialog = () => {
+    if (
+      !hasUnsavedDialogChanges ||
+      window.confirm("Discard unsaved changes to this submission?")
+    ) {
+      closeDialog();
+    }
   };
 
   const openDialogFor = (submission: StartJourneySubmission) => {
@@ -943,7 +964,10 @@ export default function AdminStartJourneyPage() {
         open={dialogOpen}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          unsaved={hasUnsavedDialogChanges}
+        >
           <DialogHeader>
             <DialogTitle>Start Journey Submission Details</DialogTitle>
             <DialogDescription>
@@ -1206,7 +1230,7 @@ export default function AdminStartJourneyPage() {
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDialog}>
+            <Button variant="outline" onClick={attemptCloseDialog}>
               Cancel
             </Button>
             <Button
