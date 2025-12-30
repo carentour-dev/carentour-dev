@@ -92,6 +92,8 @@ const normalizeRoleSlug = (value: string): string => {
 };
 
 const PROTECTED_ROLE_SLUGS = new Set(["user", "admin"]);
+const sortUnique = (values: string[]) =>
+  Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 
 export default function AccessManagementPage() {
   const { toast } = useToast();
@@ -342,6 +344,58 @@ export default function AccessManagementPage() {
       : `${selectedRoleNames.length} roles`
     : "All roles";
 
+  const initialUserRoles = useMemo(() => {
+    if (!selectedUser) return [];
+    const roles = selectedUser.roles.includes("user")
+      ? selectedUser.roles
+      : [...selectedUser.roles, "user"];
+    return sortUnique(roles);
+  }, [selectedUser]);
+
+  const hasUnsavedRoleChanges = useMemo(() => {
+    if (!selectedUser) return false;
+    const current = sortUnique(selectedRoles);
+    if (current.length !== initialUserRoles.length) {
+      return true;
+    }
+    return current.some((role, index) => role !== initialUserRoles[index]);
+  }, [initialUserRoles, selectedRoles, selectedUser]);
+
+  const hasUnsavedCreateRoleChanges = useMemo(
+    () =>
+      Boolean(createRoleName.trim()) ||
+      Boolean(createRoleSlug.trim()) ||
+      Boolean(createRoleDescription.trim()) ||
+      createRolePermissions.length > 0 ||
+      createRoleSuperuser,
+    [
+      createRoleDescription,
+      createRoleName,
+      createRolePermissions.length,
+      createRoleSlug,
+      createRoleSuperuser,
+    ],
+  );
+
+  const initialRolePermissions = useMemo(
+    () =>
+      sortUnique(
+        selectedRoleRecord?.permissions?.map((permission) => permission.slug) ??
+          [],
+      ),
+    [selectedRoleRecord],
+  );
+
+  const hasUnsavedRolePermissionChanges = useMemo(() => {
+    const current = sortUnique(selectedRolePermissions);
+    if (current.length !== initialRolePermissions.length) {
+      return true;
+    }
+    return current.some(
+      (permission, index) => permission !== initialRolePermissions[index],
+    );
+  }, [initialRolePermissions, selectedRolePermissions]);
+
   const openEditor = (user: UserRecord) => {
     const roles = user.roles.includes("user")
       ? user.roles
@@ -355,6 +409,15 @@ export default function AccessManagementPage() {
     setDialogOpen(false);
     setSelectedUser(null);
     setSelectedRoles([]);
+  };
+
+  const attemptCloseEditor = () => {
+    if (
+      !hasUnsavedRoleChanges ||
+      window.confirm("Discard unsaved role changes?")
+    ) {
+      closeEditor();
+    }
   };
 
   const roleGrantsAdminAccess = (role: string) => {
@@ -421,6 +484,15 @@ export default function AccessManagementPage() {
     setCreateDialogOpen(false);
     setCreateRoleSaving(false);
     resetCreateRoleForm();
+  };
+
+  const attemptCloseCreateRoleDialog = () => {
+    if (
+      !hasUnsavedCreateRoleChanges ||
+      window.confirm("Discard new role draft?")
+    ) {
+      closeCreateRoleDialog();
+    }
   };
 
   const toggleCreateRolePermission = (
@@ -688,6 +760,15 @@ export default function AccessManagementPage() {
     setPermissionSearch("");
   };
 
+  const attemptCloseRolePermissionEditor = () => {
+    if (
+      !hasUnsavedRolePermissionChanges ||
+      window.confirm("Discard unsaved permission changes?")
+    ) {
+      closeRolePermissionEditor();
+    }
+  };
+
   const toggleRolePermission = (permissionSlug: string, enabled: boolean) => {
     if (!permissionSlug) {
       return;
@@ -923,7 +1004,12 @@ export default function AccessManagementPage() {
                           Edit
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-lg">
+                      <DialogContent
+                        className="max-w-lg"
+                        unsaved={
+                          hasUnsavedRoleChanges && selectedUser?.id === user.id
+                        }
+                      >
                         <DialogHeader>
                           <DialogTitle>Assign roles</DialogTitle>
                           <DialogDescription>
@@ -976,7 +1062,7 @@ export default function AccessManagementPage() {
                         <DialogFooter>
                           <Button
                             variant="outline"
-                            onClick={closeEditor}
+                            onClick={attemptCloseEditor}
                             disabled={saving}
                           >
                             Cancel
@@ -1116,7 +1202,10 @@ export default function AccessManagementPage() {
           }
         }}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent
+          className="max-w-xl"
+          unsaved={hasUnsavedCreateRoleChanges}
+        >
           <DialogHeader>
             <DialogTitle>Create role</DialogTitle>
             <DialogDescription>
@@ -1281,7 +1370,7 @@ export default function AccessManagementPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={closeCreateRoleDialog}
+              onClick={attemptCloseCreateRoleDialog}
               disabled={createRoleSaving}
             >
               Cancel
@@ -1352,7 +1441,10 @@ export default function AccessManagementPage() {
         open={roleDialogOpen}
         onOpenChange={(open) => !open && closeRolePermissionEditor()}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent
+          className="max-w-xl"
+          unsaved={hasUnsavedRolePermissionChanges}
+        >
           <DialogHeader>
             <DialogTitle>Edit role permissions</DialogTitle>
             <DialogDescription>
@@ -1442,7 +1534,7 @@ export default function AccessManagementPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={closeRolePermissionEditor}
+              onClick={attemptCloseRolePermissionEditor}
               disabled={savingPermissions}
             >
               Cancel
