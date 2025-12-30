@@ -347,21 +347,33 @@ function AuthorDialog({
   author?: any;
   onClose: () => void;
 }) {
+  const initialAuthorType: "standalone" | "linked" = author?.user_id
+    ? "linked"
+    : "standalone";
+  const initialUserId = author?.user_id || "";
+  const initialName = author?.name || "";
+  const initialEmail = author?.email || "";
+  const initialBio = author?.bio || "";
+  const initialAvatar = author?.avatar || "";
+  const initialWebsite = author?.website || "";
+  const initialTwitter = author?.social_links?.twitter || "";
+  const initialLinkedin = author?.social_links?.linkedin || "";
+  const initialGithub = author?.social_links?.github || "";
+  const initialActive = author?.active ?? true;
+
   const [authorType, setAuthorType] = useState<"standalone" | "linked">(
-    author?.user_id ? "linked" : "standalone",
+    initialAuthorType,
   );
-  const [userId, setUserId] = useState(author?.user_id || "");
-  const [name, setName] = useState(author?.name || "");
-  const [email, setEmail] = useState(author?.email || "");
-  const [bio, setBio] = useState(author?.bio || "");
-  const [avatar, setAvatar] = useState(author?.avatar || "");
-  const [website, setWebsite] = useState(author?.website || "");
-  const [twitter, setTwitter] = useState(author?.social_links?.twitter || "");
-  const [linkedin, setLinkedin] = useState(
-    author?.social_links?.linkedin || "",
-  );
-  const [github, setGithub] = useState(author?.social_links?.github || "");
-  const [active, setActive] = useState(author?.active ?? true);
+  const [userId, setUserId] = useState(initialUserId);
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [bio, setBio] = useState(initialBio);
+  const [avatar, setAvatar] = useState(initialAvatar);
+  const [website, setWebsite] = useState(initialWebsite);
+  const [twitter, setTwitter] = useState(initialTwitter);
+  const [linkedin, setLinkedin] = useState(initialLinkedin);
+  const [github, setGithub] = useState(initialGithub);
+  const [active, setActive] = useState(initialActive);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -413,6 +425,25 @@ function AuthorDialog({
 
   const usersErrorMessage =
     usersError instanceof Error ? usersError.message : "Failed to load users";
+
+  const hasUnsavedChanges =
+    authorType !== initialAuthorType ||
+    userId !== initialUserId ||
+    name.trim() !== initialName.trim() ||
+    email.trim() !== initialEmail.trim() ||
+    bio.trim() !== initialBio.trim() ||
+    avatar !== initialAvatar ||
+    website.trim() !== initialWebsite.trim() ||
+    twitter.trim() !== initialTwitter.trim() ||
+    linkedin.trim() !== initialLinkedin.trim() ||
+    github.trim() !== initialGithub.trim() ||
+    active !== initialActive;
+
+  const handleClose = () => {
+    if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
+      onClose();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -476,7 +507,10 @@ function AuthorDialog({
   };
 
   return (
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <DialogContent
+      className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      unsaved={hasUnsavedChanges}
+    >
       <DialogHeader>
         <DialogTitle>{author ? "Edit Author" : "Create Author"}</DialogTitle>
       </DialogHeader>
@@ -657,7 +691,7 @@ function AuthorDialog({
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {author ? "Update" : "Create"}
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
         </div>
