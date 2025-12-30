@@ -17,6 +17,7 @@ import {
   pickFacilityImage,
   type MedicalFacilityDetail,
 } from "@/lib/medical-facilities";
+import { formatInfrastructureEntries } from "@/lib/infrastructure";
 import {
   ArrowLeft,
   Building2,
@@ -69,6 +70,10 @@ export default function FacilityDetailClient({ slug, initialData }: Props) {
     string,
     unknown
   > | null;
+  const infrastructureEntries = useMemo(
+    () => formatInfrastructureEntries(infrastructure),
+    [infrastructure],
+  );
   const gallery = Array.isArray(provider?.gallery_urls)
     ? provider.gallery_urls.filter(Boolean)
     : [];
@@ -324,26 +329,21 @@ export default function FacilityDetailClient({ slug, initialData }: Props) {
                   </Card>
                 ) : null}
 
-                {infrastructure && Object.keys(infrastructure).length > 0 ? (
+                {infrastructureEntries.length > 0 ? (
                   <Card>
                     <CardHeader>
                       <CardTitle>Infrastructure &amp; technology</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      {Object.entries(infrastructure).map(([key, value]) => (
-                        <div key={key} className="flex justify-between gap-4">
+                      {infrastructureEntries.map((entry) => (
+                        <div
+                          key={entry.key}
+                          className="flex justify-between gap-4"
+                        >
                           <span className="text-muted-foreground capitalize">
-                            {key.replace(/_/g, " ")}
+                            {entry.label}
                           </span>
-                          <span className="text-foreground">
-                            {typeof value === "string"
-                              ? value
-                              : Array.isArray(value)
-                                ? value.join(", ")
-                                : value !== null && typeof value === "object"
-                                  ? JSON.stringify(value)
-                                  : String(value)}
-                          </span>
+                          <span className="text-foreground">{entry.value}</span>
                         </div>
                       ))}
                     </CardContent>
