@@ -306,6 +306,17 @@ export default function AdminAccountsPage() {
     }
   }, [editingAccount, editForm, resolveSex]);
 
+  const hasUnsavedEditChanges = editForm.formState.isDirty;
+
+  const attemptCloseEditDialog = () => {
+    if (
+      !hasUnsavedEditChanges ||
+      window.confirm("Discard unsaved changes to this account?")
+    ) {
+      setEditingAccount(null);
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (values: CreateAccountValues) => {
       const payload = {
@@ -844,11 +855,11 @@ export default function AdminAccountsPage() {
           open={Boolean(editingAccount)}
           onOpenChange={(open) => {
             if (!open) {
-              setEditingAccount(null);
+              attemptCloseEditDialog();
             }
           }}
         >
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" unsaved={hasUnsavedEditChanges}>
             <DialogHeader>
               <DialogTitle>Edit staff details</DialogTitle>
               <DialogDescription>
@@ -1034,7 +1045,7 @@ export default function AdminAccountsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setEditingAccount(null)}
+                    onClick={attemptCloseEditDialog}
                     disabled={isSavingDetails}
                   >
                     Cancel
