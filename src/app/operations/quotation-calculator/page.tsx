@@ -1,0 +1,1571 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Calculator,
+  FileText,
+  Loader2,
+  Plus,
+  Printer,
+  Save,
+  Trash2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
+import { useToast } from "@/hooks/use-toast";
+import { quoteInputSchema } from "@/lib/operations/quotation-calculator/schema";
+import {
+  buildDefaultQuoteInput,
+  calculateQuote,
+} from "@/lib/operations/quotation-calculator/calculations";
+import type { QuoteInput } from "@/lib/operations/quotation-calculator/types";
+
+type OperationsQuote = {
+  id: string;
+  quote_number: string;
+  quote_date: string;
+  patient_name: string;
+  final_price_usd: number | null;
+  created_at: string;
+};
+
+const QUOTES_QUERY_KEY = ["operations", "quotes"] as const;
+
+const formatCurrency = (value: number, currency: "USD" | "EGP" = "USD") => {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(safeValue);
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
+      new Date(value),
+    );
+  } catch {
+    return value;
+  }
+};
+
+const safeValue = (value: number | null | undefined) =>
+  Number.isFinite(value ?? NaN) ? Number(value) : 0;
+
+const CLIENT_TYPES = [
+  { value: "B2C", label: "B2C" },
+  { value: "B2B", label: "B2B" },
+] as const;
+
+export default function OperationsQuotationCalculatorPage() {
+  const { toast } = useToast();
+  const invalidate = useAdminInvalidate();
+  const defaultValues = useMemo(() => buildDefaultQuoteInput(), []);
+  const [lastSavedQuoteId, setLastSavedQuoteId] = useState<string | null>(null);
+
+  const form = useForm<QuoteInput>({
+    resolver: zodResolver(quoteInputSchema),
+    defaultValues,
+  });
+
+  const tourismServices = useFieldArray({
+    control: form.control,
+    name: "tourismServices",
+  });
+  const indirectCosts = useFieldArray({
+    control: form.control,
+    name: "indirectCosts.items",
+  });
+  const currencyRates = useFieldArray({
+    control: form.control,
+    name: "currencyRates",
+  });
+  const medicalProcedures = useFieldArray({
+    control: form.control,
+    name: "dataSheets.medicalProcedures",
+  });
+  const accommodations = useFieldArray({
+    control: form.control,
+    name: "dataSheets.accommodations",
+  });
+  const transportationRows = useFieldArray({
+    control: form.control,
+    name: "dataSheets.transportation",
+  });
+  const tourismExtras = useFieldArray({
+    control: form.control,
+    name: "dataSheets.tourismExtras",
+  });
+
+  const watchAll = useWatch({ control: form.control }) as QuoteInput;
+  const computed = useMemo(
+    () => calculateQuote(watchAll ?? defaultValues),
+    [watchAll, defaultValues],
+  );
+
+  const quotesQuery = useQuery({
+    queryKey: QUOTES_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<OperationsQuote[]>("/api/admin/operations/quotes"),
+  });
+
+  const saveQuoteMutation = useMutation({
+    mutationFn: async (payload: QuoteInput) =>
+      adminFetch<OperationsQuote>("/api/admin/operations/quotes", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: (quote) => {
+      setLastSavedQuoteId(quote.id);
+      invalidate(QUOTES_QUERY_KEY);
+      toast({
+        title: "Quote saved",
+        description: `Quote ${quote.quote_number} was saved successfully.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Unable to save quote",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = form.handleSubmit((values) => {
+    saveQuoteMutation.mutate(values);
+  });
+
+  const handleReset = () => {
+    form.reset(buildDefaultQuoteInput());
+    setLastSavedQuoteId(null);
+  };
+
+  const handlePrint = (quoteId?: string | null) => {
+    if (!quoteId) return;
+    window.open(`/operations/quotation-calculator/${quoteId}/print`, "_blank");
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Quotation Calculator
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Build patient quotations using the same model as the Excel pricing
+            tool. All inputs are manual and calculations update instantly.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={saveQuoteMutation.isPending}
+          >
+            Reset
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handlePrint(lastSavedQuoteId)}
+            disabled={!lastSavedQuoteId}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Download PDF
+          </Button>
+          <Button onClick={handleSave} disabled={saveQuoteMutation.isPending}>
+            {saveQuoteMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save quote
+          </Button>
+        </div>
+      </header>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Calculator className="h-5 w-5 text-primary" />
+              Estimated Total
+            </CardTitle>
+            <CardDescription>
+              Final price including profit margin.
+            </CardDescription>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-semibold text-primary">
+              {formatCurrency(computed.summary.finalPriceUsd, "USD")}
+            </p>
+            <Badge variant="secondary" className="mt-1">
+              Margin {Math.round(computed.summary.profitMarginRate * 100)}%
+            </Badge>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Form {...form}>
+        <form className="space-y-6">
+          <Tabs defaultValue="calculator" className="space-y-4">
+            <TabsList className="flex w-full flex-wrap justify-start">
+              <TabsTrigger value="calculator">Calculator</TabsTrigger>
+              <TabsTrigger value="indirect">Indirect Costs</TabsTrigger>
+              <TabsTrigger value="currency">Currency Rates</TabsTrigger>
+              <TabsTrigger value="data">Data Sheets</TabsTrigger>
+              <TabsTrigger value="preview">Quote Preview</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="calculator" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quote Information</CardTitle>
+                  <CardDescription>
+                    Core quote metadata and patient details.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="meta.quoteDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quote date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="meta.quoteNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quote number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="meta.clientType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client type</FormLabel>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CLIENT_TYPES.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="meta.patientName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Patient name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="meta.country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country of origin</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="meta.age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age</FormLabel>
+                        <FormControl>
+                          <Input type="text" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Medical Procedure</CardTitle>
+                  <CardDescription>
+                    Procedure details and base medical costs.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="medical.procedureName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Procedure name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical.hospitalTier"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hospital tier</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical.lengthOfStayNights"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Length of stay (nights)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical.medicalCostEgp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Medical cost (EGP)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <FormLabel>Medical cost (USD)</FormLabel>
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      {formatCurrency(computed.medicalCostUsd, "USD")}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accommodation</CardTitle>
+                  <CardDescription>
+                    Hotel and meal plan details for the stay.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="accommodation.hotelCategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hotel category</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accommodation.roomType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Room type</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accommodation.mealPlan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meal plan</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accommodation.costPerNightEgp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost per night (EGP)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accommodation.mealPlanCostPerDayEgp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meal plan cost (EGP/day)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <FormLabel>Total accommodation (USD)</FormLabel>
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      {formatCurrency(
+                        computed.summary.accommodationCostUsd,
+                        "USD",
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Transportation</CardTitle>
+                  <CardDescription>
+                    Flight and local transportation costs.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="transportation.flightCostUsd"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Flight cost (USD)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.flightOrigin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Origin</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.flightType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Flight type</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.airportTransfersEgp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Airport transfers (EGP)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.airportVehicleType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vehicle type</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.localTransportEgp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Local transport (EGP)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="transportation.localTransportDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Days needed</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>Tourism & Additional Services</CardTitle>
+                    <CardDescription>
+                      Extra services billed in EGP and converted to USD.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      tourismServices.append({
+                        serviceName: "",
+                        quantity: 0,
+                        unitCostEgp: 0,
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add service
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Service</TableHead>
+                        <TableHead className="w-[120px]">Qty</TableHead>
+                        <TableHead className="w-[160px]">
+                          Unit cost (EGP)
+                        </TableHead>
+                        <TableHead className="w-[160px]">
+                          Unit cost (USD)
+                        </TableHead>
+                        <TableHead className="w-[160px]">Total (EGP)</TableHead>
+                        <TableHead className="w-[160px]">Total (USD)</TableHead>
+                        <TableHead className="w-[80px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tourismServices.fields.map((field, index) => {
+                        const computedItem = computed.tourismServices[index];
+                        return (
+                          <TableRow key={field.id}>
+                            <TableCell>
+                              <Input
+                                {...form.register(
+                                  `tourismServices.${index}.serviceName`,
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                {...form.register(
+                                  `tourismServices.${index}.quantity`,
+                                  { valueAsNumber: true },
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                {...form.register(
+                                  `tourismServices.${index}.unitCostEgp`,
+                                  { valueAsNumber: true },
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatCurrency(
+                                computedItem?.unitCostUsd ?? 0,
+                                "USD",
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatCurrency(
+                                computedItem?.totalEgp ?? 0,
+                                "EGP",
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatCurrency(
+                                computedItem?.totalUsd ?? 0,
+                                "USD",
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => tourismServices.remove(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  <Separator className="my-4" />
+                  <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-end">
+                    <span>Total extras:</span>
+                    <span className="text-foreground">
+                      {formatCurrency(computed.extrasTotals.totalEgp, "EGP")}
+                    </span>
+                    <span className="text-foreground">
+                      {formatCurrency(computed.extrasTotals.totalUsd, "USD")}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cost Summary</CardTitle>
+                  <CardDescription>
+                    Direct costs, indirect allocation, and final pricing.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <SummaryRow
+                    label="Medical procedure"
+                    usd={computed.summary.medicalProcedureCostUsd}
+                    egp={computed.summary.medicalProcedureCostEgp}
+                  />
+                  <SummaryRow
+                    label="Accommodation"
+                    usd={computed.summary.accommodationCostUsd}
+                    egp={computed.summary.accommodationCostEgp}
+                  />
+                  <SummaryRow
+                    label="Transportation"
+                    usd={computed.summary.transportationCostUsd}
+                    egp={computed.summary.transportationCostEgp}
+                  />
+                  <SummaryRow
+                    label="Tourism & extras"
+                    usd={computed.summary.tourismCostUsd}
+                    egp={computed.summary.tourismCostEgp}
+                  />
+                  <SummaryRow
+                    label="Indirect cost per patient"
+                    usd={computed.summary.indirectCostPerPatientUsd}
+                  />
+                  <Separator />
+                  <SummaryRow
+                    label="Subtotal"
+                    usd={computed.summary.subtotalUsd}
+                  />
+                  <SummaryRow
+                    label={`Profit margin (${Math.round(
+                      computed.summary.profitMarginRate * 100,
+                    )}%)`}
+                    usd={computed.summary.profitAmountUsd}
+                  />
+                  <Separator />
+                  <SummaryRow
+                    label="Final price"
+                    usd={computed.summary.finalPriceUsd}
+                    highlight
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="indirect" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Indirect Costs</CardTitle>
+                  <CardDescription>
+                    Annual overhead allocated per patient.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="indirectCosts.expectedAnnualPatientVolume"
+                    render={({ field }) => (
+                      <FormItem className="max-w-xs">
+                        <FormLabel>Annual patient volume</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="w-[160px]">
+                          Annual (USD)
+                        </TableHead>
+                        <TableHead className="w-[160px]">
+                          Monthly (USD)
+                        </TableHead>
+                        <TableHead className="w-[180px]">
+                          Per patient (USD)
+                        </TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {indirectCosts.fields.map((field, index) => {
+                        const computedItem =
+                          computed.indirectCosts.items[index];
+                        return (
+                          <TableRow key={field.id}>
+                            <TableCell>
+                              <Input
+                                {...form.register(
+                                  `indirectCosts.items.${index}.category`,
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                {...form.register(
+                                  `indirectCosts.items.${index}.annualCostUsd`,
+                                  { valueAsNumber: true },
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatCurrency(
+                                computedItem?.monthlyCostUsd ?? 0,
+                                "USD",
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatCurrency(
+                                computedItem?.perPatientUsd ?? 0,
+                                "USD",
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                {...form.register(
+                                  `indirectCosts.items.${index}.notes`,
+                                )}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      <TableRow>
+                        <TableCell className="font-medium">Totals</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatCurrency(
+                            computed.indirectCosts.totals.annualUsd,
+                            "USD",
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatCurrency(
+                            computed.indirectCosts.totals.monthlyUsd,
+                            "USD",
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatCurrency(
+                            computed.indirectCosts.totals.perPatientUsd,
+                            "USD",
+                          )}
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="currency" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Currency Rates</CardTitle>
+                  <CardDescription>
+                    Enter USD to currency conversions. Rates to USD are
+                    calculated automatically.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Currency</TableHead>
+                        <TableHead className="w-[200px]">
+                          USD to Currency
+                        </TableHead>
+                        <TableHead className="w-[200px]">Rate to USD</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currencyRates.fields.map((field, index) => {
+                        const computedRate = computed.currencyRates[index];
+                        return (
+                          <TableRow key={field.id}>
+                            <TableCell className="font-medium">
+                              {field.name}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                {...form.register(
+                                  `currencyRates.${index}.usdToCurrency`,
+                                  { valueAsNumber: true },
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {computedRate?.rateToUsd.toFixed(4) ?? "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                {...form.register(
+                                  `currencyRates.${index}.notes`,
+                                )}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="data" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reference Data Sheets</CardTitle>
+                  <CardDescription>
+                    Maintain the manual data tables from the Excel workbook.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="procedures" className="space-y-4">
+                    <TabsList className="flex w-full flex-wrap justify-start">
+                      <TabsTrigger value="procedures">
+                        Medical Procedures
+                      </TabsTrigger>
+                      <TabsTrigger value="accommodations">
+                        Accommodation
+                      </TabsTrigger>
+                      <TabsTrigger value="transportation">
+                        Transportation
+                      </TabsTrigger>
+                      <TabsTrigger value="tourism">
+                        Tourism & Extras
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="procedures">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Premium (EGP)</TableHead>
+                            <TableHead>Mid-range (EGP)</TableHead>
+                            <TableHead>Budget (EGP)</TableHead>
+                            <TableHead>Stay (nights)</TableHead>
+                            <TableHead>Pre-op</TableHead>
+                            <TableHead>Post-op</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {medicalProcedures.fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.procedureCode`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.procedureName`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.category`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.premiumHospitalEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.midRangeHospitalEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.budgetHospitalEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.typicalLengthOfStayNights`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.preOpDays`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.postOpDays`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.medicalProcedures.${index}.notes`,
+                                  )}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+
+                    <TabsContent value="accommodations">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Stars</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Room type</TableHead>
+                            <TableHead>Price/night (EGP)</TableHead>
+                            <TableHead>Meal plan</TableHead>
+                            <TableHead>Meal cost (EGP/day)</TableHead>
+                            <TableHead>Airport distance (km)</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {accommodations.fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.hotelCode`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.hotelName`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.starRating`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.location`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.roomType`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.pricePerNightEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.mealPlan`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.mealPlanCostEgpPerDay`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.airportDistanceKm`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.accommodations.${index}.notes`,
+                                  )}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+
+                    <TabsContent value="transportation">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Service type</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Route</TableHead>
+                            <TableHead>Vehicle</TableHead>
+                            <TableHead>Cost (EGP)</TableHead>
+                            <TableHead>Cost (USD)</TableHead>
+                            <TableHead>Cost (EUR)</TableHead>
+                            <TableHead>Provider</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {transportationRows.fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.serviceType`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.description`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.routeDetails`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.vehicleType`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.costEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.costUsd`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.costEur`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.provider`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.transportation.${index}.notes`,
+                                  )}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+
+                    <TabsContent value="tourism">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Duration</TableHead>
+                            <TableHead>Cost (EGP)</TableHead>
+                            <TableHead>Cost (USD)</TableHead>
+                            <TableHead>Cost (EUR)</TableHead>
+                            <TableHead>Max persons</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tourismExtras.fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.serviceCode`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.serviceName`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.category`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.description`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.duration`,
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.costEgp`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.costUsd`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.costEur`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.maxPersons`,
+                                    { valueAsNumber: true },
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  {...form.register(
+                                    `dataSheets.tourismExtras.${index}.notes`,
+                                  )}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="preview" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Quote Preview
+                  </CardTitle>
+                  <CardDescription>
+                    Summary view mirroring the printable quotation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 text-sm">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Patient information
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Quote number:
+                        </span>{" "}
+                        {watchAll?.meta?.quoteNumber}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Quote date:
+                        </span>{" "}
+                        {formatDate(watchAll?.meta?.quoteDate)}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Patient name:
+                        </span>{" "}
+                        {watchAll?.meta?.patientName}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Country:</span>{" "}
+                        {watchAll?.meta?.country}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Age:</span>{" "}
+                        {watchAll?.meta?.age || "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Procedure details
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Procedure:
+                        </span>{" "}
+                        {watchAll?.medical?.procedureName}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Hospital tier:
+                        </span>{" "}
+                        {watchAll?.medical?.hospitalTier}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Length of stay:
+                        </span>{" "}
+                        {safeValue(watchAll?.medical?.lengthOfStayNights) || 0}{" "}
+                        nights
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Client type:
+                        </span>{" "}
+                        {watchAll?.meta?.clientType}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">
+                      Investment summary
+                    </p>
+                    <SummaryRow
+                      label="Subtotal"
+                      usd={computed.summary.subtotalUsd}
+                    />
+                    <SummaryRow
+                      label="Profit margin"
+                      usd={computed.summary.profitAmountUsd}
+                    />
+                    <SummaryRow
+                      label="Total package price"
+                      usd={computed.summary.finalPriceUsd}
+                      highlight
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </form>
+      </Form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Saved Quotes</CardTitle>
+          <CardDescription>
+            Review recently saved quotations or download a PDF.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {quotesQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading quotes…
+            </div>
+          ) : quotesQuery.isError ? (
+            <p className="text-sm text-destructive">
+              Unable to load saved quotes.
+            </p>
+          ) : quotesQuery.data?.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quote</TableHead>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead className="w-[140px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotesQuery.data.map((quote) => (
+                  <TableRow key={quote.id}>
+                    <TableCell className="font-medium">
+                      {quote.quote_number}
+                    </TableCell>
+                    <TableCell>{quote.patient_name}</TableCell>
+                    <TableCell>{formatDate(quote.quote_date)}</TableCell>
+                    <TableCell>
+                      {formatCurrency(safeValue(quote.final_price_usd), "USD")}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrint(quote.id)}
+                      >
+                        <Printer className="mr-2 h-4 w-4" />
+                        PDF
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No quotes saved yet. Save a quote to view it here.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  usd,
+  egp,
+  highlight = false,
+}: {
+  label: string;
+  usd: number;
+  egp?: number;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <span className={highlight ? "font-semibold" : "text-muted-foreground"}>
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-3 text-right">
+        {typeof egp === "number" && (
+          <span className="text-muted-foreground">
+            {formatCurrency(egp, "EGP")}
+          </span>
+        )}
+        <span className={highlight ? "font-semibold text-primary" : ""}>
+          {formatCurrency(usd, "USD")}
+        </span>
+      </div>
+    </div>
+  );
+}
