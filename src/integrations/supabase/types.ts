@@ -918,6 +918,81 @@ export type Database = {
           },
         ];
       };
+      operations_quotes: {
+        Row: {
+          age: number | null;
+          client_type: string;
+          computed_data: Json;
+          country: string;
+          created_at: string;
+          final_price_usd: number | null;
+          id: string;
+          input_data: Json;
+          owner_profile_id: string | null;
+          owner_user_id: string;
+          patient_name: string;
+          profit_amount_usd: number | null;
+          profit_margin: number | null;
+          quote_date: string;
+          quote_number: string;
+          subtotal_usd: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          age?: number | null;
+          client_type: string;
+          computed_data: Json;
+          country: string;
+          created_at?: string;
+          final_price_usd?: number | null;
+          id?: string;
+          input_data: Json;
+          owner_profile_id?: string | null;
+          owner_user_id: string;
+          patient_name: string;
+          profit_amount_usd?: number | null;
+          profit_margin?: number | null;
+          quote_date: string;
+          quote_number: string;
+          subtotal_usd?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          age?: number | null;
+          client_type?: string;
+          computed_data?: Json;
+          country?: string;
+          created_at?: string;
+          final_price_usd?: number | null;
+          id?: string;
+          input_data?: Json;
+          owner_profile_id?: string | null;
+          owner_user_id?: string;
+          patient_name?: string;
+          profit_amount_usd?: number | null;
+          profit_margin?: number | null;
+          quote_date?: string;
+          quote_number?: string;
+          subtotal_usd?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "operations_quotes_owner_profile_id_fkey";
+            columns: ["owner_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "operations_quotes_owner_profile_id_fkey";
+            columns: ["owner_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       newsletter_subscriptions: {
         Row: {
           confirmed_at: string | null;
