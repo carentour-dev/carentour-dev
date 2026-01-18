@@ -128,7 +128,10 @@ export const operationsQuotesController = {
     ownerUserId: string,
   ): Promise<OperationsQuoteRow> {
     if (!ownerUserId) {
-      throw new ApiError(401, "Operation requires an authenticated team member");
+      throw new ApiError(
+        401,
+        "Operation requires an authenticated team member",
+      );
     }
 
     const supabase = getClient();
