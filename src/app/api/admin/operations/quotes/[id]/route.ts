@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { operationsQuotesController } from "@/server/modules/operationsQuotes/module";
 import { adminRoute } from "@/server/utils/adminRoute";
 import { jsonResponse } from "@/server/utils/http";
@@ -20,5 +21,23 @@ export const GET = adminRoute(async (_req, ctx) => {
 
   const quoteId = ctx.params?.id;
   const quote = await operationsQuotesController.get(quoteId, userId);
+  return jsonResponse(quote);
+}, QUOTES_PERMISSIONS);
+
+export const PUT = adminRoute(async (req: NextRequest, ctx) => {
+  const userId = ctx.auth?.user.id;
+
+  if (!userId) {
+    throw new ApiError(401, "Missing authenticated user");
+  }
+
+  const quoteId = ctx.params?.id;
+  const payload = await req.json();
+  const quote = await operationsQuotesController.update(
+    quoteId,
+    payload,
+    userId,
+  );
+
   return jsonResponse(quote);
 }, QUOTES_PERMISSIONS);
