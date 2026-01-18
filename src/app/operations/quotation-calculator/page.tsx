@@ -139,30 +139,32 @@ const EMPTY_MEDICAL_PROCEDURE: QuoteInput["dataSheets"]["medicalProcedures"][num
     notes: "",
   };
 
-const EMPTY_ACCOMMODATION: QuoteInput["dataSheets"]["accommodations"][number] = {
-  hotelCode: "",
-  hotelName: "",
-  starRating: "",
-  location: "",
-  roomType: "",
-  pricePerNightEgp: 0,
-  mealPlan: "",
-  mealPlanCostEgpPerDay: 0,
-  airportDistanceKm: 0,
-  notes: "",
-};
+const EMPTY_ACCOMMODATION: QuoteInput["dataSheets"]["accommodations"][number] =
+  {
+    hotelCode: "",
+    hotelName: "",
+    starRating: "",
+    location: "",
+    roomType: "",
+    pricePerNightEgp: 0,
+    mealPlan: "",
+    mealPlanCostEgpPerDay: 0,
+    airportDistanceKm: 0,
+    notes: "",
+  };
 
-const EMPTY_TRANSPORTATION: QuoteInput["dataSheets"]["transportation"][number] = {
-  serviceType: "",
-  description: "",
-  routeDetails: "",
-  vehicleType: "",
-  costEgp: 0,
-  costUsd: 0,
-  costEur: 0,
-  provider: "",
-  notes: "",
-};
+const EMPTY_TRANSPORTATION: QuoteInput["dataSheets"]["transportation"][number] =
+  {
+    serviceType: "",
+    description: "",
+    routeDetails: "",
+    vehicleType: "",
+    costEgp: 0,
+    costUsd: 0,
+    costEur: 0,
+    provider: "",
+    notes: "",
+  };
 
 const EMPTY_TOURISM_EXTRA: QuoteInput["dataSheets"]["tourismExtras"][number] = {
   serviceCode: "",
@@ -259,8 +261,7 @@ export default function OperationsQuotationCalculatorPage() {
   const handleQuoteSaveError = (error: unknown, title: string) => {
     toast({
       title,
-      description:
-        error instanceof Error ? error.message : "Please try again.",
+      description: error instanceof Error ? error.message : "Please try again.",
       variant: "destructive",
     });
   };
@@ -268,20 +269,28 @@ export default function OperationsQuotationCalculatorPage() {
   const saveQuoteMutation = useMutation({
     mutationFn: createQuote,
     onSuccess: (quote, values) =>
-      handleQuoteSaveSuccess(quote, {
-        title: "Quote saved",
-        description: `Quote ${quote.quote_number} was saved successfully.`,
-      }, values),
+      handleQuoteSaveSuccess(
+        quote,
+        {
+          title: "Quote saved",
+          description: `Quote ${quote.quote_number} was saved successfully.`,
+        },
+        values,
+      ),
     onError: (error) => handleQuoteSaveError(error, "Unable to save quote"),
   });
 
   const saveAsNewQuoteMutation = useMutation({
     mutationFn: createQuote,
     onSuccess: (quote, values) =>
-      handleQuoteSaveSuccess(quote, {
-        title: "Quote saved as new",
-        description: `Quote ${quote.quote_number} was saved as a new copy.`,
-      }, values),
+      handleQuoteSaveSuccess(
+        quote,
+        {
+          title: "Quote saved as new",
+          description: `Quote ${quote.quote_number} was saved as a new copy.`,
+        },
+        values,
+      ),
     onError: (error) =>
       handleQuoteSaveError(error, "Unable to save quote as new"),
   });
@@ -302,10 +311,14 @@ export default function OperationsQuotationCalculatorPage() {
         },
       ),
     onSuccess: (quote, variables) =>
-      handleQuoteSaveSuccess(quote, {
-        title: "Quote updated",
-        description: `Quote ${quote.quote_number} was updated successfully.`,
-      }, variables.payload),
+      handleQuoteSaveSuccess(
+        quote,
+        {
+          title: "Quote updated",
+          description: `Quote ${quote.quote_number} was updated successfully.`,
+        },
+        variables.payload,
+      ),
     onError: (error) => handleQuoteSaveError(error, "Unable to update quote"),
   });
 
@@ -329,8 +342,9 @@ export default function OperationsQuotationCalculatorPage() {
         return;
       }
 
-      form.reset(parsed.data);
-      setBaselineInput(parsed.data);
+      const parsedData = parsed.data as QuoteInput;
+      form.reset(parsedData);
+      setBaselineInput(parsedData);
       setEditingQuote({ id: quote.id, quoteNumber: quote.quote_number });
       setLastSavedQuoteId(quote.id);
       toast({
@@ -449,9 +463,7 @@ export default function OperationsQuotationCalculatorPage() {
           <Button
             variant="outline"
             onClick={handleUndoChanges}
-            disabled={
-              !canUndo || isAnySaving || loadQuoteMutation.isPending
-            }
+            disabled={!canUndo || isAnySaving || loadQuoteMutation.isPending}
           >
             <Undo2 className="mr-2 h-4 w-4" />
             Undo changes
@@ -1360,7 +1372,9 @@ export default function OperationsQuotationCalculatorPage() {
                                   variant="ghost"
                                   size="icon"
                                   aria-label="Delete medical procedure"
-                                  onClick={() => medicalProcedures.remove(index)}
+                                  onClick={() =>
+                                    medicalProcedures.remove(index)
+                                  }
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
