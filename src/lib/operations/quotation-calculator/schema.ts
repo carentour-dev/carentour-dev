@@ -17,11 +17,15 @@ const toNumber = (value: unknown, fallback = 0) => {
 const numberField = (fallback = 0) =>
   z.preprocess((value) => toNumber(value, fallback), z.number().min(0));
 
+const clientTypeSchema = z
+  .enum(["", "B2B", "B2C"])
+  .refine((value) => value !== "", { message: "Client type is required" });
+
 export const quoteInputSchema = z.object({
   meta: z.object({
     quoteDate: z.string().min(1, "Quote date is required"),
     quoteNumber: z.string().min(1, "Quote number is required"),
-    clientType: z.string().min(1, "Client type is required"),
+    clientType: clientTypeSchema,
     patientName: z.string().min(1, "Patient name is required"),
     country: z.string().min(1, "Country is required"),
     age: z.string().default(""),
