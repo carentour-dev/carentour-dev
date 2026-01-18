@@ -3,6 +3,7 @@ import {
   Bot,
   CalendarCheck,
   CalendarDays,
+  Calculator,
   Inbox,
   LayoutDashboard,
   ListTodo,
@@ -55,6 +56,10 @@ const cntAiRequirement: AccessRequirement = {
   allPermissions: [OPERATIONS_ACCESS_PERMISSION, OPERATIONS_SHARED_PERMISSION],
 };
 
+const quotationCalculatorRequirement: AccessRequirement = sectionRequirement(
+  "operations.quotation_calculator",
+);
+
 export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
   {
     id: "overview",
@@ -75,6 +80,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: ListTodo,
     adminHref: "/admin",
     required: tasksRequirement,
+  },
+  {
+    id: "quotation-calculator",
+    label: "Quotation Calculator",
+    description:
+      "Build and save medical tourism quotations using the Excel-based pricing model.",
+    href: "/operations/quotation-calculator",
+    icon: Calculator,
+    adminHref: "/admin",
+    required: quotationCalculatorRequirement,
   },
   {
     id: "cnt-ai",
