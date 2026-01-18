@@ -266,6 +266,46 @@ export default function OperationsQuotationCalculatorPage() {
     () => calculateQuote(watchAll ?? defaultValues),
     [watchAll, defaultValues],
   );
+  const watchedCurrencyRates = watchAll?.currencyRates ?? [];
+  const usdToEgp = safeValue(
+    watchedCurrencyRates.find((rate) => rate.code === "EGP")?.usdToCurrency,
+  );
+
+  const getRateToEgp = (rate?: QuoteInput["currencyRates"][number]): number => {
+    if (!rate) return 0;
+    const usdToCurrency = safeValue(rate.usdToCurrency);
+    if (rate.code === "EGP") {
+      return usdToCurrency;
+    }
+    if (usdToEgp <= 0 || usdToCurrency <= 0) {
+      return 0;
+    }
+    return usdToEgp / usdToCurrency;
+  };
+
+  const handleRateToEgpChange = (
+    index: number,
+    code: string,
+    value: string,
+  ) => {
+    const parsed = Number(value);
+    const nextValue = Number.isFinite(parsed) ? parsed : 0;
+
+    if (code === "EGP") {
+      form.setValue(`currencyRates.${index}.usdToCurrency`, nextValue, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      return;
+    }
+
+    const nextUsdToCurrency =
+      usdToEgp > 0 && nextValue > 0 ? usdToEgp / nextValue : 0;
+    form.setValue(`currencyRates.${index}.usdToCurrency`, nextUsdToCurrency, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
 
   const quotesQuery = useQuery({
     queryKey: QUOTES_QUERY_KEY,
@@ -1272,8 +1312,8 @@ export default function OperationsQuotationCalculatorPage() {
                   <div>
                     <CardTitle>Currency Rates</CardTitle>
                     <CardDescription>
-                      Enter USD to currency conversions. Rates to USD are
-                      calculated automatically.
+                      Enter currency to EGP conversions. Use the EGP row for
+                      USD/EGP. Rates to USD are calculated automatically.
                     </CardDescription>
                   </div>
                   <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -1311,9 +1351,7 @@ export default function OperationsQuotationCalculatorPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Currency</TableHead>
-                        <TableHead className="w-[200px]">
-                          USD to Currency
-                        </TableHead>
+                        <TableHead className="w-[200px]">Rate to EGP</TableHead>
                         <TableHead className="w-[200px]">Rate to USD</TableHead>
                         <TableHead>Notes</TableHead>
                       </TableRow>
@@ -1321,18 +1359,36 @@ export default function OperationsQuotationCalculatorPage() {
                     <TableBody>
                       {currencyRates.fields.map((field, index) => {
                         const computedRate = computed.currencyRates[index];
+                        const currentRate = watchedCurrencyRates[index];
+                        const currencyCode =
+                          currentRate?.code ?? field.code ?? "";
+                        const currencyName =
+                          currentRate?.name ?? field.name ?? "—";
+                        const displayRate = getRateToEgp(currentRate ?? field);
+                        const rateField = form.register(
+                          `currencyRates.${index}.usdToCurrency`,
+                          { valueAsNumber: true },
+                        );
                         return (
                           <TableRow key={field.id}>
                             <TableCell className="font-medium">
-                              {field.name}
+                              {currencyName}
                             </TableCell>
                             <TableCell>
                               <Input
                                 type="number"
-                                {...form.register(
-                                  `currencyRates.${index}.usdToCurrency`,
-                                  { valueAsNumber: true },
-                                )}
+                                step="any"
+                                name={rateField.name}
+                                ref={rateField.ref}
+                                onBlur={rateField.onBlur}
+                                value={displayRate > 0 ? displayRate : ""}
+                                onChange={(event) =>
+                                  handleRateToEgpChange(
+                                    index,
+                                    currencyCode,
+                                    event.target.value,
+                                  )
+                                }
                               />
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
@@ -1350,6 +1406,10 @@ export default function OperationsQuotationCalculatorPage() {
                       })}
                     </TableBody>
                   </Table>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Tip: Rates are displayed as 1 unit of currency in EGP. We
+                    convert to USD rates behind the scenes for calculations.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
