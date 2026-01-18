@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  RefreshCw,
   Save,
   Trash2,
   Undo2,
@@ -79,6 +80,18 @@ type OperationsQuoteDetail = {
   input_data: QuoteInput;
 };
 
+type ExchangeRatesPayload = {
+  source: string;
+  url: string;
+  fetchedAt: string;
+  asOf: string | null;
+  rates: Array<{
+    code: string;
+    name: string;
+    usdToCurrency: number;
+  }>;
+};
+
 const QUOTES_QUERY_KEY = ["operations", "quotes"] as const;
 
 const formatCurrency = (value: number, currency: "USD" | "EGP" = "USD") => {
@@ -99,6 +112,23 @@ const formatDate = (value?: string | null) => {
   } catch {
     return value;
   }
+};
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+};
+
+const buildExchangeRateNote = (payload: ExchangeRatesPayload) => {
+  const asOf = payload.asOf ? ` (as of ${payload.asOf})` : "";
+  return `${payload.source} buy rate${asOf}`;
 };
 
 const safeValue = (value: number | null | undefined) =>
@@ -190,6 +220,11 @@ export default function OperationsQuotationCalculatorPage() {
   } | null>(null);
   const [loadingQuoteId, setLoadingQuoteId] = useState<string | null>(null);
   const [baselineInput, setBaselineInput] = useState<QuoteInput | null>(null);
+  const [exchangeRatesMeta, setExchangeRatesMeta] = useState<{
+    source: string;
+    fetchedAt: string;
+    asOf: string | null;
+  } | null>(null);
 
   const form = useForm<QuoteInput>({
     resolver: zodResolver(quoteInputSchema),
@@ -363,6 +398,70 @@ export default function OperationsQuotationCalculatorPage() {
     },
     onSettled: () => {
       setLoadingQuoteId(null);
+    },
+  });
+
+  const exchangeRatesMutation = useMutation({
+    mutationFn: () =>
+      adminFetch<ExchangeRatesPayload>("/api/admin/operations/exchange-rates"),
+    onSuccess: (payload) => {
+      if (!payload?.rates?.length) {
+        toast({
+          title: "No rates received",
+          description: "Banque Misr did not return any exchange rates.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const ratesByCode = new Map(
+        payload.rates.map((rate) => [rate.code, rate]),
+      );
+      const currentRates = form.getValues("currencyRates") ?? [];
+      const defaultNote = buildExchangeRateNote(payload);
+      let updatedCount = 0;
+
+      const nextRates = currentRates.map((rate) => {
+        const match = ratesByCode.get(rate.code);
+        if (!match || !Number.isFinite(match.usdToCurrency)) {
+          return rate;
+        }
+
+        const usdToCurrency =
+          match.usdToCurrency > 0 ? match.usdToCurrency : rate.usdToCurrency;
+        if (usdToCurrency !== rate.usdToCurrency) {
+          updatedCount += 1;
+        }
+
+        return {
+          ...rate,
+          name: match.name || rate.name,
+          usdToCurrency,
+          notes: rate.notes?.trim() ? rate.notes : defaultNote,
+        };
+      });
+
+      currencyRates.replace(nextRates);
+      setExchangeRatesMeta({
+        source: payload.source,
+        fetchedAt: payload.fetchedAt,
+        asOf: payload.asOf,
+      });
+
+      toast({
+        title: "Exchange rates updated",
+        description: updatedCount
+          ? `Updated ${updatedCount} currencies from ${payload.source}.`
+          : "No matching currencies were updated.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Unable to fetch exchange rates",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -1169,12 +1268,43 @@ export default function OperationsQuotationCalculatorPage() {
 
             <TabsContent value="currency" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Currency Rates</CardTitle>
-                  <CardDescription>
-                    Enter USD to currency conversions. Rates to USD are
-                    calculated automatically.
-                  </CardDescription>
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle>Currency Rates</CardTitle>
+                    <CardDescription>
+                      Enter USD to currency conversions. Rates to USD are
+                      calculated automatically.
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-start gap-2 sm:items-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exchangeRatesMutation.mutate()}
+                      disabled={exchangeRatesMutation.isPending}
+                    >
+                      {exchangeRatesMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Fetch Banque Misr rates
+                    </Button>
+                    {exchangeRatesMeta ? (
+                      <span className="text-xs text-muted-foreground">
+                        Last updated{" "}
+                        {formatDateTime(exchangeRatesMeta.fetchedAt)}
+                        {exchangeRatesMeta.asOf
+                          ? ` (as of ${exchangeRatesMeta.asOf})`
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Rates are currently manual.
+                      </span>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
