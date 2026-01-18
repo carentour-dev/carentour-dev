@@ -8,10 +8,13 @@ import {
   Calculator,
   FileText,
   Loader2,
+  Pencil,
   Plus,
   Printer,
   Save,
   Trash2,
+  Undo2,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -70,6 +73,12 @@ type OperationsQuote = {
   created_at: string;
 };
 
+type OperationsQuoteDetail = {
+  id: string;
+  quote_number: string;
+  input_data: QuoteInput;
+};
+
 const QUOTES_QUERY_KEY = ["operations", "quotes"] as const;
 
 const formatCurrency = (value: number, currency: "USD" | "EGP" = "USD") => {
@@ -95,21 +104,96 @@ const formatDate = (value?: string | null) => {
 const safeValue = (value: number | null | undefined) =>
   Number.isFinite(value ?? NaN) ? Number(value) : 0;
 
+const DEFAULT_QUOTE_SEQUENCE_PAD = 3;
+
+const getNextQuoteNumber = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^(.*?)(\d+)$/);
+  if (!match) {
+    return `${trimmed}-${String(1).padStart(DEFAULT_QUOTE_SEQUENCE_PAD, "0")}`;
+  }
+
+  const [, prefix, numeric] = match;
+  const next = Number.parseInt(numeric, 10) + 1;
+  return `${prefix}${String(next).padStart(numeric.length, "0")}`;
+};
+
 const CLIENT_TYPES = [
   { value: "B2C", label: "B2C" },
   { value: "B2B", label: "B2B" },
 ] as const;
+
+const EMPTY_MEDICAL_PROCEDURE: QuoteInput["dataSheets"]["medicalProcedures"][number] =
+  {
+    procedureCode: "",
+    procedureName: "",
+    category: "",
+    premiumHospitalEgp: 0,
+    midRangeHospitalEgp: 0,
+    budgetHospitalEgp: 0,
+    typicalLengthOfStayNights: 0,
+    preOpDays: 0,
+    postOpDays: 0,
+    notes: "",
+  };
+
+const EMPTY_ACCOMMODATION: QuoteInput["dataSheets"]["accommodations"][number] = {
+  hotelCode: "",
+  hotelName: "",
+  starRating: "",
+  location: "",
+  roomType: "",
+  pricePerNightEgp: 0,
+  mealPlan: "",
+  mealPlanCostEgpPerDay: 0,
+  airportDistanceKm: 0,
+  notes: "",
+};
+
+const EMPTY_TRANSPORTATION: QuoteInput["dataSheets"]["transportation"][number] = {
+  serviceType: "",
+  description: "",
+  routeDetails: "",
+  vehicleType: "",
+  costEgp: 0,
+  costUsd: 0,
+  costEur: 0,
+  provider: "",
+  notes: "",
+};
+
+const EMPTY_TOURISM_EXTRA: QuoteInput["dataSheets"]["tourismExtras"][number] = {
+  serviceCode: "",
+  serviceName: "",
+  category: "",
+  description: "",
+  duration: "",
+  costEgp: 0,
+  costUsd: 0,
+  costEur: 0,
+  maxPersons: 0,
+  notes: "",
+};
 
 export default function OperationsQuotationCalculatorPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
   const defaultValues = useMemo(() => buildDefaultQuoteInput(), []);
   const [lastSavedQuoteId, setLastSavedQuoteId] = useState<string | null>(null);
+  const [editingQuote, setEditingQuote] = useState<{
+    id: string;
+    quoteNumber: string;
+  } | null>(null);
+  const [loadingQuoteId, setLoadingQuoteId] = useState<string | null>(null);
+  const [baselineInput, setBaselineInput] = useState<QuoteInput | null>(null);
 
   const form = useForm<QuoteInput>({
     resolver: zodResolver(quoteInputSchema),
     defaultValues,
   });
+  const { isDirty } = form.formState;
 
   const tourismServices = useFieldArray({
     control: form.control,
@@ -152,37 +236,184 @@ export default function OperationsQuotationCalculatorPage() {
       adminFetch<OperationsQuote[]>("/api/admin/operations/quotes"),
   });
 
+  const createQuote = async (payload: QuoteInput) =>
+    adminFetch<OperationsQuote>("/api/admin/operations/quotes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+  const handleQuoteSaveSuccess = (
+    quote: { id: string; quote_number: string },
+    message: { title: string; description: string },
+    values?: QuoteInput,
+  ) => {
+    const savedValues = values ?? form.getValues();
+    form.reset(savedValues);
+    setBaselineInput(savedValues);
+    setLastSavedQuoteId(quote.id);
+    setEditingQuote({ id: quote.id, quoteNumber: quote.quote_number });
+    invalidate(QUOTES_QUERY_KEY);
+    toast(message);
+  };
+
+  const handleQuoteSaveError = (error: unknown, title: string) => {
+    toast({
+      title,
+      description:
+        error instanceof Error ? error.message : "Please try again.",
+      variant: "destructive",
+    });
+  };
+
   const saveQuoteMutation = useMutation({
-    mutationFn: async (payload: QuoteInput) =>
-      adminFetch<OperationsQuote>("/api/admin/operations/quotes", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-    onSuccess: (quote) => {
-      setLastSavedQuoteId(quote.id);
-      invalidate(QUOTES_QUERY_KEY);
-      toast({
+    mutationFn: createQuote,
+    onSuccess: (quote, values) =>
+      handleQuoteSaveSuccess(quote, {
         title: "Quote saved",
         description: `Quote ${quote.quote_number} was saved successfully.`,
+      }, values),
+    onError: (error) => handleQuoteSaveError(error, "Unable to save quote"),
+  });
+
+  const saveAsNewQuoteMutation = useMutation({
+    mutationFn: createQuote,
+    onSuccess: (quote, values) =>
+      handleQuoteSaveSuccess(quote, {
+        title: "Quote saved as new",
+        description: `Quote ${quote.quote_number} was saved as a new copy.`,
+      }, values),
+    onError: (error) =>
+      handleQuoteSaveError(error, "Unable to save quote as new"),
+  });
+
+  const updateQuoteMutation = useMutation({
+    mutationFn: async ({
+      quoteId,
+      payload,
+    }: {
+      quoteId: string;
+      payload: QuoteInput;
+    }) =>
+      adminFetch<OperationsQuoteDetail>(
+        `/api/admin/operations/quotes/${quoteId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        },
+      ),
+    onSuccess: (quote, variables) =>
+      handleQuoteSaveSuccess(quote, {
+        title: "Quote updated",
+        description: `Quote ${quote.quote_number} was updated successfully.`,
+      }, variables.payload),
+    onError: (error) => handleQuoteSaveError(error, "Unable to update quote"),
+  });
+
+  const loadQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) =>
+      adminFetch<OperationsQuoteDetail>(
+        `/api/admin/operations/quotes/${quoteId}`,
+      ),
+    onMutate: (quoteId) => {
+      setLoadingQuoteId(quoteId);
+    },
+    onSuccess: (quote) => {
+      const parsed = quoteInputSchema.safeParse(quote.input_data);
+
+      if (!parsed.success) {
+        toast({
+          title: "Unable to load quote",
+          description: "This quote data is no longer valid.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      form.reset(parsed.data);
+      setBaselineInput(parsed.data);
+      setEditingQuote({ id: quote.id, quoteNumber: quote.quote_number });
+      setLastSavedQuoteId(quote.id);
+      toast({
+        title: "Quote loaded",
+        description: `Quote ${quote.quote_number} is ready to edit.`,
       });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     onError: (error) => {
       toast({
-        title: "Unable to save quote",
+        title: "Unable to load quote",
         description:
           error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     },
+    onSettled: () => {
+      setLoadingQuoteId(null);
+    },
   });
 
+  const isPrimarySaving =
+    saveQuoteMutation.isPending || updateQuoteMutation.isPending;
+  const isAnySaving = isPrimarySaving || saveAsNewQuoteMutation.isPending;
+  const canUndo = Boolean(baselineInput) && isDirty;
+
   const handleSave = form.handleSubmit((values) => {
+    if (editingQuote?.id) {
+      updateQuoteMutation.mutate({ quoteId: editingQuote.id, payload: values });
+      return;
+    }
+
     saveQuoteMutation.mutate(values);
   });
+
+  const handleSaveAsNew = form.handleSubmit((values) => {
+    const nextQuoteNumber = getNextQuoteNumber(values.meta.quoteNumber);
+    const shouldUpdateNumber =
+      Boolean(nextQuoteNumber) && nextQuoteNumber !== values.meta.quoteNumber;
+
+    const payload: QuoteInput = shouldUpdateNumber
+      ? {
+          ...values,
+          meta: {
+            ...values.meta,
+            quoteNumber: nextQuoteNumber ?? values.meta.quoteNumber,
+          },
+        }
+      : values;
+
+    if (shouldUpdateNumber) {
+      form.setValue("meta.quoteNumber", nextQuoteNumber!, {
+        shouldDirty: true,
+      });
+    }
+
+    saveAsNewQuoteMutation.mutate(payload);
+  });
+
+  const handleUndoChanges = () => {
+    if (!baselineInput) return;
+    form.reset(baselineInput);
+  };
+
+  const handleExitEditMode = () => {
+    if (isDirty) {
+      const shouldExit = window.confirm(
+        "You have unsaved changes. Exit edit mode and discard them?",
+      );
+      if (!shouldExit) return;
+    }
+    const currentValues = form.getValues();
+    form.reset(currentValues);
+    setEditingQuote(null);
+    setLastSavedQuoteId(null);
+    setBaselineInput(currentValues);
+  };
 
   const handleReset = () => {
     form.reset(buildDefaultQuoteInput());
     setLastSavedQuoteId(null);
+    setEditingQuote(null);
+    setBaselineInput(null);
   };
 
   const handlePrint = (quoteId?: string | null) => {
@@ -201,15 +432,40 @@ export default function OperationsQuotationCalculatorPage() {
             Build patient quotations using the same model as the Excel pricing
             tool. All inputs are manual and calculations update instantly.
           </p>
+          {editingQuote && (
+            <Badge variant="secondary" className="w-fit">
+              Editing {editingQuote.quoteNumber}
+            </Badge>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={handleReset}
-            disabled={saveQuoteMutation.isPending}
+            disabled={isAnySaving || loadQuoteMutation.isPending}
           >
             Reset
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleUndoChanges}
+            disabled={
+              !canUndo || isAnySaving || loadQuoteMutation.isPending
+            }
+          >
+            <Undo2 className="mr-2 h-4 w-4" />
+            Undo changes
+          </Button>
+          {editingQuote && (
+            <Button
+              variant="outline"
+              onClick={handleExitEditMode}
+              disabled={isAnySaving || loadQuoteMutation.isPending}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Exit edit mode
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => handlePrint(lastSavedQuoteId)}
@@ -218,13 +474,30 @@ export default function OperationsQuotationCalculatorPage() {
             <Printer className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
-          <Button onClick={handleSave} disabled={saveQuoteMutation.isPending}>
-            {saveQuoteMutation.isPending ? (
+          <Button
+            variant="outline"
+            onClick={handleSaveAsNew}
+            disabled={
+              !editingQuote || isAnySaving || loadQuoteMutation.isPending
+            }
+          >
+            {saveAsNewQuoteMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            Save as new
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isAnySaving || loadQuoteMutation.isPending}
+          >
+            {isPrimarySaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Save quote
+            {editingQuote ? "Update quote" : "Save quote"}
           </Button>
         </div>
       </header>
@@ -964,7 +1237,22 @@ export default function OperationsQuotationCalculatorPage() {
                       </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="procedures">
+                    <TabsContent value="procedures" className="space-y-3">
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            medicalProcedures.append({
+                              ...EMPTY_MEDICAL_PROCEDURE,
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add procedure
+                        </Button>
+                      </div>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -978,6 +1266,7 @@ export default function OperationsQuotationCalculatorPage() {
                             <TableHead>Pre-op</TableHead>
                             <TableHead>Post-op</TableHead>
                             <TableHead>Notes</TableHead>
+                            <TableHead className="w-[60px]" />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1065,13 +1354,37 @@ export default function OperationsQuotationCalculatorPage() {
                                   )}
                                 />
                               </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Delete medical procedure"
+                                  onClick={() => medicalProcedures.remove(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TabsContent>
 
-                    <TabsContent value="accommodations">
+                    <TabsContent value="accommodations" className="space-y-3">
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            accommodations.append({ ...EMPTY_ACCOMMODATION })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add accommodation
+                        </Button>
+                      </div>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -1085,6 +1398,7 @@ export default function OperationsQuotationCalculatorPage() {
                             <TableHead>Meal cost (EGP/day)</TableHead>
                             <TableHead>Airport distance (km)</TableHead>
                             <TableHead>Notes</TableHead>
+                            <TableHead className="w-[60px]" />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1166,13 +1480,39 @@ export default function OperationsQuotationCalculatorPage() {
                                   )}
                                 />
                               </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Delete accommodation"
+                                  onClick={() => accommodations.remove(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TabsContent>
 
-                    <TabsContent value="transportation">
+                    <TabsContent value="transportation" className="space-y-3">
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            transportationRows.append({
+                              ...EMPTY_TRANSPORTATION,
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add transportation
+                        </Button>
+                      </div>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -1185,6 +1525,7 @@ export default function OperationsQuotationCalculatorPage() {
                             <TableHead>Cost (EUR)</TableHead>
                             <TableHead>Provider</TableHead>
                             <TableHead>Notes</TableHead>
+                            <TableHead className="w-[60px]" />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1259,13 +1600,39 @@ export default function OperationsQuotationCalculatorPage() {
                                   )}
                                 />
                               </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Delete transportation"
+                                  onClick={() =>
+                                    transportationRows.remove(index)
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TabsContent>
 
-                    <TabsContent value="tourism">
+                    <TabsContent value="tourism" className="space-y-3">
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            tourismExtras.append({ ...EMPTY_TOURISM_EXTRA })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add tourism extra
+                        </Button>
+                      </div>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -1279,6 +1646,7 @@ export default function OperationsQuotationCalculatorPage() {
                             <TableHead>Cost (EUR)</TableHead>
                             <TableHead>Max persons</TableHead>
                             <TableHead>Notes</TableHead>
+                            <TableHead className="w-[60px]" />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1361,6 +1729,17 @@ export default function OperationsQuotationCalculatorPage() {
                                     `dataSheets.tourismExtras.${index}.notes`,
                                   )}
                                 />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Delete tourism extra"
+                                  onClick={() => tourismExtras.remove(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1479,7 +1858,7 @@ export default function OperationsQuotationCalculatorPage() {
         <CardHeader>
           <CardTitle>Saved Quotes</CardTitle>
           <CardDescription>
-            Review recently saved quotations or download a PDF.
+            Review recently saved quotations, edit them, or download a PDF.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1500,14 +1879,21 @@ export default function OperationsQuotationCalculatorPage() {
                   <TableHead>Patient</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Total</TableHead>
-                  <TableHead className="w-[140px]" />
+                  <TableHead className="w-[220px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {quotesQuery.data.map((quote) => (
                   <TableRow key={quote.id}>
-                    <TableCell className="font-medium">
-                      {quote.quote_number}
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">
+                          {quote.quote_number}
+                        </span>
+                        {editingQuote?.id === quote.id && (
+                          <Badge variant="secondary">Editing</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{quote.patient_name}</TableCell>
                     <TableCell>{formatDate(quote.quote_date)}</TableCell>
@@ -1515,15 +1901,32 @@ export default function OperationsQuotationCalculatorPage() {
                       {formatCurrency(safeValue(quote.final_price_usd), "USD")}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePrint(quote.id)}
-                      >
-                        <Printer className="mr-2 h-4 w-4" />
-                        PDF
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => loadQuoteMutation.mutate(quote.id)}
+                          disabled={loadQuoteMutation.isPending || isAnySaving}
+                        >
+                          {loadingQuoteId === quote.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Pencil className="mr-2 h-4 w-4" />
+                          )}
+                          {loadingQuoteId === quote.id ? "Loading" : "Edit"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrint(quote.id)}
+                          disabled={loadQuoteMutation.isPending}
+                        >
+                          <Printer className="mr-2 h-4 w-4" />
+                          PDF
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
