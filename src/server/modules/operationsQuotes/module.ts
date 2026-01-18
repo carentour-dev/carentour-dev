@@ -10,6 +10,8 @@ type OperationsQuoteRow =
   Database["public"]["Tables"]["operations_quotes"]["Row"];
 type OperationsQuoteInsert =
   Database["public"]["Tables"]["operations_quotes"]["Insert"];
+type OperationsQuoteUpdate =
+  Database["public"]["Tables"]["operations_quotes"]["Update"];
 
 type QuoteOwnerContext = {
   userId: string;
@@ -115,6 +117,60 @@ export const operationsQuotesController = {
 
     if (error || !data) {
       throw new ApiError(500, "Failed to create quote", error?.message);
+    }
+
+    return data;
+  },
+
+  async update(
+    quoteId: unknown,
+    payload: unknown,
+    ownerUserId: string,
+  ): Promise<OperationsQuoteRow> {
+    if (!ownerUserId) {
+      throw new ApiError(401, "Operation requires an authenticated team member");
+    }
+
+    const supabase = getClient();
+    const id = z.string().uuid("Invalid quote id").safeParse(quoteId);
+
+    if (!id.success) {
+      throw new ApiError(400, "Invalid quote id");
+    }
+
+    const parsed = quoteInputSchema.parse(payload) as QuoteInput;
+    const computed = calculateQuote(parsed);
+    const age = parseAge(parsed.meta.age);
+
+    const updatePayload: OperationsQuoteUpdate = {
+      quote_number: parsed.meta.quoteNumber,
+      quote_date: parsed.meta.quoteDate,
+      client_type: parsed.meta.clientType,
+      patient_name: parsed.meta.patientName,
+      country: parsed.meta.country,
+      age,
+      input_data: parsed,
+      computed_data: computed,
+      subtotal_usd: computed.summary.subtotalUsd,
+      profit_margin: computed.summary.profitMarginRate,
+      profit_amount_usd: computed.summary.profitAmountUsd,
+      final_price_usd: computed.summary.finalPriceUsd,
+    };
+
+    const { data, error } = await supabase
+      .from("operations_quotes")
+      .update(updatePayload)
+      .eq("id", id.data)
+      .eq("owner_user_id", ownerUserId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      throw new ApiError(500, "Failed to update quote", error.message);
+    }
+
+    if (!data) {
+      throw new ApiError(404, "Quote not found");
     }
 
     return data;
