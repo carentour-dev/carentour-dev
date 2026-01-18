@@ -38,8 +38,8 @@ DROP POLICY IF EXISTS operations_quotes_owner_policy
 ON public.operations_quotes;
 CREATE POLICY operations_quotes_owner_policy
 ON public.operations_quotes
-USING (owner_user_id = auth.uid())
-WITH CHECK (owner_user_id = auth.uid());
+USING (owner_user_id = (SELECT auth.uid()))
+WITH CHECK (owner_user_id = (SELECT auth.uid()));
 
 DROP TRIGGER IF EXISTS operations_quotes_set_updated_at
 ON public.operations_quotes;
