@@ -145,7 +145,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
       <SidebarProvider>
         <Sidebar
           collapsible="icon"
-          className="bg-sidebar text-sidebar-foreground"
+          className="bg-sidebar text-sidebar-foreground print:hidden"
         >
           <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
             <OperationsBranding />
@@ -185,7 +185,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
 
         <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
           <OperationsTopbar />
-          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
+          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 print:px-0 print:pb-0 print:pt-0 lg:px-10">
             <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
         </SidebarInset>
@@ -265,7 +265,7 @@ function OperationsProfileSummary({
 
 function OperationsTopbar() {
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur lg:h-16 lg:px-8">
+    <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur print:hidden lg:h-16 lg:px-8">
       <div className="flex flex-1 items-center gap-4">
         <SidebarTrigger className="-ml-1 lg:hidden" />
         <div className="flex flex-1 flex-col">
