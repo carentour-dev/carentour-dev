@@ -408,10 +408,7 @@ export async function fetchBanqueMisrRates(): Promise<BanqueMisrRatesPayload> {
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError(
-        504,
-        "Banque Misr exchange rate request timed out.",
-      );
+      throw new ApiError(504, "Banque Misr exchange rate request timed out.");
     }
     throw error;
   } finally {
