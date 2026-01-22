@@ -32,6 +32,19 @@ export const quoteInputSchema = z.object({
   }),
   medical: z.object({
     procedureName: z.string().default(""),
+    serviceProviderId: z.string().default(""),
+    treatmentId: z.string().default(""),
+    procedureId: z.string().default(""),
+    costBreakdown: z
+      .array(
+        z.object({
+          code: z.string().default(""),
+          label: z.string().default(""),
+          amountEgp: numberField(),
+          notes: z.string().default(""),
+        }),
+      )
+      .default([]),
     hospitalTier: z.string().default(""),
     medicalCostEgp: numberField(),
     lengthOfStayNights: numberField(),
