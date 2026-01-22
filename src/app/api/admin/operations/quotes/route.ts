@@ -21,7 +21,7 @@ export const GET = adminRoute(async (_req, ctx) => {
     throw new ApiError(401, "Missing authenticated user");
   }
 
-  const quotes = await operationsQuotesController.list(userId);
+  const quotes = await operationsQuotesController.list();
   return jsonResponse(quotes);
 }, QUOTES_PERMISSIONS);
 
