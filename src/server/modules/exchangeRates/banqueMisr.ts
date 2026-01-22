@@ -392,14 +392,31 @@ export async function fetchBanqueMisrRates(): Promise<BanqueMisrRatesPayload> {
     return cache.payload;
   }
 
-  const response = await fetch(BANQUE_MISR_URL, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml",
-    },
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  let response: Response;
+
+  try {
+    response = await fetch(BANQUE_MISR_URL, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError(
+        504,
+        "Banque Misr exchange rate request timed out.",
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new ApiError(
