@@ -117,7 +117,10 @@ export const operationsQuotesController = {
     return data;
   },
 
-  async update(quoteId: unknown, payload: unknown): Promise<OperationsQuoteRow> {
+  async update(
+    quoteId: unknown,
+    payload: unknown,
+  ): Promise<OperationsQuoteRow> {
     const supabase = getClient();
     const id = z.string().uuid("Invalid quote id").safeParse(quoteId);
 
