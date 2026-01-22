@@ -113,7 +113,7 @@ const gradeLabels: Record<TreatmentGrade, string> = {
 const treatmentSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
-  category: z.string().optional(),
+  category: z.string().min(1, "Specialty is required"),
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
@@ -1002,7 +1002,7 @@ export default function AdminTreatmentsPage() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Specialty</FormLabel>
                       <Input placeholder="Dental" {...field} />
                       <FormMessage />
                     </FormItem>
