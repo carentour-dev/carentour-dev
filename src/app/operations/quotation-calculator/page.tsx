@@ -398,10 +398,7 @@ export default function OperationsQuotationCalculatorPage() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [visibleProviderProcedures]);
   const specialtyComboOptions = useMemo(
-    () => [
-      { value: "__all__", label: "All specialties" },
-      ...specialtyOptions,
-    ],
+    () => [{ value: "__all__", label: "All specialties" }, ...specialtyOptions],
     [specialtyOptions],
   );
   const specialtyFilteredProcedures = useMemo(() => {
@@ -471,7 +468,10 @@ export default function OperationsQuotationCalculatorPage() {
     [selectedCostBreakdown],
   );
   const breakdownProcedures = useMemo(() => {
-    const groups = new Map<string, { label: string; total: number; items: number }>();
+    const groups = new Map<
+      string,
+      { label: string; total: number; items: number }
+    >();
 
     selectedCostBreakdown.forEach((item) => {
       const rawLabel = item.label?.trim() ?? "";
@@ -610,9 +610,8 @@ export default function OperationsQuotationCalculatorPage() {
     const currentBreakdown =
       form.getValues("medical.costBreakdown") ??
       ([] as QuoteInput["medical"]["costBreakdown"]);
-    const normalizedExisting = (Array.isArray(currentBreakdown)
-      ? currentBreakdown
-      : []
+    const normalizedExisting = (
+      Array.isArray(currentBreakdown) ? currentBreakdown : []
     )
       .map((item) => ({
         code: typeof item.code === "string" ? item.code : "",
@@ -683,9 +682,8 @@ export default function OperationsQuotationCalculatorPage() {
     const currentBreakdown =
       form.getValues("medical.costBreakdown") ??
       ([] as QuoteInput["medical"]["costBreakdown"]);
-    const nextBreakdown = (Array.isArray(currentBreakdown)
-      ? currentBreakdown
-      : []
+    const nextBreakdown = (
+      Array.isArray(currentBreakdown) ? currentBreakdown : []
     ).filter((_, index) => index !== removeIndex);
 
     const nextTotal = nextBreakdown.reduce(
@@ -723,9 +721,8 @@ export default function OperationsQuotationCalculatorPage() {
     const currentBreakdown =
       form.getValues("medical.costBreakdown") ??
       ([] as QuoteInput["medical"]["costBreakdown"]);
-    const nextBreakdown = (Array.isArray(currentBreakdown)
-      ? currentBreakdown
-      : []
+    const nextBreakdown = (
+      Array.isArray(currentBreakdown) ? currentBreakdown : []
     ).filter((item) => {
       const rawLabel = item.label?.trim() ?? "";
       const separatorIndex = rawLabel.indexOf(" - ");
@@ -1353,8 +1350,8 @@ export default function OperationsQuotationCalculatorPage() {
                             Provider pricing
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Select a provider procedure price list to add to
-                            the medical cost breakdown.
+                            Select a provider procedure price list to add to the
+                            medical cost breakdown.
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
@@ -1458,7 +1455,9 @@ export default function OperationsQuotationCalculatorPage() {
                               </TableHeader>
                               <TableBody>
                                 {breakdownItems.map((item) => (
-                                  <TableRow key={`${item.procedureLabel}-${item.index}`}>
+                                  <TableRow
+                                    key={`${item.procedureLabel}-${item.index}`}
+                                  >
                                     <TableCell className="font-medium">
                                       {item.procedureLabel}
                                     </TableCell>
@@ -1520,8 +1519,8 @@ export default function OperationsQuotationCalculatorPage() {
                                   emptyLabel="No providers found."
                                   disabled={
                                     pricingProvidersQuery.isLoading ||
-                                    (pricingProvidersQuery.data?.length ?? 0) ===
-                                      0
+                                    (pricingProvidersQuery.data?.length ??
+                                      0) === 0
                                   }
                                   onChange={(value) => {
                                     field.onChange(value);
@@ -1560,7 +1559,8 @@ export default function OperationsQuotationCalculatorPage() {
                               specialtyOptions.length === 0
                             }
                             onChange={(value) => {
-                              const nextValue = value === "__all__" ? "" : value;
+                              const nextValue =
+                                value === "__all__" ? "" : value;
                               setSelectedSpecialty(nextValue);
                               form.setValue("medical.treatmentId", "", {
                                 shouldDirty: true,
