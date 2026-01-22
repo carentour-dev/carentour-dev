@@ -2658,6 +2658,10 @@ export type Database = {
         Returns: undefined;
       };
       is_admin_or_editor: { Args: never; Returns: boolean };
+      next_operations_quote_number: {
+        Args: { p_year?: number };
+        Returns: string;
+      };
       log_security_event: {
         Args: {
           p_event_data?: Json;
