@@ -24,7 +24,7 @@ const clientTypeSchema = z
 export const quoteInputSchema = z.object({
   meta: z.object({
     quoteDate: z.string().min(1, "Quote date is required"),
-    quoteNumber: z.string().min(1, "Quote number is required"),
+    quoteNumber: z.string().default(""),
     clientType: clientTypeSchema,
     patientName: z.string().min(1, "Patient name is required"),
     country: z.string().min(1, "Country is required"),
