@@ -183,8 +183,13 @@ const buildExchangeRateNote = (payload: ExchangeRatesPayload) => {
   return `${payload.source} buy rate${asOf}`;
 };
 
-const safeValue = (value: number | null | undefined) =>
-  Number.isFinite(value ?? NaN) ? Number(value) : 0;
+const safeValue = (value: number | string | null | undefined) => {
+  if (value === "" || value === null || value === undefined) {
+    return 0;
+  }
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const DEFAULT_QUOTE_SEQUENCE_PAD = 3;
 
