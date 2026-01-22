@@ -35,6 +35,21 @@ const parseAge = (value?: string | null) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const reserveNextQuoteNumber = async (): Promise<string> => {
+  const supabase = getClient();
+  const { data, error } = await supabase.rpc("next_operations_quote_number");
+
+  if (error) {
+    throw new ApiError(500, "Failed to generate quote number", error.message);
+  }
+
+  if (!data || typeof data !== "string") {
+    throw new ApiError(500, "Failed to generate quote number");
+  }
+
+  return data;
+};
+
 export const operationsQuotesController = {
   async list(): Promise<OperationsQuoteRow[]> {
     const supabase = getClient();
@@ -50,6 +65,8 @@ export const operationsQuotesController = {
 
     return data ?? [];
   },
+
+  reserveNextQuoteNumber,
 
   async get(quoteId: unknown): Promise<OperationsQuoteRow> {
     const supabase = getClient();
@@ -84,19 +101,30 @@ export const operationsQuotesController = {
     const supabase = getClient();
 
     const parsed = quoteInputSchema.parse(payload) as QuoteInput;
-    const computed = calculateQuote(parsed);
-    const age = parseAge(parsed.meta.age);
+    const trimmedQuoteNumber = parsed.meta.quoteNumber.trim();
+    const quoteNumber = trimmedQuoteNumber || (await reserveNextQuoteNumber());
+    const normalizedInput = trimmedQuoteNumber
+      ? parsed
+      : {
+          ...parsed,
+          meta: {
+            ...parsed.meta,
+            quoteNumber,
+          },
+        };
+    const computed = calculateQuote(normalizedInput);
+    const age = parseAge(normalizedInput.meta.age);
 
     const insertPayload: OperationsQuoteInsert = {
       owner_user_id: owner.userId,
       owner_profile_id: owner.profileId ?? null,
-      quote_number: parsed.meta.quoteNumber,
-      quote_date: parsed.meta.quoteDate,
-      client_type: parsed.meta.clientType,
-      patient_name: parsed.meta.patientName,
-      country: parsed.meta.country,
+      quote_number: quoteNumber,
+      quote_date: normalizedInput.meta.quoteDate,
+      client_type: normalizedInput.meta.clientType,
+      patient_name: normalizedInput.meta.patientName,
+      country: normalizedInput.meta.country,
       age,
-      input_data: parsed,
+      input_data: normalizedInput,
       computed_data: computed,
       subtotal_usd: computed.summary.subtotalUsd,
       profit_margin: computed.summary.profitMarginRate,
@@ -129,11 +157,17 @@ export const operationsQuotesController = {
     }
 
     const parsed = quoteInputSchema.parse(payload) as QuoteInput;
+    const trimmedQuoteNumber = parsed.meta.quoteNumber.trim();
+
+    if (!trimmedQuoteNumber) {
+      throw new ApiError(400, "Quote number is required");
+    }
+
     const computed = calculateQuote(parsed);
     const age = parseAge(parsed.meta.age);
 
     const updatePayload: OperationsQuoteUpdate = {
-      quote_number: parsed.meta.quoteNumber,
+      quote_number: trimmedQuoteNumber,
       quote_date: parsed.meta.quoteDate,
       client_type: parsed.meta.clientType,
       patient_name: parsed.meta.patientName,
