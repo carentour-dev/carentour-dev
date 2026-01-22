@@ -200,6 +200,10 @@ export const buildDefaultQuoteInput = (): QuoteInput => {
     },
     medical: {
       procedureName: "",
+      serviceProviderId: "",
+      treatmentId: "",
+      procedureId: "",
+      costBreakdown: [],
       hospitalTier: "",
       medicalCostEgp: 0,
       lengthOfStayNights: 0,
@@ -279,9 +283,17 @@ export const calculateQuote = (input: QuoteInput): QuoteComputed => {
   const egpRate =
     currencyRates.find((rate) => rate.code === "EGP")?.rateToUsd ?? 0;
 
-  const medicalCostEgp = clampNonNegative(
-    toNumber(input.medical.medicalCostEgp),
-  );
+  const breakdownItems = Array.isArray(input.medical.costBreakdown)
+    ? input.medical.costBreakdown
+    : [];
+  const breakdownTotal = breakdownItems.reduce((sum, item) => {
+    return sum + clampNonNegative(toNumber(item.amountEgp));
+  }, 0);
+
+  const medicalCostEgp =
+    breakdownTotal > 0
+      ? breakdownTotal
+      : clampNonNegative(toNumber(input.medical.medicalCostEgp));
   const medicalCostUsd = medicalCostEgp * egpRate;
   const lengthOfStay = clampNonNegative(
     toNumber(input.medical.lengthOfStayNights),
