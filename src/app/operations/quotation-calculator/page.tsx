@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -29,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -58,6 +60,7 @@ import {
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
 import { useToast } from "@/hooks/use-toast";
+import { ComboBox } from "@/components/ui/combobox";
 import { quoteInputSchema } from "@/lib/operations/quotation-calculator/schema";
 import {
   buildDefaultQuoteInput,
@@ -92,7 +95,56 @@ type ExchangeRatesPayload = {
   }>;
 };
 
+type ProviderSummary = {
+  id: string;
+  name: string;
+  facility_type?: string | null;
+  city?: string | null;
+  country_code?: string | null;
+  is_partner?: boolean | null;
+};
+
+type PriceComponent = {
+  code?: string;
+  label: string;
+  amountEgp: number;
+  notes?: string;
+};
+
+type ProviderProcedurePricing = {
+  id: string;
+  name: string;
+  treatmentId: string;
+  treatmentName: string | null;
+  treatmentCategory: string | null;
+  treatmentSlug?: string | null;
+  displayOrder: number;
+  isPublic: boolean;
+  priceList: {
+    id: string;
+    components: PriceComponent[];
+    totalCostEgp: number;
+    isActive: boolean;
+  } | null;
+};
+
+type ProviderProcedurePricingResponse = {
+  provider: {
+    id: string;
+    name: string;
+    procedure_ids?: string[] | null;
+  };
+  procedures: ProviderProcedurePricing[];
+};
+
 const QUOTES_QUERY_KEY = ["operations", "quotes"] as const;
+const PRICING_PROVIDERS_QUERY_KEY = [
+  "operations",
+  "pricing",
+  "providers",
+] as const;
+const getProviderPricingQueryKey = (providerId: string) =>
+  ["operations", "pricing", "provider", providerId] as const;
 
 const formatCurrency = (value: number, currency: "USD" | "EGP" = "USD") => {
   const safeValue = Number.isFinite(value) ? value : 0;
@@ -225,6 +277,8 @@ export default function OperationsQuotationCalculatorPage() {
     fetchedAt: string;
     asOf: string | null;
   } | null>(null);
+  const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [includeUnpriced, setIncludeUnpriced] = useState(false);
 
   const form = useForm<QuoteInput>({
     resolver: zodResolver(quoteInputSchema),
@@ -266,6 +320,13 @@ export default function OperationsQuotationCalculatorPage() {
     () => calculateQuote(watchAll ?? defaultValues),
     [watchAll, defaultValues],
   );
+  const selectedProviderId = watchAll?.medical?.serviceProviderId ?? "";
+  const selectedTreatmentId = watchAll?.medical?.treatmentId ?? "";
+  const selectedProcedureId = watchAll?.medical?.procedureId ?? "";
+  const selectedCostBreakdown = useMemo(
+    () => watchAll?.medical?.costBreakdown ?? [],
+    [watchAll?.medical?.costBreakdown],
+  );
   const watchedCurrencyRates = watchAll?.currencyRates ?? [];
   const usdToEgp = safeValue(
     watchedCurrencyRates.find((rate) => rate.code === "EGP")?.usdToCurrency,
@@ -282,6 +343,224 @@ export default function OperationsQuotationCalculatorPage() {
     }
     return usdToEgp / usdToCurrency;
   };
+
+  const pricingProvidersQuery = useQuery({
+    queryKey: PRICING_PROVIDERS_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<ProviderSummary[]>("/api/admin/operations/pricing/providers"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const providerPricingQuery = useQuery({
+    queryKey: selectedProviderId
+      ? getProviderPricingQueryKey(selectedProviderId)
+      : ["operations", "pricing", "provider", "none"],
+    queryFn: () =>
+      adminFetch<ProviderProcedurePricingResponse>(
+        `/api/admin/operations/pricing/providers/${selectedProviderId}/procedure-price-lists`,
+      ),
+    enabled: Boolean(selectedProviderId),
+  });
+
+  const providerProcedures = useMemo(
+    () => providerPricingQuery.data?.procedures ?? [],
+    [providerPricingQuery.data?.procedures],
+  );
+  const providerOptions = useMemo(
+    () =>
+      (pricingProvidersQuery.data ?? []).map((provider) => ({
+        value: provider.id,
+        label: provider.name,
+        description: [provider.city, provider.country_code]
+          .filter(Boolean)
+          .join(", "),
+      })),
+    [pricingProvidersQuery.data],
+  );
+  const visibleProviderProcedures = useMemo(() => {
+    if (includeUnpriced) {
+      return providerProcedures;
+    }
+    return providerProcedures.filter(
+      (procedure) => procedure.priceList?.isActive,
+    );
+  }, [includeUnpriced, providerProcedures]);
+  const specialtyOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    visibleProviderProcedures.forEach((procedure) => {
+      const rawCategory = procedure.treatmentCategory?.trim();
+      const value = rawCategory ? rawCategory : "uncategorized";
+      const label = rawCategory ? rawCategory : "Uncategorized";
+      map.set(value, label);
+    });
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [visibleProviderProcedures]);
+  const specialtyComboOptions = useMemo(
+    () => [
+      { value: "__all__", label: "All specialties" },
+      ...specialtyOptions,
+    ],
+    [specialtyOptions],
+  );
+  const specialtyFilteredProcedures = useMemo(() => {
+    if (!selectedSpecialty) {
+      return visibleProviderProcedures;
+    }
+    return visibleProviderProcedures.filter((procedure) => {
+      const rawCategory = procedure.treatmentCategory?.trim();
+      const value = rawCategory ? rawCategory : "uncategorized";
+      return value === selectedSpecialty;
+    });
+  }, [selectedSpecialty, visibleProviderProcedures]);
+  const providerTreatmentOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    specialtyFilteredProcedures.forEach((procedure) => {
+      const label = procedure.treatmentName ?? "Unknown treatment";
+      map.set(procedure.treatmentId, label);
+    });
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [specialtyFilteredProcedures]);
+  const treatmentComboOptions = useMemo(
+    () => [
+      { value: "__all__", label: "All treatments" },
+      ...providerTreatmentOptions.map((option) => ({
+        value: option.id,
+        label: option.label,
+      })),
+    ],
+    [providerTreatmentOptions],
+  );
+
+  const filteredProviderProcedures = useMemo(() => {
+    if (!selectedTreatmentId) {
+      return specialtyFilteredProcedures;
+    }
+    return specialtyFilteredProcedures.filter(
+      (procedure) => procedure.treatmentId === selectedTreatmentId,
+    );
+  }, [selectedTreatmentId, specialtyFilteredProcedures]);
+  const procedureComboOptions = useMemo(
+    () => [
+      { value: "__all__", label: "All procedures" },
+      ...filteredProviderProcedures.map((procedure) => ({
+        value: procedure.id,
+        label: procedure.name,
+        description: procedure.treatmentName ?? undefined,
+      })),
+    ],
+    [filteredProviderProcedures],
+  );
+
+  const selectedProviderProcedure = useMemo(
+    () =>
+      filteredProviderProcedures.find(
+        (procedure) => procedure.id === selectedProcedureId,
+      ) ?? null,
+    [filteredProviderProcedures, selectedProcedureId],
+  );
+  const selectedBreakdownTotal = useMemo(
+    () =>
+      selectedCostBreakdown.reduce(
+        (sum, item) => sum + safeValue(item.amountEgp),
+        0,
+      ),
+    [selectedCostBreakdown],
+  );
+  const breakdownProcedures = useMemo(() => {
+    const groups = new Map<string, { label: string; total: number; items: number }>();
+
+    selectedCostBreakdown.forEach((item) => {
+      const rawLabel = item.label?.trim() ?? "";
+      const separatorIndex = rawLabel.indexOf(" - ");
+      const groupLabel =
+        separatorIndex > 0 ? rawLabel.slice(0, separatorIndex) : "Additional";
+      const group = groups.get(groupLabel) ?? {
+        label: groupLabel,
+        total: 0,
+        items: 0,
+      };
+
+      group.total += safeValue(item.amountEgp);
+      group.items += 1;
+      groups.set(groupLabel, group);
+    });
+
+    return Array.from(groups.values()).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
+  }, [selectedCostBreakdown]);
+  const breakdownItems = useMemo(() => {
+    return selectedCostBreakdown.map((item, index) => {
+      const rawLabel = item.label?.trim() ?? "";
+      const separatorIndex = rawLabel.indexOf(" - ");
+      const procedureLabel =
+        separatorIndex > 0 ? rawLabel.slice(0, separatorIndex) : "Additional";
+      const componentLabel =
+        separatorIndex > 0 ? rawLabel.slice(separatorIndex + 3) : rawLabel;
+
+      return {
+        index,
+        procedureLabel,
+        componentLabel: componentLabel || "Item",
+        amountEgp: safeValue(item.amountEgp),
+        notes: item.notes ?? "",
+      };
+    });
+  }, [selectedCostBreakdown]);
+  const selectedPriceListTotal = useMemo(() => {
+    const priceList = selectedProviderProcedure?.priceList;
+    if (!priceList) return 0;
+    if (typeof priceList.totalCostEgp === "number") {
+      return priceList.totalCostEgp;
+    }
+    return priceList.components.reduce(
+      (sum, item) => sum + safeValue(item.amountEgp),
+      0,
+    );
+  }, [selectedProviderProcedure]);
+
+  useEffect(() => {
+    form.register("medical.costBreakdown");
+  }, [form]);
+
+  useEffect(() => {
+    if (
+      selectedSpecialty &&
+      !specialtyOptions.some((option) => option.value === selectedSpecialty)
+    ) {
+      setSelectedSpecialty("");
+    }
+  }, [selectedSpecialty, specialtyOptions]);
+
+  useEffect(() => {
+    if (
+      selectedTreatmentId &&
+      !providerTreatmentOptions.some(
+        (option) => option.id === selectedTreatmentId,
+      )
+    ) {
+      form.setValue("medical.treatmentId", "", {
+        shouldDirty: true,
+      });
+    }
+  }, [form, providerTreatmentOptions, selectedTreatmentId]);
+
+  useEffect(() => {
+    if (
+      selectedProcedureId &&
+      !filteredProviderProcedures.some(
+        (procedure) => procedure.id === selectedProcedureId,
+      )
+    ) {
+      form.setValue("medical.procedureId", "", {
+        shouldDirty: true,
+      });
+    }
+  }, [filteredProviderProcedures, form, selectedProcedureId]);
 
   const handleRateToEgpChange = (
     index: number,
@@ -304,6 +583,178 @@ export default function OperationsQuotationCalculatorPage() {
     form.setValue(`currencyRates.${index}.usdToCurrency`, nextUsdToCurrency, {
       shouldDirty: true,
       shouldValidate: true,
+    });
+  };
+
+  const handleApplyPriceList = () => {
+    const priceList = selectedProviderProcedure?.priceList;
+    if (!priceList?.components?.length) {
+      toast({
+        title: "No price list available",
+        description: "Select a procedure with a saved price breakdown.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!priceList.isActive) {
+      toast({
+        title: "Price list inactive",
+        description: "Activate the price list before using it in a quote.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const components = priceList.components ?? [];
+    const currentBreakdown =
+      form.getValues("medical.costBreakdown") ??
+      ([] as QuoteInput["medical"]["costBreakdown"]);
+    const normalizedExisting = (Array.isArray(currentBreakdown)
+      ? currentBreakdown
+      : []
+    )
+      .map((item) => ({
+        code: typeof item.code === "string" ? item.code : "",
+        label: typeof item.label === "string" ? item.label : "",
+        amountEgp: safeValue(item.amountEgp),
+        notes: typeof item.notes === "string" ? item.notes : "",
+      }))
+      .filter((item) => item.label.length > 0);
+    const procedureLabel = selectedProviderProcedure?.name ?? "Procedure";
+    const normalizedComponents = components.map((component) => ({
+      code: component.code ?? "",
+      label: `${procedureLabel} - ${component.label}`,
+      amountEgp: safeValue(component.amountEgp),
+      notes: component.notes ?? "",
+    }));
+    const combinedBreakdown = [...normalizedExisting, ...normalizedComponents];
+    const total = combinedBreakdown.reduce(
+      (sum, item) => sum + safeValue(item.amountEgp),
+      0,
+    );
+
+    form.setValue("medical.costBreakdown", combinedBreakdown, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    form.setValue("medical.medicalCostEgp", total, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    const currentProcedureName =
+      form.getValues("medical.procedureName")?.trim() ?? "";
+    if (!currentProcedureName) {
+      form.setValue("medical.procedureName", procedureLabel, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    form.setValue("medical.serviceProviderId", selectedProviderId, {
+      shouldDirty: true,
+    });
+    form.setValue(
+      "medical.treatmentId",
+      selectedProviderProcedure.treatmentId,
+      {
+        shouldDirty: true,
+      },
+    );
+    form.setValue("medical.procedureId", selectedProviderProcedure.id, {
+      shouldDirty: true,
+    });
+
+    toast({
+      title: "Price breakdown added",
+      description: "Medical cost now includes the selected provider pricing.",
+    });
+  };
+
+  const handleClearBreakdown = () => {
+    form.setValue("medical.costBreakdown", [], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const handleRemoveBreakdownItem = (removeIndex: number) => {
+    const currentBreakdown =
+      form.getValues("medical.costBreakdown") ??
+      ([] as QuoteInput["medical"]["costBreakdown"]);
+    const nextBreakdown = (Array.isArray(currentBreakdown)
+      ? currentBreakdown
+      : []
+    ).filter((_, index) => index !== removeIndex);
+
+    const nextTotal = nextBreakdown.reduce(
+      (sum, item) => sum + safeValue(item.amountEgp),
+      0,
+    );
+
+    form.setValue("medical.costBreakdown", nextBreakdown, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    form.setValue("medical.medicalCostEgp", nextTotal, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+
+    toast({
+      title: "Component removed",
+      description: "The component was removed from the breakdown.",
+    });
+  };
+
+  const handleRemoveProcedureFromBreakdown = (groupLabel: string) => {
+    const confirmationMessage =
+      groupLabel === "Additional"
+        ? "Remove all additional items from the breakdown?"
+        : `Remove ${groupLabel} from the breakdown?`;
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    const currentBreakdown =
+      form.getValues("medical.costBreakdown") ??
+      ([] as QuoteInput["medical"]["costBreakdown"]);
+    const nextBreakdown = (Array.isArray(currentBreakdown)
+      ? currentBreakdown
+      : []
+    ).filter((item) => {
+      const rawLabel = item.label?.trim() ?? "";
+      const separatorIndex = rawLabel.indexOf(" - ");
+      if (separatorIndex > 0) {
+        const prefix = rawLabel.slice(0, separatorIndex);
+        return prefix !== groupLabel;
+      }
+      return groupLabel !== "Additional";
+    });
+
+    const nextTotal = nextBreakdown.reduce(
+      (sum, item) => sum + safeValue(item.amountEgp),
+      0,
+    );
+
+    form.setValue("medical.costBreakdown", nextBreakdown, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    form.setValue("medical.medicalCostEgp", nextTotal, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+
+    toast({
+      title: "Procedure removed",
+      description: "The procedure was removed from the breakdown.",
     });
   };
 
@@ -441,10 +892,8 @@ export default function OperationsQuotationCalculatorPage() {
     },
   });
 
-  const exchangeRatesMutation = useMutation({
-    mutationFn: () =>
-      adminFetch<ExchangeRatesPayload>("/api/admin/operations/exchange-rates"),
-    onSuccess: (payload) => {
+  const applyExchangeRatesPayload = useCallback(
+    (payload: ExchangeRatesPayload) => {
       if (!payload?.rates?.length) {
         toast({
           title: "No rates received",
@@ -495,6 +944,19 @@ export default function OperationsQuotationCalculatorPage() {
           : "No matching currencies were updated.",
       });
     },
+    [currencyRates, form, toast],
+  );
+
+  const fetchExchangeRates = useCallback((signal?: AbortSignal) => {
+    return adminFetch<ExchangeRatesPayload>(
+      "/api/admin/operations/exchange-rates",
+      { signal },
+    );
+  }, []);
+
+  const exchangeRatesMutation = useMutation({
+    mutationFn: () => fetchExchangeRates(),
+    onSuccess: applyExchangeRatesPayload,
     onError: (error) => {
       toast({
         title: "Unable to fetch exchange rates",
@@ -504,6 +966,40 @@ export default function OperationsQuotationCalculatorPage() {
       });
     },
   });
+
+  const hasFetchedRatesOnLoad = useRef(false);
+  useEffect(() => {
+    if (hasFetchedRatesOnLoad.current) return;
+    if (exchangeRatesMeta) {
+      hasFetchedRatesOnLoad.current = true;
+      return;
+    }
+    hasFetchedRatesOnLoad.current = true;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+
+    fetchExchangeRates(controller.signal)
+      .then(applyExchangeRatesPayload)
+      .catch((error) => {
+        if (error instanceof Error && error.name === "AbortError") {
+          toast({
+            title: "Exchange rates timed out",
+            description: "Banque Misr rates took too long to respond.",
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Unable to fetch exchange rates",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+      });
+  }, [applyExchangeRatesPayload, exchangeRatesMeta, fetchExchangeRates, toast]);
 
   const isPrimarySaving =
     saveQuoteMutation.isPending || updateQuoteMutation.isPending;
@@ -847,6 +1343,420 @@ export default function OperationsQuotationCalculatorPage() {
                     <FormLabel>Medical cost (USD)</FormLabel>
                     <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
                       {formatCurrency(computed.medicalCostUsd, "USD")}
+                    </div>
+                  </div>
+                  <div className="md:col-span-3">
+                    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            Provider pricing
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Select a provider procedure price list to add to
+                            the medical cost breakdown.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Switch
+                              checked={includeUnpriced}
+                              onCheckedChange={setIncludeUnpriced}
+                            />
+                            <span>Include unpriced</span>
+                          </div>
+                          <Button asChild variant="outline" size="sm">
+                            <Link href="/operations/pricing">
+                              Manage price lists
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                      {selectedCostBreakdown.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary">
+                            Breakdown total{" "}
+                            {formatCurrency(selectedBreakdownTotal, "EGP")}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearBreakdown}
+                          >
+                            Clear breakdown
+                          </Button>
+                        </div>
+                      ) : null}
+                      {breakdownProcedures.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Added procedures
+                          </p>
+                          <div className="rounded-md border border-border/60 bg-background">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Procedure</TableHead>
+                                  <TableHead className="w-[140px]">
+                                    Components
+                                  </TableHead>
+                                  <TableHead className="w-[160px] text-right">
+                                    Total (EGP)
+                                  </TableHead>
+                                  <TableHead className="w-[140px]" />
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {breakdownProcedures.map((group) => (
+                                  <TableRow key={group.label}>
+                                    <TableCell className="font-medium">
+                                      {group.label}
+                                    </TableCell>
+                                    <TableCell>{group.items}</TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                      {formatCurrency(group.total, "EGP")}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleRemoveProcedureFromBreakdown(
+                                            group.label,
+                                          )
+                                        }
+                                      >
+                                        Remove
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ) : null}
+                      {breakdownItems.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Added components
+                          </p>
+                          <div className="rounded-md border border-border/60 bg-background">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Procedure</TableHead>
+                                  <TableHead>Component</TableHead>
+                                  <TableHead className="w-[140px] text-right">
+                                    Amount (EGP)
+                                  </TableHead>
+                                  <TableHead>Notes</TableHead>
+                                  <TableHead className="w-[120px]" />
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {breakdownItems.map((item) => (
+                                  <TableRow key={`${item.procedureLabel}-${item.index}`}>
+                                    <TableCell className="font-medium">
+                                      {item.procedureLabel}
+                                    </TableCell>
+                                    <TableCell>{item.componentLabel}</TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                      {formatCurrency(item.amountEgp, "EGP")}
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.notes ? (
+                                        <span className="text-sm text-muted-foreground">
+                                          {item.notes}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">
+                                          —
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleRemoveBreakdownItem(item.index)
+                                        }
+                                      >
+                                        Remove
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                        <FormField
+                          control={form.control}
+                          name="medical.serviceProviderId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Service provider</FormLabel>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value ?? ""}
+                                  options={providerOptions}
+                                  placeholder={
+                                    pricingProvidersQuery.isLoading
+                                      ? "Loading providers..."
+                                      : (pricingProvidersQuery.data?.length ??
+                                            0) === 0
+                                        ? "No providers available"
+                                        : "Select a provider"
+                                  }
+                                  searchPlaceholder="Search providers..."
+                                  emptyLabel="No providers found."
+                                  disabled={
+                                    pricingProvidersQuery.isLoading ||
+                                    (pricingProvidersQuery.data?.length ?? 0) ===
+                                      0
+                                  }
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    setSelectedSpecialty("");
+                                    form.setValue("medical.treatmentId", "", {
+                                      shouldDirty: true,
+                                    });
+                                    form.setValue("medical.procedureId", "", {
+                                      shouldDirty: true,
+                                    });
+                                    form.setValue("medical.costBreakdown", [], {
+                                      shouldDirty: true,
+                                    });
+                                  }}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <div className="space-y-2">
+                          <FormLabel>Specialty</FormLabel>
+                          <ComboBox
+                            value={selectedSpecialty || "__all__"}
+                            options={specialtyComboOptions}
+                            placeholder={
+                              !selectedProviderId
+                                ? "Select a provider first"
+                                : specialtyOptions.length === 0
+                                  ? "No specialties available"
+                                  : "All specialties"
+                            }
+                            searchPlaceholder="Search specialties..."
+                            emptyLabel="No specialties found."
+                            disabled={
+                              !selectedProviderId ||
+                              specialtyOptions.length === 0
+                            }
+                            onChange={(value) => {
+                              const nextValue = value === "__all__" ? "" : value;
+                              setSelectedSpecialty(nextValue);
+                              form.setValue("medical.treatmentId", "", {
+                                shouldDirty: true,
+                              });
+                              form.setValue("medical.procedureId", "", {
+                                shouldDirty: true,
+                              });
+                            }}
+                          />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="medical.treatmentId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Treatment</FormLabel>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value || "__all__"}
+                                  options={treatmentComboOptions}
+                                  placeholder={
+                                    !selectedProviderId
+                                      ? "Select a provider first"
+                                      : providerTreatmentOptions.length === 0
+                                        ? "No treatments available"
+                                        : "All treatments"
+                                  }
+                                  searchPlaceholder="Search treatments..."
+                                  emptyLabel="No treatments found."
+                                  disabled={
+                                    !selectedProviderId ||
+                                    providerTreatmentOptions.length === 0
+                                  }
+                                  onChange={(value) => {
+                                    const nextValue =
+                                      value === "__all__" ? "" : value;
+                                    field.onChange(nextValue);
+                                    form.setValue("medical.procedureId", "", {
+                                      shouldDirty: true,
+                                    });
+                                  }}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="medical.procedureId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Procedure</FormLabel>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value || "__all__"}
+                                  options={procedureComboOptions}
+                                  placeholder={
+                                    !selectedProviderId
+                                      ? "Select a provider first"
+                                      : filteredProviderProcedures.length === 0
+                                        ? "No procedures available"
+                                        : "All procedures"
+                                  }
+                                  searchPlaceholder="Search procedures..."
+                                  emptyLabel="No procedures found."
+                                  disabled={
+                                    !selectedProviderId ||
+                                    filteredProviderProcedures.length === 0
+                                  }
+                                  onChange={(value) => {
+                                    const nextValue =
+                                      value === "__all__" ? "" : value;
+                                    field.onChange(nextValue);
+                                  }}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {!selectedProviderId ? (
+                        <p className="text-xs text-muted-foreground">
+                          Select a provider to view available procedures and
+                          pricing.
+                        </p>
+                      ) : providerPricingQuery.isLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading provider procedures…
+                        </div>
+                      ) : providerPricingQuery.isError ? (
+                        <p className="text-xs text-destructive">
+                          Unable to load provider procedures.
+                        </p>
+                      ) : providerProcedures.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No procedures are linked to this provider yet.
+                        </p>
+                      ) : visibleProviderProcedures.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No active price lists found. Toggle Include unpriced
+                          or manage price lists to add pricing.
+                        </p>
+                      ) : filteredProviderProcedures.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No procedures match the current filters.
+                        </p>
+                      ) : selectedProviderProcedure ? (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {selectedProviderProcedure.priceList ? (
+                              <Badge
+                                variant={
+                                  selectedProviderProcedure.priceList.isActive
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {selectedProviderProcedure.priceList.isActive
+                                  ? "Active price list"
+                                  : "Inactive price list"}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Unpriced</Badge>
+                            )}
+                          </div>
+                          {selectedProviderProcedure.priceList?.components
+                            ?.length ? (
+                            <div className="space-y-3 rounded-md border border-border/60 bg-background p-3">
+                              {selectedProviderProcedure.priceList.components.map(
+                                (component, index) => (
+                                  <div
+                                    key={`${component.label}-${index}`}
+                                    className="flex flex-wrap items-start justify-between gap-3 text-sm"
+                                  >
+                                    <div>
+                                      <p className="font-medium text-foreground">
+                                        {component.label}
+                                      </p>
+                                      {component.notes ? (
+                                        <p className="text-xs text-muted-foreground">
+                                          {component.notes}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <span className="font-medium text-foreground">
+                                      {formatCurrency(
+                                        safeValue(component.amountEgp),
+                                        "EGP",
+                                      )}
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                              <Separator />
+                              <div className="flex items-center justify-between text-sm font-semibold">
+                                <span>Total</span>
+                                <span>
+                                  {formatCurrency(
+                                    selectedPriceListTotal,
+                                    "EGP",
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              No price list saved for this procedure yet.
+                            </p>
+                          )}
+                          {!selectedProviderProcedure.priceList?.isActive &&
+                          selectedProviderProcedure.priceList ? (
+                            <p className="text-xs text-muted-foreground">
+                              This price list is inactive. Activate it before
+                              using it in a quote.
+                            </p>
+                          ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleApplyPriceList}
+                            disabled={
+                              !selectedProviderProcedure.priceList?.components
+                                ?.length ||
+                              !selectedProviderProcedure.priceList?.isActive
+                            }
+                          >
+                            Add to breakdown
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Select a procedure to view its price list.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
