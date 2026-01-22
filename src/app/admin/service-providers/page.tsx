@@ -282,7 +282,8 @@ export default function AdminServiceProvidersPage() {
     },
   });
 
-  const selectedProviderTreatmentId = providerProcedureForm.watch("treatmentId");
+  const selectedProviderTreatmentId =
+    providerProcedureForm.watch("treatmentId");
   const selectedProviderTreatment = useMemo(() => {
     if (!selectedProviderTreatmentId) return null;
     return (treatmentsQuery.data ?? []).find(
@@ -1317,7 +1318,9 @@ export default function AdminServiceProvidersPage() {
                               <FormLabel>Specialty</FormLabel>
                               <FormControl>
                                 <Input
-                                  value={selectedProviderTreatment?.category ?? ""}
+                                  value={
+                                    selectedProviderTreatment?.category ?? ""
+                                  }
                                   placeholder="Set a specialty on the treatment"
                                   readOnly
                                 />
