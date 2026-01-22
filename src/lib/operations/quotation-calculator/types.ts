@@ -11,9 +11,20 @@ export type QuoteMeta = {
 
 export type MedicalProcedureInput = {
   procedureName: string;
+  serviceProviderId?: string;
+  treatmentId?: string;
+  procedureId?: string;
+  costBreakdown?: MedicalCostBreakdownItem[];
   hospitalTier: string;
   medicalCostEgp: number;
   lengthOfStayNights: number;
+};
+
+export type MedicalCostBreakdownItem = {
+  code?: string;
+  label: string;
+  amountEgp: number;
+  notes?: string;
 };
 
 export type AccommodationInput = {
