@@ -282,6 +282,14 @@ export default function AdminServiceProvidersPage() {
     },
   });
 
+  const selectedProviderTreatmentId = providerProcedureForm.watch("treatmentId");
+  const selectedProviderTreatment = useMemo(() => {
+    if (!selectedProviderTreatmentId) return null;
+    return (treatmentsQuery.data ?? []).find(
+      (treatment) => treatment.id === selectedProviderTreatmentId,
+    );
+  }, [selectedProviderTreatmentId, treatmentsQuery.data]);
+
   const hasUnsavedChanges =
     form.formState.isDirty || providerProcedureForm.formState.isDirty;
 
@@ -674,8 +682,22 @@ export default function AdminServiceProvidersPage() {
         return;
       }
 
+      const treatmentId = values.treatmentId.trim();
+      const selectedTreatment = (treatmentsQuery.data ?? []).find(
+        (treatment) => treatment.id === treatmentId,
+      );
+      if (!selectedTreatment?.category?.trim()) {
+        toast({
+          title: "Missing specialty",
+          description:
+            "Add a specialty to the treatment before creating a procedure.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const payload = {
-        treatmentId: values.treatmentId.trim(),
+        treatmentId,
         procedure: {
           name: values.name.trim(),
           description: values.description.trim() || undefined,
@@ -1260,7 +1282,7 @@ export default function AdminServiceProvidersPage() {
                           role="group"
                           aria-label="Create provider procedure"
                         >
-                          <div className="grid gap-3 md:grid-cols-2">
+                          <div className="grid gap-3 md:grid-cols-3">
                             <FormField
                               control={providerProcedureForm.control}
                               name="treatmentId"
@@ -1291,6 +1313,21 @@ export default function AdminServiceProvidersPage() {
                                 </FormItem>
                               )}
                             />
+                            <FormItem>
+                              <FormLabel>Specialty</FormLabel>
+                              <FormControl>
+                                <Input
+                                  value={selectedProviderTreatment?.category ?? ""}
+                                  placeholder="Set a specialty on the treatment"
+                                  readOnly
+                                />
+                              </FormControl>
+                              {!selectedProviderTreatment?.category ? (
+                                <FormDescription>
+                                  Specialty comes from the selected treatment.
+                                </FormDescription>
+                              ) : null}
+                            </FormItem>
                             <FormField
                               control={providerProcedureForm.control}
                               name="name"
