@@ -36,13 +36,12 @@ const parseAge = (value?: string | null) => {
 };
 
 export const operationsQuotesController = {
-  async list(ownerUserId: string): Promise<OperationsQuoteRow[]> {
+  async list(): Promise<OperationsQuoteRow[]> {
     const supabase = getClient();
 
     const { data, error } = await supabase
       .from("operations_quotes")
       .select("*")
-      .eq("owner_user_id", ownerUserId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -52,10 +51,7 @@ export const operationsQuotesController = {
     return data ?? [];
   },
 
-  async get(
-    quoteId: unknown,
-    ownerUserId: string,
-  ): Promise<OperationsQuoteRow> {
+  async get(quoteId: unknown): Promise<OperationsQuoteRow> {
     const supabase = getClient();
     const id = z.string().uuid("Invalid quote id").safeParse(quoteId);
 
@@ -67,7 +63,6 @@ export const operationsQuotesController = {
       .from("operations_quotes")
       .select("*")
       .eq("id", id.data)
-      .eq("owner_user_id", ownerUserId)
       .maybeSingle();
 
     if (error) {
@@ -122,18 +117,7 @@ export const operationsQuotesController = {
     return data;
   },
 
-  async update(
-    quoteId: unknown,
-    payload: unknown,
-    ownerUserId: string,
-  ): Promise<OperationsQuoteRow> {
-    if (!ownerUserId) {
-      throw new ApiError(
-        401,
-        "Operation requires an authenticated team member",
-      );
-    }
-
+  async update(quoteId: unknown, payload: unknown): Promise<OperationsQuoteRow> {
     const supabase = getClient();
     const id = z.string().uuid("Invalid quote id").safeParse(quoteId);
 
@@ -164,7 +148,6 @@ export const operationsQuotesController = {
       .from("operations_quotes")
       .update(updatePayload)
       .eq("id", id.data)
-      .eq("owner_user_id", ownerUserId)
       .select("*")
       .maybeSingle();
 
