@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Calculator,
+  CircleDollarSign,
   Inbox,
   LayoutDashboard,
   ListTodo,
@@ -59,6 +60,9 @@ const cntAiRequirement: AccessRequirement = {
 const quotationCalculatorRequirement: AccessRequirement = sectionRequirement(
   "operations.quotation_calculator",
 );
+const pricingRequirement: AccessRequirement = sectionRequirement(
+  "operations.quotation_calculator",
+);
 
 export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
   {
@@ -90,6 +94,15 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: Calculator,
     adminHref: "/admin",
     required: quotationCalculatorRequirement,
+  },
+  {
+    id: "pricing",
+    label: "Pricing",
+    description: "Maintain provider price lists and procedure breakdowns.",
+    href: "/operations/pricing",
+    icon: CircleDollarSign,
+    adminHref: "/admin",
+    required: pricingRequirement,
   },
   {
     id: "cnt-ai",
