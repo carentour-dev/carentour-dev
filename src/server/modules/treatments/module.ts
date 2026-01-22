@@ -59,7 +59,7 @@ const procedureSchema = z.object({
 const baseTreatmentSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
-  category: z.string().optional(),
+  category: z.string().min(1, "Specialty is required"),
   summary: z.string().optional(),
   description: z.string().optional(),
   overview: z.string().optional(),
@@ -479,6 +479,27 @@ export const treatmentController = {
 
     if (!provider) {
       throw new ApiError(404, "Service provider not found");
+    }
+
+    const { data: treatment, error: treatmentError } = await supabase
+      .from("treatments")
+      .select("category")
+      .eq("id", parsed.treatmentId)
+      .maybeSingle();
+
+    if (treatmentError) {
+      throw new ApiError(
+        500,
+        "Failed to load treatment",
+        treatmentError.message,
+      );
+    }
+
+    if (!treatment?.category || treatment.category.trim().length === 0) {
+      throw new ApiError(
+        400,
+        "Treatment specialty is required before adding procedures",
+      );
     }
 
     const startOrder = await fetchNextDisplayOrder(parsed.treatmentId);
