@@ -20,7 +20,7 @@ export const GET = adminRoute(async (_req, ctx) => {
   }
 
   const quoteId = ctx.params?.id;
-  const quote = await operationsQuotesController.get(quoteId, userId);
+  const quote = await operationsQuotesController.get(quoteId);
   return jsonResponse(quote);
 }, QUOTES_PERMISSIONS);
 
@@ -33,11 +33,7 @@ export const PUT = adminRoute(async (req: NextRequest, ctx) => {
 
   const quoteId = ctx.params?.id;
   const payload = await req.json();
-  const quote = await operationsQuotesController.update(
-    quoteId,
-    payload,
-    userId,
-  );
+  const quote = await operationsQuotesController.update(quoteId, payload);
 
   return jsonResponse(quote);
 }, QUOTES_PERMISSIONS);
