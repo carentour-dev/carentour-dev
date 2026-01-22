@@ -191,22 +191,6 @@ const safeValue = (value: number | string | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const DEFAULT_QUOTE_SEQUENCE_PAD = 3;
-
-const getNextQuoteNumber = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const match = trimmed.match(/^(.*?)(\d+)$/);
-  if (!match) {
-    return `${trimmed}-${String(1).padStart(DEFAULT_QUOTE_SEQUENCE_PAD, "0")}`;
-  }
-
-  const [, prefix, numeric] = match;
-  const next = Number.parseInt(numeric, 10) + 1;
-  return `${prefix}${String(next).padStart(numeric.length, "0")}`;
-};
-
 const CLIENT_TYPES = [
   { value: "B2C", label: "B2C" },
   { value: "B2B", label: "B2B" },
@@ -778,8 +762,15 @@ export default function OperationsQuotationCalculatorPage() {
     values?: QuoteInput,
   ) => {
     const savedValues = values ?? form.getValues();
-    form.reset(savedValues);
-    setBaselineInput(savedValues);
+    const nextValues: QuoteInput = {
+      ...savedValues,
+      meta: {
+        ...savedValues.meta,
+        quoteNumber: quote.quote_number || savedValues.meta.quoteNumber,
+      },
+    };
+    form.reset(nextValues);
+    setBaselineInput(nextValues);
     setLastSavedQuoteId(quote.id);
     setEditingQuote({ id: quote.id, quoteNumber: quote.quote_number });
     invalidate(QUOTES_QUERY_KEY);
@@ -1008,7 +999,7 @@ export default function OperationsQuotationCalculatorPage() {
   const isAnySaving = isPrimarySaving || saveAsNewQuoteMutation.isPending;
   const canUndo = Boolean(baselineInput) && isDirty;
 
-  const handleSave = form.handleSubmit((values) => {
+  const handleSave = form.handleSubmit(async (values) => {
     if (editingQuote?.id) {
       updateQuoteMutation.mutate({ quoteId: editingQuote.id, payload: values });
       return;
@@ -1017,26 +1008,14 @@ export default function OperationsQuotationCalculatorPage() {
     saveQuoteMutation.mutate(values);
   });
 
-  const handleSaveAsNew = form.handleSubmit((values) => {
-    const nextQuoteNumber = getNextQuoteNumber(values.meta.quoteNumber);
-    const shouldUpdateNumber =
-      Boolean(nextQuoteNumber) && nextQuoteNumber !== values.meta.quoteNumber;
-
-    const payload: QuoteInput = shouldUpdateNumber
-      ? {
-          ...values,
-          meta: {
-            ...values.meta,
-            quoteNumber: nextQuoteNumber ?? values.meta.quoteNumber,
-          },
-        }
-      : values;
-
-    if (shouldUpdateNumber) {
-      form.setValue("meta.quoteNumber", nextQuoteNumber!, {
-        shouldDirty: true,
-      });
-    }
+  const handleSaveAsNew = form.handleSubmit(async (values) => {
+    const payload: QuoteInput = {
+      ...values,
+      meta: {
+        ...values.meta,
+        quoteNumber: "",
+      },
+    };
 
     saveAsNewQuoteMutation.mutate(payload);
   });
@@ -1212,7 +1191,11 @@ export default function OperationsQuotationCalculatorPage() {
                       <FormItem>
                         <FormLabel>Quote number</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input
+                            {...field}
+                            readOnly
+                            placeholder="Auto-generated"
+                          />
                         </FormControl>
                       </FormItem>
                     )}
