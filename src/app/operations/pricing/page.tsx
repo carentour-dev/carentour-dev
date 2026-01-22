@@ -181,10 +181,7 @@ export default function OperationsPricingPage() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [visibleProcedures]);
   const specialtyComboOptions = useMemo(
-    () => [
-      { value: "__all__", label: "All specialties" },
-      ...specialtyOptions,
-    ],
+    () => [{ value: "__all__", label: "All specialties" }, ...specialtyOptions],
     [specialtyOptions],
   );
   const specialtyFilteredProcedures = useMemo(() => {
