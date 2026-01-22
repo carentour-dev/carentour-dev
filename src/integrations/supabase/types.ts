@@ -1877,6 +1877,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      service_provider_procedure_price_lists: {
+        Row: {
+          components: Json;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          procedure_id: string;
+          service_provider_id: string;
+          total_cost_egp: number;
+          updated_at: string;
+        };
+        Insert: {
+          components?: Json;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          procedure_id: string;
+          service_provider_id: string;
+          total_cost_egp?: number;
+          updated_at?: string;
+        };
+        Update: {
+          components?: Json;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          procedure_id?: string;
+          service_provider_id?: string;
+          total_cost_egp?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_provider_procedure_price_lists_procedure_id_fkey";
+            columns: ["procedure_id"];
+            isOneToOne: false;
+            referencedRelation: "treatment_procedures";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "service_provider_procedure_price_lists_service_provider_id_fkey";
+            columns: ["service_provider_id"];
+            isOneToOne: false;
+            referencedRelation: "service_providers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       start_journey_submissions: {
         Row: {
           accessibility_needs: string | null;
