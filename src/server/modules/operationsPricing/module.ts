@@ -178,11 +178,13 @@ export const operationsPricingController = {
       );
     }
 
-    const procedureIdsForPricing = (procedures ?? []).map((procedure) =>
-      procedure.id,
+    const procedureIdsForPricing = (procedures ?? []).map(
+      (procedure) => procedure.id,
     );
     const providerOwnedProcedureIds = (procedures ?? [])
-      .filter((procedure) => procedure.created_by_provider_id === parsedProviderId)
+      .filter(
+        (procedure) => procedure.created_by_provider_id === parsedProviderId,
+      )
       .map((procedure) => procedure.id);
     const currentProcedureIds = new Set(offeredProcedureIds);
     const missingOwnedProcedures = providerOwnedProcedureIds.filter(
