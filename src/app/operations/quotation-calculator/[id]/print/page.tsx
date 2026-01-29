@@ -275,10 +275,6 @@ export default function QuotationPrintView() {
               value={formatCurrency(computed.summary.subtotalUsd, "USD")}
             />
             <SummaryRow
-              label="Profit margin"
-              value={formatCurrency(computed.summary.profitAmountUsd, "USD")}
-            />
-            <SummaryRow
               label="Total package price"
               value={formatCurrency(computed.summary.finalPriceUsd, "USD")}
               highlight
