@@ -191,6 +191,31 @@ const safeValue = (value: number | string | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const roundCurrency = (value: number, decimals = 2) => {
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+};
+
+const DEFAULT_PROCEDURE_PRICE_MULTIPLIER = 1;
+
+const getProcedurePriceMultiplier = () => {
+  const raw = process.env.NEXT_PUBLIC_OPERATIONS_PROCEDURE_PRICE_MULTIPLIER;
+  const parsed = safeValue(raw);
+  return parsed > 0 ? parsed : DEFAULT_PROCEDURE_PRICE_MULTIPLIER;
+};
+
+const PROCEDURE_PRICE_MULTIPLIER = getProcedurePriceMultiplier();
+
+const applyProcedurePriceMarkupEgp = (
+  amountEgp: number | string | null | undefined,
+) => {
+  const base = safeValue(amountEgp);
+  if (PROCEDURE_PRICE_MULTIPLIER === 1) {
+    return base;
+  }
+  return roundCurrency(base * PROCEDURE_PRICE_MULTIPLIER);
+};
+
 const CLIENT_TYPES = [
   { value: "B2C", label: "B2C" },
   { value: "B2B", label: "B2B" },
@@ -503,11 +528,14 @@ export default function OperationsQuotationCalculatorPage() {
   const selectedPriceListTotal = useMemo(() => {
     const priceList = selectedProviderProcedure?.priceList;
     if (!priceList) return 0;
-    if (typeof priceList.totalCostEgp === "number") {
+    if (
+      PROCEDURE_PRICE_MULTIPLIER === 1 &&
+      typeof priceList.totalCostEgp === "number"
+    ) {
       return priceList.totalCostEgp;
     }
-    return priceList.components.reduce(
-      (sum, item) => sum + safeValue(item.amountEgp),
+    return (priceList.components ?? []).reduce(
+      (sum, item) => sum + applyProcedurePriceMarkupEgp(item.amountEgp),
       0,
     );
   }, [selectedProviderProcedure]);
@@ -613,7 +641,7 @@ export default function OperationsQuotationCalculatorPage() {
     const normalizedComponents = components.map((component) => ({
       code: component.code ?? "",
       label: `${procedureLabel} - ${component.label}`,
-      amountEgp: safeValue(component.amountEgp),
+      amountEgp: applyProcedurePriceMarkupEgp(component.amountEgp),
       notes: component.notes ?? "",
     }));
     const combinedBreakdown = [...normalizedExisting, ...normalizedComponents];
@@ -1137,17 +1165,12 @@ export default function OperationsQuotationCalculatorPage() {
               <Calculator className="h-5 w-5 text-primary" />
               Estimated Total
             </CardTitle>
-            <CardDescription>
-              Final price including profit margin.
-            </CardDescription>
+            <CardDescription>Final price for the package.</CardDescription>
           </div>
           <div className="text-right">
             <p className="text-3xl font-semibold text-primary">
               {formatCurrency(computed.summary.finalPriceUsd, "USD")}
             </p>
-            <Badge variant="secondary" className="mt-1">
-              Margin {Math.round(computed.summary.profitMarginRate * 100)}%
-            </Badge>
           </div>
         </CardHeader>
       </Card>
@@ -1697,7 +1720,9 @@ export default function OperationsQuotationCalculatorPage() {
                                     </div>
                                     <span className="font-medium text-foreground">
                                       {formatCurrency(
-                                        safeValue(component.amountEgp),
+                                        applyProcedurePriceMarkupEgp(
+                                          component.amountEgp,
+                                        ),
                                         "EGP",
                                       )}
                                     </span>
@@ -2078,12 +2103,6 @@ export default function OperationsQuotationCalculatorPage() {
                   <SummaryRow
                     label="Subtotal"
                     usd={computed.summary.subtotalUsd}
-                  />
-                  <SummaryRow
-                    label={`Profit margin (${Math.round(
-                      computed.summary.profitMarginRate * 100,
-                    )}%)`}
-                    usd={computed.summary.profitAmountUsd}
                   />
                   <Separator />
                   <SummaryRow
@@ -2938,10 +2957,6 @@ export default function OperationsQuotationCalculatorPage() {
                     <SummaryRow
                       label="Subtotal"
                       usd={computed.summary.subtotalUsd}
-                    />
-                    <SummaryRow
-                      label="Profit margin"
-                      usd={computed.summary.profitAmountUsd}
                     />
                     <SummaryRow
                       label="Total package price"
