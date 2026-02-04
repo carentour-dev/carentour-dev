@@ -35,6 +35,10 @@ lerna-debug.log*
 .env*.local
 .env
 
+# price list templates
+/price-list-template*.csv
+/price-list-template*.xlsx
+
 # vercel
 .vercel
 
