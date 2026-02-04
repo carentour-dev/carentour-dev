@@ -10,7 +10,9 @@
     "lint": "next lint",
     "prepare": "husky",
     "format": "prettier --check --cache .",
-    "format:write": "prettier --write ."
+    "format:write": "prettier --write .",
+    "price-list:template-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs",
+    "price-list:example-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs --example"
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",
@@ -82,6 +84,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "xlsx": "0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
