@@ -6,6 +6,11 @@ import type {
   QuoteSummary,
   TourismServiceInput,
 } from "./types";
+import {
+  getDefaultPricingSettings,
+  getNonMedicalMarginRate,
+  normalizePricingSettings,
+} from "./pricing";
 
 const DEFAULT_CURRENCY_RATES: CurrencyRateInput[] = [
   {
@@ -102,6 +107,11 @@ const DEFAULT_TOURISM_SERVICES: TourismServiceInput[] = [
 ];
 
 const DEFAULT_DATA_SHEETS_ROW_COUNT = 10;
+const DEFAULT_PAYMENT_TERMS = [
+  "30% deposit required upon booking confirmation",
+  "50% payment due 14 days before arrival",
+  "Final 20% payment upon arrival in Egypt",
+].join("\n");
 
 const buildDefaultRows = <T>(factory: () => T, count = 0) =>
   Array.from({ length: count }, () => factory());
@@ -197,12 +207,17 @@ export const buildDefaultQuoteInput = (): QuoteInput => {
       patientName: "",
       country: "",
       age: "",
+      paymentTerms: DEFAULT_PAYMENT_TERMS,
     },
+    pricingSettings: getDefaultPricingSettings(),
     medical: {
       procedureName: "",
       serviceProviderId: "",
+      serviceProviderName: "",
       treatmentId: "",
+      treatmentName: "",
       procedureId: "",
+      procedureDisplayName: "",
       costBreakdown: [],
       hospitalTier: "",
       medicalCostEgp: 0,
@@ -271,6 +286,7 @@ const computeIndirectCosts = (
 };
 
 export const calculateQuote = (input: QuoteInput): QuoteComputed => {
+  const pricingSettings = normalizePricingSettings(input.pricingSettings);
   const currencyRates = (input.currencyRates ?? []).map((rate) => {
     const usdToCurrency = clampNonNegative(toNumber(rate.usdToCurrency));
     return {
@@ -371,17 +387,23 @@ export const calculateQuote = (input: QuoteInput): QuoteComputed => {
     finalPriceUsd: 0,
   };
 
-  summary.subtotalUsd =
-    summary.medicalProcedureCostUsd +
+  const clientType = input.meta.clientType;
+  const nonMedicalSubtotalUsd =
     summary.accommodationCostUsd +
     summary.transportationCostUsd +
     summary.tourismCostUsd +
     summary.indirectCostPerPatientUsd;
 
-  const clientType = input.meta.clientType?.toUpperCase?.() ?? "";
-  summary.profitMarginRate = clientType === "B2B" ? 0.35 : 0.5;
-  summary.profitAmountUsd = summary.subtotalUsd * summary.profitMarginRate;
-  summary.finalPriceUsd = summary.subtotalUsd + summary.profitAmountUsd;
+  summary.subtotalUsd = summary.medicalProcedureCostUsd + nonMedicalSubtotalUsd;
+  summary.profitMarginRate = getNonMedicalMarginRate(
+    clientType,
+    pricingSettings,
+  );
+  summary.profitAmountUsd = nonMedicalSubtotalUsd * summary.profitMarginRate;
+  summary.finalPriceUsd =
+    summary.medicalProcedureCostUsd +
+    nonMedicalSubtotalUsd +
+    summary.profitAmountUsd;
 
   return {
     currencyRates,
