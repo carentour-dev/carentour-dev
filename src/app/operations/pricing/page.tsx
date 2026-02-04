@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +46,7 @@ import {
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
 import { useToast } from "@/hooks/use-toast";
+import { getDefaultPricingSettings } from "@/lib/operations/quotation-calculator/pricing";
 
 type ProviderSummary = {
   id: string;
@@ -105,6 +114,11 @@ const formatCurrency = (value: number, currency: "USD" | "EGP" = "EGP") => {
 const safeValue = (value: number | null | undefined) =>
   Number.isFinite(value ?? NaN) ? Number(value) : 0;
 
+const roundCurrency = (value: number, decimals = 2) => {
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+};
+
 const UNCATEGORIZED_VALUE = "uncategorized";
 const createComponentId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -115,6 +129,9 @@ export default function OperationsPricingPage() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
 
+  const pricingDefaults = useMemo(() => getDefaultPricingSettings(), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [providerId, setProviderId] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
   const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
@@ -122,6 +139,8 @@ export default function OperationsPricingPage() {
   const [includeUnpriced, setIncludeUnpriced] = useState(false);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvImportErrors, setCsvImportErrors] = useState<string[]>([]);
   const [editingProcedure, setEditingProcedure] =
     useState<ProviderProcedurePricing | null>(null);
   const [editingComponents, setEditingComponents] = useState<
@@ -366,6 +385,312 @@ export default function OperationsPricingPage() {
     ]);
   };
 
+  const moveEditingComponent = (index: number, direction: -1 | 1) => {
+    setEditingComponents((prev) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      next.splice(nextIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const escapeCsvValue = (value: unknown) => {
+    const raw = value === null || value === undefined ? "" : String(value);
+    if (raw.includes('"') || raw.includes(",") || raw.includes("\n")) {
+      return `"${raw.replace(/"/g, '""')}"`;
+    }
+    return raw;
+  };
+
+  const parseCsv = (value: string) => {
+    const rows: string[][] = [];
+    let current = "";
+    let row: string[] = [];
+    let inQuotes = false;
+
+    const pushCell = () => {
+      row.push(current);
+      current = "";
+    };
+    const pushRow = () => {
+      if (row.length > 0 || current.length > 0) {
+        pushCell();
+      }
+      if (row.length > 0) {
+        rows.push(row);
+      }
+      row = [];
+    };
+
+    for (let i = 0; i < value.length; i += 1) {
+      const char = value[i];
+      if (char === '"') {
+        if (inQuotes && value[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+      if (char === "," && !inQuotes) {
+        pushCell();
+        continue;
+      }
+      if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (char === "\r" && value[i + 1] === "\n") {
+          i += 1;
+        }
+        pushRow();
+        continue;
+      }
+      current += char;
+    }
+
+    if (current.length > 0 || row.length > 0) {
+      pushRow();
+    }
+
+    return rows.filter((rowValues) =>
+      rowValues.some((cell) => cell.trim().length > 0),
+    );
+  };
+
+  const parseBoolean = (value: string | undefined) => {
+    if (!value) return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (["true", "1", "yes", "y"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "n"].includes(normalized)) {
+      return false;
+    }
+    return undefined;
+  };
+
+  const handleExportCsv = () => {
+    if (!providerPricingQuery.data) {
+      toast({
+        title: "No provider selected",
+        description: "Choose a provider before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { provider, procedures } = providerPricingQuery.data;
+    const headers = [
+      "provider_id",
+      "provider_name",
+      "procedure_id",
+      "procedure_name",
+      "treatment_id",
+      "treatment_name",
+      "specialty",
+      "component_label",
+      "component_amount_egp",
+      "component_notes",
+      "component_code",
+      "is_active",
+    ];
+    const rows = procedures.flatMap((procedure) => {
+      const priceList = procedure.priceList;
+      if (!priceList?.components?.length) {
+        return [];
+      }
+      return priceList.components.map((component) =>
+        [
+          provider.id,
+          provider.name,
+          procedure.id,
+          procedure.name,
+          procedure.treatmentId,
+          procedure.treatmentName ?? "",
+          procedure.treatmentCategory ?? "",
+          component.label,
+          safeValue(component.amountEgp),
+          component.notes ?? "",
+          component.code ?? "",
+          priceList.isActive ? "true" : "false",
+        ].map(escapeCsvValue),
+      );
+    });
+
+    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join(
+      "\n",
+    );
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `provider-price-lists-${provider.name.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const runImportRows = async (rows: string[][]) => {
+    if (rows.length < 2) {
+      throw new Error("File needs a header row and at least one data row.");
+    }
+
+    const headers = rows[0]!.map((header) => header.trim().toLowerCase());
+    const getIndex = (key: string) => headers.indexOf(key);
+    const index = {
+      providerId: getIndex("provider_id"),
+      procedureId: getIndex("procedure_id"),
+      label: getIndex("component_label"),
+      amount: getIndex("component_amount_egp"),
+      notes: getIndex("component_notes"),
+      code: getIndex("component_code"),
+      isActive: getIndex("is_active"),
+    };
+
+    if (index.procedureId < 0 || index.label < 0 || index.amount < 0) {
+      throw new Error(
+        "Headers must include procedure_id, component_label, and component_amount_egp.",
+      );
+    }
+
+    const grouped = new Map<
+      string,
+      { components: PriceComponent[]; isActive?: boolean }
+    >();
+    const errors: string[] = [];
+
+    rows.slice(1).forEach((rowValues, rowIndex) => {
+      const rowNumber = rowIndex + 2;
+      const procedureIdValue = rowValues[index.procedureId]?.trim();
+      if (!procedureIdValue) {
+        errors.push(`Row ${rowNumber}: missing procedure_id.`);
+        return;
+      }
+      const rowProviderId =
+        index.providerId >= 0 ? rowValues[index.providerId]?.trim() : null;
+      if (rowProviderId && rowProviderId !== providerId) {
+        return;
+      }
+      const label = rowValues[index.label]?.trim();
+      if (!label) {
+        return;
+      }
+      const amount = safeValue(Number(rowValues[index.amount]));
+      const notes =
+        index.notes >= 0 ? (rowValues[index.notes]?.trim() ?? "") : "";
+      const code = index.code >= 0 ? (rowValues[index.code]?.trim() ?? "") : "";
+      const isActiveValue =
+        index.isActive >= 0
+          ? parseBoolean(rowValues[index.isActive])
+          : undefined;
+
+      const entry = grouped.get(procedureIdValue) ?? { components: [] };
+      if (isActiveValue !== undefined) {
+        entry.isActive = isActiveValue;
+      }
+      entry.components.push({
+        label,
+        amountEgp: amount,
+        ...(notes ? { notes } : {}),
+        ...(code ? { code } : {}),
+      });
+      grouped.set(procedureIdValue, entry);
+    });
+
+    if (grouped.size === 0) {
+      throw new Error("No valid price list rows were found.");
+    }
+
+    for (const [procedureIdValue, payload] of grouped.entries()) {
+      await adminFetch(
+        `/api/admin/operations/pricing/providers/${providerId}/procedure-price-lists`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            procedureId: procedureIdValue,
+            components: payload.components,
+            ...(payload.isActive !== undefined
+              ? { isActive: payload.isActive }
+              : {}),
+          }),
+        },
+      );
+    }
+
+    invalidate(getProviderPricingQueryKey(providerId));
+    setCsvImportErrors(errors);
+    toast({
+      title: "Price lists imported",
+      description: `Updated ${grouped.size} procedure price list${
+        grouped.size === 1 ? "" : "s"
+      }.`,
+    });
+  };
+
+  const handleImportRows = async (rows: string[][]) => {
+    if (!providerId) {
+      toast({
+        title: "Select a provider first",
+        description: "Imports are applied to the selected provider.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCsvImporting(true);
+    setCsvImportErrors([]);
+
+    try {
+      await runImportRows(rows);
+    } catch (error) {
+      toast({
+        title: "Import failed",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCsvImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleImportCsv = async (file: File) => {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    await handleImportRows(rows);
+  };
+
+  const handleImportXlsx = async (file: File) => {
+    const { read, utils } = await import("xlsx");
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = read(arrayBuffer, { type: "array" });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      throw new Error("No sheets found in the Excel file.");
+    }
+    const sheet = workbook.Sheets[sheetName];
+    const csv = utils.sheet_to_csv(sheet, { blankrows: false });
+    const rows = parseCsv(csv);
+    await handleImportRows(rows);
+  };
+
+  const handleImportFile = async (file: File) => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension === "xlsx" || extension === "xls") {
+      await handleImportXlsx(file);
+      return;
+    }
+    await handleImportCsv(file);
+  };
+
   const upsertPriceListMutation = useMutation({
     mutationFn: async (payload: {
       providerId: string;
@@ -435,6 +760,32 @@ export default function OperationsPricingPage() {
         0,
       ),
     [editingComponents],
+  );
+  const b2bSellingTotal = useMemo(
+    () =>
+      editingComponents.reduce(
+        (sum, item) =>
+          sum +
+          roundCurrency(
+            safeValue(item.amountEgp) *
+              pricingDefaults.b2bMedicalMarkupMultiplier,
+          ),
+        0,
+      ),
+    [editingComponents, pricingDefaults],
+  );
+  const b2cSellingTotal = useMemo(
+    () =>
+      editingComponents.reduce(
+        (sum, item) =>
+          sum +
+          roundCurrency(
+            safeValue(item.amountEgp) *
+              pricingDefaults.b2cMedicalMarkupMultiplier,
+          ),
+        0,
+      ),
+    [editingComponents, pricingDefaults],
   );
 
   const isSaving =
@@ -512,6 +863,7 @@ export default function OperationsPricingPage() {
                   setSelectedTreatmentId("");
                   setSelectedProcedureId("");
                   setSearch("");
+                  setCsvImportErrors([]);
                   closeDialog();
                 }}
               />
@@ -599,6 +951,56 @@ export default function OperationsPricingPage() {
                 }
               />
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    handleImportFile(file);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={!providerId || providerPricingQuery.isLoading}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!providerId || csvImporting}
+              >
+                {csvImporting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Import CSV/XLSX
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                CSV/XLSX import updates price lists by procedure.
+              </span>
+            </div>
+            {csvImportErrors.length > 0 ? (
+              <span className="text-xs text-destructive">
+                {csvImportErrors[0]}
+                {csvImportErrors.length > 1
+                  ? ` (+${csvImportErrors.length - 1} more)`
+                  : ""}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -752,7 +1154,7 @@ export default function OperationsPricingPage() {
                   editingComponents.map((component, index) => (
                     <div
                       key={component.id}
-                      className="grid gap-2 md:grid-cols-[2fr_1fr_2fr_auto]"
+                      className="grid gap-2 md:grid-cols-[2fr_1fr_2fr_auto_auto]"
                     >
                       <Input
                         placeholder="Component label"
@@ -790,6 +1192,26 @@ export default function OperationsPricingPage() {
                           })
                         }
                       />
+                      <div className="flex flex-col items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => moveEditingComponent(index, -1)}
+                          disabled={index === 0}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => moveEditingComponent(index, 1)}
+                          disabled={index === editingComponents.length - 1}
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
@@ -822,8 +1244,16 @@ export default function OperationsPricingPage() {
                   />
                   <Label>Active</Label>
                 </div>
-                <div className="text-sm font-semibold">
-                  Total: {formatCurrency(editingTotal, "EGP")}
+                <div className="space-y-1 text-right">
+                  <div className="text-sm font-semibold">
+                    Total: {formatCurrency(editingTotal, "EGP")}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    B2B preview: {formatCurrency(b2bSellingTotal, "EGP")}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    B2C preview: {formatCurrency(b2cSellingTotal, "EGP")}
+                  </div>
                 </div>
               </div>
             </div>
