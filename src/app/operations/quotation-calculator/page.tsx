@@ -32,6 +32,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -67,6 +75,10 @@ import {
   calculateQuote,
 } from "@/lib/operations/quotation-calculator/calculations";
 import type { QuoteInput } from "@/lib/operations/quotation-calculator/types";
+import {
+  getMedicalMarkupMultiplier,
+  normalizePricingSettings,
+} from "@/lib/operations/quotation-calculator/pricing";
 
 type OperationsQuote = {
   id: string;
@@ -196,24 +208,15 @@ const roundCurrency = (value: number, decimals = 2) => {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 };
 
-const DEFAULT_PROCEDURE_PRICE_MULTIPLIER = 1;
-
-const getProcedurePriceMultiplier = () => {
-  const raw = process.env.NEXT_PUBLIC_OPERATIONS_PROCEDURE_PRICE_MULTIPLIER;
-  const parsed = safeValue(raw);
-  return parsed > 0 ? parsed : DEFAULT_PROCEDURE_PRICE_MULTIPLIER;
-};
-
-const PROCEDURE_PRICE_MULTIPLIER = getProcedurePriceMultiplier();
-
-const applyProcedurePriceMarkupEgp = (
+const applyMarkup = (
   amountEgp: number | string | null | undefined,
+  multiplier: number,
 ) => {
   const base = safeValue(amountEgp);
-  if (PROCEDURE_PRICE_MULTIPLIER === 1) {
+  if (multiplier === 1) {
     return base;
   }
-  return roundCurrency(base * PROCEDURE_PRICE_MULTIPLIER);
+  return roundCurrency(base * multiplier);
 };
 
 const CLIENT_TYPES = [
@@ -293,6 +296,8 @@ export default function OperationsQuotationCalculatorPage() {
   } | null>(null);
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
   const [includeUnpriced, setIncludeUnpriced] = useState(false);
+  const [applyPriceListDialogOpen, setApplyPriceListDialogOpen] =
+    useState(false);
 
   const form = useForm<QuoteInput>({
     resolver: zodResolver(quoteInputSchema),
@@ -344,6 +349,23 @@ export default function OperationsQuotationCalculatorPage() {
   const watchedCurrencyRates = watchAll?.currencyRates ?? [];
   const usdToEgp = safeValue(
     watchedCurrencyRates.find((rate) => rate.code === "EGP")?.usdToCurrency,
+  );
+  const pricingSettings = useMemo(
+    () => normalizePricingSettings(watchAll?.pricingSettings),
+    [watchAll?.pricingSettings],
+  );
+  const medicalMarkupMultiplier = useMemo(
+    () =>
+      getMedicalMarkupMultiplier(
+        watchAll?.meta?.clientType ?? "",
+        pricingSettings,
+      ),
+    [pricingSettings, watchAll?.meta?.clientType],
+  );
+  const applyMedicalMarkupEgp = useCallback(
+    (amountEgp: number | string | null | undefined) =>
+      applyMarkup(amountEgp, medicalMarkupMultiplier),
+    [medicalMarkupMultiplier],
   );
 
   const getRateToEgp = (rate?: QuoteInput["currencyRates"][number]): number => {
@@ -529,16 +551,20 @@ export default function OperationsQuotationCalculatorPage() {
     const priceList = selectedProviderProcedure?.priceList;
     if (!priceList) return 0;
     if (
-      PROCEDURE_PRICE_MULTIPLIER === 1 &&
+      medicalMarkupMultiplier === 1 &&
       typeof priceList.totalCostEgp === "number"
     ) {
       return priceList.totalCostEgp;
     }
     return (priceList.components ?? []).reduce(
-      (sum, item) => sum + applyProcedurePriceMarkupEgp(item.amountEgp),
+      (sum, item) => sum + applyMedicalMarkupEgp(item.amountEgp),
       0,
     );
-  }, [selectedProviderProcedure]);
+  }, [
+    applyMedicalMarkupEgp,
+    medicalMarkupMultiplier,
+    selectedProviderProcedure,
+  ]);
 
   useEffect(() => {
     form.register("medical.costBreakdown");
@@ -603,7 +629,33 @@ export default function OperationsQuotationCalculatorPage() {
     });
   };
 
-  const handleApplyPriceList = () => {
+  const buildPriceListCodePrefix = (providerId: string, procedureId: string) =>
+    `priceList:${providerId}:${procedureId}:`;
+
+  const normalizeBreakdownItems = (
+    items: QuoteInput["medical"]["costBreakdown"],
+  ) =>
+    (Array.isArray(items) ? items : [])
+      .map((item) => ({
+        code: typeof item.code === "string" ? item.code : "",
+        label: typeof item.label === "string" ? item.label : "",
+        amountEgp: safeValue(item.amountEgp),
+        notes: typeof item.notes === "string" ? item.notes : "",
+      }))
+      .filter((item) => item.label.length > 0);
+
+  const isBreakdownItemForProcedure = (
+    item: { code: string; label: string },
+    procedureLabel: string,
+    codePrefix: string,
+  ) => {
+    if (item.code && item.code.startsWith(codePrefix)) {
+      return true;
+    }
+    return item.label.startsWith(`${procedureLabel} - `);
+  };
+
+  const openApplyPriceListDialog = () => {
     const priceList = selectedProviderProcedure?.priceList;
     if (!priceList?.components?.length) {
       toast({
@@ -622,29 +674,39 @@ export default function OperationsQuotationCalculatorPage() {
       });
       return;
     }
+    setApplyPriceListDialogOpen(true);
+  };
+
+  const applyPriceListToBreakdown = (mode: "append" | "replace") => {
+    const priceList = selectedProviderProcedure?.priceList;
+    if (!priceList?.components?.length || !selectedProviderProcedure) {
+      return;
+    }
 
     const components = priceList.components ?? [];
     const currentBreakdown =
       form.getValues("medical.costBreakdown") ??
       ([] as QuoteInput["medical"]["costBreakdown"]);
-    const normalizedExisting = (
-      Array.isArray(currentBreakdown) ? currentBreakdown : []
-    )
-      .map((item) => ({
-        code: typeof item.code === "string" ? item.code : "",
-        label: typeof item.label === "string" ? item.label : "",
-        amountEgp: safeValue(item.amountEgp),
-        notes: typeof item.notes === "string" ? item.notes : "",
-      }))
-      .filter((item) => item.label.length > 0);
-    const procedureLabel = selectedProviderProcedure?.name ?? "Procedure";
-    const normalizedComponents = components.map((component) => ({
-      code: component.code ?? "",
+    const normalizedExisting = normalizeBreakdownItems(currentBreakdown);
+    const procedureLabel = selectedProviderProcedure.name ?? "Procedure";
+    const codePrefix = buildPriceListCodePrefix(
+      selectedProviderId,
+      selectedProviderProcedure.id,
+    );
+    const filteredExisting =
+      mode === "replace"
+        ? normalizedExisting.filter(
+            (item) =>
+              !isBreakdownItemForProcedure(item, procedureLabel, codePrefix),
+          )
+        : normalizedExisting;
+    const normalizedComponents = components.map((component, index) => ({
+      code: `${codePrefix}${component.code ?? index}`,
       label: `${procedureLabel} - ${component.label}`,
-      amountEgp: applyProcedurePriceMarkupEgp(component.amountEgp),
+      amountEgp: applyMedicalMarkupEgp(component.amountEgp),
       notes: component.notes ?? "",
     }));
-    const combinedBreakdown = [...normalizedExisting, ...normalizedComponents];
+    const combinedBreakdown = [...filteredExisting, ...normalizedComponents];
     const total = combinedBreakdown.reduce(
       (sum, item) => sum + safeValue(item.amountEgp),
       0,
@@ -668,6 +730,23 @@ export default function OperationsQuotationCalculatorPage() {
         shouldValidate: true,
       });
     }
+    const providerName =
+      pricingProvidersQuery.data?.find(
+        (provider) => provider.id === selectedProviderId,
+      )?.name ?? "";
+    form.setValue("medical.serviceProviderName", providerName, {
+      shouldDirty: true,
+    });
+    form.setValue(
+      "medical.treatmentName",
+      selectedProviderProcedure.treatmentName ?? "",
+      { shouldDirty: true },
+    );
+    form.setValue(
+      "medical.procedureDisplayName",
+      selectedProviderProcedure.name ?? "",
+      { shouldDirty: true },
+    );
     form.setValue("medical.serviceProviderId", selectedProviderId, {
       shouldDirty: true,
     });
@@ -682,8 +761,12 @@ export default function OperationsQuotationCalculatorPage() {
       shouldDirty: true,
     });
 
+    setApplyPriceListDialogOpen(false);
     toast({
-      title: "Price breakdown added",
+      title:
+        mode === "replace"
+          ? "Price breakdown replaced"
+          : "Price breakdown added",
       description: "Medical cost now includes the selected provider pricing.",
     });
   };
@@ -1288,6 +1371,22 @@ export default function OperationsQuotationCalculatorPage() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="meta.paymentTerms"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-3">
+                        <FormLabel>Payment terms</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={3}
+                            placeholder="Enter payment terms, one per line"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
 
@@ -1536,12 +1635,29 @@ export default function OperationsQuotationCalculatorPage() {
                                   onChange={(value) => {
                                     field.onChange(value);
                                     setSelectedSpecialty("");
+                                    const providerName =
+                                      pricingProvidersQuery.data?.find(
+                                        (provider) => provider.id === value,
+                                      )?.name ?? "";
+                                    form.setValue(
+                                      "medical.serviceProviderName",
+                                      providerName,
+                                      { shouldDirty: true },
+                                    );
                                     form.setValue("medical.treatmentId", "", {
+                                      shouldDirty: true,
+                                    });
+                                    form.setValue("medical.treatmentName", "", {
                                       shouldDirty: true,
                                     });
                                     form.setValue("medical.procedureId", "", {
                                       shouldDirty: true,
                                     });
+                                    form.setValue(
+                                      "medical.procedureDisplayName",
+                                      "",
+                                      { shouldDirty: true },
+                                    );
                                     form.setValue("medical.costBreakdown", [], {
                                       shouldDirty: true,
                                     });
@@ -1609,9 +1725,23 @@ export default function OperationsQuotationCalculatorPage() {
                                     const nextValue =
                                       value === "__all__" ? "" : value;
                                     field.onChange(nextValue);
+                                    const treatmentName =
+                                      providerTreatmentOptions.find(
+                                        (option) => option.id === nextValue,
+                                      )?.label ?? "";
+                                    form.setValue(
+                                      "medical.treatmentName",
+                                      treatmentName,
+                                      { shouldDirty: true },
+                                    );
                                     form.setValue("medical.procedureId", "", {
                                       shouldDirty: true,
                                     });
+                                    form.setValue(
+                                      "medical.procedureDisplayName",
+                                      "",
+                                      { shouldDirty: true },
+                                    );
                                   }}
                                 />
                               </FormControl>
@@ -1645,6 +1775,16 @@ export default function OperationsQuotationCalculatorPage() {
                                     const nextValue =
                                       value === "__all__" ? "" : value;
                                     field.onChange(nextValue);
+                                    const procedureName =
+                                      filteredProviderProcedures.find(
+                                        (procedure) =>
+                                          procedure.id === nextValue,
+                                      )?.name ?? "";
+                                    form.setValue(
+                                      "medical.procedureDisplayName",
+                                      procedureName,
+                                      { shouldDirty: true },
+                                    );
                                   }}
                                 />
                               </FormControl>
@@ -1720,7 +1860,7 @@ export default function OperationsQuotationCalculatorPage() {
                                     </div>
                                     <span className="font-medium text-foreground">
                                       {formatCurrency(
-                                        applyProcedurePriceMarkupEgp(
+                                        applyMedicalMarkupEgp(
                                           component.amountEgp,
                                         ),
                                         "EGP",
@@ -1755,7 +1895,7 @@ export default function OperationsQuotationCalculatorPage() {
                           <Button
                             type="button"
                             size="sm"
-                            onClick={handleApplyPriceList}
+                            onClick={openApplyPriceListDialog}
                             disabled={
                               !selectedProviderProcedure.priceList?.components
                                 ?.length ||
@@ -1774,6 +1914,46 @@ export default function OperationsQuotationCalculatorPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Dialog
+                open={applyPriceListDialogOpen}
+                onOpenChange={setApplyPriceListDialogOpen}
+              >
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Apply price list</DialogTitle>
+                    <DialogDescription>
+                      Choose how to add{" "}
+                      {selectedProviderProcedure?.name ?? "this procedure"} to
+                      the medical cost breakdown.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setApplyPriceListDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => applyPriceListToBreakdown("append")}
+                      >
+                        Append
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => applyPriceListToBreakdown("replace")}
+                      >
+                        Replace
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <Card>
                 <CardHeader>
