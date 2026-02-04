@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getDefaultPricingSettings } from "./pricing";
 
 const toNumber = (value: unknown, fallback = 0) => {
   if (value === "" || value === null || value === undefined) {
@@ -21,6 +22,36 @@ const clientTypeSchema = z
   .enum(["", "B2B", "B2C"])
   .refine((value) => value !== "", { message: "Client type is required" });
 
+const DEFAULT_PAYMENT_TERMS = [
+  "30% deposit required upon booking confirmation",
+  "50% payment due 14 days before arrival",
+  "Final 20% payment upon arrival in Egypt",
+].join("\n");
+
+const DEFAULT_PRICING_SETTINGS = getDefaultPricingSettings();
+
+const pricingSettingsSchema = z
+  .object({
+    version: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .default(DEFAULT_PRICING_SETTINGS.version),
+    b2bMedicalMarkupMultiplier: numberField(
+      DEFAULT_PRICING_SETTINGS.b2bMedicalMarkupMultiplier,
+    ),
+    b2cMedicalMarkupMultiplier: numberField(
+      DEFAULT_PRICING_SETTINGS.b2cMedicalMarkupMultiplier,
+    ),
+    b2bNonMedicalMarginRate: numberField(
+      DEFAULT_PRICING_SETTINGS.b2bNonMedicalMarginRate,
+    ),
+    b2cNonMedicalMarginRate: numberField(
+      DEFAULT_PRICING_SETTINGS.b2cNonMedicalMarginRate,
+    ),
+  })
+  .default(DEFAULT_PRICING_SETTINGS);
+
 export const quoteInputSchema = z.object({
   meta: z.object({
     quoteDate: z.string().min(1, "Quote date is required"),
@@ -29,12 +60,17 @@ export const quoteInputSchema = z.object({
     patientName: z.string().min(1, "Patient name is required"),
     country: z.string().min(1, "Country is required"),
     age: z.string().default(""),
+    paymentTerms: z.string().default(DEFAULT_PAYMENT_TERMS),
   }),
+  pricingSettings: pricingSettingsSchema,
   medical: z.object({
     procedureName: z.string().default(""),
     serviceProviderId: z.string().default(""),
+    serviceProviderName: z.string().default(""),
     treatmentId: z.string().default(""),
+    treatmentName: z.string().default(""),
     procedureId: z.string().default(""),
+    procedureDisplayName: z.string().default(""),
     costBreakdown: z
       .array(
         z.object({
