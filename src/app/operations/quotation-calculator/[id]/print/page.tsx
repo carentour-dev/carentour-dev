@@ -65,12 +65,28 @@ export default function QuotationPrintView() {
   const input = quote?.input_data;
   const computed = quote?.computed_data;
 
+  const paymentTerms = useMemo(() => {
+    const raw = input?.meta?.paymentTerms ?? "";
+    return raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }, [input?.meta?.paymentTerms]);
+
   const additionalServices = useMemo(
     () =>
       (computed?.tourismServices ?? []).filter(
         (item) => item.serviceName || item.quantity > 0,
       ),
     [computed?.tourismServices],
+  );
+
+  const breakdownItems = useMemo(
+    () =>
+      (input?.medical?.costBreakdown ?? []).filter(
+        (item) => item.label || Number(item.amountEgp) > 0,
+      ),
+    [input?.medical?.costBreakdown],
   );
 
   useEffect(() => {
@@ -169,7 +185,21 @@ export default function QuotationPrintView() {
               </p>
               <p>
                 <span className="text-muted-foreground">Procedure:</span>{" "}
-                {input.medical.procedureName}
+                {input.medical.procedureDisplayName ||
+                  input.medical.procedureName ||
+                  "—"}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Provider:</span>{" "}
+                {input.medical.serviceProviderName ||
+                  input.medical.serviceProviderId ||
+                  "—"}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Treatment:</span>{" "}
+                {input.medical.treatmentName ||
+                  input.medical.treatmentId ||
+                  "—"}
               </p>
               <p>
                 <span className="text-muted-foreground">Hospital tier:</span>{" "}
@@ -180,6 +210,44 @@ export default function QuotationPrintView() {
                 {input.medical.lengthOfStayNights} nights
               </p>
             </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3 text-sm">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Medical cost breakdown
+            </p>
+            {breakdownItems.length > 0 ? (
+              <div className="overflow-hidden rounded-md border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Component</th>
+                      <th className="px-3 py-2 text-left">Notes</th>
+                      <th className="px-3 py-2 text-right">Amount (EGP)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {breakdownItems.map((item, index) => (
+                      <tr key={`${item.label}-${index}`} className="border-t">
+                        <td className="px-3 py-2">{item.label}</td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {item.notes || "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {formatCurrency(item.amountEgp, "EGP")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No medical breakdown items were saved for this quote.
+              </p>
+            )}
           </div>
 
           <Separator />
@@ -287,11 +355,17 @@ export default function QuotationPrintView() {
             <p className="text-xs font-semibold uppercase text-muted-foreground">
               Payment terms
             </p>
-            <ul className="list-disc space-y-1 pl-4">
-              <li>30% deposit required upon booking confirmation</li>
-              <li>50% payment due 14 days before arrival</li>
-              <li>Final 20% payment upon arrival in Egypt</li>
-            </ul>
+            {paymentTerms.length > 0 ? (
+              <ul className="list-disc space-y-1 pl-4">
+                {paymentTerms.map((term, index) => (
+                  <li key={`${term}-${index}`}>{term}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No payment terms provided.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
