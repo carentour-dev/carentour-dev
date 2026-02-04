@@ -1,5 +1,13 @@
 export type ClientType = "" | "B2B" | "B2C";
 
+export type PricingSettings = {
+  version: number;
+  b2bMedicalMarkupMultiplier: number;
+  b2cMedicalMarkupMultiplier: number;
+  b2bNonMedicalMarginRate: number;
+  b2cNonMedicalMarginRate: number;
+};
+
 export type QuoteMeta = {
   quoteDate: string;
   quoteNumber: string;
@@ -7,13 +15,17 @@ export type QuoteMeta = {
   patientName: string;
   country: string;
   age: string;
+  paymentTerms: string;
 };
 
 export type MedicalProcedureInput = {
   procedureName: string;
   serviceProviderId?: string;
+  serviceProviderName?: string;
   treatmentId?: string;
+  treatmentName?: string;
   procedureId?: string;
+  procedureDisplayName?: string;
   costBreakdown?: MedicalCostBreakdownItem[];
   hospitalTier: string;
   medicalCostEgp: number;
@@ -129,6 +141,7 @@ export type QuoteDataSheets = {
 
 export type QuoteInput = {
   meta: QuoteMeta;
+  pricingSettings: PricingSettings;
   medical: MedicalProcedureInput;
   accommodation: AccommodationInput;
   transportation: TransportationInput;
