@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { isPasswordRecoveryCurrentUrl } from "@/lib/auth/password-recovery";
 import { useSecurity } from "@/hooks/useSecurity";
 
 interface SignUpPayload {
@@ -329,6 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
 
       const currentUserId = session?.user?.id ?? null;
+      const isRecoveryFlowInUrl = isPasswordRecoveryCurrentUrl();
 
       // Supabase reports a non-typed "USER_DELETED" event in some scenarios.
       const authEvent = event as string;
@@ -336,6 +338,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (event === "SIGNED_OUT" || authEvent === "USER_DELETED") {
         lastKnownUserId.current = null;
         redirectedForCurrentUser.current = false;
+        return;
+      }
+
+      if (
+        typeof window !== "undefined" &&
+        (event === "PASSWORD_RECOVERY" ||
+          (event === "SIGNED_IN" && isRecoveryFlowInUrl))
+      ) {
+        if (window.location.pathname !== "/auth") {
+          window.location.replace("/auth?reset=true");
+        }
         return;
       }
 
@@ -349,6 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isNewSignIn &&
         typeof window !== "undefined" &&
         window.location.pathname === "/" &&
+        !isRecoveryFlowInUrl &&
         !redirectedForCurrentUser.current
       ) {
         void (async () => {
