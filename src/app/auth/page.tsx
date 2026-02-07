@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth, metadataIndicatesStaffAccount } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { isPasswordRecoveryCurrentUrl } from "@/lib/auth/password-recovery";
 import { useToast } from "@/hooks/use-toast";
 import { sexOptions, SexOptionValue } from "@/constants/profile";
 import { Loader2 } from "lucide-react";
@@ -45,14 +47,18 @@ function AuthContent() {
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState<boolean>(() =>
+    isPasswordRecoveryCurrentUrl(),
+  );
   const { signIn, signUp, resetPassword, updatePassword, user, session } =
     useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Check if we&apos;re in password reset mode
-  const isPasswordResetMode = searchParams.get("reset") === "true" && session;
+  // Check if we&apos;re in password reset mode.
+  // Recovery links can arrive via query params, hash params, or PASSWORD_RECOVERY events.
+  const isPasswordResetMode = isRecoveryFlow && Boolean(session);
   const maxDateOfBirth = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
@@ -65,6 +71,37 @@ function AuthContent() {
       }
     }
   }, [user, router, isPasswordResetMode]);
+
+  useEffect(() => {
+    if (isRecoveryFlow) {
+      return;
+    }
+
+    const isRecoveryFromQuery =
+      searchParams.get("reset") === "true" ||
+      searchParams.get("type") === "recovery";
+
+    if (isRecoveryFromQuery || isPasswordRecoveryCurrentUrl()) {
+      setIsRecoveryFlow(true);
+    }
+  }, [isRecoveryFlow, searchParams]);
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryFlow(true);
+        return;
+      }
+
+      if (event === "SIGNED_IN" && isPasswordRecoveryCurrentUrl()) {
+        setIsRecoveryFlow(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
