@@ -4,8 +4,8 @@ const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   version: 1,
   b2bMedicalMarkupMultiplier: 1.62,
   b2cMedicalMarkupMultiplier: 1.8,
-  b2bNonMedicalMarginRate: 0.35,
-  b2cNonMedicalMarginRate: 0.5,
+  b2bNonMedicalMarginRate: 0.2,
+  b2cNonMedicalMarginRate: 0.2,
 };
 
 const toNumber = (value: unknown, fallback: number) => {
