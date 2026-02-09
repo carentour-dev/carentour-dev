@@ -28,7 +28,19 @@ const readEnvNumber = (key: string, fallback: number) => {
   if (typeof process === "undefined") {
     return fallback;
   }
-  const raw = process.env[key];
+
+  const rawByKey: Record<string, string | undefined> = {
+    NEXT_PUBLIC_OPERATIONS_MEDICAL_MARKUP_MULTIPLIER_B2B:
+      process.env.NEXT_PUBLIC_OPERATIONS_MEDICAL_MARKUP_MULTIPLIER_B2B,
+    NEXT_PUBLIC_OPERATIONS_MEDICAL_MARKUP_MULTIPLIER_B2C:
+      process.env.NEXT_PUBLIC_OPERATIONS_MEDICAL_MARKUP_MULTIPLIER_B2C,
+    NEXT_PUBLIC_OPERATIONS_NON_MEDICAL_MARGIN_RATE_B2B:
+      process.env.NEXT_PUBLIC_OPERATIONS_NON_MEDICAL_MARGIN_RATE_B2B,
+    NEXT_PUBLIC_OPERATIONS_NON_MEDICAL_MARGIN_RATE_B2C:
+      process.env.NEXT_PUBLIC_OPERATIONS_NON_MEDICAL_MARGIN_RATE_B2C,
+  };
+
+  const raw = rawByKey[key];
   if (raw === undefined || raw === null || raw === "") {
     return fallback;
   }
