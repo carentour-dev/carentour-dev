@@ -37,6 +37,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  CircleDollarSign,
   Hotel,
   Inbox,
   LayoutDashboard,
@@ -60,6 +61,7 @@ const NAV_ITEMS = [
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
+  { label: "Finance", href: "/admin/finance", icon: CircleDollarSign },
   { label: "Testimonials", href: "/admin/testimonials", icon: Sparkles },
   {
     label: "Service Providers",
@@ -99,6 +101,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const hasOperationsAccess =
     hasOperationsEntry(operationsEntitlements) ||
     hasAnyOperationsSection(operationsEntitlements);
+  const hasFinanceAccess =
+    profile?.hasPermission("finance.access") ||
+    (profile?.permissions ?? []).some((permission) =>
+      permission.startsWith("finance."),
+    );
 
   // Reuse existing auth provider to fully sign out admins.
   const handleSignOut = async () => {
@@ -143,9 +150,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
             privileges.
           </p>
         </div>
-        <Button onClick={() => router.replace("/dashboard")}>
-          Return to dashboard
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {hasFinanceAccess ? (
+            <Button onClick={() => router.replace("/finance")}>
+              Open finance workspace
+            </Button>
+          ) : null}
+          <Button
+            variant={hasFinanceAccess ? "outline" : "default"}
+            onClick={() => router.replace("/dashboard")}
+          >
+            Return to dashboard
+          </Button>
+        </div>
       </div>
     );
   }
