@@ -28,6 +28,18 @@ const DEFAULT_PAYMENT_TERMS = [
   "Final 20% payment upon arrival in Egypt",
 ].join("\n");
 
+const DEFAULT_INSTALLMENT_TEMPLATE = [
+  { label: "Deposit", percent: 30, dueInDays: 0, dueDate: "", notes: "" },
+  { label: "Pre-arrival", percent: 50, dueInDays: 14, dueDate: "", notes: "" },
+  {
+    label: "Final balance",
+    percent: 20,
+    dueInDays: 30,
+    dueDate: "",
+    notes: "",
+  },
+];
+
 const DEFAULT_PRICING_SETTINGS = getDefaultPricingSettings();
 
 const pricingSettingsSchema = z
@@ -61,6 +73,17 @@ export const quoteInputSchema = z.object({
     country: z.string().min(1, "Country is required"),
     age: z.string().default(""),
     paymentTerms: z.string().default(DEFAULT_PAYMENT_TERMS),
+    installmentTemplate: z
+      .array(
+        z.object({
+          label: z.string().min(1, "Installment label is required"),
+          percent: numberField(),
+          dueInDays: numberField(),
+          dueDate: z.string().default(""),
+          notes: z.string().default(""),
+        }),
+      )
+      .default(DEFAULT_INSTALLMENT_TEMPLATE),
   }),
   pricingSettings: pricingSettingsSchema,
   medical: z.object({
