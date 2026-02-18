@@ -113,6 +113,18 @@ const DEFAULT_PAYMENT_TERMS = [
   "Final 20% payment upon arrival in Egypt",
 ].join("\n");
 
+const DEFAULT_INSTALLMENT_TEMPLATE = [
+  { label: "Deposit", percent: 30, dueInDays: 0, dueDate: "", notes: "" },
+  { label: "Pre-arrival", percent: 50, dueInDays: 14, dueDate: "", notes: "" },
+  {
+    label: "Final balance",
+    percent: 20,
+    dueInDays: 30,
+    dueDate: "",
+    notes: "",
+  },
+];
+
 const buildDefaultRows = <T>(factory: () => T, count = 0) =>
   Array.from({ length: count }, () => factory());
 
@@ -208,6 +220,7 @@ export const buildDefaultQuoteInput = (): QuoteInput => {
       country: "",
       age: "",
       paymentTerms: DEFAULT_PAYMENT_TERMS,
+      installmentTemplate: DEFAULT_INSTALLMENT_TEMPLATE,
     },
     pricingSettings: getDefaultPricingSettings(),
     medical: {
