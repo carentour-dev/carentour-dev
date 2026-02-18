@@ -8,6 +8,14 @@ export type PricingSettings = {
   b2cNonMedicalMarginRate: number;
 };
 
+export type InstallmentTemplateItem = {
+  label: string;
+  percent: number;
+  dueInDays?: number;
+  dueDate?: string;
+  notes?: string;
+};
+
 export type QuoteMeta = {
   quoteDate: string;
   quoteNumber: string;
@@ -16,6 +24,7 @@ export type QuoteMeta = {
   country: string;
   age: string;
   paymentTerms: string;
+  installmentTemplate: InstallmentTemplateItem[];
 };
 
 export type MedicalProcedureInput = {
