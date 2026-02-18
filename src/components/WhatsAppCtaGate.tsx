@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import WhatsAppCta, { type WhatsAppCtaProps } from "./WhatsAppCta";
 
-const HIDDEN_PREFIXES = ["/admin", "/operations", "/cms"];
+const HIDDEN_PREFIXES = ["/admin", "/operations", "/finance", "/cms"];
 
 export default function WhatsAppCtaGate(props: WhatsAppCtaProps) {
   const pathname = usePathname();
