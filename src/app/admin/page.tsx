@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   Building2,
+  CircleDollarSign,
   Hotel,
   Inbox,
   Stethoscope,
@@ -39,6 +40,12 @@ const quickLinks = [
     href: "/admin/treatments",
     description: "Maintain pricing, durations, and medical guidance.",
     icon: Building2,
+  },
+  {
+    title: "Finance Workspace",
+    href: "/admin/finance",
+    description: "Manage invoices, installments, payments, and approvals.",
+    icon: CircleDollarSign,
   },
   {
     title: "Patient Testimonials",
