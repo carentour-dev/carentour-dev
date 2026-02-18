@@ -8,6 +8,7 @@ import {
   Calendar,
   CalendarCheck,
   CalendarDays,
+  CircleDollarSign,
   Clock,
   ChevronDown,
   ExternalLink,
@@ -237,6 +238,51 @@ type DashboardDocument = {
   deletable?: boolean;
 };
 
+type PatientFinanceInstallment = {
+  id: string;
+  label: string;
+  percent: number;
+  amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  due_date: string;
+  status: "pending" | "partially_paid" | "paid" | "overdue" | "cancelled";
+  display_order: number;
+};
+
+type PatientFinanceInvoice = {
+  id: string;
+  invoice_number: string;
+  status:
+    | "draft"
+    | "issued"
+    | "partially_paid"
+    | "paid"
+    | "overdue"
+    | "void"
+    | "cancelled";
+  computed_status:
+    | "draft"
+    | "issued"
+    | "partially_paid"
+    | "paid"
+    | "overdue"
+    | "void"
+    | "cancelled";
+  issue_date: string | null;
+  due_date: string | null;
+  currency: string;
+  total_amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  installments: PatientFinanceInstallment[];
+};
+
+type PatientFinanceSnapshot = {
+  patientId: string | null;
+  invoices: PatientFinanceInvoice[];
+};
+
 const sanitizePatientCountry = (value?: string | null) => {
   if (typeof value !== "string") return null;
 
@@ -255,6 +301,31 @@ const formatDateTime = (value: string | null | undefined) => {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+};
+
+const formatDate = (value: string | null | undefined) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Not set";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+  }).format(date);
+};
+
+const formatCurrencyAmount = (
+  value: number | null | undefined,
+  currency: string | null | undefined,
+) => {
+  const safeValue = Number.isFinite(value ?? NaN) ? (value as number) : 0;
+  const safeCurrency =
+    typeof currency === "string" && currency.trim().length >= 3
+      ? currency.trim().toUpperCase()
+      : "USD";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: safeCurrency,
+    maximumFractionDigits: 2,
+  }).format(safeValue);
 };
 
 const formatFileSize = (bytes?: number | null) => {
@@ -325,6 +396,23 @@ const statusBadgeVariant = (status: string | null | undefined) => {
       return "outline" as const;
     default:
       return "secondary" as const;
+  }
+};
+
+const financeStatusBadgeVariant = (status: string | null | undefined) => {
+  if (!status) return "outline" as const;
+  switch (status) {
+    case "paid":
+      return "success" as const;
+    case "overdue":
+      return "destructive" as const;
+    case "partially_paid":
+      return "secondary" as const;
+    case "cancelled":
+    case "void":
+      return "outline" as const;
+    default:
+      return "default" as const;
   }
 };
 
@@ -493,6 +581,40 @@ export default function DashboardPage() {
         : [];
 
       return documents;
+    },
+  });
+
+  const {
+    data: patientFinance,
+    isLoading: patientFinanceLoading,
+    isFetching: patientFinanceFetching,
+    refetch: refetchPatientFinance,
+  } = useQuery({
+    queryKey: ["dashboard", "patient-finance"],
+    enabled: !!user && !isStaffAccount,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch("/api/patient/finance/installments", {
+        headers,
+        credentials: "include",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ?? "Failed to load finance installment details",
+        );
+      }
+
+      return (result?.data ?? {
+        patientId: null,
+        invoices: [],
+      }) as PatientFinanceSnapshot;
     },
   });
 
@@ -1163,6 +1285,60 @@ export default function DashboardPage() {
       );
   }, [appointments]);
 
+  const financeInvoices = useMemo(
+    () => patientFinance?.invoices ?? [],
+    [patientFinance?.invoices],
+  );
+
+  const upcomingFinanceInstallments = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return financeInvoices
+      .flatMap((invoice) =>
+        (invoice.installments ?? []).map((installment) => ({
+          ...installment,
+          invoiceNumber: invoice.invoice_number,
+          invoiceCurrency: invoice.currency,
+        })),
+      )
+      .filter(
+        (installment) =>
+          installment.balance_amount > 0 &&
+          installment.status !== "paid" &&
+          installment.status !== "cancelled" &&
+          installment.due_date >= today,
+      )
+      .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  }, [financeInvoices]);
+
+  const overdueFinanceInstallments = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return financeInvoices
+      .flatMap((invoice) =>
+        (invoice.installments ?? []).map((installment) => ({
+          ...installment,
+          invoiceNumber: invoice.invoice_number,
+          invoiceCurrency: invoice.currency,
+        })),
+      )
+      .filter(
+        (installment) =>
+          installment.balance_amount > 0 &&
+          installment.status !== "paid" &&
+          installment.status !== "cancelled" &&
+          (installment.status === "overdue" || installment.due_date < today),
+      )
+      .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  }, [financeInvoices]);
+
+  const totalOutstandingFinanceBalance = useMemo(
+    () =>
+      financeInvoices.reduce(
+        (sum, invoice) => sum + (invoice.balance_amount ?? 0),
+        0,
+      ),
+    [financeInvoices],
+  );
+
   const recentReviews = useMemo(
     () =>
       [...reviews].sort(
@@ -1401,6 +1577,17 @@ export default function DashboardPage() {
       action: () => scrollToSection("appointments"),
       accentClass:
         "bg-blue-500/15 text-blue-600 dark:text-blue-100 group-hover:bg-blue-500/25 group-hover:text-blue-700 dark:group-hover:text-blue-50",
+    },
+    {
+      title: "Finance Overview",
+      description:
+        financeInvoices.length > 0
+          ? `${overdueFinanceInstallments.length} overdue installment${overdueFinanceInstallments.length === 1 ? "" : "s"}`
+          : "Track invoices and payment milestones",
+      icon: CircleDollarSign,
+      action: () => scrollToSection("finance"),
+      accentClass:
+        "bg-teal-500/15 text-teal-600 dark:text-teal-100 group-hover:bg-teal-500/25 group-hover:text-teal-700 dark:group-hover:text-teal-50",
     },
     {
       title: "Share a Review",
@@ -2386,6 +2573,136 @@ export default function DashboardPage() {
                         </p>
                       ) : null}
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card id="finance">
+                <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CircleDollarSign className="h-5 w-5 text-primary" />
+                      Finance overview
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Read-only view of invoices and installment milestones.
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      overdueFinanceInstallments.length > 0
+                        ? "destructive"
+                        : "outline"
+                    }
+                  >
+                    {overdueFinanceInstallments.length} overdue
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {patientFinanceLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading finance details...
+                    </div>
+                  ) : financeInvoices.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
+                      <p className="font-medium text-foreground">
+                        No invoices yet
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Your finance timeline appears here once an invoice is
+                        issued.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Total outstanding balance
+                        </p>
+                        <p className="mt-1 text-xl font-semibold text-foreground">
+                          {formatCurrencyAmount(
+                            totalOutstandingFinanceBalance,
+                            financeInvoices[0]?.currency ?? "USD",
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {upcomingFinanceInstallments.length} upcoming
+                          installment
+                          {upcomingFinanceInstallments.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {financeInvoices.slice(0, 4).map((invoice) => (
+                          <div
+                            key={invoice.id}
+                            className="rounded-lg border border-border/70 bg-muted/10 p-3"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-foreground">
+                                {invoice.invoice_number}
+                              </p>
+                              <Badge
+                                variant={financeStatusBadgeVariant(
+                                  invoice.computed_status ?? invoice.status,
+                                )}
+                              >
+                                {(
+                                  invoice.computed_status ?? invoice.status
+                                ).replace(/_/g, " ")}
+                              </Badge>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
+                              <p>
+                                Due {formatDate(invoice.due_date)} • Balance{" "}
+                                {formatCurrencyAmount(
+                                  invoice.balance_amount,
+                                  invoice.currency,
+                                )}
+                              </p>
+                              {invoice.installments.length > 0 ? (
+                                <p>
+                                  Installments: {invoice.installments.length}{" "}
+                                  total •{" "}
+                                  {
+                                    invoice.installments.filter(
+                                      (item) =>
+                                        item.status === "paid" ||
+                                        item.balance_amount <= 0,
+                                    ).length
+                                  }{" "}
+                                  paid
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {financeInvoices.length > 4 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Showing latest four invoices.
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+
+                  {patientFinanceFetching ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Refreshing finance status...
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        void refetchPatientFinance();
+                      }}
+                    >
+                      Refresh finance
+                    </Button>
                   )}
                 </CardContent>
               </Card>
