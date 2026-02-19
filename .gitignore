@@ -17,10 +17,11 @@ dist-ssr
 
 # misc
 .DS_Store
+/tmp/
 *.pem
 WEBSITE_FLOW.md
 CLEANUP_SUMMARY.md
-docs/
+/docs/
 BLOG_IMPLEMENTATION_STATUS.md
 BLOG_IMPLEMENTATION_COMPLETE.md
 
