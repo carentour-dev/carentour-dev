@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
+import { financeCounterpartySync } from "@/server/modules/finance/counterpartySync";
 import { ApiError } from "@/server/utils/errors";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -157,9 +158,23 @@ export const serviceProviderController = {
 
   async create(payload: unknown) {
     const parsed = createServiceProviderSchema.parse(payload);
-    return serviceProvidersService.create(
+    const created = await serviceProvidersService.create(
       normalizeServiceProviderForCreate(parsed),
     );
+
+    financeCounterpartySync
+      .syncServiceProviderEvent(created.id)
+      .catch((error) =>
+        console.error(
+          "[finance][counterparty-sync][service-provider][create]",
+          {
+            serviceProviderId: created.id,
+            error,
+          },
+        ),
+      );
+
+    return created;
   },
 
   async update(id: unknown, payload: unknown) {
@@ -178,11 +193,61 @@ export const serviceProviderController = {
       throw new ApiError(400, "No valid fields provided for update");
     }
 
-    return serviceProvidersService.update(serviceProviderId, sanitizedUpdate);
+    const updated = await serviceProvidersService.update(
+      serviceProviderId,
+      sanitizedUpdate,
+    );
+
+    financeCounterpartySync
+      .syncServiceProviderEvent(serviceProviderId)
+      .catch((error) =>
+        console.error(
+          "[finance][counterparty-sync][service-provider][update]",
+          {
+            serviceProviderId,
+            error,
+          },
+        ),
+      );
+
+    return updated;
   },
 
   async delete(id: unknown) {
     const serviceProviderId = serviceProviderIdSchema.parse(id);
-    return serviceProvidersService.remove(serviceProviderId);
+    let linkedCounterpartyIds: string[] = [];
+
+    try {
+      linkedCounterpartyIds =
+        await financeCounterpartySync.captureServiceProviderLinkedCounterparties(
+          serviceProviderId,
+        );
+    } catch (error) {
+      console.error(
+        "[finance][counterparty-sync][service-provider][delete][capture]",
+        {
+          serviceProviderId,
+          error,
+        },
+      );
+    }
+
+    const result = await serviceProvidersService.remove(serviceProviderId);
+
+    financeCounterpartySync
+      .deactivateServiceProviderLink(serviceProviderId, {
+        counterpartyIds: linkedCounterpartyIds,
+      })
+      .catch((error) =>
+        console.error(
+          "[finance][counterparty-sync][service-provider][delete]",
+          {
+            serviceProviderId,
+            error,
+          },
+        ),
+      );
+
+    return result;
   },
 };
