@@ -13,6 +13,7 @@ import {
   type FinanceInstallmentState,
   type FinanceInstallmentTemplateItem,
 } from "./logic";
+import { financeLedgerPosting } from "./ledger";
 
 type FinanceActor = {
   userId: string;
@@ -869,12 +870,23 @@ export const financeController = {
       );
     }
 
+    let existingCase: any = null;
     if (existingOrder?.id) {
-      const { data: existingCase } = await supabase
+      const { data: existingCaseRow, error: existingCaseError } = await supabase
         .from("finance_cases")
         .select("*")
         .eq("operations_quote_id", id)
         .maybeSingle();
+
+      if (existingCaseError) {
+        throw new ApiError(
+          500,
+          "Failed to verify existing finance case",
+          existingCaseError.message,
+        );
+      }
+
+      existingCase = existingCaseRow ?? null;
 
       const { data: existingInvoice, error: existingInvoiceError } =
         await supabase
@@ -899,7 +911,7 @@ export const financeController = {
         );
         return {
           reused: true,
-          financeCase: existingCase ?? null,
+          financeCase: existingCase,
           order: existingOrder,
           invoice: installmentsResult.invoice,
           installments: installmentsResult.installments,
@@ -918,17 +930,60 @@ export const financeController = {
       );
     }
 
-    const currency: FinanceCurrency = options.currency ?? "USD";
-    const resolvedTargetRate = await resolveUsdToTargetRate(currency);
-    const exchangeRateContext: FinanceExchangeRateContext = {
-      sourceCurrency: "USD",
-      targetCurrency: currency,
-      usdToTargetRate: resolvedTargetRate.usdToTargetRate,
-      source: resolvedTargetRate.source,
-      url: resolvedTargetRate.url,
-      asOf: resolvedTargetRate.asOf,
-      fetchedAt: resolvedTargetRate.fetchedAt,
-    };
+    const snapshotConversion =
+      existingOrder?.quote_snapshot &&
+      typeof existingOrder.quote_snapshot === "object"
+        ? (existingOrder.quote_snapshot as Record<string, any>)
+            .finance_conversion
+        : null;
+    const requestedCurrency: FinanceCurrency = options.currency ?? "USD";
+    const currency = (existingOrder?.currency ??
+      requestedCurrency) as FinanceCurrency;
+
+    let exchangeRateContext: FinanceExchangeRateContext;
+    if (existingOrder?.id) {
+      const snapshotRate = Number(snapshotConversion?.usd_to_currency_rate);
+      const derivedRate =
+        sourceSummary.total > 0
+          ? normalizeMoney(
+              normalizeMoney(existingOrder.total_amount) / sourceSummary.total,
+            )
+          : 0;
+      const usdToTargetRate = Number.isFinite(snapshotRate)
+        ? snapshotRate
+        : currency === "USD"
+          ? 1
+          : derivedRate > 0
+            ? derivedRate
+            : 1;
+
+      exchangeRateContext = {
+        sourceCurrency: "USD",
+        targetCurrency: currency,
+        usdToTargetRate,
+        source: normalizeText(snapshotConversion?.source) ?? "existing_order",
+        url:
+          normalizeText(snapshotConversion?.source_url) ??
+          normalizeText(snapshotConversion?.url),
+        asOf:
+          normalizeText(snapshotConversion?.source_as_of) ??
+          normalizeText(snapshotConversion?.as_of),
+        fetchedAt:
+          normalizeText(snapshotConversion?.fetched_at) ??
+          normalizeText(snapshotConversion?.fetchedAt),
+      };
+    } else {
+      const resolvedTargetRate = await resolveUsdToTargetRate(currency);
+      exchangeRateContext = {
+        sourceCurrency: "USD",
+        targetCurrency: currency,
+        usdToTargetRate: resolvedTargetRate.usdToTargetRate,
+        source: resolvedTargetRate.source,
+        url: resolvedTargetRate.url,
+        asOf: resolvedTargetRate.asOf,
+        fetchedAt: resolvedTargetRate.fetchedAt,
+      };
+    }
 
     const summary = convertQuoteSummaryCurrency({
       summary: sourceSummary,
@@ -976,7 +1031,25 @@ export const financeController = {
       );
     }
 
-    let financeCase = financeCaseSeed;
+    let financeCase = financeCaseSeed ?? existingCase;
+
+    if (!financeCase && existingOrder?.finance_case_id) {
+      const { data: linkedCase, error: linkedCaseError } = await supabase
+        .from("finance_cases")
+        .select("*")
+        .eq("id", existingOrder.finance_case_id)
+        .maybeSingle();
+
+      if (linkedCaseError) {
+        throw new ApiError(
+          500,
+          "Failed to load finance case linked to existing order",
+          linkedCaseError.message,
+        );
+      }
+
+      financeCase = linkedCase ?? null;
+    }
 
     if (!financeCase) {
       const caseTitleParts = [
@@ -1017,80 +1090,120 @@ export const financeController = {
       financeCase = createdCase;
     }
 
-    const { data: order, error: createOrderError } = await supabase
-      .from("finance_orders")
-      .insert({
-        finance_case_id: financeCase.id,
-        operations_quote_id: quote.id,
-        status: "confirmed",
-        order_date: issueDate,
-        currency,
-        subtotal_amount: summary.subtotal,
-        tax_amount: summary.tax,
-        total_amount: summary.total,
-        quote_snapshot: {
-          ...quote,
-          finance_conversion: {
-            source_currency: exchangeRateContext.sourceCurrency,
-            target_currency: exchangeRateContext.targetCurrency,
-            usd_to_currency_rate: exchangeRateContext.usdToTargetRate,
-            source: exchangeRateContext.source,
-            source_url: exchangeRateContext.url,
-            source_as_of: exchangeRateContext.asOf,
-            fetched_at: exchangeRateContext.fetchedAt,
-          },
-        },
-        notes:
-          currency !== "USD"
-            ? `Created from quotation calculator (auto FX via ${exchangeRateContext.source})`
-            : "Created from quotation calculator",
-        created_by_profile_id: owner.profileId ?? null,
-      })
-      .select("*")
-      .single();
+    let order = existingOrder;
+    let orderLines: any[] = [];
 
-    if (createOrderError || !order) {
+    if (!order) {
+      const { data: createdOrder, error: createOrderError } = await supabase
+        .from("finance_orders")
+        .insert({
+          finance_case_id: financeCase.id,
+          operations_quote_id: quote.id,
+          status: "confirmed",
+          order_date: issueDate,
+          currency,
+          subtotal_amount: summary.subtotal,
+          tax_amount: summary.tax,
+          total_amount: summary.total,
+          quote_snapshot: {
+            ...quote,
+            finance_conversion: {
+              source_currency: exchangeRateContext.sourceCurrency,
+              target_currency: exchangeRateContext.targetCurrency,
+              usd_to_currency_rate: exchangeRateContext.usdToTargetRate,
+              source: exchangeRateContext.source,
+              source_url: exchangeRateContext.url,
+              source_as_of: exchangeRateContext.asOf,
+              fetched_at: exchangeRateContext.fetchedAt,
+            },
+          },
+          notes:
+            currency !== "USD"
+              ? `Created from quotation calculator (auto FX via ${exchangeRateContext.source})`
+              : "Created from quotation calculator",
+          created_by_profile_id: owner.profileId ?? null,
+        })
+        .select("*")
+        .single();
+
+      if (createOrderError || !createdOrder) {
+        throw new ApiError(
+          500,
+          "Failed to create finance order",
+          createOrderError?.message,
+        );
+      }
+
+      order = createdOrder;
+    }
+
+    const orderCurrency = (order.currency ?? currency) as FinanceCurrency;
+    const { data: existingOrderLines, error: existingOrderLinesError } =
+      await supabase
+        .from("finance_order_lines")
+        .select("*")
+        .eq("finance_order_id", order.id)
+        .order("created_at", { ascending: true });
+
+    if (existingOrderLinesError) {
       throw new ApiError(
         500,
-        "Failed to create finance order",
-        createOrderError?.message,
+        "Failed to load finance order lines",
+        existingOrderLinesError.message,
       );
     }
 
-    const orderLinesPayload = summary.lines.map((line) => ({
-      finance_order_id: order.id,
-      line_type: line.line_type,
-      description: line.description,
-      quantity: 1,
-      unit_amount: line.amount,
-      line_total: line.amount,
-      currency,
-      source_key: "quote_summary",
-      metadata: {
-        quote_id: quote.id,
-        quote_number: quote.quote_number,
-        source_currency: exchangeRateContext.sourceCurrency,
-        target_currency: exchangeRateContext.targetCurrency,
-        usd_to_currency_rate: exchangeRateContext.usdToTargetRate,
-      },
-    }));
+    orderLines = existingOrderLines ?? [];
 
-    const { data: orderLines, error: orderLinesError } = await supabase
-      .from("finance_order_lines")
-      .insert(orderLinesPayload)
-      .select("*");
+    if (orderLines.length === 0) {
+      const orderLinesPayload = summary.lines.map((line) => ({
+        finance_order_id: order.id,
+        line_type: line.line_type,
+        description: line.description,
+        quantity: 1,
+        unit_amount: line.amount,
+        line_total: line.amount,
+        currency: orderCurrency,
+        source_key: "quote_summary",
+        metadata: {
+          quote_id: quote.id,
+          quote_number: quote.quote_number,
+          source_currency: exchangeRateContext.sourceCurrency,
+          target_currency: exchangeRateContext.targetCurrency,
+          usd_to_currency_rate: exchangeRateContext.usdToTargetRate,
+        },
+      }));
 
-    if (orderLinesError) {
-      throw new ApiError(
-        500,
-        "Failed to create finance order lines",
-        orderLinesError.message,
-      );
+      const { data: insertedOrderLines, error: orderLinesError } =
+        await supabase
+          .from("finance_order_lines")
+          .insert(orderLinesPayload)
+          .select("*");
+
+      if (orderLinesError) {
+        throw new ApiError(
+          500,
+          "Failed to create finance order lines",
+          orderLinesError.message,
+        );
+      }
+
+      orderLines = insertedOrderLines ?? [];
     }
 
     const explicitDueDate = toDateOnly(options.dueDate);
     const dueDate = explicitDueDate ?? addDays(issueDate, 30);
     const initialStatus: InvoiceStatus = options.invoiceStatus ?? "draft";
+    const invoiceCurrency = (order.currency ?? currency) as FinanceCurrency;
+    const orderSubtotal = normalizeMoney(
+      order.subtotal_amount ?? summary.subtotal,
+    );
+    const orderTax = normalizeMoney(order.tax_amount ?? summary.tax);
+    const orderTotal = normalizeMoney(order.total_amount ?? summary.total);
+    const conversionSnapshot =
+      order?.quote_snapshot && typeof order.quote_snapshot === "object"
+        ? (order.quote_snapshot as Record<string, any>).finance_conversion
+        : null;
 
     const { data: invoice, error: createInvoiceError } = await supabase
       .from("finance_invoices")
@@ -1101,19 +1214,20 @@ export const financeController = {
         status: initialStatus,
         issue_date: issueDate,
         due_date: dueDate,
-        currency,
-        subtotal_amount: summary.subtotal,
-        tax_amount: summary.tax,
-        total_amount: summary.total,
+        currency: invoiceCurrency,
+        subtotal_amount: orderSubtotal,
+        tax_amount: orderTax,
+        total_amount: orderTotal,
         paid_amount: 0,
-        balance_amount: summary.total,
+        balance_amount: orderTotal,
         quote_payment_terms: normalizeText(
           quote.input_data?.meta?.paymentTerms,
         ),
         notes:
-          currency !== "USD"
+          normalizeText(order.notes) ??
+          (invoiceCurrency !== "USD"
             ? `Generated from operations quote conversion (auto FX via ${exchangeRateContext.source})`
-            : "Generated from operations quote conversion",
+            : "Generated from operations quote conversion"),
         created_by_profile_id: owner.profileId ?? null,
       })
       .select("*")
@@ -1134,7 +1248,7 @@ export const financeController = {
       quantity: line.quantity ?? 1,
       unit_amount: line.unit_amount ?? line.line_total ?? 0,
       line_total: line.line_total ?? 0,
-      currency,
+      currency: line.currency ?? invoiceCurrency,
       metadata: line.metadata ?? {},
     }));
 
@@ -1156,7 +1270,7 @@ export const financeController = {
     const installments = await upsertInstallments({
       supabase,
       invoiceId: invoice.id,
-      totalAmount: summary.total,
+      totalAmount: orderTotal,
       issueDate,
       template: options.installmentTemplate ?? templateFromQuote,
     });
@@ -1182,6 +1296,24 @@ export const financeController = {
       invoice.due_date = latestDueDate;
     }
 
+    const reusedOrder = Boolean(existingOrder?.id);
+    const snapshotRate = Number(conversionSnapshot?.usd_to_currency_rate);
+    const auditSourceCurrency = reusedOrder
+      ? normalizeText(conversionSnapshot?.source_currency)
+      : exchangeRateContext.sourceCurrency;
+    const auditTargetCurrency = reusedOrder
+      ? (normalizeText(conversionSnapshot?.target_currency) ??
+        normalizeText(order.currency))
+      : exchangeRateContext.targetCurrency;
+    const auditFxRate = reusedOrder
+      ? Number.isFinite(snapshotRate)
+        ? normalizeMoney(snapshotRate)
+        : null
+      : exchangeRateContext.usdToTargetRate;
+    const auditFxSource = reusedOrder
+      ? normalizeText(conversionSnapshot?.source)
+      : exchangeRateContext.source;
+
     await writeFinanceAuditEvent({
       supabase,
       entityType: "finance_invoice",
@@ -1194,12 +1326,20 @@ export const financeController = {
         finance_case_id: financeCase.id,
         finance_order_id: order.id,
         finance_invoice_id: invoice.id,
-        source_currency: exchangeRateContext.sourceCurrency,
-        target_currency: exchangeRateContext.targetCurrency,
-        usd_to_currency_rate: exchangeRateContext.usdToTargetRate,
-        fx_source: exchangeRateContext.source,
+        source_currency: auditSourceCurrency,
+        target_currency: auditTargetCurrency,
+        usd_to_currency_rate: auditFxRate,
+        fx_source: auditFxSource,
+        reused_order: reusedOrder,
       },
     });
+
+    if (invoice.status !== "draft") {
+      await financeLedgerPosting.postInvoiceById(
+        invoice.id,
+        owner.profileId ?? null,
+      );
+    }
 
     return {
       reused: false,
@@ -1416,6 +1556,18 @@ export const financeController = {
       );
     }
 
+    const originalInstallments = (installmentRows ?? []).map((row: any) => ({
+      id: row.id,
+      paid_amount: normalizeMoney(row.paid_amount),
+      balance_amount: normalizeMoney(row.balance_amount),
+      status: row.status,
+    }));
+    const originalInvoiceSnapshot = {
+      paid_amount: normalizeMoney(invoice.paid_amount),
+      balance_amount: normalizeMoney(invoice.balance_amount),
+      status: invoice.status,
+    };
+
     const installmentState = mapInstallmentsToState(installmentRows ?? []);
 
     const allocationResult = applyPaymentAllocation({
@@ -1439,113 +1591,229 @@ export const financeController = {
     }
 
     const paymentDate = paymentDateCandidate.toISOString();
+    let payment: any = null;
+    let updatedInvoice: any = null;
+    let allocationsInserted = false;
 
-    const { data: payment, error: paymentError } = await supabase
-      .from("finance_payments")
-      .insert({
-        payment_reference: normalizeText(parsed.paymentReference),
-        status: "recorded",
-        payment_method: parsed.paymentMethod,
-        payment_date: paymentDate,
-        currency: parsed.currency.toUpperCase(),
-        amount: parsed.amount,
-        source: normalizeText(parsed.source),
-        received_from: normalizeText(parsed.receivedFrom),
-        notes: normalizeText(parsed.notes),
-        created_by_profile_id: owner.profileId ?? null,
-      })
-      .select("*")
-      .single();
+    const rollbackPaymentRecording = async () => {
+      const rollbackErrors: string[] = [];
 
-    if (paymentError || !payment) {
-      throw new ApiError(
-        500,
-        "Failed to record payment",
-        paymentError?.message,
-      );
-    }
+      for (const row of originalInstallments) {
+        const { error: restoreInstallmentError } = await supabase
+          .from("finance_invoice_installments")
+          .update({
+            paid_amount: row.paid_amount,
+            balance_amount: row.balance_amount,
+            status: row.status,
+          })
+          .eq("id", row.id);
 
-    const allocationRows = allocationResult.appliedAllocations.map(
-      (allocation) => ({
-        finance_payment_id: payment.id,
-        finance_invoice_id: parsed.invoiceId,
-        finance_invoice_installment_id: allocation.installmentId,
-        amount: allocation.amount,
-        currency: parsed.currency.toUpperCase(),
-      }),
-    );
+        if (restoreInstallmentError) {
+          rollbackErrors.push(
+            `installment ${row.id} rollback failed: ${restoreInstallmentError.message}`,
+          );
+        }
+      }
 
-    if (allocationRows.length > 0) {
-      const { error: allocationInsertError } = await supabase
-        .from("finance_payment_allocations")
-        .insert(allocationRows);
+      const { error: restoreInvoiceError } = await supabase
+        .from("finance_invoices")
+        .update(originalInvoiceSnapshot)
+        .eq("id", parsed.invoiceId);
 
-      if (allocationInsertError) {
-        throw new ApiError(
-          500,
-          "Failed to store payment allocations",
-          allocationInsertError.message,
+      if (restoreInvoiceError) {
+        rollbackErrors.push(
+          `invoice rollback failed: ${restoreInvoiceError.message}`,
         );
       }
-    }
 
-    for (const installment of allocationResult.installments) {
-      const { error: installmentUpdateError } = await supabase
-        .from("finance_invoice_installments")
-        .update({
-          paid_amount: installment.paidAmount,
-          balance_amount: installment.balanceAmount,
-          status: installment.status,
+      if (allocationsInserted && payment?.id) {
+        const { error: deleteAllocationsError } = await supabase
+          .from("finance_payment_allocations")
+          .delete()
+          .eq("finance_payment_id", payment.id);
+
+        if (deleteAllocationsError) {
+          rollbackErrors.push(
+            `allocation rollback failed: ${deleteAllocationsError.message}`,
+          );
+        }
+      }
+
+      if (payment?.id) {
+        const { error: deletePaymentError } = await supabase
+          .from("finance_payments")
+          .delete()
+          .eq("id", payment.id)
+          .eq("status", "recorded");
+
+        if (deletePaymentError) {
+          rollbackErrors.push(
+            `payment rollback failed: ${deletePaymentError.message}`,
+          );
+        }
+      }
+
+      return rollbackErrors.length > 0 ? rollbackErrors.join("; ") : null;
+    };
+
+    try {
+      const { data: createdPayment, error: paymentError } = await supabase
+        .from("finance_payments")
+        .insert({
+          payment_reference: normalizeText(parsed.paymentReference),
+          status: "recorded",
+          payment_method: parsed.paymentMethod,
+          payment_date: paymentDate,
+          currency: parsed.currency.toUpperCase(),
+          amount: parsed.amount,
+          source: normalizeText(parsed.source),
+          received_from: normalizeText(parsed.receivedFrom),
+          notes: normalizeText(parsed.notes),
+          created_by_profile_id: owner.profileId ?? null,
         })
-        .eq("id", installment.id);
+        .select("*")
+        .single();
 
-      if (installmentUpdateError) {
+      if (paymentError || !createdPayment) {
         throw new ApiError(
           500,
-          "Failed to update installment payment status",
-          installmentUpdateError.message,
+          "Failed to record payment",
+          paymentError?.message,
         );
       }
-    }
 
-    const { data: updatedInvoice, error: invoiceUpdateError } = await supabase
-      .from("finance_invoices")
-      .update({
-        paid_amount: allocationResult.invoicePaidAmount,
-        balance_amount: allocationResult.invoiceBalanceAmount,
-        status: allocationResult.invoiceStatus,
-      })
-      .eq("id", parsed.invoiceId)
-      .select("*")
-      .single();
+      payment = createdPayment;
 
-    if (invoiceUpdateError || !updatedInvoice) {
-      throw new ApiError(
-        500,
-        "Failed to update invoice payment status",
-        invoiceUpdateError?.message,
+      const allocationRows = allocationResult.appliedAllocations.map(
+        (allocation) => ({
+          finance_payment_id: payment.id,
+          finance_invoice_id: parsed.invoiceId,
+          finance_invoice_installment_id: allocation.installmentId,
+          amount: allocation.amount,
+          currency: parsed.currency.toUpperCase(),
+        }),
       );
+
+      if (allocationRows.length > 0) {
+        const { error: allocationInsertError } = await supabase
+          .from("finance_payment_allocations")
+          .insert(allocationRows);
+
+        if (allocationInsertError) {
+          throw new ApiError(
+            500,
+            "Failed to store payment allocations",
+            allocationInsertError.message,
+          );
+        }
+
+        allocationsInserted = true;
+      }
+
+      for (const installment of allocationResult.installments) {
+        const { error: installmentUpdateError } = await supabase
+          .from("finance_invoice_installments")
+          .update({
+            paid_amount: installment.paidAmount,
+            balance_amount: installment.balanceAmount,
+            status: installment.status,
+          })
+          .eq("id", installment.id);
+
+        if (installmentUpdateError) {
+          throw new ApiError(
+            500,
+            "Failed to update installment payment status",
+            installmentUpdateError.message,
+          );
+        }
+      }
+
+      const { data: invoiceAfterPayment, error: invoiceUpdateError } =
+        await supabase
+          .from("finance_invoices")
+          .update({
+            paid_amount: allocationResult.invoicePaidAmount,
+            balance_amount: allocationResult.invoiceBalanceAmount,
+            status: allocationResult.invoiceStatus,
+          })
+          .eq("id", parsed.invoiceId)
+          .select("*")
+          .single();
+
+      if (invoiceUpdateError || !invoiceAfterPayment) {
+        throw new ApiError(
+          500,
+          "Failed to update invoice payment status",
+          invoiceUpdateError?.message,
+        );
+      }
+
+      updatedInvoice = invoiceAfterPayment;
+
+      await writeFinanceAuditEvent({
+        supabase,
+        entityType: "finance_payment",
+        entityId: payment.id,
+        action: "payment_recorded",
+        actor: owner,
+        payload: {
+          finance_invoice_id: parsed.invoiceId,
+          finance_payment_id: payment.id,
+          amount: parsed.amount,
+          allocations: allocationResult.appliedAllocations,
+        },
+      });
+    } catch (error) {
+      const rollbackDetails = payment?.id
+        ? await rollbackPaymentRecording()
+        : null;
+
+      if (error instanceof ApiError) {
+        if (rollbackDetails) {
+          throw new ApiError(error.status, error.message, {
+            cause: error.details ?? null,
+            rollback: rollbackDetails,
+          });
+        }
+        throw error;
+      }
+
+      const message =
+        error instanceof Error ? error.message : "Failed to record payment";
+      if (rollbackDetails) {
+        throw new ApiError(500, "Failed to record payment", {
+          cause: message,
+          rollback: rollbackDetails,
+        });
+      }
+      throw new ApiError(500, "Failed to record payment", message);
     }
 
-    await writeFinanceAuditEvent({
-      supabase,
-      entityType: "finance_payment",
-      entityId: payment.id,
-      action: "payment_recorded",
-      actor: owner,
-      payload: {
-        finance_invoice_id: parsed.invoiceId,
-        finance_payment_id: payment.id,
-        amount: parsed.amount,
-        allocations: allocationResult.appliedAllocations,
-      },
-    });
+    if (!payment || !updatedInvoice) {
+      throw new ApiError(500, "Failed to finalize recorded payment");
+    }
+
+    let ledgerPostingError: string | null = null;
+    try {
+      await financeLedgerPosting.postPaymentById(
+        payment.id,
+        owner.profileId ?? null,
+      );
+    } catch (error) {
+      ledgerPostingError =
+        error instanceof Error
+          ? error.message
+          : "Failed to post payment to ledger";
+    }
 
     return {
       payment,
       invoice: updatedInvoice,
       allocations: allocationResult.appliedAllocations,
       installments: allocationResult.installments,
+      ledgerPosted: ledgerPostingError === null,
+      ledgerPostingError,
     };
   },
 
@@ -1853,6 +2121,13 @@ export const financeController = {
       },
     });
 
+    if (status === "approved") {
+      await financeLedgerPosting.postCreditAdjustmentById(
+        adjustment.id,
+        owner.profileId ?? null,
+      );
+    }
+
     return {
       adjustment,
       approvalRequest,
@@ -1957,6 +2232,13 @@ export const financeController = {
         decision_notes: normalizeText(parsed.decisionNotes),
       },
     });
+
+    if (parsed.status === "approved") {
+      await financeLedgerPosting.postCreditAdjustmentById(
+        id,
+        owner.profileId ?? null,
+      );
+    }
 
     return {
       adjustment: updatedAdjustment,
