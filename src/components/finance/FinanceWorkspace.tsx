@@ -13,10 +13,8 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import {
-  adminFetch,
-  useAdminInvalidate,
-} from "@/components/admin/hooks/useAdminFetch";
+import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import { useFinanceInvalidate } from "@/components/finance/hooks/useFinanceInvalidate";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,6 +138,28 @@ type FinanceCreditAdjustment = {
   } | null;
 };
 
+type FinancePayableListItem = {
+  id: string;
+  payable_number: string;
+  status: string;
+  due_date: string | null;
+  total_amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  currency: string;
+  has_pending_approval: boolean;
+};
+
+type FinanceApprovalRequest = {
+  id: string;
+  status: string;
+};
+
+type FinanceProfitLossReport = {
+  baseCurrency: string;
+  netIncome: number;
+};
+
 type InstallmentEditorRow = {
   label: string;
   percent: string;
@@ -152,6 +172,9 @@ const QUOTES_QUERY_KEY = ["finance", "quotes", "operations"] as const;
 const AGING_QUERY_KEY = ["finance", "ar-aging"] as const;
 const CREDIT_ADJUSTMENTS_QUERY_KEY = ["finance", "credit-adjustments"] as const;
 const FX_QUERY_KEY = ["finance", "quotation", "exchange-rates"] as const;
+const PAYABLES_QUERY_KEY = ["finance", "payables"] as const;
+const APPROVALS_QUERY_KEY = ["finance", "approval-requests"] as const;
+const PROFIT_LOSS_QUERY_KEY = ["finance", "profit-loss"] as const;
 
 const todayDateOnly = () => new Date().toISOString().slice(0, 10);
 
@@ -169,6 +192,47 @@ const formatDate = (value?: string | null) => {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
     parsed,
   );
+};
+
+const startOfUtcDay = (value: Date) =>
+  new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+  );
+
+const sumByCurrency = <T extends { currency?: string | null }>(
+  rows: T[],
+  getAmount: (row: T) => number,
+  fallbackCurrency: string,
+) => {
+  const totals: Record<string, number> = {};
+
+  for (const row of rows) {
+    const currency = (row.currency || fallbackCurrency).toUpperCase();
+    const amount = Number(getAmount(row));
+    if (!Number.isFinite(amount)) {
+      continue;
+    }
+    totals[currency] = (totals[currency] ?? 0) + amount;
+  }
+
+  return totals;
+};
+
+const formatCurrencyBreakdown = (
+  totalsByCurrency: Record<string, number> | null | undefined,
+) => {
+  const entries = Object.entries(totalsByCurrency ?? {})
+    .map(([currency, amount]) => [currency, Number(amount)] as const)
+    .filter(([, amount]) => Number.isFinite(amount) && Math.abs(amount) > 0)
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  if (entries.length === 0) {
+    return formatCurrency(0, "USD");
+  }
+
+  return entries
+    .map(([currency, amount]) => formatCurrency(amount, currency))
+    .join(" | ");
 };
 
 const normalizePercent = (value: string) => {
@@ -206,7 +270,7 @@ export function FinanceWorkspace({
   invoiceDetailsBasePath,
 }: FinanceWorkspaceProps) {
   const { toast } = useToast();
-  const invalidate = useAdminInvalidate();
+  const invalidateFinance = useFinanceInvalidate();
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
@@ -273,6 +337,31 @@ export function FinanceWorkspace({
     queryFn: () =>
       adminFetch<FinanceCreditAdjustment[]>(
         "/api/admin/finance/credit-adjustments?status=pending",
+      ),
+    staleTime: 30_000,
+  });
+
+  const payablesQuery = useQuery({
+    queryKey: PAYABLES_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<FinancePayableListItem[]>("/api/admin/finance/payables"),
+    staleTime: 30_000,
+  });
+
+  const approvalsQuery = useQuery({
+    queryKey: APPROVALS_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<FinanceApprovalRequest[]>(
+        "/api/admin/finance/approval-requests?status=pending",
+      ),
+    staleTime: 30_000,
+  });
+
+  const profitLossQuery = useQuery({
+    queryKey: PROFIT_LOSS_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<FinanceProfitLossReport>(
+        "/api/admin/finance/reports/profit-loss",
       ),
     staleTime: 30_000,
   });
@@ -371,8 +460,7 @@ export function FinanceWorkspace({
       });
     },
     onSuccess: (result) => {
-      invalidate(INVOICES_QUERY_KEY);
-      invalidate(AGING_QUERY_KEY);
+      invalidateFinance();
       setSelectedInvoiceId(result.invoice.id);
       toast({
         title: result.reused
@@ -403,6 +491,8 @@ export function FinanceWorkspace({
 
       return adminFetch<{
         invoice: { invoice_number: string; balance_amount: number };
+        ledgerPosted?: boolean;
+        ledgerPostingError?: string | null;
       }>("/api/admin/finance/payments", {
         method: "POST",
         body: JSON.stringify({
@@ -416,9 +506,7 @@ export function FinanceWorkspace({
       });
     },
     onSuccess: (result) => {
-      invalidate(INVOICES_QUERY_KEY);
-      invalidate(AGING_QUERY_KEY);
-      invalidate(["finance", "invoice-installments", selectedInvoiceId]);
+      invalidateFinance();
       setPaymentAmount("");
       setPaymentReference("");
       setPaymentNotes("");
@@ -426,6 +514,16 @@ export function FinanceWorkspace({
         title: "Payment recorded",
         description: `Invoice balance is now ${formatCurrency(result.invoice.balance_amount, selectedInvoice?.currency ?? "USD")}.`,
       });
+
+      if (result.ledgerPosted === false) {
+        toast({
+          title: "Ledger posting pending",
+          description:
+            result.ledgerPostingError ??
+            "Payment was saved, but ledger posting did not complete.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -466,9 +564,7 @@ export function FinanceWorkspace({
       );
     },
     onSuccess: () => {
-      invalidate(INVOICES_QUERY_KEY);
-      invalidate(AGING_QUERY_KEY);
-      invalidate(["finance", "invoice-installments", selectedInvoiceId]);
+      invalidateFinance();
       toast({
         title: "Installment schedule updated",
         description: "Invoice schedule was saved successfully.",
@@ -514,7 +610,7 @@ export function FinanceWorkspace({
       });
     },
     onSuccess: (result) => {
-      invalidate(CREDIT_ADJUSTMENTS_QUERY_KEY);
+      invalidateFinance();
       setAdjustmentAmount("");
       setAdjustmentReasonCode("");
       setAdjustmentNotes("");
@@ -550,7 +646,7 @@ export function FinanceWorkspace({
         },
       ),
     onSuccess: () => {
-      invalidate(CREDIT_ADJUSTMENTS_QUERY_KEY);
+      invalidateFinance();
       toast({
         title: "Decision recorded",
         description: "Credit adjustment approval status has been updated.",
@@ -566,11 +662,12 @@ export function FinanceWorkspace({
     },
   });
 
-  const outstandingAmount = useMemo(
+  const outstandingByCurrency = useMemo(
     () =>
-      (invoicesQuery.data ?? []).reduce(
-        (sum, invoice) => sum + (invoice.balance_amount ?? 0),
-        0,
+      sumByCurrency(
+        invoicesQuery.data ?? [],
+        (invoice) => invoice.balance_amount ?? 0,
+        "USD",
       ),
     [invoicesQuery.data],
   );
@@ -584,11 +681,49 @@ export function FinanceWorkspace({
     [invoicesQuery.data],
   );
 
+  const openPayables = useMemo(
+    () =>
+      (payablesQuery.data ?? []).filter((payable) =>
+        ["approved", "scheduled", "partially_paid"].includes(payable.status),
+      ),
+    [payablesQuery.data],
+  );
+
+  const openPayablesBalanceByCurrency = useMemo(
+    () =>
+      sumByCurrency(
+        openPayables,
+        (payable) => payable.balance_amount ?? 0,
+        "EGP",
+      ),
+    [openPayables],
+  );
+
+  const dueThisWeekPayablesCount = useMemo(() => {
+    const windowStart = startOfUtcDay(new Date());
+    const windowEnd = new Date(windowStart);
+    windowEnd.setUTCDate(windowEnd.getUTCDate() + 7);
+
+    return openPayables.filter((payable) => {
+      if (!payable.due_date) {
+        return false;
+      }
+      const dueDate = new Date(`${payable.due_date}T00:00:00.000Z`);
+      if (!Number.isFinite(dueDate.getTime())) {
+        return false;
+      }
+      return dueDate >= windowStart && dueDate <= windowEnd;
+    }).length;
+  }, [openPayables]);
+
   const hasFinanceDataError =
     invoicesQuery.isError ||
     quotesQuery.isError ||
     agingQuery.isError ||
-    pendingAdjustmentsQuery.isError;
+    pendingAdjustmentsQuery.isError ||
+    payablesQuery.isError ||
+    approvalsQuery.isError ||
+    profitLossQuery.isError;
 
   const requiresFxRate = convertCurrency !== "USD";
   const hasFxRate = usdToSelectedCurrencyRate !== null;
@@ -627,29 +762,87 @@ export function FinanceWorkspace({
         </Card>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Total invoices</CardDescription>
             <CardTitle>{invoicesQuery.data?.length ?? 0}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Outstanding receivables</CardDescription>
-            <CardTitle>{formatCurrency(outstandingAmount, "USD")}</CardTitle>
+            <CardTitle>
+              {formatCurrencyBreakdown(outstandingByCurrency)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Overdue installments</CardDescription>
             <CardTitle>{overdueInstallmentsCount}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Pending approvals</CardDescription>
-            <CardTitle>{pendingAdjustmentsQuery.data?.length ?? 0}</CardTitle>
+            <CardTitle>{approvalsQuery.data?.length ?? 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="border-b-0 bg-transparent pb-2">
+            <CardDescription>Open payables</CardDescription>
+            <CardTitle>{openPayables.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="border-b-0 bg-transparent pb-2">
+            <CardDescription>Period net income</CardDescription>
+            <CardTitle>
+              {formatCurrency(
+                profitLossQuery.data?.netIncome ?? 0,
+                profitLossQuery.data?.baseCurrency ?? "EGP",
+              )}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Card>
+          <CardHeader className="border-b-0 bg-transparent pb-2">
+            <CardDescription>AP open balance</CardDescription>
+            <CardTitle>
+              {formatCurrencyBreakdown(openPayablesBalanceByCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="border-b-0 bg-transparent pb-2">
+            <CardDescription>AP due this week</CardDescription>
+            <CardTitle>{dueThisWeekPayablesCount}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="border-b-0 bg-transparent pb-2">
+            <CardDescription>Quick links</CardDescription>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/payables`}>
+                  Payables
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/ledger/journals`}>
+                  Journals
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/reports/ap-aging`}>
+                  AP Aging
+                </Link>
+              </Button>
+            </div>
           </CardHeader>
         </Card>
       </div>
@@ -1098,7 +1291,7 @@ export function FinanceWorkspace({
                           </p>
                         </div>
                         <p className="text-sm font-semibold">
-                          {formatCurrency(bucket?.amount ?? 0, "USD")}
+                          {formatCurrencyBreakdown(bucket?.byCurrency ?? {})}
                         </p>
                       </div>
                     );
