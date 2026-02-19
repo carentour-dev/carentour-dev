@@ -26,12 +26,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
+  BarChart3,
+  BookOpen,
   Calculator,
   CircleDollarSign,
   LayoutDashboard,
   Loader2,
   LogOut,
   Users,
+  Wallet,
 } from "lucide-react";
 
 type FinanceShellProps = {
@@ -50,6 +53,33 @@ const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
     label: "Quotation Calculator",
     href: "/finance/quotation-calculator",
     icon: Calculator,
+  },
+  { label: "Counterparties", href: "/finance/counterparties", icon: Users },
+  { label: "Payables", href: "/finance/payables", icon: Wallet },
+  {
+    label: "Journals",
+    href: "/finance/ledger/journals",
+    icon: BookOpen,
+  },
+  {
+    label: "AP Aging",
+    href: "/finance/reports/ap-aging",
+    icon: CircleDollarSign,
+  },
+  {
+    label: "Trial Balance",
+    href: "/finance/reports/trial-balance",
+    icon: BarChart3,
+  },
+  {
+    label: "Profit & Loss",
+    href: "/finance/reports/profit-loss",
+    icon: BarChart3,
+  },
+  {
+    label: "Balance Sheet",
+    href: "/finance/reports/balance-sheet",
+    icon: BarChart3,
   },
 ];
 
@@ -132,10 +162,7 @@ export function FinanceShell({ children }: FinanceShellProps) {
           <Button onClick={() => router.replace("/dashboard")}>
             Go to dashboard
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.replace("/auth/support")}
-          >
+          <Button variant="outline" onClick={() => router.replace("/contact")}>
             Contact support
           </Button>
         </div>
