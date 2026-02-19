@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
+import { financeCounterpartySync } from "@/server/modules/finance/counterpartySync";
 import { ApiError } from "@/server/utils/errors";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -120,7 +121,16 @@ export const hotelController = {
 
   async create(payload: unknown) {
     const parsed = createHotelSchema.parse(payload);
-    return hotelsService.create(normalizeHotelForCreate(parsed));
+    const created = await hotelsService.create(normalizeHotelForCreate(parsed));
+
+    financeCounterpartySync.syncHotelEvent(created.id).catch((error) =>
+      console.error("[finance][counterparty-sync][hotel][create]", {
+        hotelId: created.id,
+        error,
+      }),
+    );
+
+    return created;
   },
 
   async update(id: unknown, payload: unknown) {
@@ -137,11 +147,45 @@ export const hotelController = {
       throw new ApiError(400, "No valid fields provided for update");
     }
 
-    return hotelsService.update(hotelId, sanitizedUpdate);
+    const updated = await hotelsService.update(hotelId, sanitizedUpdate);
+
+    financeCounterpartySync.syncHotelEvent(hotelId).catch((error) =>
+      console.error("[finance][counterparty-sync][hotel][update]", {
+        hotelId,
+        error,
+      }),
+    );
+
+    return updated;
   },
 
   async delete(id: unknown) {
     const hotelId = hotelIdSchema.parse(id);
-    return hotelsService.remove(hotelId);
+    let linkedCounterpartyIds: string[] = [];
+
+    try {
+      linkedCounterpartyIds =
+        await financeCounterpartySync.captureHotelLinkedCounterparties(hotelId);
+    } catch (error) {
+      console.error("[finance][counterparty-sync][hotel][delete][capture]", {
+        hotelId,
+        error,
+      });
+    }
+
+    const result = await hotelsService.remove(hotelId);
+
+    financeCounterpartySync
+      .deactivateHotelLink(hotelId, {
+        counterpartyIds: linkedCounterpartyIds,
+      })
+      .catch((error) =>
+        console.error("[finance][counterparty-sync][hotel][delete]", {
+          hotelId,
+          error,
+        }),
+      );
+
+    return result;
   },
 };
