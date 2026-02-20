@@ -94,6 +94,59 @@ type ProviderProcedurePricingResponse = {
   procedures: ProviderProcedurePricing[];
 };
 
+type PricingImportRowResult = {
+  key: string;
+  rowNumbers: number[];
+  status: "ready" | "blocked" | "applied";
+  reason: string | null;
+  procedureId: string | null;
+  procedureName: string | null;
+  treatmentId: string | null;
+  treatmentName: string | null;
+  specialty: string | null;
+  willCreateTreatment: boolean;
+  willCreateProcedure: boolean;
+  componentCount: number;
+  totalCostEgp: number;
+};
+
+type PricingImportSummary = {
+  totalRows: number;
+  readyRows: number;
+  blockedRows: number;
+  skippedRows: number;
+  readyGroups: number;
+  blockedGroups: number;
+  createMissing: boolean;
+};
+
+type PricingImportApplyResult = {
+  summary: {
+    appliedGroups: number;
+    createdTreatments: number;
+    createdProcedures: number;
+    upsertedPriceLists: number;
+  };
+  rowResults: Array<{
+    rowNumbers: number[];
+    treatmentId: string;
+    procedureId: string;
+    procedureName: string;
+    componentCount: number;
+    totalCostEgp: number;
+  }>;
+};
+
+type PricingImportResponse = {
+  runId: string;
+  summary: PricingImportSummary;
+  rowResults: PricingImportRowResult[];
+  blockingErrors: string[];
+  warnings: string[];
+  canApply: boolean;
+  applyResult?: PricingImportApplyResult;
+};
+
 const PRICING_PROVIDERS_QUERY_KEY = [
   "operations",
   "pricing",
@@ -140,7 +193,11 @@ export default function OperationsPricingPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [csvApplyingImport, setCsvApplyingImport] = useState(false);
+  const [createMissingOnImport, setCreateMissingOnImport] = useState(false);
   const [csvImportErrors, setCsvImportErrors] = useState<string[]>([]);
+  const [csvImportPreview, setCsvImportPreview] =
+    useState<PricingImportResponse | null>(null);
   const [editingProcedure, setEditingProcedure] =
     useState<ProviderProcedurePricing | null>(null);
   const [editingComponents, setEditingComponents] = useState<
@@ -460,19 +517,6 @@ export default function OperationsPricingPage() {
     );
   };
 
-  const parseBoolean = (value: string | undefined) => {
-    if (!value) return undefined;
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) return undefined;
-    if (["true", "1", "yes", "y"].includes(normalized)) {
-      return true;
-    }
-    if (["false", "0", "no", "n"].includes(normalized)) {
-      return false;
-    }
-    return undefined;
-  };
-
   const handleExportCsv = () => {
     if (!providerPricingQuery.data) {
       toast({
@@ -535,100 +579,36 @@ export default function OperationsPricingPage() {
     URL.revokeObjectURL(url);
   };
 
-  const runImportRows = async (rows: string[][]) => {
+  const runImportPreview = async (rows: string[][]) => {
     if (rows.length < 2) {
       throw new Error("File needs a header row and at least one data row.");
     }
 
-    const headers = rows[0]!.map((header) => header.trim().toLowerCase());
-    const getIndex = (key: string) => headers.indexOf(key);
-    const index = {
-      providerId: getIndex("provider_id"),
-      procedureId: getIndex("procedure_id"),
-      label: getIndex("component_label"),
-      amount: getIndex("component_amount_egp"),
-      notes: getIndex("component_notes"),
-      code: getIndex("component_code"),
-      isActive: getIndex("is_active"),
-    };
+    const preview = await adminFetch<PricingImportResponse>(
+      `/api/admin/operations/pricing/providers/${providerId}/procedure-price-lists/import`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "dry_run",
+          rows,
+          options: {
+            createMissing: createMissingOnImport,
+          },
+        }),
+      },
+    );
 
-    if (index.procedureId < 0 || index.label < 0 || index.amount < 0) {
-      throw new Error(
-        "Headers must include procedure_id, component_label, and component_amount_egp.",
-      );
-    }
-
-    const grouped = new Map<
-      string,
-      { components: PriceComponent[]; isActive?: boolean }
-    >();
-    const errors: string[] = [];
-
-    rows.slice(1).forEach((rowValues, rowIndex) => {
-      const rowNumber = rowIndex + 2;
-      const procedureIdValue = rowValues[index.procedureId]?.trim();
-      if (!procedureIdValue) {
-        errors.push(`Row ${rowNumber}: missing procedure_id.`);
-        return;
-      }
-      const rowProviderId =
-        index.providerId >= 0 ? rowValues[index.providerId]?.trim() : null;
-      if (rowProviderId && rowProviderId !== providerId) {
-        return;
-      }
-      const label = rowValues[index.label]?.trim();
-      if (!label) {
-        return;
-      }
-      const amount = safeValue(Number(rowValues[index.amount]));
-      const notes =
-        index.notes >= 0 ? (rowValues[index.notes]?.trim() ?? "") : "";
-      const code = index.code >= 0 ? (rowValues[index.code]?.trim() ?? "") : "";
-      const isActiveValue =
-        index.isActive >= 0
-          ? parseBoolean(rowValues[index.isActive])
-          : undefined;
-
-      const entry = grouped.get(procedureIdValue) ?? { components: [] };
-      if (isActiveValue !== undefined) {
-        entry.isActive = isActiveValue;
-      }
-      entry.components.push({
-        label,
-        amountEgp: amount,
-        ...(notes ? { notes } : {}),
-        ...(code ? { code } : {}),
-      });
-      grouped.set(procedureIdValue, entry);
-    });
-
-    if (grouped.size === 0) {
-      throw new Error("No valid price list rows were found.");
-    }
-
-    for (const [procedureIdValue, payload] of grouped.entries()) {
-      await adminFetch(
-        `/api/admin/operations/pricing/providers/${providerId}/procedure-price-lists`,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            procedureId: procedureIdValue,
-            components: payload.components,
-            ...(payload.isActive !== undefined
-              ? { isActive: payload.isActive }
-              : {}),
-          }),
-        },
-      );
-    }
-
-    invalidate(getProviderPricingQueryKey(providerId));
-    setCsvImportErrors(errors);
+    setCsvImportPreview(preview);
+    setCsvImportErrors(preview.blockingErrors);
     toast({
-      title: "Price lists imported",
-      description: `Updated ${grouped.size} procedure price list${
-        grouped.size === 1 ? "" : "s"
-      }.`,
+      title: "Import preview ready",
+      description: preview.canApply
+        ? `Ready to apply ${preview.summary.readyGroups} grouped price list${
+            preview.summary.readyGroups === 1 ? "" : "s"
+          }.`
+        : `Preview has ${preview.summary.blockedRows} blocking row${
+            preview.summary.blockedRows === 1 ? "" : "s"
+          }.`,
     });
   };
 
@@ -644,9 +624,10 @@ export default function OperationsPricingPage() {
 
     setCsvImporting(true);
     setCsvImportErrors([]);
+    setCsvImportPreview(null);
 
     try {
-      await runImportRows(rows);
+      await runImportPreview(rows);
     } catch (error) {
       toast({
         title: "Import failed",
@@ -659,6 +640,61 @@ export default function OperationsPricingPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleApplyPreview = async () => {
+    if (!providerId || !csvImportPreview?.runId) {
+      return;
+    }
+
+    if (!csvImportPreview.canApply) {
+      toast({
+        title: "Preview has blocking rows",
+        description: "Resolve blocking issues before applying the import.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCsvApplyingImport(true);
+    try {
+      const result = await adminFetch<PricingImportResponse>(
+        `/api/admin/operations/pricing/providers/${providerId}/procedure-price-lists/import`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "apply",
+            runId: csvImportPreview.runId,
+          }),
+        },
+      );
+
+      invalidate(getProviderPricingQueryKey(providerId));
+      setCsvImportPreview(null);
+      setCsvImportErrors([]);
+      const applySummary = result.applyResult?.summary;
+      toast({
+        title: "Import applied",
+        description: applySummary
+          ? `Applied ${applySummary.appliedGroups} grouped price list${
+              applySummary.appliedGroups === 1 ? "" : "s"
+            } (${applySummary.createdTreatments} treatment${
+              applySummary.createdTreatments === 1 ? "" : "s"
+            }, ${applySummary.createdProcedures} procedure${
+              applySummary.createdProcedures === 1 ? "" : "s"
+            } created).`
+          : "Price list import was applied successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to apply import",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCsvApplyingImport(false);
     }
   };
 
@@ -864,6 +900,7 @@ export default function OperationsPricingPage() {
                   setSelectedProcedureId("");
                   setSearch("");
                   setCsvImportErrors([]);
+                  setCsvImportPreview(null);
                   closeDialog();
                 }}
               />
@@ -980,17 +1017,41 @@ export default function OperationsPricingPage() {
                 type="button"
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!providerId || csvImporting}
+                disabled={!providerId || csvImporting || csvApplyingImport}
               >
                 {csvImporting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Upload className="mr-2 h-4 w-4" />
                 )}
-                Import CSV/XLSX
+                Preview CSV/XLSX
               </Button>
+              <Button
+                type="button"
+                onClick={handleApplyPreview}
+                disabled={
+                  !providerId ||
+                  csvApplyingImport ||
+                  csvImporting ||
+                  !csvImportPreview?.canApply
+                }
+              >
+                {csvApplyingImport ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Apply preview
+              </Button>
+              <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2">
+                <Switch
+                  checked={createMissingOnImport}
+                  onCheckedChange={setCreateMissingOnImport}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Create missing treatments/procedures
+                </span>
+              </div>
               <span className="text-xs text-muted-foreground">
-                CSV/XLSX import updates price lists by procedure.
+                Import now runs in two steps: preview then apply.
               </span>
             </div>
             {csvImportErrors.length > 0 ? (
@@ -1002,6 +1063,93 @@ export default function OperationsPricingPage() {
               </span>
             ) : null}
           </div>
+
+          {csvImportPreview ? (
+            <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-xs">
+              <p className="font-medium text-foreground">
+                Preview run: {csvImportPreview.runId}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Rows: {csvImportPreview.summary.totalRows} • Ready groups:{" "}
+                {csvImportPreview.summary.readyGroups} • Blocked rows:{" "}
+                {csvImportPreview.summary.blockedRows} • Skipped rows:{" "}
+                {csvImportPreview.summary.skippedRows} • Warnings:{" "}
+                {csvImportPreview.warnings.length}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Apply status:{" "}
+                {csvImportPreview.canApply
+                  ? "Ready to apply"
+                  : "Blocked (resolve issues or adjust import settings)"}
+              </p>
+              {csvImportPreview.blockingErrors.length > 0 ? (
+                <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-destructive">
+                  {csvImportPreview.blockingErrors.slice(0, 3).map((error) => (
+                    <p key={error}>{error}</p>
+                  ))}
+                  {csvImportPreview.blockingErrors.length > 3 ? (
+                    <p>
+                      +{csvImportPreview.blockingErrors.length - 3} more
+                      blocking errors
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {csvImportPreview.warnings.length > 0 ? (
+                <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-amber-900 dark:text-amber-200">
+                  {csvImportPreview.warnings.slice(0, 3).map((warning) => (
+                    <p key={warning}>{warning}</p>
+                  ))}
+                  {csvImportPreview.warnings.length > 3 ? (
+                    <p>+{csvImportPreview.warnings.length - 3} more warnings</p>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="mt-3 overflow-x-auto rounded-md border border-border/60">
+                <table className="w-full min-w-[700px] text-left text-xs">
+                  <thead className="bg-muted/40 text-muted-foreground">
+                    <tr>
+                      <th className="px-2 py-1.5 font-medium">Rows</th>
+                      <th className="px-2 py-1.5 font-medium">Status</th>
+                      <th className="px-2 py-1.5 font-medium">Treatment</th>
+                      <th className="px-2 py-1.5 font-medium">Procedure</th>
+                      <th className="px-2 py-1.5 font-medium">Components</th>
+                      <th className="px-2 py-1.5 font-medium">Total</th>
+                      <th className="px-2 py-1.5 font-medium">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvImportPreview.rowResults.map((row) => (
+                      <tr key={`${row.key}-${row.rowNumbers.join("-")}`}>
+                        <td className="px-2 py-1.5">
+                          {row.rowNumbers.join(", ")}
+                        </td>
+                        <td className="px-2 py-1.5 capitalize">{row.status}</td>
+                        <td className="px-2 py-1.5">
+                          {row.treatmentName || row.treatmentId || "-"}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          {row.procedureName || row.procedureId || "-"}
+                        </td>
+                        <td className="px-2 py-1.5">{row.componentCount}</td>
+                        <td className="px-2 py-1.5">
+                          {formatCurrency(row.totalCostEgp, "EGP")}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          {row.reason ??
+                            (row.status === "applied"
+                              ? "Applied"
+                              : row.status === "ready"
+                                ? "Ready"
+                                : "-")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
