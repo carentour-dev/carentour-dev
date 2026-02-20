@@ -12,7 +12,17 @@ const PRICING_PERMISSIONS = {
 } as const;
 
 const querySchema = z.object({
-  partnerOnly: z.coerce.boolean().optional(),
+  partnerOnly: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      const normalized = value.trim().toLowerCase();
+      return normalized.length > 0 ? normalized : undefined;
+    },
+    z
+      .enum(["true", "false", "1", "0", "yes", "no", "y", "n"])
+      .transform((value) => ["true", "1", "yes", "y"].includes(value))
+      .optional(),
+  ),
 });
 
 export const GET = adminRoute(async (req) => {
