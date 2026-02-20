@@ -230,17 +230,24 @@ export default function AdminServiceProvidersPage() {
 
   const providerProcedures = useMemo(() => {
     if (!providerId || !treatmentsQuery.data) return [];
+    const linkedProcedureIds = new Set(
+      editingServiceProvider?.procedure_ids ?? [],
+    );
 
     return treatmentsQuery.data.flatMap((treatment) =>
       (treatment.procedures ?? [])
-        .filter((procedure) => procedure.created_by_provider_id === providerId)
+        .filter(
+          (procedure) =>
+            procedure.created_by_provider_id === providerId ||
+            linkedProcedureIds.has(procedure.id),
+        )
         .map((procedure) => ({
           id: procedure.id,
           name: procedure.name,
           treatmentName: treatment.name,
         })),
     );
-  }, [providerId, treatmentsQuery.data]);
+  }, [editingServiceProvider?.procedure_ids, providerId, treatmentsQuery.data]);
 
   const providerProcedureForm = useForm<{
     treatmentId: string;
