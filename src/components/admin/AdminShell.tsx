@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -30,6 +31,12 @@ import {
   hasOperationsEntry,
 } from "@/lib/operations/entitlements";
 import { hasAnyOperationsSection } from "@/lib/operations/sections";
+import {
+  hasAdminWorkspaceAccess,
+  hasCmsWorkspaceAccess,
+  hasFinanceWorkspaceAccess,
+} from "@/lib/workspaces/access-policies";
+import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import {
@@ -86,8 +93,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
       setInitialAccessResolved(true);
     }
   }, [isCheckingAccess]);
-  const hasAdminAccess = profile?.hasPermission("admin.access");
-  const hasResolvedProfile = !profileLoading && profile !== null;
   const operationsEntitlements = useMemo(
     () =>
       profile
@@ -101,11 +106,30 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const hasOperationsAccess =
     hasOperationsEntry(operationsEntitlements) ||
     hasAnyOperationsSection(operationsEntitlements);
-  const hasFinanceAccess =
-    profile?.hasPermission("finance.access") ||
-    (profile?.permissions ?? []).some((permission) =>
-      permission.startsWith("finance."),
-    );
+  const permissions = profile?.permissions ?? [];
+  const roles = profile?.roles ?? [];
+  const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
+  const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions);
+  const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const moduleTabs = useMemo(
+    () =>
+      buildModuleTabs({
+        pathname,
+        access: {
+          admin: hasAdminAccess,
+          operations: hasOperationsAccess,
+          finance: hasFinanceAccess,
+          cms: hasCmsAccess,
+        },
+      }),
+    [
+      hasAdminAccess,
+      hasCmsAccess,
+      hasFinanceAccess,
+      hasOperationsAccess,
+      pathname,
+    ],
+  );
 
   // Reuse existing auth provider to fully sign out admins.
   const handleSignOut = async () => {
@@ -138,7 +162,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (initialAccessResolved && hasResolvedProfile && hasAdminAccess === false) {
+  if (initialAccessResolved && !profileLoading && hasAdminAccess === false) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -243,7 +267,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-          <AdminTopbar hasOperationsAccess={hasOperationsAccess} />
+          <AdminTopbar tabs={moduleTabs} />
           <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
             <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
@@ -262,49 +286,21 @@ export function AdminShell({ children }: { children: ReactNode }) {
   );
 }
 
-function AdminTopbar({
-  hasOperationsAccess,
-}: {
-  hasOperationsAccess: boolean;
-}) {
-  const { toggleSidebar } = useSidebar();
-
+function AdminTopbar({ tabs }: { tabs: ModuleTab[] }) {
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur lg:h-16 lg:px-8">
-      <div className="flex flex-1 items-center gap-4">
-        {/* Mobile trigger keeps sidebar accessible on smaller screens. */}
-        <SidebarTrigger className="lg:hidden" onClick={toggleSidebar} />
-        <SidebarSeparator className="lg:hidden" />
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-muted-foreground">
-            Care N Tour Admin
-          </span>
-          <span className="text-lg font-semibold tracking-tight">
-            Operations Console
-          </span>
-        </div>
-      </div>
-      <div className="ml-auto flex items-center gap-2">
-        {hasOperationsAccess && (
-          <Button asChild size="sm">
-            <Link href="/operations" prefetch={false}>
-              Operations Dashboard
-            </Link>
-          </Button>
-        )}
-        <Button asChild variant="outline" size="sm">
-          <Link
-            href="/"
-            prefetch={false}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Visit Site
-          </Link>
-        </Button>
-        <ThemeToggle />
-      </div>
-    </header>
+    <WorkspaceModuleTopBar
+      tabs={tabs}
+      title="Admin Console"
+      subtitle="Care N Tour Admin"
+      leftSlot={
+        <>
+          {/* Mobile trigger keeps sidebar accessible on smaller screens. */}
+          <SidebarTrigger className="lg:hidden" />
+          <SidebarSeparator className="lg:hidden" />
+        </>
+      }
+      rightSlot={<ThemeToggle />}
+    />
   );
 }
 
