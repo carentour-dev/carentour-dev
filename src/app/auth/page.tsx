@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth, metadataIndicatesStaffAccount } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { isPasswordRecoveryCurrentUrl } from "@/lib/auth/password-recovery";
 import { useToast } from "@/hooks/use-toast";
@@ -50,8 +50,7 @@ function AuthContent() {
   const [isRecoveryFlow, setIsRecoveryFlow] = useState<boolean>(() =>
     isPasswordRecoveryCurrentUrl(),
   );
-  const { signIn, signUp, resetPassword, updatePassword, user, session } =
-    useAuth();
+  const { signIn, signUp, resetPassword, updatePassword, session } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,17 +59,6 @@ function AuthContent() {
   // Recovery links can arrive via query params, hash params, or PASSWORD_RECOVERY events.
   const isPasswordResetMode = isRecoveryFlow && Boolean(session);
   const maxDateOfBirth = new Date().toISOString().split("T")[0];
-
-  useEffect(() => {
-    if (user && !isPasswordResetMode) {
-      const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
-      if (metadataIndicatesStaffAccount(metadata)) {
-        router.replace("/admin");
-      } else {
-        router.push("/dashboard");
-      }
-    }
-  }, [user, router, isPasswordResetMode]);
 
   useEffect(() => {
     if (isRecoveryFlow) {
@@ -107,7 +95,7 @@ function AuthContent() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { data, error } = await signIn(email, password);
+    const { error } = await signIn(email, password);
 
     if (error) {
       toast({
@@ -120,15 +108,6 @@ function AuthContent() {
         title: "Success",
         description: "Signed in successfully!",
       });
-      const metadata = (data?.user?.user_metadata ?? {}) as Record<
-        string,
-        unknown
-      >;
-      if (metadataIndicatesStaffAccount(metadata)) {
-        router.replace("/admin");
-      } else {
-        router.push("/dashboard");
-      }
     }
 
     setIsLoading(false);
