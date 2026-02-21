@@ -75,6 +75,7 @@ import { usePatientPortalData } from "@/hooks/usePatientPortalData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { resolveAccessibleWorkspaceRoute } from "@/lib/workspaces/access-policies";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -455,19 +456,32 @@ export default function DashboardPage() {
     const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
     return metadataIndicatesStaffAccount(metadata);
   }, [profile, user?.user_metadata]);
+  const staffWorkspacePath = useMemo(
+    () =>
+      resolveAccessibleWorkspaceRoute({
+        permissions: profile?.permissions ?? [],
+        roles: profile?.roles ?? [],
+      }),
+    [profile?.permissions, profile?.roles],
+  );
 
   useEffect(() => {
-    if (!authLoading && !profileLoading && isStaffAccount) {
+    if (
+      !authLoading &&
+      !profileLoading &&
+      isStaffAccount &&
+      staffWorkspacePath !== "/dashboard"
+    ) {
       const fallbackId =
         typeof window !== "undefined"
           ? window.setTimeout(() => {
               if (window.location.pathname.startsWith("/dashboard")) {
-                window.location.replace("/admin");
+                window.location.replace(staffWorkspacePath);
               }
             }, 500)
           : undefined;
 
-      router.replace("/admin");
+      router.replace(staffWorkspacePath);
 
       return () => {
         if (fallbackId !== undefined) {
@@ -476,7 +490,7 @@ export default function DashboardPage() {
       };
     }
     return undefined;
-  }, [authLoading, profileLoading, isStaffAccount, router]);
+  }, [authLoading, profileLoading, isStaffAccount, router, staffWorkspacePath]);
 
   const {
     patient,
