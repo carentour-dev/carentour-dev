@@ -6,6 +6,10 @@ import {
   getSupabaseAdmin,
   getSupabaseWithAuth,
 } from "@/server/supabase/adminClient";
+import {
+  computeInstallmentStatus,
+  computeInvoiceStatus,
+} from "@/server/modules/finance/logic";
 import type { AuthorizationContext } from "@/server/auth/requireAdmin";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -162,6 +166,38 @@ export type PatientDocumentSummary = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type PatientFinanceOverview = {
+  invoices: Array<{
+    id: string;
+    invoice_number: string | null;
+    issue_date: string | null;
+    due_date: string | null;
+    status: string;
+    computed_status: string;
+    currency: string;
+    total_amount: number;
+    paid_amount: number;
+    balance_amount: number;
+    installments_count: number;
+    overdue_installments_count: number;
+    next_due_installment: {
+      id: string;
+      label: string;
+      due_date: string | null;
+      balance_amount: number;
+      status: string;
+    } | null;
+  }>;
+  totals_by_currency: Array<{
+    currency: string;
+    invoiced_total: number;
+    paid_total: number;
+    balance_total: number;
+  }>;
+  open_installments: number;
+  overdue_installments: number;
+};
+
 export type PatientDetails = {
   patient: PatientRow & {
     creator_profile: ProfileSummary | null;
@@ -181,6 +217,7 @@ export type PatientDetails = {
   reviews: ReviewDetail[];
   stories: StoryDetail[];
   documents: PatientDocumentSummary[];
+  finance_overview: PatientFinanceOverview;
 };
 
 const trimString = (value: string) => value.trim();
@@ -253,6 +290,237 @@ const dedupeById = <T extends { id: string }>(rows: T[]): T[] => {
     }
   }
   return Array.from(map.values());
+};
+
+const FINANCE_IGNORE_ERROR_CODES = new Set(["42P01", "42501", "PGRST205"]);
+const FINANCE_BALANCE_EPSILON = 0.005;
+
+const createEmptyFinanceOverview = (): PatientFinanceOverview => ({
+  invoices: [],
+  totals_by_currency: [],
+  open_installments: 0,
+  overdue_installments: 0,
+});
+
+const normalizeMoney = (value: unknown) => {
+  const numeric =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : 0;
+
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+
+  return Math.round(numeric * 100) / 100;
+};
+
+const toDateOnly = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString().slice(0, 10);
+};
+
+const shouldIgnoreFinanceError = (error: { code?: string | null } | null) =>
+  Boolean(error?.code && FINANCE_IGNORE_ERROR_CODES.has(error.code));
+
+const loadPatientFinanceOverview = async (
+  supabase: any,
+  patientId: string,
+): Promise<PatientFinanceOverview> => {
+  try {
+    const { data: invoices, error: invoicesError } = await supabase
+      .from("finance_invoices")
+      .select(
+        "id, invoice_number, status, issue_date, due_date, currency, total_amount, paid_amount, balance_amount, created_at",
+      )
+      .eq("patient_id", patientId)
+      .order("issue_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (invoicesError) {
+      if (shouldIgnoreFinanceError(invoicesError)) {
+        return createEmptyFinanceOverview();
+      }
+      throw invoicesError;
+    }
+
+    const invoiceRows = invoices ?? [];
+    if (invoiceRows.length === 0) {
+      return createEmptyFinanceOverview();
+    }
+
+    const invoiceIds = invoiceRows.map((invoice: any) => invoice.id);
+    const { data: installments, error: installmentsError } = await supabase
+      .from("finance_invoice_installments")
+      .select(
+        "id, finance_invoice_id, label, due_date, amount, paid_amount, balance_amount, status, display_order",
+      )
+      .in("finance_invoice_id", invoiceIds)
+      .order("display_order", { ascending: true });
+
+    if (installmentsError) {
+      if (shouldIgnoreFinanceError(installmentsError)) {
+        return createEmptyFinanceOverview();
+      }
+      throw installmentsError;
+    }
+
+    const installmentsByInvoice = new Map<string, any[]>();
+    for (const installment of installments ?? []) {
+      const key = installment.finance_invoice_id;
+      const rows = installmentsByInvoice.get(key) ?? [];
+      rows.push(installment);
+      installmentsByInvoice.set(key, rows);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const totalsByCurrency = new Map<
+      string,
+      {
+        invoiced_total: number;
+        paid_total: number;
+        balance_total: number;
+      }
+    >();
+    let openInstallments = 0;
+    let overdueInstallments = 0;
+
+    const formattedInvoices = invoiceRows.map((invoice: any) => {
+      const currency =
+        typeof invoice.currency === "string" &&
+        invoice.currency.trim().length > 0
+          ? invoice.currency.trim().toUpperCase()
+          : "USD";
+
+      const installmentRows = (installmentsByInvoice.get(invoice.id) ?? []).map(
+        (installment) => {
+          const amount = normalizeMoney(installment.amount);
+          const paidAmount = normalizeMoney(installment.paid_amount);
+          const balanceAmount = normalizeMoney(installment.balance_amount);
+          const dueDate = toDateOnly(installment.due_date) ?? today;
+
+          return {
+            ...installment,
+            amount,
+            paidAmount,
+            balanceAmount,
+            dueDate,
+            status: computeInstallmentStatus({
+              amount,
+              paidAmount,
+              dueDate,
+              currentStatus: installment.status,
+              asOfDate: today,
+            }),
+          };
+        },
+      );
+
+      const pendingRows = installmentRows.filter(
+        (installment) =>
+          installment.balanceAmount > FINANCE_BALANCE_EPSILON &&
+          installment.status !== "paid" &&
+          installment.status !== "cancelled",
+      );
+      const overdueRows = pendingRows.filter(
+        (installment) =>
+          installment.status === "overdue" || installment.dueDate < today,
+      );
+      const nextDueInstallment =
+        [...pendingRows]
+          .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+          .find((installment) => installment.dueDate >= today) ??
+        pendingRows[0] ??
+        null;
+
+      openInstallments += pendingRows.length;
+      overdueInstallments += overdueRows.length;
+
+      const totalAmount = normalizeMoney(invoice.total_amount);
+      const paidAmount = normalizeMoney(invoice.paid_amount);
+      const balanceAmount = normalizeMoney(invoice.balance_amount);
+
+      const currencyTotals = totalsByCurrency.get(currency) ?? {
+        invoiced_total: 0,
+        paid_total: 0,
+        balance_total: 0,
+      };
+      currencyTotals.invoiced_total = normalizeMoney(
+        currencyTotals.invoiced_total + totalAmount,
+      );
+      currencyTotals.paid_total = normalizeMoney(
+        currencyTotals.paid_total + paidAmount,
+      );
+      currencyTotals.balance_total = normalizeMoney(
+        currencyTotals.balance_total + balanceAmount,
+      );
+      totalsByCurrency.set(currency, currencyTotals);
+
+      const computedStatus = computeInvoiceStatus({
+        totalAmount,
+        paidAmount,
+        currentStatus: invoice.status,
+        installments: installmentRows.map((installment) => ({
+          dueDate: installment.dueDate,
+          balanceAmount: installment.balanceAmount,
+          status: installment.status,
+        })),
+        asOfDate: today,
+      });
+
+      return {
+        id: invoice.id,
+        invoice_number: invoice.invoice_number ?? null,
+        issue_date: toDateOnly(invoice.issue_date),
+        due_date: toDateOnly(invoice.due_date),
+        status: invoice.status,
+        computed_status: computedStatus,
+        currency,
+        total_amount: totalAmount,
+        paid_amount: paidAmount,
+        balance_amount: balanceAmount,
+        installments_count: installmentRows.length,
+        overdue_installments_count: overdueRows.length,
+        next_due_installment: nextDueInstallment
+          ? {
+              id: nextDueInstallment.id,
+              label: nextDueInstallment.label,
+              due_date: toDateOnly(nextDueInstallment.dueDate),
+              balance_amount: normalizeMoney(nextDueInstallment.balanceAmount),
+              status: nextDueInstallment.status,
+            }
+          : null,
+      };
+    });
+
+    return {
+      invoices: formattedInvoices,
+      totals_by_currency: Array.from(totalsByCurrency.entries())
+        .map(([currency, totals]) => ({ currency, ...totals }))
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+      open_installments: openInstallments,
+      overdue_installments: overdueInstallments,
+    };
+  } catch (error) {
+    console.error("[patients][details] Failed to load finance overview", {
+      patientId,
+      error,
+    });
+    return createEmptyFinanceOverview();
+  }
 };
 
 const CONTACT_REQUEST_SELECT = `
@@ -734,6 +1002,10 @@ export const patientController = {
       creator_profile: ProfileSummary | null;
       confirmed_by_profile: ProfileSummary | null;
     };
+    const financeOverviewPromise = loadPatientFinanceOverview(
+      getSupabaseAdmin(),
+      patientId,
+    );
 
     const contactQueries = [
       supabase
@@ -1248,6 +1520,7 @@ export const patientController = {
       const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
       return bTime - aTime;
     });
+    const financeOverview = await financeOverviewPromise;
 
     return {
       patient: {
@@ -1262,6 +1535,7 @@ export const patientController = {
       reviews: (reviewsResult.data ?? []) as ReviewDetail[],
       stories: (storiesResult.data ?? []) as StoryDetail[],
       documents,
+      finance_overview: financeOverview,
     };
   },
 
