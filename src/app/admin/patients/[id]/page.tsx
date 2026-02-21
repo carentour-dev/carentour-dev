@@ -87,6 +87,29 @@ const CREATED_BY_FALLBACK_LABELS: Record<string, string> = {
   import: "Data import",
 };
 
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  partially_paid: "Partially paid",
+  paid: "Paid",
+  overdue: "Overdue",
+  void: "Void",
+  cancelled: "Cancelled",
+};
+
+const INVOICE_STATUS_BADGE_VARIANT: Record<
+  string,
+  "default" | "secondary" | "outline" | "ghost" | "success" | "destructive"
+> = {
+  draft: "outline",
+  issued: "secondary",
+  partially_paid: "default",
+  paid: "success",
+  overdue: "destructive",
+  void: "ghost",
+  cancelled: "ghost",
+};
+
 type TimelineEvent = {
   id: string;
   timestamp: string | null;
@@ -127,6 +150,30 @@ const formatFileSize = (bytes: number | null | undefined) => {
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${
     units[exponent]
   }`;
+};
+
+const formatCurrency = (
+  amount: number | null | undefined,
+  currency: string,
+) => {
+  if (amount === null || amount === undefined || !Number.isFinite(amount)) {
+    return "—";
+  }
+
+  const normalizedCurrency =
+    typeof currency === "string" && currency.trim().length > 0
+      ? currency.trim().toUpperCase()
+      : "USD";
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: normalizedCurrency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${normalizedCurrency} ${amount.toFixed(2)}`;
+  }
 };
 
 const fetchPatientDetails = async (patientId: string) =>
@@ -302,6 +349,7 @@ export default function PatientDetailsPage() {
     patient.creator_profile?.job_title ??
     patient.creator_profile?.email ??
     (patient.creator_profile ? "Team member" : null);
+  const financeOverview = details.finance_overview;
 
   return (
     <div className="space-y-6 pb-20">
@@ -511,10 +559,11 @@ export default function PatientDetailsPage() {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="intake">Intake</TabsTrigger>
           <TabsTrigger value="care">Care</TabsTrigger>
+          <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
         </TabsList>
@@ -868,6 +917,197 @@ export default function PatientDetailsPage() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="finance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Finance overview</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                <InfoItem
+                  label="Invoices"
+                  value={financeOverview.invoices.length}
+                  secondary={
+                    financeOverview.invoices.length === 1
+                      ? "Invoice linked to this patient"
+                      : "Invoices linked to this patient"
+                  }
+                />
+                <InfoItem
+                  label="Open installments"
+                  value={financeOverview.open_installments}
+                  secondary="Installments with remaining balance"
+                />
+                <InfoItem
+                  label="Overdue installments"
+                  value={financeOverview.overdue_installments}
+                  secondary="Installments past due date"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Totals by currency
+                </h3>
+                {financeOverview.totals_by_currency.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No invoice totals available for this patient yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>Invoiced</TableHead>
+                          <TableHead>Paid</TableHead>
+                          <TableHead>Outstanding</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {financeOverview.totals_by_currency.map((total) => (
+                          <TableRow key={total.currency}>
+                            <TableCell>
+                              <span className="text-sm font-medium text-foreground">
+                                {total.currency}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                total.invoiced_total,
+                                total.currency,
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(total.paid_total, total.currency)}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                total.balance_total,
+                                total.currency,
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {financeOverview.invoices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No finance invoices are linked to this patient yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Issued</TableHead>
+                        <TableHead>Due</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Paid</TableHead>
+                        <TableHead>Outstanding</TableHead>
+                        <TableHead>Next installment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {financeOverview.invoices.map((invoice) => {
+                        const effectiveStatus =
+                          invoice.computed_status ?? invoice.status;
+                        const statusLabel =
+                          INVOICE_STATUS_LABELS[effectiveStatus] ??
+                          effectiveStatus.replace(/_/g, " ");
+                        const statusVariant =
+                          INVOICE_STATUS_BADGE_VARIANT[effectiveStatus] ??
+                          "secondary";
+
+                        return (
+                          <TableRow key={invoice.id}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-foreground">
+                                  {invoice.invoice_number ?? "Draft invoice"}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {invoice.currency}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={statusVariant}>
+                                {statusLabel}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {formatDate(invoice.issue_date)}
+                            </TableCell>
+                            <TableCell>
+                              {formatDate(invoice.due_date)}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                invoice.total_amount,
+                                invoice.currency,
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                invoice.paid_amount,
+                                invoice.currency,
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                invoice.balance_amount,
+                                invoice.currency,
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {invoice.next_due_installment ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-foreground">
+                                    {invoice.next_due_installment.label}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDate(
+                                      invoice.next_due_installment.due_date,
+                                    )}{" "}
+                                    •{" "}
+                                    {formatCurrency(
+                                      invoice.next_due_installment
+                                        .balance_amount,
+                                      invoice.currency,
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  —
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
