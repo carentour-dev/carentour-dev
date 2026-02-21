@@ -23,8 +23,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import {
+  createEntitlementContext,
+  hasOperationsEntry,
+} from "@/lib/operations/entitlements";
+import { hasAnyOperationsSection } from "@/lib/operations/sections";
+import {
+  hasAdminWorkspaceAccess,
+  hasCmsWorkspaceAccess,
+  hasFinanceWorkspaceAccess,
+} from "@/lib/workspaces/access-policies";
+import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
 import {
   BarChart3,
   BookOpen,
@@ -89,6 +101,7 @@ export function FinanceShell({ children }: FinanceShellProps) {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
   const [initialAccessResolved, setInitialAccessResolved] = useState(false);
+  const permissions = profile?.permissions ?? [];
 
   const isLoading = authLoading || profileLoading;
 
@@ -104,15 +117,42 @@ export function FinanceShell({ children }: FinanceShellProps) {
     }
   }, [initialAccessResolved, authLoading, router, user]);
 
-  const hasAdminAccess = profile?.hasPermission("admin.access") ?? false;
-  const hasFinanceAccess = useMemo(() => {
-    if (!profile) return false;
-    if (profile.hasPermission("admin.access")) return true;
-    if (profile.hasPermission("finance.access")) return true;
-    return (profile.permissions ?? []).some((permission) =>
-      permission.startsWith("finance."),
-    );
-  }, [profile]);
+  const roles = profile?.roles ?? [];
+  const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
+  const operationsEntitlements = useMemo(
+    () =>
+      profile
+        ? createEntitlementContext({
+            permissions: profile.permissions,
+            roles: profile.roles,
+          })
+        : createEntitlementContext(),
+    [profile],
+  );
+  const hasOperationsAccess =
+    hasOperationsEntry(operationsEntitlements) ||
+    hasAnyOperationsSection(operationsEntitlements);
+  const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions);
+  const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const moduleTabs = useMemo(
+    () =>
+      buildModuleTabs({
+        pathname,
+        access: {
+          admin: hasAdminAccess,
+          operations: hasOperationsAccess,
+          finance: hasFinanceAccess,
+          cms: hasCmsAccess,
+        },
+      }),
+    [
+      hasAdminAccess,
+      hasCmsAccess,
+      hasFinanceAccess,
+      hasOperationsAccess,
+      pathname,
+    ],
+  );
 
   const handleSignOut = async () => {
     await signOut();
@@ -246,25 +286,7 @@ export function FinanceShell({ children }: FinanceShellProps) {
         </Sidebar>
 
         <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-          <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur print:hidden lg:h-16 lg:px-8">
-            <div className="flex flex-1 items-center gap-4">
-              <SidebarTrigger className="-ml-1 lg:hidden" />
-              <div className="flex flex-1 flex-col">
-                <h1 className="text-base font-semibold tracking-tight text-foreground">
-                  Finance Workspace
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  Invoice lifecycle, payments, and receivables.
-                </p>
-              </div>
-            </div>
-            {hasAdminAccess ? (
-              <Button asChild size="sm" variant="outline">
-                <Link href="/admin/finance">Admin finance view</Link>
-              </Button>
-            ) : null}
-            <ThemeToggle />
-          </header>
+          <FinanceTopbar tabs={moduleTabs} hasAdminAccess={hasAdminAccess} />
           <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
             <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
@@ -280,6 +302,33 @@ export function FinanceShell({ children }: FinanceShellProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function FinanceTopbar({
+  tabs,
+  hasAdminAccess,
+}: {
+  tabs: ModuleTab[];
+  hasAdminAccess: boolean;
+}) {
+  return (
+    <WorkspaceModuleTopBar
+      tabs={tabs}
+      title="Finance Workspace"
+      subtitle="Invoice lifecycle, payments, and receivables."
+      leftSlot={<SidebarTrigger className="-ml-1 lg:hidden" />}
+      rightSlot={
+        <>
+          {hasAdminAccess ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/finance">Admin finance view</Link>
+            </Button>
+          ) : null}
+          <ThemeToggle />
+        </>
+      }
+    />
   );
 }
 
