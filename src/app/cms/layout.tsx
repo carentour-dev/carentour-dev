@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -14,10 +14,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  createEntitlementContext,
+  hasOperationsEntry,
+} from "@/lib/operations/entitlements";
+import { hasAnyOperationsSection } from "@/lib/operations/sections";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { useTheme } from "next-themes";
+import {
+  hasAdminWorkspaceAccess,
+  hasCmsWorkspaceAccess,
+  hasFinanceWorkspaceAccess,
+} from "@/lib/workspaces/access-policies";
+import { buildModuleTabs } from "@/lib/workspaces/module-nav";
 
 const NAV_ITEMS = [
   { href: "/cms", label: "Overview", icon: LayoutDashboard },
@@ -27,19 +37,11 @@ const NAV_ITEMS = [
   { href: "/cms/navigation", label: "Navigation Links", icon: Link2 },
 ];
 
-const CMS_PERMISSION_SLUGS = new Set([
-  "cms.read",
-  "cms.write",
-  "cms.media",
-  "nav.manage",
-]);
-
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const { resolvedTheme } = useTheme();
+  const [resolvedPermissions, setResolvedPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     const check = async () => {
@@ -55,29 +57,39 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
       );
       if (error) {
         console.error("Failed to resolve CMS permissions", error);
+        setResolvedPermissions([]);
         setAuthorized(false);
         return;
       }
       const normalizedPermissions = Array.isArray(permissions)
         ? permissions
         : [];
-      setAuthorized(
-        normalizedPermissions.some((permission) =>
-          CMS_PERMISSION_SLUGS.has(permission),
-        ),
-      );
+      setResolvedPermissions(normalizedPermissions);
+      setAuthorized(hasCmsWorkspaceAccess(normalizedPermissions));
     };
     check();
   }, [router]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const logoSrc =
-    mounted && resolvedTheme === "dark"
-      ? "/carentour-logo-light.png"
-      : "/carentour-logo-dark.png";
+  const operationsEntitlements = useMemo(
+    () => createEntitlementContext({ permissions: resolvedPermissions }),
+    [resolvedPermissions],
+  );
+  const hasOperationsAccess =
+    hasOperationsEntry(operationsEntitlements) ||
+    hasAnyOperationsSection(operationsEntitlements);
+  const moduleTabs = useMemo(
+    () =>
+      buildModuleTabs({
+        pathname,
+        access: {
+          admin: hasAdminWorkspaceAccess({ permissions: resolvedPermissions }),
+          operations: hasOperationsAccess,
+          finance: hasFinanceWorkspaceAccess(resolvedPermissions),
+          cms: hasCmsWorkspaceAccess(resolvedPermissions),
+        },
+      }),
+    [hasOperationsAccess, pathname, resolvedPermissions],
+  );
 
   if (authorized === null) {
     return (
@@ -114,32 +126,19 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link href="/cms" className="flex items-center gap-3">
-            <Image
-              src={logoSrc}
-              alt="Care N Tour logo"
-              width={240}
-              height={90}
-              className="h-12 w-auto max-w-[260px] object-contain"
-              priority
-            />
-            <span className="hidden text-sm font-semibold tracking-wide text-muted-foreground md:inline">
-              CMS
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
+      <WorkspaceModuleTopBar
+        tabs={moduleTabs}
+        title="CMS Workspace"
+        subtitle="Manage pages, media, blog content, and navigation."
+        rightSlot={
+          <>
             <ThemeToggle />
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/">View Site</Link>
-            </Button>
             <Button asChild size="sm">
               <Link href="/cms/new">New Page</Link>
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
       <div className="border-b border-border/70 bg-card/40">
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center gap-2 overflow-x-auto py-4">
