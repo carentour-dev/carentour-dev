@@ -11,6 +11,8 @@ import React, {
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isPasswordRecoveryCurrentUrl } from "@/lib/auth/password-recovery";
+import { resolveAccessibleWorkspaceRoute } from "@/lib/workspaces/access-policies";
+import { canAutoRedirectToWorkspaceFromPath } from "@/lib/workspaces/auth-redirect";
 import { useSecurity } from "@/hooks/useSecurity";
 
 interface SignUpPayload {
@@ -219,66 +221,68 @@ export const metadataIndicatesStaffAccount = (
   return false;
 };
 
-const sessionIndicatesStaffAccount = async (
+const normalizeRpcStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry) => entry.length > 0);
+};
+
+const resolveSessionRedirectTarget = async (
   session: Session | null,
-): Promise<boolean> => {
-  if (!session?.user) {
-    return false;
+): Promise<string> => {
+  if (!session?.user?.id) {
+    return "/dashboard";
+  }
+
+  try {
+    const [permissionsResult, rolesResult] = await Promise.all([
+      supabase.rpc("current_user_permissions"),
+      supabase.rpc("current_user_roles"),
+    ]);
+
+    if (permissionsResult.error) {
+      console.debug(
+        "current_user_permissions RPC failed during sign-in redirect:",
+        permissionsResult.error,
+      );
+    }
+    if (rolesResult.error) {
+      console.debug(
+        "current_user_roles RPC failed during sign-in redirect:",
+        rolesResult.error,
+      );
+    }
+
+    const permissions = normalizeRpcStringArray(permissionsResult.data);
+    const roles = normalizeRpcStringArray(rolesResult.data);
+
+    if (permissions.length || roles.length) {
+      return resolveAccessibleWorkspaceRoute({ permissions, roles });
+    }
+  } catch (rpcError) {
+    console.debug("Unable to resolve sign-in redirect entitlements:", rpcError);
   }
 
   const userMetadata = (session.user.user_metadata ?? {}) as Record<
     string,
     unknown
   >;
-
-  if (metadataIndicatesStaffAccount(userMetadata)) {
-    return true;
-  }
-
   const appMetadata = (session.user.app_metadata ?? {}) as Record<
     string,
     unknown
   >;
-
-  if (metadataIndicatesStaffAccount(appMetadata)) {
-    return true;
+  if (
+    metadataIndicatesStaffAccount(userMetadata) ||
+    metadataIndicatesStaffAccount(appMetadata)
+  ) {
+    return "/admin";
   }
 
-  if (!session.user.id) {
-    return false;
-  }
-
-  try {
-    const { data, error } = await supabase.rpc("current_user_roles");
-
-    if (error) {
-      console.debug(
-        "current_user_roles RPC failed while determining staff status:",
-        error,
-      );
-      return true;
-    }
-
-    if (Array.isArray(data)) {
-      const normalizedRoles = data
-        .map((role) =>
-          typeof role === "string" ? role.trim().toLowerCase() : null,
-        )
-        .filter((role): role is string => !!role);
-
-      if (normalizedRoles.some((role) => STAFF_ROLE_KEYS.has(role))) {
-        return true;
-      }
-    }
-  } catch (rpcError) {
-    console.debug(
-      "Unable to check current user roles while determining staff status:",
-      rpcError,
-    );
-    return true;
-  }
-
-  return false;
+  return "/dashboard";
 };
 
 const clearSupabaseAuthStorage = () => {
@@ -321,6 +325,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     useSecurity();
 
   useEffect(() => {
+    const canAutoRedirectFromCurrentPath = () => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+      return canAutoRedirectToWorkspaceFromPath(window.location.pathname);
+    };
+
+    const maybeRedirectToAccessibleWorkspace = (
+      session: Session | null,
+      userId: string | null,
+    ) => {
+      if (!userId || redirectedForCurrentUser.current) {
+        return;
+      }
+
+      if (!canAutoRedirectFromCurrentPath()) {
+        return;
+      }
+
+      void (async () => {
+        const target = await resolveSessionRedirectTarget(session);
+
+        if (
+          typeof window === "undefined" ||
+          redirectedForCurrentUser.current ||
+          !canAutoRedirectFromCurrentPath()
+        ) {
+          return;
+        }
+
+        redirectedForCurrentUser.current = true;
+        lastKnownUserId.current = userId;
+
+        if (window.location.pathname !== target) {
+          window.location.replace(target);
+        }
+      })();
+    };
+
     // Set up auth state listener
     const {
       data: { subscription },
@@ -360,25 +403,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (
         event === "SIGNED_IN" &&
         isNewSignIn &&
-        typeof window !== "undefined" &&
-        window.location.pathname === "/" &&
         !isRecoveryFlowInUrl &&
         !redirectedForCurrentUser.current
       ) {
-        void (async () => {
-          const isStaff = await sessionIndicatesStaffAccount(session ?? null);
-
-          if (
-            !isStaff &&
-            typeof window !== "undefined" &&
-            window.location.pathname === "/" &&
-            !redirectedForCurrentUser.current
-          ) {
-            redirectedForCurrentUser.current = true;
-            lastKnownUserId.current = currentUserId;
-            window.location.replace("/dashboard");
-          }
-        })();
+        maybeRedirectToAccessibleWorkspace(session ?? null, currentUserId);
       }
 
       if (currentUserId) {
@@ -395,6 +423,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
         lastKnownUserId.current = session?.user?.id ?? null;
         redirectedForCurrentUser.current = false;
+
+        if (session?.user && !isPasswordRecoveryCurrentUrl()) {
+          maybeRedirectToAccessibleWorkspace(session, session.user.id);
+        }
       })
       .catch((error) => {
         console.error("Failed to get initial session:", error);
