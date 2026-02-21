@@ -122,7 +122,15 @@ export const useUserProfile = () => {
       );
       const roles = rawRoles.length ? rawRoles : ["user"];
       const permissions = Array.isArray(permissionsResult.data)
-        ? Array.from(new Set(permissionsResult.data))
+        ? Array.from(
+            new Set(
+              permissionsResult.data
+                .map((entry) =>
+                  typeof entry === "string" ? entry.trim().toLowerCase() : "",
+                )
+                .filter((entry) => entry.length > 0),
+            ),
+          )
         : [];
 
       const username =
