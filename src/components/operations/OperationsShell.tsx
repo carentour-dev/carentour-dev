@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -34,6 +35,12 @@ import {
   hasAnyOperationsSection,
 } from "@/lib/operations/sections";
 import type { OperationsSectionConfig } from "@/lib/operations/sections";
+import {
+  hasAdminWorkspaceAccess,
+  hasCmsWorkspaceAccess,
+  hasFinanceWorkspaceAccess,
+} from "@/lib/workspaces/access-policies";
+import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
 import { Loader2, LogOut, Users } from "lucide-react";
 
 type OperationsShellProps = {
@@ -66,6 +73,24 @@ export function OperationsShell({ children }: OperationsShellProps) {
   const assignedSections = hasAnyOperationsSection(entitlements);
   const baseAccess = hasOperationsEntry(entitlements);
   const isAuthorized = baseAccess || assignedSections;
+  const permissions = profile?.permissions ?? [];
+  const roles = profile?.roles ?? [];
+  const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
+  const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions);
+  const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const moduleTabs = useMemo(
+    () =>
+      buildModuleTabs({
+        pathname,
+        access: {
+          admin: hasAdminAccess,
+          operations: isAuthorized,
+          finance: hasFinanceAccess,
+          cms: hasCmsAccess,
+        },
+      }),
+    [hasAdminAccess, hasCmsAccess, hasFinanceAccess, isAuthorized, pathname],
+  );
 
   const isLoading = authLoading || profileLoading;
 
@@ -184,7 +209,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
         </Sidebar>
 
         <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-          <OperationsTopbar />
+          <OperationsTopbar tabs={moduleTabs} />
           <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 print:px-0 print:pb-0 print:pt-0 lg:px-10">
             <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
@@ -263,22 +288,15 @@ function OperationsProfileSummary({
   );
 }
 
-function OperationsTopbar() {
+function OperationsTopbar({ tabs }: { tabs: ModuleTab[] }) {
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur print:hidden lg:h-16 lg:px-8">
-      <div className="flex flex-1 items-center gap-4">
-        <SidebarTrigger className="-ml-1 lg:hidden" />
-        <div className="flex flex-1 flex-col">
-          <h1 className="text-base font-semibold tracking-tight text-foreground">
-            Operations Dashboard
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Role-aware workspace for Care N Tour staff.
-          </p>
-        </div>
-      </div>
-      <ThemeToggle />
-    </header>
+    <WorkspaceModuleTopBar
+      tabs={tabs}
+      title="Operations Dashboard"
+      subtitle="Role-aware workspace for Care N Tour staff."
+      leftSlot={<SidebarTrigger className="-ml-1 lg:hidden" />}
+      rightSlot={<ThemeToggle />}
+    />
   );
 }
 
