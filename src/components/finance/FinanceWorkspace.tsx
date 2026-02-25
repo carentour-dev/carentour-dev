@@ -16,6 +16,9 @@ import {
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 import { useFinanceInvalidate } from "@/components/finance/hooks/useFinanceInvalidate";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { resolveFinanceCapabilities } from "@/lib/finance/capabilities";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,6 +178,9 @@ const FX_QUERY_KEY = ["finance", "quotation", "exchange-rates"] as const;
 const PAYABLES_QUERY_KEY = ["finance", "payables"] as const;
 const APPROVALS_QUERY_KEY = ["finance", "approval-requests"] as const;
 const PROFIT_LOSS_QUERY_KEY = ["finance", "profit-loss"] as const;
+const CONVERT_IN_PROGRESS_ERROR_MESSAGE =
+  "Finance conversion already in progress for this quote";
+const CONVERT_CONFLICT_RETRY_DELAY_MS = 700;
 
 const todayDateOnly = () => new Date().toISOString().slice(0, 10);
 
@@ -243,6 +249,10 @@ const normalizePercent = (value: string) => {
   return parsed.toString();
 };
 
+const isConvertInProgressError = (error: unknown) =>
+  error instanceof Error &&
+  error.message.includes(CONVERT_IN_PROGRESS_ERROR_MESSAGE);
+
 const statusBadgeVariant = (status?: string | null) => {
   switch (status) {
     case "paid":
@@ -271,6 +281,23 @@ export function FinanceWorkspace({
 }: FinanceWorkspaceProps) {
   const { toast } = useToast();
   const invalidateFinance = useFinanceInvalidate();
+  const { profile } = useUserProfile();
+  const capabilities = useMemo(
+    () => resolveFinanceCapabilities(profile?.permissions, profile?.roles),
+    [profile?.permissions, profile?.roles],
+  );
+  const canViewInvoices = capabilities.canManageInvoices;
+  const canViewQuotationData = capabilities.canAccessQuotationData;
+  const canConvertQuotesCapability = capabilities.canConvertQuotes;
+  const canRecordPaymentsCapability = capabilities.canRecordPayments;
+  const canViewCreditAdjustments = capabilities.canRecordPayments;
+  const canCreateCreditAdjustments = capabilities.canRecordPayments;
+  const canDecideApprovals = capabilities.canDecideApprovals;
+  const canViewPayables = capabilities.canManagePayables;
+  const canViewApprovalsQueue = capabilities.canViewApprovalsQueue;
+  const canViewReports = capabilities.canViewReports;
+  const canViewApprovalsConsole = capabilities.canViewApprovalsConsole;
+  const canViewSettingsConsole = capabilities.canViewSettingsConsole;
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
@@ -306,6 +333,7 @@ export function FinanceWorkspace({
     queryKey: INVOICES_QUERY_KEY,
     queryFn: () =>
       adminFetch<FinanceInvoiceListItem[]>("/api/admin/finance/invoices"),
+    enabled: canViewInvoices,
     staleTime: 30_000,
   });
 
@@ -313,6 +341,7 @@ export function FinanceWorkspace({
     queryKey: QUOTES_QUERY_KEY,
     queryFn: () =>
       adminFetch<OperationsQuote[]>("/api/admin/finance/quotation/quotes"),
+    enabled: canViewQuotationData,
     staleTime: 30_000,
   });
 
@@ -322,6 +351,7 @@ export function FinanceWorkspace({
       adminFetch<ExchangeRatesPayload>(
         "/api/admin/finance/quotation/exchange-rates",
       ),
+    enabled: canViewQuotationData,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -329,6 +359,7 @@ export function FinanceWorkspace({
     queryKey: AGING_QUERY_KEY,
     queryFn: () =>
       adminFetch<FinanceAgingReport>("/api/admin/finance/reports/ar-aging"),
+    enabled: canViewReports,
     staleTime: 30_000,
   });
 
@@ -338,6 +369,7 @@ export function FinanceWorkspace({
       adminFetch<FinanceCreditAdjustment[]>(
         "/api/admin/finance/credit-adjustments?status=pending",
       ),
+    enabled: canViewCreditAdjustments,
     staleTime: 30_000,
   });
 
@@ -345,6 +377,7 @@ export function FinanceWorkspace({
     queryKey: PAYABLES_QUERY_KEY,
     queryFn: () =>
       adminFetch<FinancePayableListItem[]>("/api/admin/finance/payables"),
+    enabled: canViewPayables,
     staleTime: 30_000,
   });
 
@@ -354,6 +387,7 @@ export function FinanceWorkspace({
       adminFetch<FinanceApprovalRequest[]>(
         "/api/admin/finance/approval-requests?status=pending",
       ),
+    enabled: canViewApprovalsQueue,
     staleTime: 30_000,
   });
 
@@ -363,6 +397,7 @@ export function FinanceWorkspace({
       adminFetch<FinanceProfitLossReport>(
         "/api/admin/finance/reports/profit-loss",
       ),
+    enabled: canViewReports,
     staleTime: 30_000,
   });
 
@@ -416,7 +451,7 @@ export function FinanceWorkspace({
 
   const installmentsQuery = useQuery({
     queryKey: ["finance", "invoice-installments", selectedInvoiceId],
-    enabled: selectedInvoiceId.length > 0,
+    enabled: canViewInvoices && selectedInvoiceId.length > 0,
     queryFn: () =>
       adminFetch<FinanceInvoiceInstallmentsResponse>(
         `/api/admin/finance/invoices/${selectedInvoiceId}/installments`,
@@ -442,6 +477,11 @@ export function FinanceWorkspace({
 
   const convertQuoteMutation = useMutation({
     mutationFn: async () => {
+      if (!canConvertQuotesCapability) {
+        throw new Error(
+          "Quote conversion requires finance.orders and finance.invoices permissions.",
+        );
+      }
       if (!selectedQuoteId) {
         throw new Error("Select a quote first.");
       }
@@ -459,6 +499,12 @@ export function FinanceWorkspace({
         }),
       });
     },
+    retry: (failureCount, error) =>
+      failureCount < 1 && isConvertInProgressError(error),
+    retryDelay: (attemptIndex, error) =>
+      isConvertInProgressError(error)
+        ? CONVERT_CONFLICT_RETRY_DELAY_MS
+        : Math.min(1000 * 2 ** attemptIndex, 30_000),
     onSuccess: (result) => {
       invalidateFinance();
       setSelectedInvoiceId(result.invoice.id);
@@ -481,6 +527,9 @@ export function FinanceWorkspace({
 
   const recordPaymentMutation = useMutation({
     mutationFn: async () => {
+      if (!canRecordPaymentsCapability) {
+        throw new Error("finance.payments permission is required.");
+      }
       if (!selectedInvoiceId) {
         throw new Error("Select an invoice first.");
       }
@@ -537,6 +586,9 @@ export function FinanceWorkspace({
 
   const updateInstallmentsMutation = useMutation({
     mutationFn: async () => {
+      if (!canViewInvoices) {
+        throw new Error("finance.invoices permission is required.");
+      }
       if (!selectedInvoiceId) {
         throw new Error("Select an invoice first.");
       }
@@ -582,6 +634,9 @@ export function FinanceWorkspace({
 
   const createAdjustmentMutation = useMutation({
     mutationFn: async () => {
+      if (!canCreateCreditAdjustments) {
+        throw new Error("finance.payments permission is required.");
+      }
       if (!selectedInvoiceId) {
         throw new Error("Select an invoice to create an adjustment.");
       }
@@ -596,6 +651,8 @@ export function FinanceWorkspace({
       return adminFetch<{
         adjustment: { id: string; status: string };
         requiresApproval: boolean;
+        ledgerPosted: boolean | null;
+        ledgerPostingError: string | null;
       }>("/api/admin/finance/credit-adjustments", {
         method: "POST",
         body: JSON.stringify({
@@ -619,8 +676,18 @@ export function FinanceWorkspace({
         title: "Credit adjustment submitted",
         description: result.requiresApproval
           ? "Approval request has been queued."
-          : `Adjustment status: ${result.adjustment.status}.`,
+          : `Adjustment status: ${humanizeFinanceLabel(result.adjustment.status)}.`,
       });
+
+      if (result.ledgerPosted === false) {
+        toast({
+          title: "Ledger posting pending",
+          description:
+            result.ledgerPostingError ??
+            "Credit adjustment was saved, but ledger posting did not complete.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -637,20 +704,34 @@ export function FinanceWorkspace({
       id: string;
       status: "approved" | "rejected";
       decisionNotes?: string;
-    }) =>
-      adminFetch(
-        `/api/admin/finance/credit-adjustments/${payload.id}/decision`,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-      ),
-    onSuccess: () => {
+    }) => {
+      if (!canDecideApprovals) {
+        throw new Error("finance.approvals permission is required.");
+      }
+      return adminFetch<{
+        ledgerPosted: boolean | null;
+        ledgerPostingError: string | null;
+      }>(`/api/admin/finance/credit-adjustments/${payload.id}/decision`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: (result) => {
       invalidateFinance();
       toast({
         title: "Decision recorded",
         description: "Credit adjustment approval status has been updated.",
       });
+
+      if (result.ledgerPosted === false) {
+        toast({
+          title: "Ledger posting pending",
+          description:
+            result.ledgerPostingError ??
+            "Decision was saved, but ledger posting did not complete.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -717,17 +798,17 @@ export function FinanceWorkspace({
   }, [openPayables]);
 
   const hasFinanceDataError =
-    invoicesQuery.isError ||
-    quotesQuery.isError ||
-    agingQuery.isError ||
-    pendingAdjustmentsQuery.isError ||
-    payablesQuery.isError ||
-    approvalsQuery.isError ||
-    profitLossQuery.isError;
+    (canViewInvoices && invoicesQuery.isError) ||
+    (canViewQuotationData && quotesQuery.isError) ||
+    (canViewReports && agingQuery.isError) ||
+    (canViewCreditAdjustments && pendingAdjustmentsQuery.isError) ||
+    (canViewPayables && payablesQuery.isError) ||
+    (canViewApprovalsQueue && approvalsQuery.isError) ||
+    (canViewReports && profitLossQuery.isError);
 
   const requiresFxRate = convertCurrency !== "USD";
   const hasFxRate = usdToSelectedCurrencyRate !== null;
-  const canConvertQuote = hasFxRate;
+  const canConvertQuote = canConvertQuotesCapability && hasFxRate;
 
   const convertedPreviewAmount = useMemo(() => {
     if (usdToSelectedCurrencyRate === null) {
@@ -766,43 +847,53 @@ export function FinanceWorkspace({
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Total invoices</CardDescription>
-            <CardTitle>{invoicesQuery.data?.length ?? 0}</CardTitle>
+            <CardTitle>
+              {canViewInvoices ? (invoicesQuery.data?.length ?? 0) : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Outstanding receivables</CardDescription>
             <CardTitle>
-              {formatCurrencyBreakdown(outstandingByCurrency)}
+              {canViewInvoices
+                ? formatCurrencyBreakdown(outstandingByCurrency)
+                : "-"}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Overdue installments</CardDescription>
-            <CardTitle>{overdueInstallmentsCount}</CardTitle>
+            <CardTitle>
+              {canViewInvoices ? overdueInstallmentsCount : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Pending approvals</CardDescription>
-            <CardTitle>{approvalsQuery.data?.length ?? 0}</CardTitle>
+            <CardTitle>
+              {canViewApprovalsQueue ? (approvalsQuery.data?.length ?? 0) : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Open payables</CardDescription>
-            <CardTitle>{openPayables.length}</CardTitle>
+            <CardTitle>{canViewPayables ? openPayables.length : "-"}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Period net income</CardDescription>
             <CardTitle>
-              {formatCurrency(
-                profitLossQuery.data?.netIncome ?? 0,
-                profitLossQuery.data?.baseCurrency ?? "EGP",
-              )}
+              {canViewReports
+                ? formatCurrency(
+                    profitLossQuery.data?.netIncome ?? 0,
+                    profitLossQuery.data?.baseCurrency ?? "EGP",
+                  )
+                : "-"}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -813,35 +904,72 @@ export function FinanceWorkspace({
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>AP open balance</CardDescription>
             <CardTitle>
-              {formatCurrencyBreakdown(openPayablesBalanceByCurrency)}
+              {canViewPayables
+                ? formatCurrencyBreakdown(openPayablesBalanceByCurrency)
+                : "-"}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>AP due this week</CardDescription>
-            <CardTitle>{dueThisWeekPayablesCount}</CardTitle>
+            <CardTitle>
+              {canViewPayables ? dueThisWeekPayablesCount : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Quick links</CardDescription>
             <div className="mt-1 flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link href={`${invoiceDetailsBasePath}/payables`}>
-                  Payables
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`${invoiceDetailsBasePath}/ledger/journals`}>
-                  Journals
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`${invoiceDetailsBasePath}/reports/ap-aging`}>
-                  AP Aging
-                </Link>
-              </Button>
+              {canViewPayables ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`${invoiceDetailsBasePath}/payables`}>
+                    Payables
+                  </Link>
+                </Button>
+              ) : null}
+              {canViewReports ? (
+                <>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`${invoiceDetailsBasePath}/ledger/journals`}>
+                      Journals
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`${invoiceDetailsBasePath}/reports/ap-aging`}>
+                      AP Aging
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`${invoiceDetailsBasePath}/reports/ar-aging`}>
+                      AR Aging
+                    </Link>
+                  </Button>
+                </>
+              ) : null}
+              {canViewApprovalsConsole ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`${invoiceDetailsBasePath}/approvals`}>
+                    Approvals
+                  </Link>
+                </Button>
+              ) : null}
+              {canViewSettingsConsole ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`${invoiceDetailsBasePath}/settings`}>
+                    Settings
+                  </Link>
+                </Button>
+              ) : null}
+              {!canViewPayables &&
+              !canViewReports &&
+              !canViewApprovalsConsole &&
+              !canViewSettingsConsole ? (
+                <p className="text-xs text-muted-foreground">
+                  No quick links available for this role.
+                </p>
+              ) : null}
             </div>
           </CardHeader>
         </Card>
@@ -861,123 +989,143 @@ export function FinanceWorkspace({
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Quote</Label>
-                <Select
-                  value={selectedQuoteId}
-                  onValueChange={setSelectedQuoteId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select quote" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(quotesQuery.data ?? []).map((quote) => (
-                      <SelectItem key={quote.id} value={quote.id}>
-                        {quote.quote_number} - {quote.patient_name || "Patient"}{" "}
-                        ({formatDate(quote.quote_date)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Issue date</Label>
-                <Input
-                  type="date"
-                  value={convertIssueDate}
-                  onChange={(event) => setConvertIssueDate(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Due date (optional)</Label>
-                <Input
-                  type="date"
-                  value={convertDueDate}
-                  onChange={(event) => setConvertDueDate(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select
-                  value={convertCurrency}
-                  onValueChange={(value: CurrencyCode) =>
-                    setConvertCurrency(value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EGP">EGP</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="SAR">SAR</SelectItem>
-                    <SelectItem value="AED">AED</SelectItem>
-                  </SelectContent>
-                </Select>
-                {requiresFxRate ? (
-                  fxQuery.isLoading ? (
-                    <p className="text-xs text-muted-foreground">
-                      Loading Banque Misr USD/{convertCurrency} rate...
-                    </p>
-                  ) : hasFxRate ? (
-                    <p className="text-xs text-muted-foreground">
-                      Auto FX: 1 USD = {usdToSelectedCurrencyRate.toFixed(4)}{" "}
-                      {convertCurrency}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-destructive">
-                      Unable to load USD/{convertCurrency} rate. Retry shortly
-                      before converting.
-                    </p>
-                  )
-                ) : null}
-                {selectedQuote && convertedPreviewAmount !== null ? (
-                  <p className="text-xs text-muted-foreground">
-                    Preview total:{" "}
-                    {formatCurrency(selectedQuoteTotalUsd, "USD")}
-                    {convertCurrency !== "USD"
-                      ? ` -> ${formatCurrency(convertedPreviewAmount, convertCurrency)}`
-                      : ""}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label>Initial invoice status</Label>
-                <Select
-                  value={convertStatus}
-                  onValueChange={(value: "draft" | "issued") =>
-                    setConvertStatus(value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="issued">Issued</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <Button
-                  onClick={() => convertQuoteMutation.mutate()}
-                  disabled={
-                    convertQuoteMutation.isPending ||
-                    !selectedQuoteId ||
-                    quotesQuery.isLoading ||
-                    !canConvertQuote
-                  }
-                >
-                  {convertQuoteMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                  )}
-                  Convert quote
-                </Button>
-              </div>
+              {canViewQuotationData ? (
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Quote</Label>
+                    <Select
+                      value={selectedQuoteId}
+                      onValueChange={setSelectedQuoteId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select quote" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(quotesQuery.data ?? []).map((quote) => (
+                          <SelectItem key={quote.id} value={quote.id}>
+                            {quote.quote_number} -{" "}
+                            {quote.patient_name || "Patient"} (
+                            {formatDate(quote.quote_date)})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Issue date</Label>
+                    <Input
+                      type="date"
+                      value={convertIssueDate}
+                      onChange={(event) =>
+                        setConvertIssueDate(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Due date (optional)</Label>
+                    <Input
+                      type="date"
+                      value={convertDueDate}
+                      onChange={(event) =>
+                        setConvertDueDate(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select
+                      value={convertCurrency}
+                      onValueChange={(value: CurrencyCode) =>
+                        setConvertCurrency(value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EGP">EGP</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="SAR">SAR</SelectItem>
+                        <SelectItem value="AED">AED</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {requiresFxRate ? (
+                      fxQuery.isLoading ? (
+                        <p className="text-xs text-muted-foreground">
+                          Loading Banque Misr USD/{convertCurrency} rate...
+                        </p>
+                      ) : hasFxRate ? (
+                        <p className="text-xs text-muted-foreground">
+                          Auto FX: 1 USD ={" "}
+                          {usdToSelectedCurrencyRate.toFixed(4)}{" "}
+                          {convertCurrency}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-destructive">
+                          Unable to load USD/{convertCurrency} rate. Retry
+                          shortly before converting.
+                        </p>
+                      )
+                    ) : null}
+                    {selectedQuote && convertedPreviewAmount !== null ? (
+                      <p className="text-xs text-muted-foreground">
+                        Preview total:{" "}
+                        {formatCurrency(selectedQuoteTotalUsd, "USD")}
+                        {convertCurrency !== "USD"
+                          ? ` -> ${formatCurrency(convertedPreviewAmount, convertCurrency)}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Initial invoice status</Label>
+                    <Select
+                      value={convertStatus}
+                      onValueChange={(value: "draft" | "issued") =>
+                        setConvertStatus(value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="issued">Issued</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Button
+                      onClick={() => convertQuoteMutation.mutate()}
+                      disabled={
+                        convertQuoteMutation.isPending ||
+                        !selectedQuoteId ||
+                        quotesQuery.isLoading ||
+                        !canConvertQuote
+                      }
+                    >
+                      {convertQuoteMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Convert quote
+                    </Button>
+                    {!canConvertQuotesCapability ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Quote conversion requires both finance.orders and
+                        finance.invoices permissions.
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground md:col-span-2">
+                  Quote conversion requires orders/invoices access.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -995,6 +1143,7 @@ export function FinanceWorkspace({
               <Select
                 value={selectedInvoiceId}
                 onValueChange={setSelectedInvoiceId}
+                disabled={!canViewInvoices}
               >
                 <SelectTrigger className="w-full md:w-72">
                   <SelectValue placeholder="Select invoice" />
@@ -1010,134 +1159,143 @@ export function FinanceWorkspace({
               </Select>
             </CardHeader>
             <CardContent className="space-y-4">
-              {installmentsQuery.isLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading installments...
-                </div>
-              ) : installmentRows.length === 0 ? (
+              {!canViewInvoices ? (
                 <p className="text-sm text-muted-foreground">
-                  Select an invoice to manage installment schedule.
+                  Invoice permissions are required to manage installment
+                  schedules.
                 </p>
               ) : (
                 <>
-                  <div className="space-y-3">
-                    {installmentRows.map((row, index) => (
-                      <div
-                        key={`${index}-${row.label}`}
-                        className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3 md:grid-cols-4"
-                      >
-                        <Input
-                          placeholder="Label"
-                          value={row.label}
-                          onChange={(event) => {
-                            setInstallmentRows((prev) =>
-                              prev.map((item, itemIndex) =>
-                                itemIndex === index
-                                  ? { ...item, label: event.target.value }
-                                  : item,
-                              ),
-                            );
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Percent"
-                          value={row.percent}
-                          onChange={(event) => {
-                            setInstallmentRows((prev) =>
-                              prev.map((item, itemIndex) =>
-                                itemIndex === index
-                                  ? {
-                                      ...item,
-                                      percent: normalizePercent(
-                                        event.target.value,
-                                      ),
-                                    }
-                                  : item,
-                              ),
-                            );
-                          }}
-                        />
-                        <Input
-                          type="date"
-                          value={row.dueDate}
-                          onChange={(event) => {
-                            setInstallmentRows((prev) =>
-                              prev.map((item, itemIndex) =>
-                                itemIndex === index
-                                  ? { ...item, dueDate: event.target.value }
-                                  : item,
-                              ),
-                            );
-                          }}
-                        />
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Notes"
-                            value={row.notes}
-                            onChange={(event) => {
-                              setInstallmentRows((prev) =>
-                                prev.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, notes: event.target.value }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setInstallmentRows((prev) =>
-                                prev.filter(
-                                  (_, itemIndex) => itemIndex !== index,
-                                ),
-                              );
-                            }}
-                            disabled={installmentRows.length <= 1}
+                  {installmentsQuery.isLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading installments...
+                    </div>
+                  ) : installmentRows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Select an invoice to manage installment schedule.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {installmentRows.map((row, index) => (
+                          <div
+                            key={`${index}-${row.label}`}
+                            className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3 md:grid-cols-4"
                           >
-                            Remove
-                          </Button>
-                        </div>
+                            <Input
+                              placeholder="Label"
+                              value={row.label}
+                              onChange={(event) => {
+                                setInstallmentRows((prev) =>
+                                  prev.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, label: event.target.value }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                            />
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Percent"
+                              value={row.percent}
+                              onChange={(event) => {
+                                setInstallmentRows((prev) =>
+                                  prev.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? {
+                                          ...item,
+                                          percent: normalizePercent(
+                                            event.target.value,
+                                          ),
+                                        }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                            />
+                            <Input
+                              type="date"
+                              value={row.dueDate}
+                              onChange={(event) => {
+                                setInstallmentRows((prev) =>
+                                  prev.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, dueDate: event.target.value }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                            />
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="Notes"
+                                value={row.notes}
+                                onChange={(event) => {
+                                  setInstallmentRows((prev) =>
+                                    prev.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? { ...item, notes: event.target.value }
+                                        : item,
+                                    ),
+                                  );
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setInstallmentRows((prev) =>
+                                    prev.filter(
+                                      (_, itemIndex) => itemIndex !== index,
+                                    ),
+                                  );
+                                }}
+                                disabled={installmentRows.length <= 1}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setInstallmentRows((prev) => [
-                          ...prev,
-                          {
-                            label: `Installment ${prev.length + 1}`,
-                            percent: "0",
-                            dueDate: "",
-                            notes: "",
-                          },
-                        ])
-                      }
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add installment
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => updateInstallmentsMutation.mutate()}
-                      disabled={updateInstallmentsMutation.isPending}
-                    >
-                      {updateInstallmentsMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                      )}
-                      Save schedule
-                    </Button>
-                  </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setInstallmentRows((prev) => [
+                              ...prev,
+                              {
+                                label: `Installment ${prev.length + 1}`,
+                                percent: "0",
+                                dueDate: "",
+                                notes: "",
+                              },
+                            ])
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add installment
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => updateInstallmentsMutation.mutate()}
+                          disabled={updateInstallmentsMutation.isPending}
+                        >
+                          {updateInstallmentsMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                          )}
+                          Save schedule
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </CardContent>
@@ -1152,87 +1310,101 @@ export function FinanceWorkspace({
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Invoice</Label>
-                <Select
-                  value={selectedInvoiceId}
-                  onValueChange={setSelectedInvoiceId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select invoice" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(invoicesQuery.data ?? []).map((invoice) => (
-                      <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_number} -{" "}
-                        {formatCurrency(
-                          invoice.balance_amount,
-                          invoice.currency,
-                        )}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Amount</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentAmount}
-                  onChange={(event) => setPaymentAmount(event.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Method</Label>
-                <Select
-                  value={paymentMethod}
-                  onValueChange={(
-                    value: "bank_transfer" | "cash" | "card" | "gateway",
-                  ) => setPaymentMethod(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bank_transfer">Bank transfer</SelectItem>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="gateway">Gateway</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Reference (optional)</Label>
-                <Input
-                  value={paymentReference}
-                  onChange={(event) => setPaymentReference(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Notes (optional)</Label>
-                <Input
-                  value={paymentNotes}
-                  onChange={(event) => setPaymentNotes(event.target.value)}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Button
-                  onClick={() => recordPaymentMutation.mutate()}
-                  disabled={
-                    recordPaymentMutation.isPending || !selectedInvoiceId
-                  }
-                >
-                  {recordPaymentMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wallet className="mr-2 h-4 w-4" />
-                  )}
-                  Record payment
-                </Button>
-              </div>
+              {canRecordPaymentsCapability ? (
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Invoice</Label>
+                    <Select
+                      value={selectedInvoiceId}
+                      onValueChange={setSelectedInvoiceId}
+                      disabled={!canViewInvoices}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select invoice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(invoicesQuery.data ?? []).map((invoice) => (
+                          <SelectItem key={invoice.id} value={invoice.id}>
+                            {invoice.invoice_number} -{" "}
+                            {formatCurrency(
+                              invoice.balance_amount,
+                              invoice.currency,
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={paymentAmount}
+                      onChange={(event) => setPaymentAmount(event.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Method</Label>
+                    <Select
+                      value={paymentMethod}
+                      onValueChange={(
+                        value: "bank_transfer" | "cash" | "card" | "gateway",
+                      ) => setPaymentMethod(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bank_transfer">
+                          Bank transfer
+                        </SelectItem>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="gateway">Gateway</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reference (optional)</Label>
+                    <Input
+                      value={paymentReference}
+                      onChange={(event) =>
+                        setPaymentReference(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes (optional)</Label>
+                    <Input
+                      value={paymentNotes}
+                      onChange={(event) => setPaymentNotes(event.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Button
+                      onClick={() => recordPaymentMutation.mutate()}
+                      disabled={
+                        recordPaymentMutation.isPending || !selectedInvoiceId
+                      }
+                    >
+                      {recordPaymentMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wallet className="mr-2 h-4 w-4" />
+                      )}
+                      Record payment
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground md:col-span-2">
+                  Payment recording is hidden for roles without finance.payments
+                  permission.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1251,7 +1423,7 @@ export function FinanceWorkspace({
                 variant="outline"
                 size="icon"
                 onClick={() => agingQuery.refetch()}
-                disabled={agingQuery.isFetching}
+                disabled={!canViewReports || agingQuery.isFetching}
               >
                 {agingQuery.isFetching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1261,7 +1433,11 @@ export function FinanceWorkspace({
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {agingQuery.isLoading ? (
+              {!canViewReports ? (
+                <p className="text-sm text-muted-foreground">
+                  AR aging visibility requires finance.reports permission.
+                </p>
+              ) : agingQuery.isLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading AR aging...
@@ -1310,76 +1486,88 @@ export function FinanceWorkspace({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={adjustmentType}
-                  onValueChange={(
-                    value: "refund" | "writeoff" | "credit_note",
-                  ) => setAdjustmentType(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="refund">Refund</SelectItem>
-                    <SelectItem value="writeoff">Write-off</SelectItem>
-                    <SelectItem value="credit_note">Credit note</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Amount</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={adjustmentAmount}
-                  onChange={(event) => setAdjustmentAmount(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Reason code</Label>
-                <Input
-                  value={adjustmentReasonCode}
-                  onChange={(event) =>
-                    setAdjustmentReasonCode(event.target.value)
-                  }
-                  placeholder="e.g. patient_refund_policy"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea
-                  rows={3}
-                  value={adjustmentNotes}
-                  onChange={(event) => setAdjustmentNotes(event.target.value)}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
-                <Label htmlFor="auto-approve" className="text-sm">
-                  Request auto-approval
-                </Label>
-                <Switch
-                  id="auto-approve"
-                  checked={adjustmentAutoApprove}
-                  onCheckedChange={setAdjustmentAutoApprove}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={() => createAdjustmentMutation.mutate()}
-                disabled={
-                  createAdjustmentMutation.isPending || !selectedInvoiceId
-                }
-              >
-                {createAdjustmentMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ReceiptText className="mr-2 h-4 w-4" />
-                )}
-                Submit adjustment
-              </Button>
+              {canCreateCreditAdjustments ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={adjustmentType}
+                      onValueChange={(
+                        value: "refund" | "writeoff" | "credit_note",
+                      ) => setAdjustmentType(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="refund">Refund</SelectItem>
+                        <SelectItem value="writeoff">Write-off</SelectItem>
+                        <SelectItem value="credit_note">Credit note</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={adjustmentAmount}
+                      onChange={(event) =>
+                        setAdjustmentAmount(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reason code</Label>
+                    <Input
+                      value={adjustmentReasonCode}
+                      onChange={(event) =>
+                        setAdjustmentReasonCode(event.target.value)
+                      }
+                      placeholder="e.g. patient_refund_policy"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      rows={3}
+                      value={adjustmentNotes}
+                      onChange={(event) =>
+                        setAdjustmentNotes(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                    <Label htmlFor="auto-approve" className="text-sm">
+                      Request auto-approval
+                    </Label>
+                    <Switch
+                      id="auto-approve"
+                      checked={adjustmentAutoApprove}
+                      onCheckedChange={setAdjustmentAutoApprove}
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => createAdjustmentMutation.mutate()}
+                    disabled={
+                      createAdjustmentMutation.isPending || !selectedInvoiceId
+                    }
+                  >
+                    {createAdjustmentMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ReceiptText className="mr-2 h-4 w-4" />
+                    )}
+                    Submit adjustment
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Credit adjustments require finance.payments permission.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -1391,7 +1579,12 @@ export function FinanceWorkspace({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {pendingAdjustmentsQuery.isLoading ? (
+              {!canViewCreditAdjustments ? (
+                <p className="text-sm text-muted-foreground">
+                  Pending credit adjustments are visible to payments-capable
+                  roles.
+                </p>
+              ) : pendingAdjustmentsQuery.isLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading pending approvals...
@@ -1421,38 +1614,45 @@ export function FinanceWorkspace({
                         </p>
                       </div>
                       <Badge variant={statusBadgeVariant(adjustment.status)}>
-                        {adjustment.status}
+                        {humanizeFinanceLabel(adjustment.status)}
                       </Badge>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          decideAdjustmentMutation.mutate({
-                            id: adjustment.id,
-                            status: "rejected",
-                          })
-                        }
-                        disabled={decideAdjustmentMutation.isPending}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          decideAdjustmentMutation.mutate({
-                            id: adjustment.id,
-                            status: "approved",
-                          })
-                        }
-                        disabled={decideAdjustmentMutation.isPending}
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Approve
-                      </Button>
-                    </div>
+                    {canDecideApprovals ? (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            decideAdjustmentMutation.mutate({
+                              id: adjustment.id,
+                              status: "rejected",
+                            })
+                          }
+                          disabled={decideAdjustmentMutation.isPending}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            decideAdjustmentMutation.mutate({
+                              id: adjustment.id,
+                              status: "approved",
+                            })
+                          }
+                          disabled={decideAdjustmentMutation.isPending}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Approve
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Read-only: finance.approvals permission is required to
+                        decide requests.
+                      </p>
+                    )}
                   </div>
                 ))
               )}
@@ -1469,83 +1669,94 @@ export function FinanceWorkspace({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {invoicesQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading invoices...
-            </div>
-          ) : (invoicesQuery.data ?? []).length === 0 ? (
+          {!canViewInvoices ? (
             <p className="text-sm text-muted-foreground">
-              No finance invoices created yet. Convert a quote to start.
+              Invoice register visibility requires finance.invoices permission.
             </p>
           ) : (
-            (invoicesQuery.data ?? []).map((invoice) => (
-              <div
-                key={invoice.id}
-                className="flex w-full flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-left transition hover:border-primary/40"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {invoice.invoice_number}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {invoice.patient_name || "Unassigned patient"} • Issued{" "}
-                      {formatDate(invoice.issue_date)}
-                    </p>
-                  </div>
-                  <Badge variant={statusBadgeVariant(invoice.status)}>
-                    {invoice.status}
-                  </Badge>
+            <>
+              {invoicesQuery.isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading invoices...
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedInvoiceId(invoice.id)}
+              ) : (invoicesQuery.data ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No finance invoices created yet. Convert a quote to start.
+                </p>
+              ) : (
+                (invoicesQuery.data ?? []).map((invoice) => (
+                  <div
+                    key={invoice.id}
+                    className="flex w-full flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-left transition hover:border-primary/40"
                   >
-                    Manage in workspace
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link
-                      href={`${invoiceDetailsBasePath}/invoices/${invoice.id}`}
-                    >
-                      Open details
-                    </Link>
-                  </Button>
-                </div>
-                <div className="grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
-                  <span>
-                    Total:{" "}
-                    {formatCurrency(invoice.total_amount, invoice.currency)}
-                  </span>
-                  <span>
-                    Paid:{" "}
-                    {formatCurrency(invoice.paid_amount, invoice.currency)}
-                  </span>
-                  <span>
-                    Balance:{" "}
-                    {formatCurrency(invoice.balance_amount, invoice.currency)}
-                  </span>
-                  <span>
-                    Overdue installments:{" "}
-                    {invoice.overdue_installments_count ?? 0}
-                  </span>
-                </div>
-                {invoice.next_due_installment ? (
-                  <p className="text-xs text-muted-foreground">
-                    Next due: {invoice.next_due_installment.label} on{" "}
-                    {formatDate(invoice.next_due_installment.due_date)} (
-                    {formatCurrency(
-                      invoice.next_due_installment.balance_amount,
-                      invoice.currency,
-                    )}
-                    )
-                  </p>
-                ) : null}
-              </div>
-            ))
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {invoice.invoice_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {invoice.patient_name || "Unassigned patient"} •
+                          Issued {formatDate(invoice.issue_date)}
+                        </p>
+                      </div>
+                      <Badge variant={statusBadgeVariant(invoice.status)}>
+                        {humanizeFinanceLabel(invoice.status)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedInvoiceId(invoice.id)}
+                      >
+                        Manage in workspace
+                      </Button>
+                      <Button asChild size="sm">
+                        <Link
+                          href={`${invoiceDetailsBasePath}/invoices/${invoice.id}`}
+                        >
+                          Open details
+                        </Link>
+                      </Button>
+                    </div>
+                    <div className="grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
+                      <span>
+                        Total:{" "}
+                        {formatCurrency(invoice.total_amount, invoice.currency)}
+                      </span>
+                      <span>
+                        Paid:{" "}
+                        {formatCurrency(invoice.paid_amount, invoice.currency)}
+                      </span>
+                      <span>
+                        Balance:{" "}
+                        {formatCurrency(
+                          invoice.balance_amount,
+                          invoice.currency,
+                        )}
+                      </span>
+                      <span>
+                        Overdue installments:{" "}
+                        {invoice.overdue_installments_count ?? 0}
+                      </span>
+                    </div>
+                    {invoice.next_due_installment ? (
+                      <p className="text-xs text-muted-foreground">
+                        Next due: {invoice.next_due_installment.label} on{" "}
+                        {formatDate(invoice.next_due_installment.due_date)} (
+                        {formatCurrency(
+                          invoice.next_due_installment.balance_amount,
+                          invoice.currency,
+                        )}
+                        )
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </>
           )}
         </CardContent>
       </Card>
