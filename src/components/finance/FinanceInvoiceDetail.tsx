@@ -12,6 +12,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -205,7 +206,7 @@ export function FinanceInvoiceDetail({
           </Link>
         </Button>
         <Badge variant={badgeVariant(invoice.status)}>
-          {invoice.status.replace(/_/g, " ")}
+          {humanizeFinanceLabel(invoice.status)}
         </Badge>
       </div>
 
@@ -286,7 +287,7 @@ export function FinanceInvoiceDetail({
                     </p>
                   </div>
                   <Badge variant={badgeVariant(installment.status)}>
-                    {installment.status.replace(/_/g, " ")}
+                    {humanizeFinanceLabel(installment.status)}
                   </Badge>
                 </div>
                 <div className="mt-2 grid gap-1 text-xs text-muted-foreground md:grid-cols-3">
@@ -338,11 +339,11 @@ export function FinanceInvoiceDetail({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatDateTime(payment.payment_date)} •{" "}
-                      {payment.payment_method.replace(/_/g, " ")}
+                      {humanizeFinanceLabel(payment.payment_method)}
                     </p>
                   </div>
                   <Badge variant={badgeVariant(payment.status)}>
-                    {payment.status.replace(/_/g, " ")}
+                    {humanizeFinanceLabel(payment.status)}
                   </Badge>
                 </div>
                 <div className="mt-2 grid gap-1 text-xs text-muted-foreground md:grid-cols-3">
@@ -434,11 +435,11 @@ export function FinanceInvoiceDetail({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium">
-                      {adjustment.adjustment_type.replace(/_/g, " ")} •{" "}
+                      {humanizeFinanceLabel(adjustment.adjustment_type)} •{" "}
                       {formatCurrency(adjustment.amount, adjustment.currency)}
                     </p>
                     <Badge variant={badgeVariant(adjustment.status)}>
-                      {adjustment.status}
+                      {humanizeFinanceLabel(adjustment.status)}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
