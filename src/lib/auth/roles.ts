@@ -31,11 +31,15 @@ export function normalizeRoles(input: string[] | null | undefined): RoleSlug[] {
   const normalized: RoleSlug[] = [];
 
   for (const role of input) {
-    if (!role || seen.has(role)) {
+    const normalizedRole =
+      typeof role === "string" ? role.trim().toLowerCase() : "";
+
+    if (!normalizedRole || seen.has(normalizedRole)) {
       continue;
     }
-    seen.add(role);
-    normalized.push(role);
+
+    seen.add(normalizedRole);
+    normalized.push(normalizedRole);
   }
 
   return normalized;
