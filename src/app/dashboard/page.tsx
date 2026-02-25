@@ -75,6 +75,7 @@ import { usePatientPortalData } from "@/hooks/usePatientPortalData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { resolveAccessibleWorkspaceRoute } from "@/lib/workspaces/access-policies";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -2045,8 +2046,8 @@ export default function DashboardPage() {
                               <p className="text-xs text-muted-foreground">
                                 Origin
                               </p>
-                              <p className="text-sm capitalize">
-                                {(request.origin ?? "web").replace(/_/g, " ")}
+                              <p className="text-sm">
+                                {humanizeFinanceLabel(request.origin ?? "web")}
                               </p>
                             </div>
                           </div>
@@ -2662,9 +2663,9 @@ export default function DashboardPage() {
                                   invoice.computed_status ?? invoice.status,
                                 )}
                               >
-                                {(
-                                  invoice.computed_status ?? invoice.status
-                                ).replace(/_/g, " ")}
+                                {humanizeFinanceLabel(
+                                  invoice.computed_status ?? invoice.status,
+                                )}
                               </Badge>
                             </div>
                             <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
