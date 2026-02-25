@@ -58,3 +58,26 @@ export const canPostPayableSettlement = (status?: string | null) =>
       status,
     ) as (typeof PAYABLE_SETTLEMENT_POSTABLE_STATUSES_INTERNAL)[number],
   );
+
+export type PayableApprovalGuardInput = {
+  entity_type?: string | null;
+  action?: string | null;
+  status?: string | null;
+};
+
+export const hasPendingPayableSubmitApproval = (
+  approvals?: PayableApprovalGuardInput[] | null,
+) =>
+  (approvals ?? []).some(
+    (approval) =>
+      normalizeStatus(approval.entity_type) === "finance_payable" &&
+      normalizeStatus(approval.action) === "payable_submit" &&
+      normalizeStatus(approval.status) === "pending",
+  );
+
+export const canEditPayableDraft = (input: {
+  status?: string | null;
+  approvals?: PayableApprovalGuardInput[] | null;
+}) =>
+  canEditPayableStatus(input.status) &&
+  !hasPendingPayableSubmitApproval(input.approvals);
