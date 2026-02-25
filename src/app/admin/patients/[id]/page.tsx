@@ -23,6 +23,7 @@ import type {
   PatientDocumentSummary,
 } from "@/server/modules/patients/module";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -687,12 +688,12 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {request.origin ?? "web"}
+                              {humanizeFinanceLabel(request.origin ?? "web")}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {request.status.replace(/_/g, " ")}
+                              {humanizeFinanceLabel(request.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[240px]">
@@ -761,12 +762,12 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {submission.status.replace(/_/g, " ")}
+                              {humanizeFinanceLabel(submission.status)}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {submission.origin ?? "web"}
+                              {humanizeFinanceLabel(submission.origin ?? "web")}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[240px]">
@@ -836,7 +837,7 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {consultation.status.replace(/_/g, " ")}
+                              {humanizeFinanceLabel(consultation.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[240px]">
@@ -907,7 +908,7 @@ export default function PatientDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {appointment.status.replace(/_/g, " ")}
+                              {humanizeFinanceLabel(appointment.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[240px]">
@@ -1035,7 +1036,7 @@ export default function PatientDetailsPage() {
                           invoice.computed_status ?? invoice.status;
                         const statusLabel =
                           INVOICE_STATUS_LABELS[effectiveStatus] ??
-                          effectiveStatus.replace(/_/g, " ");
+                          humanizeFinanceLabel(effectiveStatus);
                         const statusVariant =
                           INVOICE_STATUS_BADGE_VARIANT[effectiveStatus] ??
                           "secondary";
@@ -1147,8 +1148,8 @@ export default function PatientDetailsPage() {
                                 {document.label}
                               </span>
                               {document.type ? (
-                                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  {document.type.replace(/_/g, " ")}
+                                <span className="text-xs tracking-wide text-muted-foreground">
+                                  {humanizeFinanceLabel(document.type)}
                                 </span>
                               ) : null}
                             </div>
@@ -1360,10 +1361,13 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
       title: "Contact request submitted",
       description: `${request.first_name} ${request.last_name} submitted a ${request.request_type ?? "general"} inquiry.`,
       icon: <Mail className="h-4 w-4" />,
-      badge: request.status.replace(/_/g, " "),
+      badge: humanizeFinanceLabel(request.status),
       badgeVariant: "secondary",
       metadata: [
-        { label: "Origin", value: request.origin ?? "web" },
+        {
+          label: "Origin",
+          value: humanizeFinanceLabel(request.origin ?? "web"),
+        },
         { label: "Email", value: request.email },
       ],
     });
@@ -1379,10 +1383,13 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
         submission.procedure_name ??
         "New Start Journey intake received.",
       icon: <FileText className="h-4 w-4" />,
-      badge: submission.status.replace(/_/g, " "),
+      badge: humanizeFinanceLabel(submission.status),
       badgeVariant: "secondary",
       metadata: [
-        { label: "Origin", value: submission.origin ?? "web" },
+        {
+          label: "Origin",
+          value: humanizeFinanceLabel(submission.origin ?? "web"),
+        },
         {
           label: "Resolved",
           value: submission.resolved_at
@@ -1400,7 +1407,7 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
       title: "Consultation scheduled",
       description: consultation.doctors?.name ?? "Consultation with specialist",
       icon: <Calendar className="h-4 w-4" />,
-      badge: consultation.status.replace(/_/g, " "),
+      badge: humanizeFinanceLabel(consultation.status),
       badgeVariant: "secondary",
       metadata: [
         {
@@ -1421,7 +1428,7 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
       title: "Appointment",
       description: appointment.title,
       icon: <Calendar className="h-4 w-4" />,
-      badge: appointment.status.replace(/_/g, " "),
+      badge: humanizeFinanceLabel(appointment.status),
       badgeVariant: "secondary",
       metadata: [
         {
