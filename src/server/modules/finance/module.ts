@@ -112,6 +112,7 @@ const creditAdjustmentDecisionSchema = z.object({
 const creditAdjustmentStatusSchema = z.enum(CREDIT_ADJUSTMENT_STATUSES);
 
 const getClient = () => getSupabaseAdmin() as any;
+const UNIQUE_VIOLATION_CODE = "23505";
 
 const uuidSchema = z.string().uuid();
 
@@ -163,6 +164,10 @@ const ensureActor = (actor?: FinanceActor) => {
   }
   return actor;
 };
+
+const isUniqueConstraintViolation = (
+  error: { code?: string } | null | undefined,
+) => error?.code === UNIQUE_VIOLATION_CODE;
 
 const mapInstallmentsToState = (rows: any[]): FinanceInstallmentState[] =>
   (rows ?? []).map((installment) => ({
@@ -854,6 +859,41 @@ export const financeController = {
       throw new ApiError(404, "Quote not found");
     }
 
+    const loadLatestInvoiceForOrder = async (
+      orderId: string,
+      message: string,
+    ) => {
+      const { data, error } = await supabase
+        .from("finance_invoices")
+        .select("*")
+        .eq("finance_order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new ApiError(500, message, error.message);
+      }
+
+      return data ?? null;
+    };
+
+    const loadLatestOrderForQuote = async (message: string) => {
+      const { data, error } = await supabase
+        .from("finance_orders")
+        .select("*")
+        .eq("operations_quote_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new ApiError(500, message, error.message);
+      }
+
+      return data ?? null;
+    };
+
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from("finance_orders")
       .select("*")
@@ -888,22 +928,10 @@ export const financeController = {
 
       existingCase = existingCaseRow ?? null;
 
-      const { data: existingInvoice, error: existingInvoiceError } =
-        await supabase
-          .from("finance_invoices")
-          .select("*")
-          .eq("finance_order_id", existingOrder.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-      if (existingInvoiceError) {
-        throw new ApiError(
-          500,
-          "Failed to verify existing invoice",
-          existingInvoiceError.message,
-        );
-      }
+      const existingInvoice = await loadLatestInvoiceForOrder(
+        existingOrder.id,
+        "Failed to verify existing invoice",
+      );
 
       if (existingInvoice) {
         const installmentsResult = await this.getInvoiceInstallments(
@@ -1080,18 +1108,42 @@ export const financeController = {
         .single();
 
       if (createCaseError || !createdCase) {
-        throw new ApiError(
-          500,
-          "Failed to create finance case",
-          createCaseError?.message,
-        );
-      }
+        if (isUniqueConstraintViolation(createCaseError)) {
+          const { data: caseAfterConflict, error: caseAfterConflictError } =
+            await supabase
+              .from("finance_cases")
+              .select("*")
+              .eq("operations_quote_id", id)
+              .maybeSingle();
 
-      financeCase = createdCase;
+          if (caseAfterConflictError) {
+            throw new ApiError(
+              500,
+              "Failed to load finance case after conflict",
+              caseAfterConflictError.message,
+            );
+          }
+
+          if (caseAfterConflict) {
+            financeCase = caseAfterConflict;
+          }
+        }
+
+        if (!financeCase) {
+          throw new ApiError(
+            500,
+            "Failed to create finance case",
+            createCaseError?.message,
+          );
+        }
+      } else {
+        financeCase = createdCase;
+      }
     }
 
     let order = existingOrder;
     let orderLines: any[] = [];
+    let orderResolvedFromConflict = false;
 
     if (!order) {
       const { data: createdOrder, error: createOrderError } = await supabase
@@ -1127,14 +1179,67 @@ export const financeController = {
         .single();
 
       if (createOrderError || !createdOrder) {
+        if (isUniqueConstraintViolation(createOrderError)) {
+          const orderAfterConflict = await loadLatestOrderForQuote(
+            "Failed to load finance order after conflict",
+          );
+
+          if (orderAfterConflict) {
+            order = orderAfterConflict;
+            orderResolvedFromConflict = true;
+          }
+        }
+
+        if (!order) {
+          throw new ApiError(
+            500,
+            "Failed to create finance order",
+            createOrderError?.message,
+          );
+        }
+      } else {
+        order = createdOrder;
+      }
+    }
+
+    if (orderResolvedFromConflict) {
+      const invoiceAfterConflict = await loadLatestInvoiceForOrder(
+        order.id,
+        "Failed to load finance invoice after order conflict",
+      );
+      if (!invoiceAfterConflict) {
         throw new ApiError(
-          500,
-          "Failed to create finance order",
-          createOrderError?.message,
+          409,
+          "Finance conversion already in progress for this quote. Please retry.",
         );
       }
-
-      order = createdOrder;
+      const installmentsResult = await this.getInvoiceInstallments(
+        invoiceAfterConflict.id,
+      );
+      return {
+        reused: true,
+        financeCase,
+        order,
+        invoice: installmentsResult.invoice,
+        installments: installmentsResult.installments,
+      };
+    } else {
+      const existingInvoiceAfterOrder = await loadLatestInvoiceForOrder(
+        order.id,
+        "Failed to verify invoice after order resolution",
+      );
+      if (existingInvoiceAfterOrder) {
+        const installmentsResult = await this.getInvoiceInstallments(
+          existingInvoiceAfterOrder.id,
+        );
+        return {
+          reused: true,
+          financeCase,
+          order,
+          invoice: installmentsResult.invoice,
+          installments: installmentsResult.installments,
+        };
+      }
     }
 
     const orderCurrency = (order.currency ?? currency) as FinanceCurrency;
@@ -1234,6 +1339,26 @@ export const financeController = {
       .single();
 
     if (createInvoiceError || !invoice) {
+      if (isUniqueConstraintViolation(createInvoiceError)) {
+        const invoiceAfterConflict = await loadLatestInvoiceForOrder(
+          order.id,
+          "Failed to load finance invoice after conflict",
+        );
+
+        if (invoiceAfterConflict) {
+          const installmentsResult = await this.getInvoiceInstallments(
+            invoiceAfterConflict.id,
+          );
+          return {
+            reused: true,
+            financeCase,
+            order,
+            invoice: installmentsResult.invoice,
+            installments: installmentsResult.installments,
+          };
+        }
+      }
+
       throw new ApiError(
         500,
         "Failed to create finance invoice",
@@ -1562,6 +1687,19 @@ export const financeController = {
       balance_amount: normalizeMoney(row.balance_amount),
       status: row.status,
     }));
+    const originalInstallmentById = new Map<
+      string,
+      { paid_amount: number; balance_amount: number; status: string }
+    >(
+      originalInstallments.map((row) => [
+        row.id,
+        {
+          paid_amount: row.paid_amount,
+          balance_amount: row.balance_amount,
+          status: row.status,
+        },
+      ]),
+    );
     const originalInvoiceSnapshot = {
       paid_amount: normalizeMoney(invoice.paid_amount),
       balance_amount: normalizeMoney(invoice.balance_amount),
@@ -1594,36 +1732,63 @@ export const financeController = {
     let payment: any = null;
     let updatedInvoice: any = null;
     let allocationsInserted = false;
+    const appliedInstallmentSnapshots = new Map<
+      string,
+      { paid_amount: number; balance_amount: number; status: string }
+    >();
+    let invoiceAppliedSnapshot: {
+      paid_amount: number;
+      balance_amount: number;
+      status: string;
+    } | null = null;
 
     const rollbackPaymentRecording = async () => {
       const rollbackErrors: string[] = [];
 
-      for (const row of originalInstallments) {
-        const { error: restoreInstallmentError } = await supabase
+      for (const [
+        installmentId,
+        appliedSnapshot,
+      ] of appliedInstallmentSnapshots) {
+        const originalRow = originalInstallmentById.get(installmentId);
+        if (!originalRow) {
+          continue;
+        }
+
+        let restoreInstallmentQuery = supabase
           .from("finance_invoice_installments")
           .update({
-            paid_amount: row.paid_amount,
-            balance_amount: row.balance_amount,
-            status: row.status,
+            paid_amount: originalRow.paid_amount,
+            balance_amount: originalRow.balance_amount,
+            status: originalRow.status,
           })
-          .eq("id", row.id);
+          .eq("id", installmentId)
+          .eq("paid_amount", appliedSnapshot.paid_amount)
+          .eq("balance_amount", appliedSnapshot.balance_amount)
+          .eq("status", appliedSnapshot.status);
 
+        const { error: restoreInstallmentError } =
+          await restoreInstallmentQuery;
         if (restoreInstallmentError) {
           rollbackErrors.push(
-            `installment ${row.id} rollback failed: ${restoreInstallmentError.message}`,
+            `installment ${installmentId} rollback failed: ${restoreInstallmentError.message}`,
           );
         }
       }
 
-      const { error: restoreInvoiceError } = await supabase
-        .from("finance_invoices")
-        .update(originalInvoiceSnapshot)
-        .eq("id", parsed.invoiceId);
+      if (invoiceAppliedSnapshot) {
+        const { error: restoreInvoiceError } = await supabase
+          .from("finance_invoices")
+          .update(originalInvoiceSnapshot)
+          .eq("id", parsed.invoiceId)
+          .eq("paid_amount", invoiceAppliedSnapshot.paid_amount)
+          .eq("balance_amount", invoiceAppliedSnapshot.balance_amount)
+          .eq("status", invoiceAppliedSnapshot.status);
 
-      if (restoreInvoiceError) {
-        rollbackErrors.push(
-          `invoice rollback failed: ${restoreInvoiceError.message}`,
-        );
+        if (restoreInvoiceError) {
+          rollbackErrors.push(
+            `invoice rollback failed: ${restoreInvoiceError.message}`,
+          );
+        }
       }
 
       if (allocationsInserted && payment?.id) {
@@ -1711,14 +1876,30 @@ export const financeController = {
       }
 
       for (const installment of allocationResult.installments) {
-        const { error: installmentUpdateError } = await supabase
-          .from("finance_invoice_installments")
-          .update({
-            paid_amount: installment.paidAmount,
-            balance_amount: installment.balanceAmount,
-            status: installment.status,
-          })
-          .eq("id", installment.id);
+        const previousInstallment = originalInstallmentById.get(installment.id);
+        if (!previousInstallment) {
+          throw new ApiError(
+            422,
+            `Installment ${installment.id} could not be resolved for update`,
+          );
+        }
+
+        const nextInstallmentSnapshot = {
+          paid_amount: installment.paidAmount,
+          balance_amount: installment.balanceAmount,
+          status: installment.status,
+        };
+
+        const { data: updatedInstallment, error: installmentUpdateError } =
+          await supabase
+            .from("finance_invoice_installments")
+            .update(nextInstallmentSnapshot)
+            .eq("id", installment.id)
+            .eq("paid_amount", previousInstallment.paid_amount)
+            .eq("balance_amount", previousInstallment.balance_amount)
+            .eq("status", previousInstallment.status)
+            .select("id")
+            .maybeSingle();
 
         if (installmentUpdateError) {
           throw new ApiError(
@@ -1727,25 +1908,49 @@ export const financeController = {
             installmentUpdateError.message,
           );
         }
+
+        if (!updatedInstallment) {
+          throw new ApiError(
+            409,
+            "Invoice changed during payment recording. Please retry.",
+          );
+        }
+
+        appliedInstallmentSnapshots.set(
+          installment.id,
+          nextInstallmentSnapshot,
+        );
       }
+
+      invoiceAppliedSnapshot = {
+        paid_amount: allocationResult.invoicePaidAmount,
+        balance_amount: allocationResult.invoiceBalanceAmount,
+        status: allocationResult.invoiceStatus,
+      };
 
       const { data: invoiceAfterPayment, error: invoiceUpdateError } =
         await supabase
           .from("finance_invoices")
-          .update({
-            paid_amount: allocationResult.invoicePaidAmount,
-            balance_amount: allocationResult.invoiceBalanceAmount,
-            status: allocationResult.invoiceStatus,
-          })
+          .update(invoiceAppliedSnapshot)
           .eq("id", parsed.invoiceId)
+          .eq("paid_amount", originalInvoiceSnapshot.paid_amount)
+          .eq("balance_amount", originalInvoiceSnapshot.balance_amount)
+          .eq("status", originalInvoiceSnapshot.status)
           .select("*")
-          .single();
+          .maybeSingle();
 
-      if (invoiceUpdateError || !invoiceAfterPayment) {
+      if (invoiceUpdateError) {
         throw new ApiError(
           500,
           "Failed to update invoice payment status",
           invoiceUpdateError?.message,
+        );
+      }
+
+      if (!invoiceAfterPayment) {
+        throw new ApiError(
+          409,
+          "Invoice changed during payment recording. Please retry.",
         );
       }
 
@@ -2121,17 +2326,27 @@ export const financeController = {
       },
     });
 
+    let ledgerPostingError: string | null = null;
     if (status === "approved") {
-      await financeLedgerPosting.postCreditAdjustmentById(
-        adjustment.id,
-        owner.profileId ?? null,
-      );
+      try {
+        await financeLedgerPosting.postCreditAdjustmentById(
+          adjustment.id,
+          owner.profileId ?? null,
+        );
+      } catch (error) {
+        ledgerPostingError =
+          error instanceof Error
+            ? error.message
+            : "Failed to post credit adjustment to ledger";
+      }
     }
 
     return {
       adjustment,
       approvalRequest,
       requiresApproval: workflow.requiresApproval,
+      ledgerPosted: status === "approved" ? ledgerPostingError === null : null,
+      ledgerPostingError,
     };
   },
 
@@ -2233,15 +2448,26 @@ export const financeController = {
       },
     });
 
+    let ledgerPostingError: string | null = null;
     if (parsed.status === "approved") {
-      await financeLedgerPosting.postCreditAdjustmentById(
-        id,
-        owner.profileId ?? null,
-      );
+      try {
+        await financeLedgerPosting.postCreditAdjustmentById(
+          id,
+          owner.profileId ?? null,
+        );
+      } catch (error) {
+        ledgerPostingError =
+          error instanceof Error
+            ? error.message
+            : "Failed to post credit adjustment to ledger";
+      }
     }
 
     return {
       adjustment: updatedAdjustment,
+      ledgerPosted:
+        parsed.status === "approved" ? ledgerPostingError === null : null,
+      ledgerPostingError,
     };
   },
 };
