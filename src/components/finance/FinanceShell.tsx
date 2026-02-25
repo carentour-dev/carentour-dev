@@ -36,15 +36,21 @@ import {
   hasCmsWorkspaceAccess,
   hasFinanceWorkspaceAccess,
 } from "@/lib/workspaces/access-policies";
+import {
+  resolveFinanceCapabilities,
+  type FinanceCapabilities,
+} from "@/lib/finance/capabilities";
 import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
 import {
   BarChart3,
   BookOpen,
   Calculator,
+  CheckCheck,
   CircleDollarSign,
   LayoutDashboard,
   Loader2,
   LogOut,
+  SlidersHorizontal,
   Users,
   Wallet,
 } from "lucide-react";
@@ -57,6 +63,7 @@ type FinanceNavItem = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
+  isVisible?: (capabilities: FinanceCapabilities) => boolean;
 };
 
 const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
@@ -65,33 +72,67 @@ const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
     label: "Quotation Calculator",
     href: "/finance/quotation-calculator",
     icon: Calculator,
+    isVisible: (capabilities) => capabilities.canAccessQuotationData,
   },
-  { label: "Counterparties", href: "/finance/counterparties", icon: Users },
-  { label: "Payables", href: "/finance/payables", icon: Wallet },
+  {
+    label: "Counterparties",
+    href: "/finance/counterparties",
+    icon: Users,
+    isVisible: (capabilities) => capabilities.canViewCounterparties,
+  },
+  {
+    label: "Payables",
+    href: "/finance/payables",
+    icon: Wallet,
+    isVisible: (capabilities) => capabilities.canManagePayables,
+  },
+  {
+    label: "Approvals",
+    href: "/finance/approvals",
+    icon: CheckCheck,
+    isVisible: (capabilities) => capabilities.canViewApprovalsConsole,
+  },
+  {
+    label: "Settings",
+    href: "/finance/settings",
+    icon: SlidersHorizontal,
+    isVisible: (capabilities) => capabilities.canViewSettingsConsole,
+  },
   {
     label: "Journals",
     href: "/finance/ledger/journals",
     icon: BookOpen,
+    isVisible: (capabilities) => capabilities.canViewJournalEntries,
   },
   {
     label: "AP Aging",
     href: "/finance/reports/ap-aging",
     icon: CircleDollarSign,
+    isVisible: (capabilities) => capabilities.canViewReports,
+  },
+  {
+    label: "AR Aging",
+    href: "/finance/reports/ar-aging",
+    icon: CircleDollarSign,
+    isVisible: (capabilities) => capabilities.canViewReports,
   },
   {
     label: "Trial Balance",
     href: "/finance/reports/trial-balance",
     icon: BarChart3,
+    isVisible: (capabilities) => capabilities.canViewReports,
   },
   {
     label: "Profit & Loss",
     href: "/finance/reports/profit-loss",
     icon: BarChart3,
+    isVisible: (capabilities) => capabilities.canViewReports,
   },
   {
     label: "Balance Sheet",
     href: "/finance/reports/balance-sheet",
     icon: BarChart3,
+    isVisible: (capabilities) => capabilities.canViewReports,
   },
 ];
 
@@ -101,7 +142,14 @@ export function FinanceShell({ children }: FinanceShellProps) {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
   const [initialAccessResolved, setInitialAccessResolved] = useState(false);
-  const permissions = profile?.permissions ?? [];
+  const permissions = useMemo(
+    () => profile?.permissions ?? [],
+    [profile?.permissions],
+  );
+  const financeCapabilities = useMemo(
+    () => resolveFinanceCapabilities(permissions, profile?.roles),
+    [permissions, profile?.roles],
+  );
 
   const isLoading = authLoading || profileLoading;
 
@@ -132,8 +180,15 @@ export function FinanceShell({ children }: FinanceShellProps) {
   const hasOperationsAccess =
     hasOperationsEntry(operationsEntitlements) ||
     hasAnyOperationsSection(operationsEntitlements);
-  const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions);
+  const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
   const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const visibleFinanceNavItems = useMemo(
+    () =>
+      FINANCE_NAV_ITEMS.filter((item) =>
+        item.isVisible ? item.isVisible(financeCapabilities) : true,
+      ),
+    [financeCapabilities],
+  );
   const moduleTabs = useMemo(
     () =>
       buildModuleTabs({
@@ -225,7 +280,7 @@ export function FinanceShell({ children }: FinanceShellProps) {
               <SidebarGroupLabel>Finance</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {FINANCE_NAV_ITEMS.map((item) => {
+                  {visibleFinanceNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive =
                       pathname === item.href ||
@@ -322,7 +377,7 @@ function FinanceTopbar({
         <>
           {hasAdminAccess ? (
             <Button asChild size="sm" variant="outline">
-              <Link href="/admin/finance">Admin finance view</Link>
+              <Link href="/admin/finance">Admin Finance View</Link>
             </Button>
           ) : null}
           <ThemeToggle />
