@@ -95,6 +95,8 @@ assert.equal(
   true,
 );
 assert.equal(hasFinanceWorkspaceAccess(["admin.access"]), true);
+assert.equal(hasFinanceWorkspaceAccess([], ["admin"]), true);
+assert.equal(hasFinanceWorkspaceAccess([], ["ADMIN"]), true);
 assert.equal(hasFinanceWorkspaceAccess(["cms.read"]), false);
 assert.equal(hasFinanceWorkspaceAccess([]), false);
 assert.equal(hasOperationsWorkspaceAccess(["operations.access"]), true);
