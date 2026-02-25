@@ -3,5 +3,5 @@
 import { FinanceJournalWorkspace } from "@/components/finance/FinanceJournalWorkspace";
 
 export default function AdminFinanceJournalPage() {
-  return <FinanceJournalWorkspace />;
+  return <FinanceJournalWorkspace workspaceBasePath="/admin/finance" />;
 }
