@@ -89,8 +89,17 @@ export function hasCmsWorkspaceAccess(permissions: string[]): boolean {
   );
 }
 
-export function hasFinanceWorkspaceAccess(permissions: string[]): boolean {
+export function hasFinanceWorkspaceAccess(
+  permissions: string[],
+  roles: string[] = [],
+): boolean {
   const normalizedPermissions = normalizePermissionSlugs(permissions);
+  const normalizedRoles = normalizeRoleSlugs(roles);
+
+  if (normalizedRoles.includes("admin")) {
+    return true;
+  }
+
   if (!normalizedPermissions.length) {
     return false;
   }
@@ -154,7 +163,7 @@ export function resolveAccessibleWorkspaceRoute({
     return "/operations";
   }
 
-  if (hasFinanceWorkspaceAccess(normalizedPermissions)) {
+  if (hasFinanceWorkspaceAccess(normalizedPermissions, normalizedRoles)) {
     return "/finance";
   }
 
