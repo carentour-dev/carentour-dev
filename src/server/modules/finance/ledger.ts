@@ -1127,11 +1127,16 @@ const createJournalEntry = async (input: {
     .insert(linePayload);
 
   if (lineInsertError) {
-    throw new ApiError(
-      500,
-      "Failed to create journal lines",
-      lineInsertError.message,
-    );
+    const { error: entryRollbackError } = await input.supabase
+      .from("finance_journal_entries")
+      .delete()
+      .eq("id", entry.id);
+
+    const details = entryRollbackError
+      ? `${lineInsertError.message}; journal rollback failed: ${entryRollbackError.message}`
+      : lineInsertError.message;
+
+    throw new ApiError(500, "Failed to create journal lines", details);
   }
 
   return {
@@ -1552,23 +1557,242 @@ const postPayablePaymentGroup = async (input: {
     throw new ApiError(404, "Payable payment group not found");
   }
 
-  let postedCount = 0;
-  for (const payment of payments) {
-    const shouldApplySettlement =
-      payment.status === "recorded"
-        ? Boolean(input.applySettlementForRecorded ?? true)
-        : false;
+  const shouldApplySettlementForRecorded = Boolean(
+    input.applySettlementForRecorded ?? true,
+  );
+  const settlementCandidates = payments.filter(
+    (payment: any) =>
+      payment.status === "recorded" && shouldApplySettlementForRecorded,
+  );
+  const candidatePayableIds = Array.from(
+    new Set(
+      settlementCandidates
+        .map((payment: any) => payment.finance_payable_id)
+        .filter(
+          (value: unknown): value is string =>
+            typeof value === "string" && value.length > 0,
+        ),
+    ),
+  );
+  const payableOriginalSnapshots = new Map<
+    string,
+    { paidAmount: number; balanceAmount: number; status: string }
+  >();
 
-    const result = await postPayablePaymentRow({
-      supabase: input.supabase,
-      paymentRow: payment,
-      actorProfileId: input.actorProfileId ?? null,
-      applySettlement: shouldApplySettlement,
-    });
+  if (candidatePayableIds.length > 0) {
+    const { data: payableRows, error: payableRowsError } = await input.supabase
+      .from("finance_payables")
+      .select("id, payable_number, status, paid_amount, balance_amount")
+      .in("id", candidatePayableIds);
 
-    if (result.posted) {
-      postedCount += 1;
+    if (payableRowsError) {
+      throw new ApiError(
+        500,
+        "Failed to load payables for payment-group posting",
+        payableRowsError.message,
+      );
     }
+
+    const payableById = new Map<string, any>();
+    for (const payable of payableRows ?? []) {
+      payableById.set(payable.id, payable);
+      payableOriginalSnapshots.set(payable.id, {
+        paidAmount: normalizeMoney(payable.paid_amount),
+        balanceAmount: normalizeMoney(payable.balance_amount),
+        status:
+          typeof payable.status === "string" && payable.status.length > 0
+            ? payable.status
+            : "draft",
+      });
+    }
+
+    const settlementTotals = new Map<string, number>();
+    for (const payment of settlementCandidates) {
+      const payableId =
+        typeof payment.finance_payable_id === "string"
+          ? payment.finance_payable_id
+          : null;
+      if (!payableId) {
+        throw new ApiError(
+          422,
+          "Payable payment group contains invalid payable references",
+        );
+      }
+
+      const payable = payableById.get(payableId);
+      if (!payable) {
+        throw new ApiError(
+          404,
+          "Payable for settlement was not found during group posting",
+        );
+      }
+
+      if (!canPostPayableSettlement(payable.status)) {
+        throw new ApiError(
+          409,
+          `Cannot settle payable in status ${payable.status}`,
+        );
+      }
+
+      const running = settlementTotals.get(payableId) ?? 0;
+      settlementTotals.set(
+        payableId,
+        normalizeMoney(running + normalizeMoney(payment.amount)),
+      );
+    }
+
+    for (const [payableId, total] of settlementTotals) {
+      const payable = payableById.get(payableId);
+      if (!payable) {
+        continue;
+      }
+      if (total - normalizeMoney(payable.balance_amount) > EPSILON) {
+        throw new ApiError(
+          422,
+          `Payment group exceeds payable balance for ${payable.payable_number}`,
+        );
+      }
+    }
+  }
+
+  const postedRows: Array<{
+    paymentId: string;
+    payableId: string;
+    previousStatus: string;
+    previousPostedJournalEntryId: string | null;
+    previousFxRate: number | null;
+    entryId: string;
+  }> = [];
+  let postedCount = 0;
+  try {
+    for (const payment of payments) {
+      const shouldApplySettlement =
+        payment.status === "recorded"
+          ? shouldApplySettlementForRecorded
+          : false;
+
+      const result = await postPayablePaymentRow({
+        supabase: input.supabase,
+        paymentRow: payment,
+        actorProfileId: input.actorProfileId ?? null,
+        applySettlement: shouldApplySettlement,
+      });
+
+      if (result.posted) {
+        postedCount += 1;
+      }
+
+      if (
+        result.posted &&
+        typeof payment.id === "string" &&
+        typeof payment.finance_payable_id === "string" &&
+        typeof result.entryId === "string"
+      ) {
+        const previousFxRateCandidate = Number(payment.fx_rate);
+        postedRows.push({
+          paymentId: payment.id,
+          payableId: payment.finance_payable_id,
+          previousStatus:
+            typeof payment.status === "string" && payment.status.length > 0
+              ? payment.status
+              : "recorded",
+          previousPostedJournalEntryId:
+            typeof payment.posted_journal_entry_id === "string"
+              ? payment.posted_journal_entry_id
+              : null,
+          previousFxRate: Number.isFinite(previousFxRateCandidate)
+            ? previousFxRateCandidate
+            : null,
+          entryId: result.entryId,
+        });
+      }
+    }
+  } catch (error) {
+    const rollbackErrors: string[] = [];
+    const postedEntryIds = Array.from(
+      new Set(postedRows.map((row) => row.entryId)),
+    );
+
+    for (const row of postedRows) {
+      const { error: paymentRollbackError } = await input.supabase
+        .from("finance_payable_payments")
+        .update({
+          status: row.previousStatus,
+          posted_journal_entry_id: row.previousPostedJournalEntryId,
+          fx_rate: row.previousFxRate,
+        })
+        .eq("id", row.paymentId)
+        .eq("posted_journal_entry_id", row.entryId);
+
+      if (paymentRollbackError) {
+        rollbackErrors.push(
+          `payment ${row.paymentId} rollback failed: ${paymentRollbackError.message}`,
+        );
+      }
+    }
+
+    if (shouldApplySettlementForRecorded) {
+      const affectedPayableIds = Array.from(
+        new Set(postedRows.map((row) => row.payableId)),
+      );
+      for (const payableId of affectedPayableIds) {
+        const snapshot = payableOriginalSnapshots.get(payableId);
+        if (!snapshot) {
+          continue;
+        }
+
+        const { error: payableRollbackError } = await input.supabase
+          .from("finance_payables")
+          .update({
+            paid_amount: snapshot.paidAmount,
+            balance_amount: snapshot.balanceAmount,
+            status: snapshot.status,
+          })
+          .eq("id", payableId);
+
+        if (payableRollbackError) {
+          rollbackErrors.push(
+            `payable ${payableId} rollback failed: ${payableRollbackError.message}`,
+          );
+        }
+      }
+    }
+
+    if (postedEntryIds.length > 0) {
+      const { error: entryRollbackError } = await input.supabase
+        .from("finance_journal_entries")
+        .delete()
+        .in("id", postedEntryIds);
+
+      if (entryRollbackError) {
+        rollbackErrors.push(
+          `journal rollback failed: ${entryRollbackError.message}`,
+        );
+      }
+    }
+
+    const rollbackDetails =
+      rollbackErrors.length > 0 ? rollbackErrors.join("; ") : null;
+
+    if (error instanceof ApiError) {
+      if (rollbackDetails) {
+        throw new ApiError(error.status, error.message, {
+          cause: error.details ?? null,
+          rollback: rollbackDetails,
+        });
+      }
+      throw error;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Failed to post payment group";
+    if (rollbackDetails) {
+      throw new ApiError(500, "Failed to post payable payment group", {
+        cause: message,
+        rollback: rollbackDetails,
+      });
+    }
+    throw new ApiError(500, "Failed to post payable payment group", message);
   }
 
   return {
