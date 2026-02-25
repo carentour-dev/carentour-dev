@@ -143,4 +143,13 @@ const creditNoteWorkflowApprover = resolveCreditAdjustmentWorkflow({
 assert.equal(creditNoteWorkflowApprover.requiresApproval, false);
 assert.equal(creditNoteWorkflowApprover.nextStatus, "approved");
 
+const creditNoteWorkflowDefault = resolveCreditAdjustmentWorkflow({
+  adjustmentType: "credit_note",
+  actorPermissions: ["finance.payments"],
+  requestedAutoApprove: false,
+});
+assert.equal(creditNoteWorkflowDefault.requiresApproval, false);
+assert.equal(creditNoteWorkflowDefault.hasPrivilege, true);
+assert.equal(creditNoteWorkflowDefault.nextStatus, "approved");
+
 console.log("finance module logic tests passed");
