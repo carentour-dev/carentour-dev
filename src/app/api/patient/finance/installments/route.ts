@@ -59,12 +59,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[patient][finance][installments][GET]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to load finance installments",
-      },
+      { error: "Failed to load finance installments" },
       { status: 500 },
     );
   }
