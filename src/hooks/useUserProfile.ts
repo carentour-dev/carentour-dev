@@ -171,12 +171,15 @@ export const useUserProfile = () => {
     }
 
     const { roles, permissions } = profileState;
+    const hasAdminAccess =
+      roles.includes("admin") || permissions.includes("admin.access");
 
     return {
       ...profileState,
       hasRole: (role: RoleSlug) => hasRole(roles, role),
       hasAnyRole: (allowed: RoleSlug[]) => hasAnyRole(roles, allowed),
-      hasPermission: (permission: string) => permissions.includes(permission),
+      hasPermission: (permission: string) =>
+        hasAdminAccess || permissions.includes(permission),
     };
   }, [profileState]);
 
