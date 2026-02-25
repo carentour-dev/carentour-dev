@@ -36,6 +36,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { resolveFinanceCapabilities } from "@/lib/finance/capabilities";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 
 type Counterparty = {
   id: string;
@@ -102,7 +105,7 @@ const COUNTERPARTY_SYNC_HISTORY_QUERY_KEY = [
 const SEARCH_ALL_VALUE = "__all__";
 const BASE_COUNTERPARTY_KIND_OPTIONS: CounterpartyKindOption[] = [
   { value: "vendor", label: "Vendor" },
-  { value: "service_provider", label: "Service provider" },
+  { value: "service_provider", label: "Service Provider" },
   { value: "hospital", label: "Hospital" },
   { value: "hotel", label: "Hotel" },
   { value: "insurance", label: "Insurance" },
@@ -127,11 +130,6 @@ const sourceBadgeVariant = (
     return "secondary" as const;
   }
   return "outline" as const;
-};
-
-const normalizeText = (value?: string) => {
-  if (typeof value !== "string") return "";
-  return value;
 };
 
 const readAuditCounters = (
@@ -187,6 +185,15 @@ const buildKindOptions = (currentValue?: string): CounterpartyKindOption[] => {
 export function FinanceCounterpartiesWorkspace() {
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
+  const { profile } = useUserProfile();
+  const capabilities = useMemo(
+    () => resolveFinanceCapabilities(profile?.permissions, profile?.roles),
+    [profile?.permissions, profile?.roles],
+  );
+  const canViewCounterparties = capabilities.canViewCounterparties;
+  const canManageCounterparties = capabilities.canManageCounterparties;
+  const canRunSyncPreview = capabilities.canRunCounterpartySync;
+  const canRunSyncApply = capabilities.canManageSettings;
 
   const [search, setSearch] = useState("");
   const [searchCounterpartyId, setSearchCounterpartyId] =
@@ -238,6 +245,7 @@ export function FinanceCounterpartiesWorkspace() {
         `/api/admin/finance/counterparties${query ? `?${query}` : ""}`,
       );
     },
+    enabled: canViewCounterparties,
     staleTime: 30_000,
   });
   const counterpartySearchOptionsQuery = useQuery({
@@ -256,6 +264,7 @@ export function FinanceCounterpartiesWorkspace() {
         `/api/admin/finance/counterparties${query ? `?${query}` : ""}`,
       );
     },
+    enabled: canViewCounterparties,
     staleTime: 30_000,
   });
 
@@ -265,12 +274,16 @@ export function FinanceCounterpartiesWorkspace() {
       adminFetch<SyncAuditRow[]>(
         "/api/admin/finance/counterparties/reconcile?limit=5",
       ),
+    enabled: canRunSyncPreview,
     staleTime: 30_000,
   });
 
   const createMutation = useMutation({
-    mutationFn: async () =>
-      adminFetch<Counterparty>("/api/admin/finance/counterparties", {
+    mutationFn: async () => {
+      if (!canManageCounterparties) {
+        throw new Error("finance.counterparties permission is required.");
+      }
+      return adminFetch<Counterparty>("/api/admin/finance/counterparties", {
         method: "POST",
         body: JSON.stringify({
           name: createForm.name.trim(),
@@ -280,7 +293,8 @@ export function FinanceCounterpartiesWorkspace() {
           contactPhone: createForm.contactPhone.trim() || undefined,
           isActive: createForm.isActive,
         }),
-      }),
+      });
+    },
     onSuccess: () => {
       invalidate(COUNTERPARTIES_QUERY_KEY);
       setCreateOpen(false);
@@ -309,6 +323,9 @@ export function FinanceCounterpartiesWorkspace() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      if (!canManageCounterparties) {
+        throw new Error("finance.counterparties permission is required.");
+      }
       if (!selectedCounterparty) {
         throw new Error("Counterparty is not selected.");
       }
@@ -347,13 +364,17 @@ export function FinanceCounterpartiesWorkspace() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (input: { id: string; name: string }) =>
-      adminFetch<CounterpartyDeleteResult>(
+    mutationFn: async (input: { id: string; name: string }) => {
+      if (!canManageCounterparties) {
+        throw new Error("finance.counterparties permission is required.");
+      }
+      return adminFetch<CounterpartyDeleteResult>(
         `/api/admin/finance/counterparties/${input.id}`,
         {
           method: "DELETE",
         },
-      ),
+      );
+    },
     onSuccess: (result, input) => {
       invalidate(COUNTERPARTIES_QUERY_KEY);
       if (selectedCounterparty?.id === input.id) {
@@ -394,6 +415,16 @@ export function FinanceCounterpartiesWorkspace() {
 
   const reconcileMutation = useMutation({
     mutationFn: async (mode: "dry_run" | "apply") => {
+      if (!canRunSyncPreview) {
+        throw new Error(
+          "Counterparty sync is not available for the current role.",
+        );
+      }
+      if (mode === "apply" && !canRunSyncApply) {
+        throw new Error(
+          "finance.settings permission is required to apply sync.",
+        );
+      }
       const payload: Record<string, unknown> = {
         mode,
       };
@@ -514,6 +545,30 @@ export function FinanceCounterpartiesWorkspace() {
     setSearch(searchSeed);
   };
 
+  if (!canViewCounterparties && !canRunSyncPreview) {
+    return (
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Counterparty Registry
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage AP counterparties and run manual sync with providers/hotels.
+          </p>
+        </header>
+        <Card className="border-border/80 bg-muted/20">
+          <CardHeader>
+            <CardTitle>Counterparty access is required</CardTitle>
+            <CardDescription>
+              This page is hidden for roles without counterparty or settings
+              capability.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -529,19 +584,23 @@ export function FinanceCounterpartiesWorkspace() {
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Total counterparties</CardDescription>
-            <CardTitle>{summary.total}</CardTitle>
+            <CardTitle>{canViewCounterparties ? summary.total : "-"}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Active</CardDescription>
-            <CardTitle>{summary.active}</CardTitle>
+            <CardTitle>
+              {canViewCounterparties ? summary.active : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="border-b-0 bg-transparent pb-2">
             <CardDescription>Linked from source</CardDescription>
-            <CardTitle>{summary.linked}</CardTitle>
+            <CardTitle>
+              {canViewCounterparties ? summary.linked : "-"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -563,31 +622,43 @@ export function FinanceCounterpartiesWorkspace() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => reconcileMutation.mutate("dry_run")}
-              disabled={reconcileMutation.isPending}
-            >
-              {reconcileMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {canRunSyncPreview ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => reconcileMutation.mutate("dry_run")}
+                disabled={reconcileMutation.isPending}
+              >
+                {reconcileMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Preview sync
+              </Button>
+              {canRunSyncApply ? (
+                <Button
+                  onClick={() => reconcileMutation.mutate("apply")}
+                  disabled={reconcileMutation.isPending}
+                >
+                  {reconcileMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Run sync
+                </Button>
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <p className="self-center text-xs text-muted-foreground">
+                  Apply sync is available to settings-capable users only.
+                </p>
               )}
-              Preview sync
-            </Button>
-            <Button
-              onClick={() => reconcileMutation.mutate("apply")}
-              disabled={reconcileMutation.isPending}
-            >
-              {reconcileMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Run sync
-            </Button>
-          </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Counterparty sync is not available for the current role.
+            </p>
+          )}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-border p-3">
@@ -601,7 +672,7 @@ export function FinanceCounterpartiesWorkspace() {
               </p>
               {latestAuditRun ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {latestAuditRun.action.replace(/_/g, " ")}
+                  {humanizeFinanceLabel(latestAuditRun.action)}
                 </p>
               ) : null}
             </div>
@@ -623,7 +694,7 @@ export function FinanceCounterpartiesWorkspace() {
             </div>
           </div>
 
-          {summary.total === 0 ? (
+          {summary.total === 0 && canViewCounterparties ? (
             <p className="text-xs text-muted-foreground">
               No counterparties are stored yet. Click <strong>Run sync</strong>{" "}
               to apply changes, or add one manually from the button below.
@@ -641,161 +712,178 @@ export function FinanceCounterpartiesWorkspace() {
                 Search, review source linkage, and update active status.
               </CardDescription>
             </div>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add counterparty
-            </Button>
+            {canManageCounterparties ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add counterparty
+              </Button>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Search</Label>
-              <ComboBox
-                value={searchCounterpartyId}
-                options={searchOptions}
-                placeholder="Name, code, email, phone"
-                searchPlaceholder="Search counterparties..."
-                emptyLabel="No counterparties found."
-                disabled={counterpartySearchOptionsQuery.isLoading}
-                onChange={handleSearchCounterpartyChange}
-                contentClassName="w-[420px] p-0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Active status</Label>
-              <Select
-                value={activeFilter}
-                onValueChange={(value) =>
-                  setActiveFilter(value as "all" | "true" | "false")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Source</Label>
-              <Select
-                value={sourceFilter}
-                onValueChange={(value) =>
-                  setSourceFilter(
-                    value as "all" | "manual" | "service_provider" | "hotel",
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All sources</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="service_provider">
-                    Service provider
-                  </SelectItem>
-                  <SelectItem value="hotel">Hotel</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {counterpartiesQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading counterparties...
-            </div>
-          ) : null}
-
-          {!counterpartiesQuery.isLoading && rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No counterparties found for the current filter.
-            </p>
-          ) : null}
-
-          {rows.map((row) => (
-            <div key={row.id} className="rounded-lg border border-border p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium">{row.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.kind} • Last synced{" "}
-                    {formatDateTime(row.last_synced_at)}
-                  </p>
+          {canViewCounterparties ? (
+            <>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Search</Label>
+                  <ComboBox
+                    value={searchCounterpartyId}
+                    options={searchOptions}
+                    placeholder="Name, code, email, phone"
+                    searchPlaceholder="Search counterparties..."
+                    emptyLabel="No counterparties found."
+                    disabled={counterpartySearchOptionsQuery.isLoading}
+                    onChange={handleSearchCounterpartyChange}
+                    contentClassName="w-[420px] p-0"
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={sourceBadgeVariant(row.source_type)}>
-                    {normalizeText(row.source_type || "manual").replace(
-                      /_/g,
-                      " ",
-                    )}
-                  </Badge>
-                  <Badge variant={row.is_active ? "success" : "outline"}>
-                    {row.is_active ? "active" : "inactive"}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
-                <p>Email: {row.contact_email || "-"}</p>
-                <p>Phone: {row.contact_phone || "-"}</p>
-                <p>Code: {row.external_code || "-"}</p>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedCounterparty(row);
-                    setEditForm({
-                      name: row.name || "",
-                      kind: row.kind || "vendor",
-                      externalCode: row.external_code || "",
-                      contactEmail: row.contact_email || "",
-                      contactPhone: row.contact_phone || "",
-                      isActive: row.is_active,
-                    });
-                    setEditOpen(true);
-                  }}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      `Delete ${row.name}? If this counterparty is used in payables, it will be deactivated instead.`,
-                    );
-                    if (!confirmed) {
-                      return;
+                <div className="space-y-2">
+                  <Label>Active status</Label>
+                  <Select
+                    value={activeFilter}
+                    onValueChange={(value) =>
+                      setActiveFilter(value as "all" | "true" | "false")
                     }
-                    deleteMutation.mutate({
-                      id: row.id,
-                      name: row.name,
-                    });
-                  }}
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending &&
-                  deleteMutation.variables?.id === row.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Source</Label>
+                  <Select
+                    value={sourceFilter}
+                    onValueChange={(value) =>
+                      setSourceFilter(
+                        value as
+                          | "all"
+                          | "manual"
+                          | "service_provider"
+                          | "hotel",
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="service_provider">
+                        Service Provider
+                      </SelectItem>
+                      <SelectItem value="hotel">Hotel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          ))}
+
+              {counterpartiesQuery.isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading counterparties...
+                </div>
+              ) : null}
+
+              {!counterpartiesQuery.isLoading && rows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No counterparties found for the current filter.
+                </p>
+              ) : null}
+
+              {rows.map((row) => (
+                <div
+                  key={row.id}
+                  className="rounded-lg border border-border p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{row.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {humanizeFinanceLabel(row.kind)} • Last synced{" "}
+                        {formatDateTime(row.last_synced_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={sourceBadgeVariant(row.source_type)}>
+                        {humanizeFinanceLabel(row.source_type || "manual")}
+                      </Badge>
+                      <Badge variant={row.is_active ? "success" : "outline"}>
+                        {row.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                    <p>Email: {row.contact_email || "-"}</p>
+                    <p>Phone: {row.contact_phone || "-"}</p>
+                    <p>Code: {row.external_code || "-"}</p>
+                  </div>
+
+                  {canManageCounterparties ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCounterparty(row);
+                          setEditForm({
+                            name: row.name || "",
+                            kind: row.kind || "vendor",
+                            externalCode: row.external_code || "",
+                            contactEmail: row.contact_email || "",
+                            contactPhone: row.contact_phone || "",
+                            isActive: row.is_active,
+                          });
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Delete ${row.name}? If this counterparty is used in payables, it will be deactivated instead.`,
+                          );
+                          if (!confirmed) {
+                            return;
+                          }
+                          deleteMutation.mutate({
+                            id: row.id,
+                            name: row.name,
+                          });
+                        }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending &&
+                        deleteMutation.variables?.id === row.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Delete
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Counterparty registry data is hidden for roles without payables or
+              counterparty read access.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -902,7 +990,7 @@ export function FinanceCounterpartiesWorkspace() {
             <Button
               type="button"
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || !canManageCounterparties}
             >
               {createMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1010,7 +1098,7 @@ export function FinanceCounterpartiesWorkspace() {
             <Button
               type="button"
               onClick={() => updateMutation.mutate()}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !canManageCounterparties}
             >
               {updateMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
