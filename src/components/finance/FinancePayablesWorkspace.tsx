@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Send, XCircle } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Send, XCircle } from "lucide-react";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 import { useFinanceInvalidate } from "@/components/finance/hooks/useFinanceInvalidate";
 import { useToast } from "@/hooks/use-toast";
+import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,12 +70,26 @@ type PayableRow = {
   has_pending_approval: boolean;
 };
 
+type PayablePaymentRow = {
+  id: string;
+  finance_payable_id: string | null;
+  payment_date: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  status: string;
+  payment_group_id: string | null;
+  reference: string | null;
+  notes: string | null;
+};
+
 const PAYABLES_QUERY_KEY = ["finance", "payables"] as const;
+const PAYABLE_PAYMENTS_QUERY_KEY = ["finance", "payables", "payments"] as const;
 const COUNTERPARTIES_QUERY_KEY = ["finance", "counterparties"] as const;
 const CHART_ACCOUNTS_QUERY_KEY = ["finance", "chart-accounts"] as const;
 const COUNTERPARTY_KIND_OPTIONS = [
   { value: "vendor", label: "Vendor" },
-  { value: "service_provider", label: "Service provider" },
+  { value: "service_provider", label: "Service Provider" },
   { value: "hospital", label: "Hospital" },
   { value: "hotel", label: "Hotel" },
   { value: "insurance", label: "Insurance" },
@@ -96,6 +111,16 @@ const formatDate = (value?: string | null) => {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
     parsed,
   );
+};
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
 };
 
 const startOfUtcDay = (value: Date) =>
@@ -185,10 +210,24 @@ export function FinancePayablesWorkspace({
     useState<string>("");
   const [counterpartyContactPhone, setCounterpartyContactPhone] =
     useState<string>("");
+  const [paymentsDateFrom, setPaymentsDateFrom] = useState<string>("");
+  const [paymentsDateTo, setPaymentsDateTo] = useState<string>("");
+  const [paymentsMethodFilter, setPaymentsMethodFilter] =
+    useState<string>("all");
+  const [paymentsStatusFilter, setPaymentsStatusFilter] =
+    useState<string>("all");
+  const [paymentsSearch, setPaymentsSearch] = useState<string>("");
 
   const payablesQuery = useQuery({
     queryKey: PAYABLES_QUERY_KEY,
     queryFn: () => adminFetch<PayableRow[]>("/api/admin/finance/payables"),
+    staleTime: 30_000,
+  });
+
+  const paymentsRegisterQuery = useQuery({
+    queryKey: PAYABLE_PAYMENTS_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<PayablePaymentRow[]>("/api/admin/finance/payables/payments"),
     staleTime: 30_000,
   });
 
@@ -224,11 +263,105 @@ export function FinancePayablesWorkspace({
         .map((counterparty) => ({
           value: counterparty.id,
           label: counterparty.name,
-          description: counterparty.kind,
+          description: humanizeFinanceLabel(counterparty.kind),
         }))
         .sort((a, b) => a.label.localeCompare(b.label)),
     [counterpartiesQuery.data],
   );
+
+  const payableById = useMemo(() => {
+    const map = new Map<string, PayableRow>();
+    for (const row of payablesQuery.data ?? []) {
+      map.set(row.id, row);
+    }
+    return map;
+  }, [payablesQuery.data]);
+
+  const paymentMethodOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (paymentsRegisterQuery.data ?? [])
+            .map((payment) => payment.payment_method)
+            .filter((value) => typeof value === "string" && value.length > 0),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [paymentsRegisterQuery.data],
+  );
+
+  const paymentStatusOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (paymentsRegisterQuery.data ?? [])
+            .map((payment) => payment.status)
+            .filter((value) => typeof value === "string" && value.length > 0),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [paymentsRegisterQuery.data],
+  );
+
+  const filteredPayments = useMemo(() => {
+    const normalizedSearch = paymentsSearch.trim().toLowerCase();
+    const fromTime = paymentsDateFrom
+      ? Date.parse(`${paymentsDateFrom}T00:00:00Z`)
+      : null;
+    const toTime = paymentsDateTo
+      ? Date.parse(`${paymentsDateTo}T23:59:59Z`)
+      : null;
+
+    return (paymentsRegisterQuery.data ?? []).filter((payment) => {
+      if (
+        paymentsMethodFilter !== "all" &&
+        payment.payment_method !== paymentsMethodFilter
+      ) {
+        return false;
+      }
+
+      if (
+        paymentsStatusFilter !== "all" &&
+        payment.status !== paymentsStatusFilter
+      ) {
+        return false;
+      }
+
+      if (fromTime !== null || toTime !== null) {
+        const paymentTime = Date.parse(payment.payment_date);
+        if (!Number.isFinite(paymentTime)) {
+          return false;
+        }
+        if (fromTime !== null && paymentTime < fromTime) {
+          return false;
+        }
+        if (toTime !== null && paymentTime > toTime) {
+          return false;
+        }
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const payable = payment.finance_payable_id
+        ? payableById.get(payment.finance_payable_id)
+        : null;
+      const tokens = [
+        payment.finance_payable_id ?? "",
+        payable?.payable_number ?? "",
+        payment.reference ?? "",
+      ].map((value) => value.toLowerCase());
+
+      return tokens.some((token) => token.includes(normalizedSearch));
+    });
+  }, [
+    paymentsRegisterQuery.data,
+    paymentsMethodFilter,
+    paymentsStatusFilter,
+    paymentsDateFrom,
+    paymentsDateTo,
+    paymentsSearch,
+    payableById,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -707,6 +840,170 @@ export function FinancePayablesWorkspace({
 
       <Card>
         <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>Payments register</CardTitle>
+              <CardDescription>
+                Global payable payment view with method, status, and date
+                filters.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => paymentsRegisterQuery.refetch()}
+              disabled={paymentsRegisterQuery.isFetching}
+            >
+              {paymentsRegisterQuery.isFetching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="space-y-2">
+              <Label>Date from</Label>
+              <Input
+                type="date"
+                value={paymentsDateFrom}
+                onChange={(event) => setPaymentsDateFrom(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date to</Label>
+              <Input
+                type="date"
+                value={paymentsDateTo}
+                onChange={(event) => setPaymentsDateTo(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Method</Label>
+              <Select
+                value={paymentsMethodFilter}
+                onValueChange={setPaymentsMethodFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Methods</SelectItem>
+                  {paymentMethodOptions.map((method) => (
+                    <SelectItem key={method} value={method}>
+                      {humanizeFinanceLabel(method)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={paymentsStatusFilter}
+                onValueChange={setPaymentsStatusFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {paymentStatusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {humanizeFinanceLabel(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Search payable/ref</Label>
+              <Input
+                value={paymentsSearch}
+                onChange={(event) => setPaymentsSearch(event.target.value)}
+                placeholder="Payable id, number, or reference"
+              />
+            </div>
+          </div>
+
+          {paymentsRegisterQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading payments register...
+            </div>
+          ) : null}
+
+          {paymentsRegisterQuery.isError ? (
+            <p className="text-sm text-destructive">
+              Unable to load payments register.
+            </p>
+          ) : null}
+
+          {filteredPayments.length === 0 && !paymentsRegisterQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">
+              No payment rows match current filters.
+            </p>
+          ) : null}
+
+          <div className="space-y-2">
+            {filteredPayments.map((payment) => {
+              const payable = payment.finance_payable_id
+                ? payableById.get(payment.finance_payable_id)
+                : null;
+              const payableLabel =
+                payable?.payable_number || payment.finance_payable_id || "N/A";
+
+              return (
+                <div
+                  key={payment.id}
+                  className="rounded-lg border border-border/70 bg-card p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateTime(payment.payment_date)} •{" "}
+                        {humanizeFinanceLabel(payment.payment_method)}
+                      </p>
+                    </div>
+                    <Badge variant={statusBadgeVariant(payment.status)}>
+                      {humanizeFinanceLabel(payment.status)}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Payable: {payableLabel}</span>
+                    {payment.reference ? (
+                      <span>Ref: {payment.reference}</span>
+                    ) : null}
+                  </div>
+
+                  {payment.finance_payable_id ? (
+                    <div className="mt-3">
+                      <Button asChild variant="outline" size="sm">
+                        <Link
+                          href={`${workspaceBasePath}/payables/${payment.finance_payable_id}`}
+                        >
+                          Open payable
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Payables list</CardTitle>
           <CardDescription>
             Track payable lifecycle, approval state, and balances.
@@ -746,7 +1043,7 @@ export function FinancePayablesWorkspace({
                     <Badge variant="secondary">Pending approval</Badge>
                   ) : null}
                   <Badge variant={statusBadgeVariant(payable.status)}>
-                    {payable.status.replace(/_/g, " ")}
+                    {humanizeFinanceLabel(payable.status)}
                   </Badge>
                 </div>
               </div>
