@@ -68,8 +68,21 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
 
   const roles = normalizeRoles(rolesResult.data);
   const permissions = Array.isArray(permissionsResult.data)
-    ? [...new Set(permissionsResult.data)]
+    ? [
+        ...new Set(
+          permissionsResult.data
+            .map((permission) =>
+              typeof permission === "string"
+                ? permission.trim().toLowerCase()
+                : "",
+            )
+            .filter((permission) => permission.length > 0),
+        ),
+      ]
     : [];
+  const isAdminRole = roles.includes("admin");
+  const hasAdminPermission = permissions.includes(ADMIN_PERMISSION);
+  const hasAdminAccess = isAdminRole || hasAdminPermission;
 
   const primaryRole = pickPrimaryRole(roles);
   const profileId = profileResult.data?.id ?? null;
@@ -83,8 +96,10 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
     hasRole: (role: RoleSlug) => roles.includes(role),
     hasAnyRole: (allowed: RoleSlug[]) =>
       allowed.some((role) => roles.includes(role)),
-    hasPermission: (permission: string) => permissions.includes(permission),
+    hasPermission: (permission: string) =>
+      hasAdminAccess || permissions.includes(permission),
     hasAnyPermission: (required: string[]) =>
+      hasAdminAccess ||
       required.some((permission) => permissions.includes(permission)),
   };
 }
