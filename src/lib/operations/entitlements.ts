@@ -36,7 +36,7 @@ export const createEntitlementContext = (
     if (init.permissions) {
       for (const permission of init.permissions) {
         if (typeof permission === "string" && permission.trim()) {
-          permissions.add(permission.trim());
+          permissions.add(permission.trim().toLowerCase());
         }
       }
     }
@@ -44,7 +44,7 @@ export const createEntitlementContext = (
     if (init.roles) {
       for (const role of init.roles) {
         if (typeof role === "string" && role.trim()) {
-          roles.add(role.trim() as RoleSlug);
+          roles.add(role.trim().toLowerCase() as RoleSlug);
         }
       }
     }
@@ -52,6 +52,9 @@ export const createEntitlementContext = (
 
   return { permissions, roles };
 };
+
+const hasAdminPrivileges = (context: EntitlementContext) =>
+  context.permissions.has(ADMIN_PERMISSION) || context.roles.has("admin");
 
 const matchesRoles = (
   ownedRoles: Set<RoleSlug>,
@@ -105,7 +108,7 @@ export const satisfiesRequirement = (
 ): boolean => {
   const rules = Array.isArray(requirement) ? requirement : [requirement];
 
-  if (context.permissions.has(ADMIN_PERMISSION)) {
+  if (hasAdminPrivileges(context)) {
     return true;
   }
 
@@ -124,15 +127,12 @@ export const hasPermission = (
   context: EntitlementContext,
   permission: string,
 ) => {
-  return (
-    context.permissions.has(ADMIN_PERMISSION) ||
-    context.permissions.has(permission)
-  );
+  return hasAdminPrivileges(context) || context.permissions.has(permission);
 };
 
 export const hasOperationsEntry = (context: EntitlementContext) => {
   return (
-    context.permissions.has(ADMIN_PERMISSION) ||
+    hasAdminPrivileges(context) ||
     context.permissions.has(OPERATIONS_ACCESS_PERMISSION)
   );
 };
@@ -149,7 +149,7 @@ export const mergeEntitlements = (
     if (source.permissions) {
       for (const permission of source.permissions) {
         if (typeof permission === "string" && permission.trim()) {
-          permissions.add(permission.trim());
+          permissions.add(permission.trim().toLowerCase());
         }
       }
     }
@@ -157,7 +157,7 @@ export const mergeEntitlements = (
     if (source.roles) {
       for (const role of source.roles) {
         if (typeof role === "string" && role.trim()) {
-          roles.add(role.trim() as RoleSlug);
+          roles.add(role.trim().toLowerCase() as RoleSlug);
         }
       }
     }
