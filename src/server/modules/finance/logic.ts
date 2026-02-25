@@ -663,9 +663,7 @@ export const resolveCreditAdjustmentWorkflow = (input: {
     adjustmentType: input.adjustmentType,
     actorPermissions: input.actorPermissions,
   });
-  const requestedAutoApprove = Boolean(input.requestedAutoApprove);
-  const autoApproved =
-    requestedAutoApprove && hasPrivilege && !requiresApproval;
+  const autoApproved = !requiresApproval;
 
   return {
     requiresApproval,
