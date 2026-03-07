@@ -40,6 +40,7 @@ export function ImageUploader({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isRemoteAsset = typeof value === "string" && /^https?:\/\//.test(value);
 
   const extractStoragePath = (url: string | null) => {
     if (!url) return null;
@@ -177,6 +178,14 @@ export function ImageUploader({
                 alt="Uploaded preview"
                 fill
                 className="object-cover"
+                unoptimized={isRemoteAsset}
+                onError={() => {
+                  setError(
+                    (current) =>
+                      current ??
+                      "This file URL is no longer reachable. Re-upload the file to restore the preview.",
+                  );
+                }}
               />
               <Button
                 variant="secondary"
