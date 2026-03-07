@@ -172,6 +172,32 @@ const roundCurrency = (value: number, decimals = 2) => {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 };
 
+const NO_VALID_ROWS_PREFIX = "No valid price list rows were found.: ";
+
+const formatImportFailureMessage = (message: string) => {
+  if (!message.startsWith(NO_VALID_ROWS_PREFIX)) {
+    return message;
+  }
+
+  const details = message.slice(NO_VALID_ROWS_PREFIX.length).trim();
+  if (!details) {
+    return "No valid price list rows were found.";
+  }
+
+  const reasonParts = details
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+  if (reasonParts.length === 0) {
+    return "No valid price list rows were found.";
+  }
+
+  return reasonParts.length > 1
+    ? `${reasonParts[0]} (+${reasonParts.length - 1} more blocking rows)`
+    : reasonParts[0];
+};
+
 const UNCATEGORIZED_VALUE = "uncategorized";
 const createComponentId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -629,10 +655,14 @@ export default function OperationsPricingPage() {
     try {
       await runImportPreview(rows);
     } catch (error) {
+      const rawMessage =
+        error instanceof Error ? error.message : "Please try again.";
+      const formattedMessage = formatImportFailureMessage(rawMessage);
+      setCsvImportErrors([formattedMessage]);
+
       toast({
         title: "Import failed",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
+        description: formattedMessage,
         variant: "destructive",
       });
     } finally {
