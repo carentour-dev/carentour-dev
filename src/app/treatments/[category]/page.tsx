@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ComponentType } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -27,6 +28,8 @@ import {
   Loader2,
   FileDown,
 } from "lucide-react";
+
+const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
 
 export default function TreatmentDetails() {
   const params = useParams();
@@ -103,6 +106,10 @@ export default function TreatmentDetails() {
         normalizedTreatment.summary ||
         normalizedTreatment.description ||
         "Learn more about this treatment option available through Care N Tour.",
+      heroImage:
+        normalizedTreatment.heroImageUrl ??
+        normalizedTreatment.cardImageUrl ??
+        null,
       overview:
         normalizedTreatment.overview ||
         normalizedTreatment.description ||
@@ -247,6 +254,24 @@ export default function TreatmentDetails() {
             </div>
           </div>
         </section>
+
+        {treatment.heroImage ? (
+          <section className="pb-4 bg-background">
+            <div className="container mx-auto px-4">
+              <div className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-border/60">
+                <Image
+                  src={treatment.heroImage}
+                  alt={`${treatment.title} cover image`}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1280px) 1200px, (min-width: 768px) 90vw, 100vw"
+                  unoptimized={isRemoteImageUrl(treatment.heroImage)}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/10 via-transparent to-transparent" />
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {/* Treatment Overview */}
         <section className="py-16 bg-background">
