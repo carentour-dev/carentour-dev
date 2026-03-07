@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Supabase media can be user-managed and occasionally point at removed objects.
+    // Use direct image URLs to avoid optimizer upstream failures during runtime.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
