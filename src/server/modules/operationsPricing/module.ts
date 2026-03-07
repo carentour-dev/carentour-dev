@@ -709,6 +709,20 @@ export const operationsPricingController = {
       throw new ApiError(404, "Service provider not found");
     }
 
+    const { error: deleteTransientRunsError } = await (supabase as any)
+      .from("operations_pricing_import_runs")
+      .delete()
+      .eq("provider_id", parsedProviderId)
+      .in("status", ["preview", "failed"]);
+
+    if (deleteTransientRunsError) {
+      throw new ApiError(
+        500,
+        "Failed to clean previous non-applied pricing import runs",
+        deleteTransientRunsError.message,
+      );
+    }
+
     const headers = parsed.rows[0]!.map((header) => normalizeHeader(header));
     const getIndex = (key: string) => headers.indexOf(key);
     const index = {
@@ -936,7 +950,25 @@ export const operationsPricingController = {
     });
 
     if (draftGroups.size === 0) {
-      throw new ApiError(400, "No valid price list rows were found.");
+      const firstBlockingRowReasons = earlyBlockedResults
+        .filter((item) => item.reason)
+        .slice(0, 3)
+        .map(
+          (item) =>
+            `Row ${item.rowNumbers.join(", ")}: ${item.reason ?? "Blocked"}`,
+        );
+      const firstWarningReasons = warnings.slice(0, 3);
+      const errorDetails =
+        firstBlockingRowReasons.length > 0
+          ? firstBlockingRowReasons.join(" | ")
+          : firstWarningReasons.length > 0
+            ? firstWarningReasons.join(" | ")
+            : null;
+      throw new ApiError(
+        400,
+        "No valid price list rows were found.",
+        errorDetails,
+      );
     }
 
     const { data: treatments, error: treatmentsError } = await supabase
