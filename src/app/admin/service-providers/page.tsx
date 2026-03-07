@@ -153,6 +153,24 @@ function csvToArray(value?: string | null) {
     .filter(Boolean);
 }
 
+const normalizeProcedureId = (value: string) => value.trim().toLowerCase();
+const sanitizeProcedureIds = (values?: string[] | null) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values ?? []) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) continue;
+    const normalized = normalizeProcedureId(trimmed);
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(trimmed);
+  }
+
+  return result;
+};
+
 export default function AdminServiceProvidersPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -163,6 +181,10 @@ export default function AdminServiceProvidersPage() {
   const [deletingProcedureId, setDeletingProcedureId] = useState<string | null>(
     null,
   );
+  const [unlinkingProcedureId, setUnlinkingProcedureId] = useState<
+    string | null
+  >(null);
+  const [showAllProcedureOptions, setShowAllProcedureOptions] = useState(false);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -222,6 +244,7 @@ export default function AdminServiceProvidersPage() {
         name: procedure.name,
         treatmentName: treatment.name,
         treatmentId: treatment.id,
+        createdByProviderId: procedure.created_by_provider_id,
       })),
     );
   }, [treatmentsQuery.data]);
@@ -390,6 +413,72 @@ export default function AdminServiceProvidersPage() {
     onSettled: () => setDeletingProcedureId(null),
   });
 
+  const unlinkProviderProcedure = useMutation({
+    mutationFn: async (payload: {
+      providerId: string;
+      procedureId: string;
+      nextProcedureIds: string[];
+    }) => {
+      const serviceProvider = await adminFetch<ServiceProviderRecord>(
+        `/api/admin/service-providers/${payload.providerId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            procedure_ids: payload.nextProcedureIds,
+          }),
+        },
+      );
+      const hasProcedureStillLinked = (
+        serviceProvider.procedure_ids ?? []
+      ).some(
+        (id) =>
+          normalizeProcedureId(id) ===
+          normalizeProcedureId(payload.procedureId),
+      );
+
+      if (hasProcedureStillLinked) {
+        throw new Error(
+          "Procedure unlink did not persist. Please retry or refresh.",
+        );
+      }
+
+      return serviceProvider;
+    },
+    onMutate: ({ procedureId }) => {
+      setUnlinkingProcedureId(procedureId);
+    },
+    onSuccess: (serviceProvider, variables) => {
+      invalidate(QUERY_KEY);
+      form.setValue("procedure_ids", variables.nextProcedureIds, {
+        shouldDirty: false,
+        shouldTouch: true,
+      });
+      setEditingServiceProvider((previous) =>
+        previous
+          ? {
+              ...previous,
+              procedure_ids: sanitizeProcedureIds(
+                serviceProvider.procedure_ids ?? [],
+              ),
+            }
+          : previous,
+      );
+
+      toast({
+        title: "Procedure unlinked",
+        description: "The procedure was removed from this provider profile.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to unlink procedure",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setUnlinkingProcedureId(null),
+  });
+
   const createServiceProvider = useMutation({
     mutationFn: (payload: ServiceProviderPayload) =>
       adminFetch<ServiceProviderRecord>("/api/admin/service-providers", {
@@ -518,6 +607,7 @@ export default function AdminServiceProvidersPage() {
       logo_image: null,
     });
     setDialogOpen(true);
+    setShowAllProcedureOptions(false);
   };
 
   const openEditDialog = (provider: ServiceProviderRecord) => {
@@ -578,7 +668,7 @@ export default function AdminServiceProvidersPage() {
         typeof infrastructure["emergency_support"] === "boolean"
           ? (infrastructure["emergency_support"] as boolean)
           : false,
-      procedure_ids: provider.procedure_ids ?? [],
+      procedure_ids: sanitizeProcedureIds(provider.procedure_ids),
       gallery_urls: provider.gallery_urls ?? [],
       rating: provider.rating ?? undefined,
       review_count: provider.review_count ?? undefined,
@@ -592,6 +682,7 @@ export default function AdminServiceProvidersPage() {
       logo_image: provider.logo_url ?? null,
     });
     setDialogOpen(true);
+    setShowAllProcedureOptions(false);
   };
 
   const closeDialog = () => {
@@ -661,8 +752,7 @@ export default function AdminServiceProvidersPage() {
       infrastructure,
       logo_url: values.logo_image ?? null,
       gallery_urls: galleryUrls,
-      procedure_ids:
-        values.procedure_ids?.map((id) => id.trim()).filter(Boolean) ?? [],
+      procedure_ids: sanitizeProcedureIds(values.procedure_ids),
       is_partner: values.is_partner ?? true,
       rating: values.rating ?? null,
       review_count: values.review_count ?? null,
@@ -1215,13 +1305,35 @@ export default function AdminServiceProvidersPage() {
                   name="procedure_ids"
                   render={({ field }) => {
                     const selected = new Set(field.value ?? []);
+                    const visibleProcedureOptions = showAllProcedureOptions
+                      ? procedureOptions
+                      : procedureOptions.filter((option) =>
+                          selected.has(option.id),
+                        );
                     return (
                       <FormItem>
                         <FormLabel>Procedures offered</FormLabel>
                         <FormDescription>
-                          Select procedures for filtering on the public
-                          providers page.
+                          {showAllProcedureOptions
+                            ? "Select procedures for filtering on the public providers page."
+                            : "Showing linked procedures only. Switch to all procedures to add more."}
                         </FormDescription>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setShowAllProcedureOptions(
+                                (previous) => !previous,
+                              )
+                            }
+                          >
+                            {showAllProcedureOptions
+                              ? "Show linked only"
+                              : "Show all procedures"}
+                          </Button>
+                        </div>
                         <div className="rounded-md border border-border/60">
                           {treatmentsQuery.isLoading ? (
                             <div className="p-4 text-sm text-muted-foreground">
@@ -1232,35 +1344,136 @@ export default function AdminServiceProvidersPage() {
                               No procedures available. Add procedures to
                               treatments first.
                             </div>
+                          ) : visibleProcedureOptions.length === 0 ? (
+                            <div className="p-4 text-sm text-muted-foreground">
+                              {showAllProcedureOptions
+                                ? "No procedures available."
+                                : "No linked procedures. Switch to all procedures to add one."}
+                            </div>
                           ) : (
                             <div className="max-h-64 space-y-2 overflow-auto p-3">
-                              {procedureOptions.map((option) => (
-                                <label
-                                  key={option.id}
-                                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border/60 px-3 py-2 hover:bg-muted/60"
-                                >
-                                  <Checkbox
-                                    checked={selected.has(option.id)}
-                                    onCheckedChange={(checked) => {
-                                      const next = new Set(field.value ?? []);
-                                      if (checked) {
-                                        next.add(option.id);
-                                      } else {
-                                        next.delete(option.id);
-                                      }
-                                      field.onChange(Array.from(next));
-                                    }}
-                                  />
-                                  <div className="space-y-0.5">
-                                    <p className="text-sm font-medium text-foreground">
-                                      {option.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {option.treatmentName}
-                                    </p>
+                              {visibleProcedureOptions.map((option) => {
+                                const isSelected = selected.has(option.id);
+                                const isOwnedByProvider =
+                                  option.createdByProviderId ===
+                                  editingServiceProvider?.id;
+                                const isDeletingThisProcedure =
+                                  deleteProviderProcedure.isPending &&
+                                  deletingProcedureId === option.id;
+                                const isUnlinkingThisProcedure =
+                                  unlinkProviderProcedure.isPending &&
+                                  unlinkingProcedureId === option.id;
+
+                                return (
+                                  <div
+                                    key={option.id}
+                                    className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2 hover:bg-muted/60"
+                                  >
+                                    <label className="flex cursor-pointer items-start gap-3">
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                          const next = new Set(
+                                            field.value ?? [],
+                                          );
+                                          if (checked) {
+                                            next.add(option.id);
+                                          } else {
+                                            next.delete(option.id);
+                                          }
+                                          field.onChange(Array.from(next));
+                                        }}
+                                      />
+                                      <div className="space-y-0.5">
+                                        <p className="text-sm font-medium text-foreground">
+                                          {option.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {option.treatmentName}
+                                        </p>
+                                      </div>
+                                    </label>
+                                    {isSelected ? (
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            if (!providerId) return;
+                                            const targetProcedureId =
+                                              normalizeProcedureId(option.id);
+                                            const currentProcedureIds =
+                                              sanitizeProcedureIds(
+                                                (form.getValues(
+                                                  "procedure_ids",
+                                                ) ?? []) as string[],
+                                              );
+                                            const nextProcedureIds =
+                                              currentProcedureIds.filter(
+                                                (id) =>
+                                                  normalizeProcedureId(id) !==
+                                                  targetProcedureId,
+                                              );
+                                            const removedCount =
+                                              currentProcedureIds.length -
+                                              nextProcedureIds.length;
+
+                                            if (removedCount <= 0) {
+                                              toast({
+                                                title: "Already unlinked",
+                                                description:
+                                                  "This procedure is no longer linked to the provider.",
+                                              });
+                                              return;
+                                            }
+
+                                            unlinkProviderProcedure.mutate({
+                                              providerId,
+                                              procedureId: option.id,
+                                              nextProcedureIds,
+                                            });
+                                          }}
+                                          disabled={
+                                            unlinkProviderProcedure.isPending ||
+                                            deleteProviderProcedure.isPending
+                                          }
+                                        >
+                                          {isUnlinkingThisProcedure ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            "Unlink"
+                                          )}
+                                        </Button>
+                                        {isOwnedByProvider ? (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive hover:text-destructive"
+                                            disabled={
+                                              deleteProviderProcedure.isPending
+                                            }
+                                            onClick={() => {
+                                              if (!providerId) return;
+                                              deleteProviderProcedure.mutate({
+                                                providerId,
+                                                procedureId: option.id,
+                                              });
+                                            }}
+                                          >
+                                            {isDeletingThisProcedure ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              "Delete"
+                                            )}
+                                          </Button>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
                                   </div>
-                                </label>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
