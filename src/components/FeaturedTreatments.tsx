@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ComponentType, MouseEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,7 @@ type FeaturedTreatmentCard = {
   priceLabel: string;
   durationLabel: string;
   image: string;
+  fallbackImage: string;
   Icon: ComponentType<{ className?: string }>;
   isFeatured: boolean;
 };
@@ -94,9 +95,14 @@ const getPresentation = (
   return DEFAULT_PRESENTATION;
 };
 
+const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
+
 const FeaturedTreatments = () => {
   const router = useRouter();
   const { treatments, loading, error } = useTreatments();
+  const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
+    Record<string, true>
+  >({});
 
   const featuredTreatments = useMemo<FeaturedTreatmentCard[]>(() => {
     if (treatments.length === 0) {
@@ -163,6 +169,7 @@ const FeaturedTreatments = () => {
             : "Contact us for pricing",
         durationLabel,
         image: cardImage,
+        fallbackImage: presentation.image,
         Icon: presentation.Icon,
         isFeatured: true,
         priceValue:
@@ -206,6 +213,22 @@ const FeaturedTreatments = () => {
   const handleViewAll = useCallback(() => {
     router.push("/treatments");
   }, [router]);
+
+  const handleCardImageError = useCallback(
+    (treatmentId: string, image: string, fallbackImage: string) => {
+      if (!isRemoteImageUrl(image) || image === fallbackImage) {
+        return;
+      }
+
+      setImageFallbackByTreatmentId((current) => {
+        if (current[treatmentId]) {
+          return current;
+        }
+        return { ...current, [treatmentId]: true };
+      });
+    },
+    [],
+  );
 
   const showEmptyState = !loading && !error && featuredTreatments.length === 0;
 
@@ -257,6 +280,9 @@ const FeaturedTreatments = () => {
                 ))
               : featuredTreatments.map((treatment) => {
                   const { Icon } = treatment;
+                  const imageSrc = imageFallbackByTreatmentId[treatment.id]
+                    ? treatment.fallbackImage
+                    : treatment.image;
 
                   return (
                     <Card
@@ -277,11 +303,19 @@ const FeaturedTreatments = () => {
 
                       <div className="relative h-48 overflow-hidden">
                         <Image
-                          src={treatment.image}
+                          src={imageSrc}
                           alt={treatment.title}
                           fill
                           className="object-cover group-hover:scale-105 transition-spring"
                           sizes="(min-width: 1024px) 25vw, (min-width: 768px) 40vw, 100vw"
+                          unoptimized={isRemoteImageUrl(imageSrc)}
+                          onError={() =>
+                            handleCardImageError(
+                              treatment.id,
+                              imageSrc,
+                              treatment.fallbackImage,
+                            )
+                          }
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
                         <div className="absolute bottom-4 left-4">
