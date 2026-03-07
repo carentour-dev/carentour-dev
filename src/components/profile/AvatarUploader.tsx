@@ -66,6 +66,8 @@ export function AvatarUploader({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isRemoteAvatar =
+    typeof value === "string" && /^https?:\/\//.test(value);
 
   const extractStoragePath = useCallback(
     (url: string | null) => {
@@ -208,6 +210,14 @@ export function AvatarUploader({
               alt="Avatar preview"
               fill
               className="object-cover"
+              unoptimized={isRemoteAvatar}
+              onError={() => {
+                setError(
+                  (current) =>
+                    current ??
+                    "This avatar URL is no longer reachable. Please upload a new avatar.",
+                );
+              }}
             />
             <Button
               type="button"
