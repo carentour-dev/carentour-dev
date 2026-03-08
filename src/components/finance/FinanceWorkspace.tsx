@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 
 type OperationsQuote = {
   id: string;
@@ -408,12 +409,34 @@ export function FinanceWorkspace({
       ) ?? null,
     [invoicesQuery.data, selectedInvoiceId],
   );
+  const invoiceOptions = useMemo<ComboOption[]>(
+    () =>
+      (invoicesQuery.data ?? []).map((invoice) => ({
+        value: invoice.id,
+        label: `${invoice.invoice_number} - ${formatCurrency(invoice.balance_amount, invoice.currency)}`,
+        description: invoice.patient_name
+          ? `${invoice.patient_name} • ${humanizeFinanceLabel(invoice.status)}`
+          : humanizeFinanceLabel(invoice.status),
+      })),
+    [invoicesQuery.data],
+  );
 
   const selectedQuote = useMemo(
     () =>
       (quotesQuery.data ?? []).find((quote) => quote.id === selectedQuoteId) ??
       null,
     [quotesQuery.data, selectedQuoteId],
+  );
+  const quoteOptions = useMemo<ComboOption[]>(
+    () =>
+      (quotesQuery.data ?? []).map((quote) => ({
+        value: quote.id,
+        label: `${quote.quote_number} - ${quote.patient_name || "Patient"} (${formatDate(quote.quote_date)})`,
+        description: Number.isFinite(quote.final_price_usd)
+          ? `Total ${formatCurrency(Number(quote.final_price_usd), "USD")}`
+          : undefined,
+      })),
+    [quotesQuery.data],
   );
 
   const usdToSelectedCurrencyRate = useMemo(() => {
@@ -993,23 +1016,16 @@ export function FinanceWorkspace({
                 <>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Quote</Label>
-                    <Select
+                    <ComboBox
                       value={selectedQuoteId}
-                      onValueChange={setSelectedQuoteId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select quote" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(quotesQuery.data ?? []).map((quote) => (
-                          <SelectItem key={quote.id} value={quote.id}>
-                            {quote.quote_number} -{" "}
-                            {quote.patient_name || "Patient"} (
-                            {formatDate(quote.quote_date)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={quoteOptions}
+                      placeholder="Select quote"
+                      searchPlaceholder="Search quotes..."
+                      emptyLabel="No quotes found."
+                      disabled={quotesQuery.isLoading}
+                      onChange={setSelectedQuoteId}
+                      contentClassName="w-[min(640px,calc(100vw-4rem))] p-0"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Issue date</Label>
@@ -1140,23 +1156,17 @@ export function FinanceWorkspace({
                   Review and adjust installment schedule before finalization.
                 </CardDescription>
               </div>
-              <Select
+              <ComboBox
                 value={selectedInvoiceId}
-                onValueChange={setSelectedInvoiceId}
-                disabled={!canViewInvoices}
-              >
-                <SelectTrigger className="w-full md:w-72">
-                  <SelectValue placeholder="Select invoice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(invoicesQuery.data ?? []).map((invoice) => (
-                    <SelectItem key={invoice.id} value={invoice.id}>
-                      {invoice.invoice_number} -{" "}
-                      {formatCurrency(invoice.balance_amount, invoice.currency)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={invoiceOptions}
+                placeholder="Select invoice"
+                searchPlaceholder="Search invoices..."
+                emptyLabel="No invoices found."
+                disabled={!canViewInvoices || invoicesQuery.isLoading}
+                onChange={setSelectedInvoiceId}
+                className="w-full md:w-72"
+                contentClassName="w-[min(640px,calc(100vw-4rem))] p-0"
+              />
             </CardHeader>
             <CardContent className="space-y-4">
               {!canViewInvoices ? (
@@ -1314,26 +1324,16 @@ export function FinanceWorkspace({
                 <>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Invoice</Label>
-                    <Select
+                    <ComboBox
                       value={selectedInvoiceId}
-                      onValueChange={setSelectedInvoiceId}
-                      disabled={!canViewInvoices}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select invoice" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(invoicesQuery.data ?? []).map((invoice) => (
-                          <SelectItem key={invoice.id} value={invoice.id}>
-                            {invoice.invoice_number} -{" "}
-                            {formatCurrency(
-                              invoice.balance_amount,
-                              invoice.currency,
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={invoiceOptions}
+                      placeholder="Select invoice"
+                      searchPlaceholder="Search invoices..."
+                      emptyLabel="No invoices found."
+                      disabled={!canViewInvoices || invoicesQuery.isLoading}
+                      onChange={setSelectedInvoiceId}
+                      contentClassName="w-[min(640px,calc(100vw-4rem))] p-0"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Amount</Label>
