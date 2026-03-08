@@ -256,9 +256,9 @@ export default function TreatmentDetails() {
         </section>
 
         {treatment.heroImage ? (
-          <section className="pb-4 bg-background">
+          <section className="pt-6 pb-4 bg-background">
             <div className="container mx-auto px-4">
-              <div className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-border/60">
+              <div className="relative aspect-[4/3] sm:aspect-[16/8] lg:aspect-[16/5] overflow-hidden rounded-2xl border border-border/60">
                 <Image
                   src={treatment.heroImage}
                   alt={`${treatment.title} cover image`}
