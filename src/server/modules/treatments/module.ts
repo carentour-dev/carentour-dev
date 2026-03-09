@@ -561,6 +561,28 @@ export const treatmentController = {
 
     const supabase = getSupabaseAdmin();
 
+    const { data: existingPriceLists, error: existingPriceListsError } =
+      await supabase
+        .from("service_provider_procedure_price_lists")
+        .select("id, service_provider_id")
+        .eq("procedure_id", parsedProcedureId);
+
+    if (existingPriceListsError) {
+      throw new ApiError(
+        500,
+        "Failed to inspect procedure price list usage",
+        existingPriceListsError.message,
+      );
+    }
+
+    const existingPriceListProviderIds = Array.from(
+      new Set(
+        (existingPriceLists ?? [])
+          .map((row) => row.service_provider_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
     const { data: procedure, error: procedureError } = await supabase
       .from("treatment_procedures")
       .select("id, created_by_provider_id")
@@ -583,6 +605,36 @@ export const treatmentController = {
       throw new ApiError(403, "Procedure is not owned by this provider");
     }
 
+    if ((existingPriceLists ?? []).length > 0) {
+      let linkedProviderLabels: string[] = existingPriceListProviderIds;
+
+      if (existingPriceListProviderIds.length > 0) {
+        const { data: linkedProviders, error: linkedProvidersError } =
+          await supabase
+            .from("service_providers")
+            .select("id, name")
+            .in("id", existingPriceListProviderIds);
+
+        if (linkedProvidersError) {
+          throw new ApiError(
+            500,
+            "Failed to load linked providers for procedure delete guard",
+            linkedProvidersError.message,
+          );
+        }
+
+        linkedProviderLabels = (linkedProviders ?? [])
+          .map((entry) => `${entry.name} (${entry.id})`)
+          .sort((a, b) => a.localeCompare(b));
+      }
+
+      throw new ApiError(
+        409,
+        "Cannot delete provider procedure while active price lists exist",
+        `Delete price list entries for this procedure first. Linked provider(s): ${linkedProviderLabels.join(", ")}`,
+      );
+    }
+
     const { data: provider, error: providerError } = await supabase
       .from("service_providers")
       .select("procedure_ids")
@@ -601,6 +653,19 @@ export const treatmentController = {
       throw new ApiError(404, "Service provider not found");
     }
 
+    const { error: deleteError } = await supabase
+      .from("treatment_procedures")
+      .delete()
+      .eq("id", parsedProcedureId);
+
+    if (deleteError) {
+      throw new ApiError(
+        500,
+        "Failed to delete provider procedure",
+        deleteError.message,
+      );
+    }
+
     const sanitizedProcedureIds = (
       Array.isArray(provider.procedure_ids) ? provider.procedure_ids : []
     )
@@ -613,23 +678,13 @@ export const treatmentController = {
       .eq("id", parsedProviderId);
 
     if (updateError) {
-      throw new ApiError(
-        500,
-        "Failed to unlink procedure from provider",
-        updateError.message,
-      );
-    }
-
-    const { error: deleteError } = await supabase
-      .from("treatment_procedures")
-      .delete()
-      .eq("id", parsedProcedureId);
-
-    if (deleteError) {
-      throw new ApiError(
-        500,
-        "Failed to delete provider procedure",
-        deleteError.message,
+      console.error(
+        "Failed to unlink deleted procedure from provider procedure_ids",
+        {
+          providerId: parsedProviderId,
+          procedureId: parsedProcedureId,
+          error: updateError,
+        },
       );
     }
 
