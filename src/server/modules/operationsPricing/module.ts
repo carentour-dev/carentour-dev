@@ -471,9 +471,36 @@ export const operationsPricingController = {
           (id): id is string => typeof id === "string" && id.trim().length > 0,
         )
       : [];
+    const { data: providerPriceLists, error: providerPriceListsError } =
+      await supabase
+        .from("service_provider_procedure_price_lists")
+        .select("*")
+        .eq("service_provider_id", parsedProviderId);
+
+    if (providerPriceListsError) {
+      throw new ApiError(
+        500,
+        "Failed to load provider price lists",
+        providerPriceListsError.message,
+      );
+    }
+
+    const pricedProcedureIds = Array.from(
+      new Set(
+        (providerPriceLists ?? [])
+          .map((priceList) => priceList.procedure_id)
+          .filter(
+            (id): id is string =>
+              typeof id === "string" && id.trim().length > 0,
+          ),
+      ),
+    );
+    const discoverableProcedureIds = Array.from(
+      new Set([...offeredProcedureIds, ...pricedProcedureIds]),
+    );
     const orFilters = [`created_by_provider_id.eq.${parsedProviderId}`];
-    if (offeredProcedureIds.length > 0) {
-      orFilters.push(`id.in.(${offeredProcedureIds.join(",")})`);
+    if (discoverableProcedureIds.length > 0) {
+      orFilters.push(`id.in.(${discoverableProcedureIds.join(",")})`);
     }
 
     const { data: procedures, error: proceduresError } = await supabase
@@ -494,6 +521,7 @@ export const operationsPricingController = {
     const procedureIdsForPricing = (procedures ?? []).map(
       (procedure) => procedure.id,
     );
+    const procedureIdSetForPricing = new Set(procedureIdsForPricing);
     const providerOwnedProcedureIds = (procedures ?? [])
       .filter(
         (procedure) => procedure.created_by_provider_id === parsedProviderId,
@@ -503,11 +531,18 @@ export const operationsPricingController = {
     const missingOwnedProcedures = providerOwnedProcedureIds.filter(
       (id) => !currentProcedureIds.has(id),
     );
+    const missingPricedProcedures = pricedProcedureIds.filter(
+      (id) => !currentProcedureIds.has(id),
+    );
 
-    if (missingOwnedProcedures.length > 0) {
+    if (
+      missingOwnedProcedures.length > 0 ||
+      missingPricedProcedures.length > 0
+    ) {
       const nextProcedureIds = [
         ...currentProcedureIds,
         ...missingOwnedProcedures,
+        ...missingPricedProcedures,
       ];
       const { error: updateError } = await supabase
         .from("service_providers")
@@ -526,22 +561,12 @@ export const operationsPricingController = {
       return { provider, procedures: [] };
     }
 
-    const { data: priceLists, error: priceListError } = await supabase
-      .from("service_provider_procedure_price_lists")
-      .select("*")
-      .eq("service_provider_id", parsedProviderId)
-      .in("procedure_id", procedureIdsForPricing);
-
-    if (priceListError) {
-      throw new ApiError(
-        500,
-        "Failed to load procedure price lists",
-        priceListError.message,
-      );
-    }
+    const priceLists = (providerPriceLists ?? []).filter((priceList) =>
+      procedureIdSetForPricing.has(priceList.procedure_id),
+    );
 
     const priceListMap = new Map<string, PriceListRow>();
-    for (const priceList of priceLists ?? []) {
+    for (const priceList of priceLists) {
       priceListMap.set(priceList.procedure_id, priceList);
     }
 
@@ -1049,11 +1074,89 @@ export const operationsPricingController = {
       proceduresByTreatmentAndName.set(key, existing);
     });
 
+    const resolveWithoutProcedureId = (group: ImportGroupDraft) => {
+      let resolvedTreatmentId: string | null = null;
+      let resolvedProcedureId: string | null = null;
+      let willCreateTreatment = false;
+      let willCreateProcedure = false;
+      let reason: string | null = null;
+
+      if (group.treatmentId) {
+        if (!treatmentById.has(group.treatmentId)) {
+          reason = "treatment_id does not exist.";
+        } else {
+          resolvedTreatmentId = group.treatmentId;
+        }
+      } else if (group.treatmentName) {
+        const treatmentKey = [
+          normalizeText(group.treatmentName),
+          normalizeText(group.specialty),
+        ].join("|");
+        const matches = treatmentsByKey.get(treatmentKey) ?? [];
+        if (matches.length === 1) {
+          resolvedTreatmentId = matches[0]!;
+        } else if (matches.length > 1) {
+          reason =
+            "treatment_name and specialty match multiple treatments; use treatment_id.";
+        }
+      }
+
+      if (!resolvedTreatmentId && !reason) {
+        if (createMissing) {
+          willCreateTreatment = true;
+        } else {
+          reason =
+            "Treatment was not found; enable create missing or provide treatment_id.";
+        }
+      }
+
+      if (!reason) {
+        if (resolvedTreatmentId) {
+          const procedureKey = `${resolvedTreatmentId}|${normalizeText(group.procedureName)}`;
+          const matches = proceduresByTreatmentAndName.get(procedureKey) ?? [];
+          const providerOwnedMatches = matches.filter(
+            (entry) => entry.createdByProviderId === parsedProviderId,
+          );
+
+          if (providerOwnedMatches.length === 1) {
+            resolvedProcedureId = providerOwnedMatches[0]!.id;
+          } else if (providerOwnedMatches.length > 1) {
+            reason =
+              "procedure_name matches multiple provider-owned procedures; use procedure_id.";
+          } else if (matches.length === 1) {
+            resolvedProcedureId = matches[0]!.id;
+          } else if (matches.length > 1) {
+            reason =
+              "procedure_name matches multiple procedures; use procedure_id.";
+          }
+        }
+
+        if (!resolvedProcedureId && !reason) {
+          if (createMissing) {
+            willCreateProcedure = true;
+          } else {
+            reason =
+              "Procedure was not found; enable create missing or provide procedure_id.";
+          }
+        }
+      }
+
+      return {
+        resolvedTreatmentId,
+        resolvedProcedureId,
+        willCreateTreatment,
+        willCreateProcedure,
+        reason,
+      };
+    };
+
     const items: ImportRowResult[] = [];
     const readyGroups: ImportPayloadGroup[] = [];
     let readyRows = 0;
     let blockedGroups = 0;
     let blockedRowsFromGroups = 0;
+    let staleProcedureIdFallbackGroups = 0;
+    let staleProcedureIdFallbackRows = 0;
 
     for (const group of draftGroups.values()) {
       let resolvedTreatmentId: string | null = null;
@@ -1061,11 +1164,39 @@ export const operationsPricingController = {
       let willCreateTreatment = false;
       let willCreateProcedure = false;
       let reason: string | null = null;
+      let usedStaleProcedureIdFallback = false;
 
       if (group.procedureId) {
         const matchedProcedure = procedureById.get(group.procedureId);
         if (!matchedProcedure) {
-          reason = "procedure_id does not exist.";
+          if (group.procedureName) {
+            const fallback = resolveWithoutProcedureId(group);
+            resolvedTreatmentId = fallback.resolvedTreatmentId;
+            resolvedProcedureId = fallback.resolvedProcedureId;
+            willCreateTreatment = fallback.willCreateTreatment;
+            willCreateProcedure = fallback.willCreateProcedure;
+            reason = fallback.reason;
+
+            if (
+              reason ===
+              "Treatment was not found; enable create missing or provide treatment_id."
+            ) {
+              reason =
+                "procedure_id does not exist and treatment was not found; enable create missing or provide treatment_id.";
+            } else if (
+              reason ===
+              "Procedure was not found; enable create missing or provide procedure_id."
+            ) {
+              reason =
+                "procedure_id does not exist and procedure_name could not be matched; enable create missing or provide procedure_id.";
+            }
+
+            if (!reason) {
+              usedStaleProcedureIdFallback = true;
+            }
+          } else {
+            reason = "procedure_id does not exist.";
+          }
         } else {
           resolvedProcedureId = matchedProcedure.id;
           resolvedTreatmentId = matchedProcedure.treatmentId;
@@ -1110,67 +1241,23 @@ export const operationsPricingController = {
           }
         }
       } else {
-        if (group.treatmentId) {
-          if (!treatmentById.has(group.treatmentId)) {
-            reason = "treatment_id does not exist.";
-          } else {
-            resolvedTreatmentId = group.treatmentId;
-          }
-        } else if (group.treatmentName) {
-          const treatmentKey = [
-            normalizeText(group.treatmentName),
-            normalizeText(group.specialty),
-          ].join("|");
-          const matches = treatmentsByKey.get(treatmentKey) ?? [];
-          if (matches.length === 1) {
-            resolvedTreatmentId = matches[0]!;
-          } else if (matches.length > 1) {
-            reason =
-              "treatment_name and specialty match multiple treatments; use treatment_id.";
-          }
-        }
-
-        if (!resolvedTreatmentId && !reason) {
-          if (createMissing) {
-            willCreateTreatment = true;
-          } else {
-            reason =
-              "Treatment was not found; enable create missing or provide treatment_id.";
-          }
-        }
-
-        if (!reason) {
-          if (resolvedTreatmentId) {
-            const procedureKey = `${resolvedTreatmentId}|${normalizeText(group.procedureName)}`;
-            const matches =
-              proceduresByTreatmentAndName.get(procedureKey) ?? [];
-            const providerOwnedMatches = matches.filter(
-              (entry) => entry.createdByProviderId === parsedProviderId,
-            );
-
-            if (providerOwnedMatches.length === 1) {
-              resolvedProcedureId = providerOwnedMatches[0]!.id;
-            } else if (providerOwnedMatches.length > 1) {
-              reason =
-                "procedure_name matches multiple provider-owned procedures; use procedure_id.";
-            } else if (matches.length === 1) {
-              resolvedProcedureId = matches[0]!.id;
-            } else if (matches.length > 1) {
-              reason =
-                "procedure_name matches multiple procedures; use procedure_id.";
-            }
-          }
-
-          if (!resolvedProcedureId && !reason) {
-            if (createMissing) {
-              willCreateProcedure = true;
-            } else {
-              reason =
-                "Procedure was not found; enable create missing or provide procedure_id.";
-            }
-          }
-        }
+        const fallback = resolveWithoutProcedureId(group);
+        resolvedTreatmentId = fallback.resolvedTreatmentId;
+        resolvedProcedureId = fallback.resolvedProcedureId;
+        willCreateTreatment = fallback.willCreateTreatment;
+        willCreateProcedure = fallback.willCreateProcedure;
+        reason = fallback.reason;
       }
+
+      if (usedStaleProcedureIdFallback) {
+        staleProcedureIdFallbackGroups += 1;
+        staleProcedureIdFallbackRows += group.rowNumbers.length;
+      }
+
+      const itemProcedureId =
+        !reason && willCreateProcedure
+          ? null
+          : (resolvedProcedureId ?? group.procedureId ?? null);
 
       const totalCostEgp = computeTotal(group.components);
       const item: ImportRowResult = {
@@ -1178,7 +1265,7 @@ export const operationsPricingController = {
         rowNumbers: [...group.rowNumbers],
         status: reason ? "blocked" : "ready",
         reason,
-        procedureId: resolvedProcedureId ?? group.procedureId ?? null,
+        procedureId: itemProcedureId,
         procedureName: group.procedureName,
         treatmentId: resolvedTreatmentId ?? group.treatmentId ?? null,
         treatmentName: group.treatmentName,
@@ -1212,6 +1299,12 @@ export const operationsPricingController = {
           willCreateProcedure,
         });
       }
+    }
+
+    if (staleProcedureIdFallbackGroups > 0) {
+      warnings.push(
+        `${staleProcedureIdFallbackRows} row(s) used fallback matching because procedure_id no longer exists.`,
+      );
     }
 
     const summary = {
