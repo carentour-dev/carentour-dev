@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CrudService } from "@/server/modules/common/crudService";
 import { financeCounterpartySync } from "@/server/modules/finance/counterpartySync";
+import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -191,6 +192,103 @@ export const serviceProviderController = {
 
     if (Object.keys(sanitizedUpdate).length === 0) {
       throw new ApiError(400, "No valid fields provided for update");
+    }
+
+    if (sanitizedUpdate.procedure_ids !== undefined) {
+      const supabase = getSupabaseAdmin();
+
+      const { data: existingProvider, error: existingProviderError } =
+        await supabase
+          .from("service_providers")
+          .select("procedure_ids")
+          .eq("id", serviceProviderId)
+          .maybeSingle();
+
+      if (existingProviderError) {
+        throw new ApiError(
+          500,
+          "Failed to load provider procedure links before update",
+          existingProviderError.message,
+        );
+      }
+
+      if (!existingProvider) {
+        throw new ApiError(404, "Service provider not found");
+      }
+
+      const existingProcedureIds = (
+        Array.isArray(existingProvider.procedure_ids)
+          ? existingProvider.procedure_ids
+          : []
+      ).filter((entry): entry is string => typeof entry === "string");
+
+      const nextProcedureIds = (
+        Array.isArray(sanitizedUpdate.procedure_ids)
+          ? sanitizedUpdate.procedure_ids
+          : []
+      ).filter((entry): entry is string => typeof entry === "string");
+
+      const nextProcedureIdSet = new Set(nextProcedureIds);
+      const removedProcedureIds = existingProcedureIds.filter(
+        (entry) => !nextProcedureIdSet.has(entry),
+      );
+
+      if (removedProcedureIds.length > 0) {
+        const { data: blockingPriceLists, error: blockingPriceListsError } =
+          await supabase
+            .from("service_provider_procedure_price_lists")
+            .select("procedure_id")
+            .eq("service_provider_id", serviceProviderId)
+            .in("procedure_id", removedProcedureIds);
+
+        if (blockingPriceListsError) {
+          throw new ApiError(
+            500,
+            "Failed to validate procedure unlink against price lists",
+            blockingPriceListsError.message,
+          );
+        }
+
+        const blockedProcedureIds = Array.from(
+          new Set(
+            (blockingPriceLists ?? [])
+              .map((entry) => entry.procedure_id)
+              .filter((entry): entry is string => typeof entry === "string"),
+          ),
+        );
+
+        if (blockedProcedureIds.length > 0) {
+          const { data: blockedProcedures, error: blockedProceduresError } =
+            await supabase
+              .from("treatment_procedures")
+              .select("id, name")
+              .in("id", blockedProcedureIds);
+
+          if (blockedProceduresError) {
+            throw new ApiError(
+              500,
+              "Failed to resolve procedure names for unlink guard",
+              blockedProceduresError.message,
+            );
+          }
+
+          const procedureNameById = new Map<string, string>();
+          for (const entry of blockedProcedures ?? []) {
+            procedureNameById.set(entry.id, entry.name);
+          }
+
+          const blockedProcedureLabels = blockedProcedureIds.map((entry) => {
+            const name = procedureNameById.get(entry);
+            return name ? `${name} (${entry})` : entry;
+          });
+
+          throw new ApiError(
+            409,
+            "Cannot unlink procedures while provider price lists exist",
+            `Delete provider price list(s) first for: ${blockedProcedureLabels.join(", ")}`,
+          );
+        }
+      }
     }
 
     const updated = await serviceProvidersService.update(
