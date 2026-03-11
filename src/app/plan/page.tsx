@@ -105,25 +105,25 @@ export default function PlanTrip() {
       country: "United States",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD",
+      cost: "$30 USD",
     },
     {
       country: "European Union",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD",
+      cost: "$30 USD",
     },
     {
       country: "Canada",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD",
+      cost: "$30 USD",
     },
     {
       country: "Australia",
       requirement: "Visa on Arrival",
       duration: "30 days",
-      cost: "$25 USD",
+      cost: "$30 USD",
     },
   ];
 
