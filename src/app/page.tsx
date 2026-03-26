@@ -84,6 +84,8 @@ export default async function HomePage() {
   const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
   const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
     cmsPage?.settings,
+    cmsPage?.status,
+    cmsPage?.content?.length ?? 0,
   );
 
   if (cmsPage?.content?.length && !useLegacyHomepageLayout) {
