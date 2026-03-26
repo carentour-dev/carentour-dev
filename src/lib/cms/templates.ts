@@ -430,7 +430,7 @@ export const cmsTemplates: CmsTemplate[] = [
         description:
           "Bundle flights, accommodation, and world-class medical expertise with concierge guidance.",
         alignment: "center",
-        background: "gradient",
+        background: "muted",
         containerWidth: "wide",
         primaryAction: {
           label: "Start your plan",
