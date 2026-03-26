@@ -60,7 +60,7 @@ export default function CategoryArchive() {
 
       <main>
         {/* Header */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <Button
               variant="outline"
