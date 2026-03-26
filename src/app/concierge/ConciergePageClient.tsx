@@ -200,7 +200,7 @@ export default function ConciergeServices() {
 
       <main>
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-6">
@@ -208,9 +208,7 @@ export default function ConciergeServices() {
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Premium Concierge Services for
-                <span className="block bg-gradient-hero bg-clip-text text-transparent">
-                  Medical Tourists
-                </span>
+                <span className="block text-primary">Medical Tourists</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Dedicated personal assistance ensuring your comfort,
@@ -505,7 +503,7 @@ export default function ConciergeServices() {
         </section>
 
         {/* Contact Section */}
-        <section className="py-20 bg-gradient-hero">
+        <section className="bg-surface-brand py-20">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
               Ready for Premium Support?
@@ -515,7 +513,7 @@ export default function ConciergeServices() {
               you focus on your health and recovery
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent" asChild>
+              <Button size="lg" variant="premium" asChild>
                 <Link href="/consultation" className="text-center">
                   <Phone className="h-4 w-4 mr-2" />
                   Get Free Consultation
