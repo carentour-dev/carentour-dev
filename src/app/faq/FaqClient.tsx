@@ -174,7 +174,7 @@ export function FaqClient({ faqs, categories, source }: Props) {
 
   return (
     <main>
-      <section className="bg-gradient-card py-20">
+      <section className="bg-surface-subtle py-20">
         <div className="container mx-auto px-4 text-center">
           <div className="mb-4 flex items-center justify-center gap-3">
             <Badge variant="secondary" className="text-sm">
@@ -183,10 +183,7 @@ export function FaqClient({ faqs, categories, source }: Props) {
             {sourceBadge}
           </div>
           <h1 className="mb-6 text-4xl font-bold text-foreground md:text-6xl">
-            Your Questions{" "}
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Answered
-            </span>
+            Your Questions <span className="text-primary">Answered</span>
           </h1>
           <p className="mb-8 max-w-3xl mx-auto text-xl leading-relaxed text-muted-foreground">
             Find comprehensive answers to all your medical tourism questions.
