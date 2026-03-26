@@ -113,7 +113,7 @@ const Header = () => {
                 </Button>
               </Link>
             )}
-            <Button variant="accent" size="sm" asChild>
+            <Button variant="premium" size="sm" asChild>
               <Link href="/consultation">Get Free Consultation</Link>
             </Button>
           </div>
@@ -234,7 +234,7 @@ const Header = () => {
                         </DrawerClose>
                       )}
                       <DrawerClose asChild>
-                        <Button variant="accent" className="w-full" asChild>
+                        <Button variant="premium" className="w-full" asChild>
                           <Link href="/consultation">
                             Get Free Consultation
                           </Link>
