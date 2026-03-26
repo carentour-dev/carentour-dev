@@ -396,7 +396,7 @@ export default function ConsultationPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <section className="bg-gradient-card py-16 md:py-24">
+        <section className="bg-surface-subtle py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl space-y-6">
               <Badge variant="outline">Free Medical Concierge</Badge>
