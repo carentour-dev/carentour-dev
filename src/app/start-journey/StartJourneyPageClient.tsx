@@ -1049,7 +1049,7 @@ function PatientJourneyContent() {
               className="flex items-center justify-between rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 px-3 py-2 text-sm"
             >
               <div className="flex flex-1 items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-primary" />
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">
                     {document.originalName}
@@ -1963,7 +1963,7 @@ function PatientJourneyContent() {
                           <span>Average response time: under 2 hours</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-600" />
+                          <Check className="h-4 w-4 text-primary" />
                           <span>No payment required to submit your intake</span>
                         </div>
                       </div>
