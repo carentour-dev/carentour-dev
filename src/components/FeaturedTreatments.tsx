@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { ComponentType, MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,21 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowRight,
-  Heart,
-  Eye,
-  Smile,
-  Scissors,
-  Stethoscope,
-  Activity,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTreatments } from "@/hooks/useTreatments";
 import { selectPrimaryProcedure } from "@/lib/treatments";
 
 type TreatmentPresentation = {
   image: string;
-  Icon: ComponentType<{ className?: string }>;
 };
 
 type FeaturedTreatmentCard = {
@@ -39,31 +30,29 @@ type FeaturedTreatmentCard = {
   durationLabel: string;
   image: string;
   fallbackImage: string;
-  Icon: ComponentType<{ className?: string }>;
   isFeatured: boolean;
 };
 
 const DEFAULT_PRESENTATION: TreatmentPresentation = {
   image: "/hero-medical-facility.webp",
-  Icon: Stethoscope,
 };
 
 const TREATMENT_PRESENTATION: Record<string, TreatmentPresentation> = {
-  "cardiac-surgery": { image: "/surgery-suite.webp", Icon: Heart },
-  cardiology: { image: "/surgery-suite.webp", Icon: Heart },
-  "advanced-cardiac-bypass": { image: "/surgery-suite.webp", Icon: Heart },
-  "tavr-program": { image: "/surgery-suite.webp", Icon: Heart },
-  "eye-surgery": { image: "/consultation.webp", Icon: Eye },
-  ophthalmology: { image: "/consultation.webp", Icon: Eye },
-  "retinal-repair-macular-care": { image: "/consultation.webp", Icon: Eye },
-  "laser-vision-elite": { image: "/consultation.webp", Icon: Eye },
-  "dental-care": { image: "/surgery-suite.webp", Icon: Smile },
-  dentistry: { image: "/surgery-suite.webp", Icon: Smile },
-  "signature-smile-makeover": { image: "/surgery-suite.webp", Icon: Smile },
-  "cosmetic-surgery": { image: "/consultation.webp", Icon: Scissors },
-  cosmetic: { image: "/consultation.webp", Icon: Scissors },
-  "orthopedic-surgery": { image: "/surgery-suite.webp", Icon: Activity },
-  orthopedic: { image: "/surgery-suite.webp", Icon: Activity },
+  "cardiac-surgery": { image: "/surgery-suite.webp" },
+  cardiology: { image: "/surgery-suite.webp" },
+  "advanced-cardiac-bypass": { image: "/surgery-suite.webp" },
+  "tavr-program": { image: "/surgery-suite.webp" },
+  "eye-surgery": { image: "/consultation.webp" },
+  ophthalmology: { image: "/consultation.webp" },
+  "retinal-repair-macular-care": { image: "/consultation.webp" },
+  "laser-vision-elite": { image: "/consultation.webp" },
+  "dental-care": { image: "/surgery-suite.webp" },
+  dentistry: { image: "/surgery-suite.webp" },
+  "signature-smile-makeover": { image: "/surgery-suite.webp" },
+  "cosmetic-surgery": { image: "/consultation.webp" },
+  cosmetic: { image: "/consultation.webp" },
+  "orthopedic-surgery": { image: "/surgery-suite.webp" },
+  orthopedic: { image: "/surgery-suite.webp" },
 };
 
 const formatCurrency = (value: number, currency?: string | null) => {
@@ -170,7 +159,6 @@ const FeaturedTreatments = () => {
         durationLabel,
         image: cardImage,
         fallbackImage: presentation.image,
-        Icon: presentation.Icon,
         isFeatured: true,
         priceValue:
           typeof basePriceCandidate === "number" ? basePriceCandidate : null,
@@ -279,7 +267,6 @@ const FeaturedTreatments = () => {
                   </Card>
                 ))
               : featuredTreatments.map((treatment) => {
-                  const { Icon } = treatment;
                   const imageSrc = imageFallbackByTreatmentId[treatment.id]
                     ? treatment.fallbackImage
                     : treatment.image;
@@ -317,10 +304,6 @@ const FeaturedTreatments = () => {
                             )
                           }
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
-                        <div className="absolute bottom-4 left-4">
-                          <Icon className="h-8 w-8 text-accent" />
-                        </div>
                       </div>
 
                       <CardHeader>
