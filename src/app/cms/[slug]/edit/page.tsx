@@ -26,6 +26,7 @@ import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
 import {
   HOME_HERO_IMAGE_REQUIREMENTS,
   HOME_HERO_IMAGE_REQUIREMENTS_TEXT,
+  resolveHomePageLayoutMode,
   sanitizeCmsPageSettings,
   type CmsPageSettings,
 } from "@/lib/cms/pageSettings";
@@ -165,19 +166,6 @@ export default function CmsEditPage() {
     );
   };
 
-  const resolveEffectiveHomeLayoutMode = (currentPage: PageRecord) => {
-    const explicitMode = currentPage.settings?.homeHero?.useLegacyLayout;
-    if (typeof explicitMode === "boolean") {
-      return explicitMode;
-    }
-
-    if (currentPage.status === "published" && currentPage.content.length > 0) {
-      return false;
-    }
-
-    return true;
-  };
-
   const handleHomeHeroImageChange = (value: string | null) => {
     setPage((prev) =>
       prev
@@ -187,7 +175,12 @@ export default function CmsEditPage() {
               ...(prev.settings ?? {}),
               homeHero: {
                 ...(value ? { imageUrl: value } : {}),
-                useLegacyLayout: resolveEffectiveHomeLayoutMode(prev),
+                useLegacyLayout:
+                  resolveHomePageLayoutMode(
+                    prev.settings,
+                    prev.status,
+                    prev.content.length,
+                  ) === "legacy",
               },
             },
           }
@@ -438,9 +431,13 @@ export default function CmsEditPage() {
   const statusMeta = statusCopy[page.status];
   const isHomePage = page.slug === "home";
   const homeHeroImageUrl = page.settings?.homeHero?.imageUrl ?? null;
-  const useLegacyHomepageLayout = isHomePage
-    ? resolveEffectiveHomeLayoutMode(page)
-    : false;
+  const useLegacyHomepageLayout =
+    isHomePage &&
+    resolveHomePageLayoutMode(
+      page.settings,
+      page.status,
+      page.content.length,
+    ) === "legacy";
 
   return (
     <div className="space-y-8 pb-12">
@@ -638,22 +635,22 @@ export default function CmsEditPage() {
                       Homepage Layout
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Choose whether the live Home page should keep the current
-                      static layout or use the CMS-built page content.
+                      Choose whether the live Home page should use the legacy
+                      homepage or the CMS homepage.
                     </p>
                   </div>
 
                   <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 p-4">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">
-                        Use current static homepage layout
+                        Use legacy homepage
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        On: keep the existing homepage layout and only use the
-                        CMS hero image override below.
+                        On: visitors see the old hardcoded homepage. Only the
+                        hero image override below is used.
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Off: publish the CMS-designed Home page content instead.
+                        Off: visitors see the homepage built from CMS blocks.
                       </p>
                     </div>
                     <Switch
