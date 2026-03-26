@@ -1,50 +1,101 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
-import { getPublishedPageBySlug } from "@/lib/cms/server";
+import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
+import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
+import {
+  maybeRedirectFromLegacyPath,
+  resolveSeo,
+  webPageSchema,
+} from "@/lib/seo";
 
 export const revalidate = 300;
 
-export async function generateMetadata({
-  params,
-}: {
+type PageProps = {
   params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const cmsPage = await getPublishedPageBySlug(slug);
-  if (!cmsPage) {
-    return {};
-  }
+};
 
-  return {
-    title: cmsPage.seo?.title ?? `${cmsPage.title} | Care N Tour`,
-    description: cmsPage.seo?.description ?? undefined,
-    openGraph: cmsPage.seo?.ogImage
-      ? { images: [cmsPage.seo.ogImage] }
+async function getSeo(pathname: string, cmsPage: CmsPage | null) {
+  const title =
+    typeof cmsPage?.seo?.title === "string" &&
+    cmsPage.seo.title.trim().length > 0
+      ? cmsPage.seo.title.trim()
+      : cmsPage?.title
+        ? `${cmsPage.title} | Care N Tour`
+        : "Care N Tour";
+
+  const description =
+    typeof cmsPage?.seo?.description === "string" &&
+    cmsPage.seo.description.trim().length > 0
+      ? cmsPage.seo.description.trim()
+      : undefined;
+
+  const ogImage =
+    typeof cmsPage?.seo?.ogImage === "string" &&
+    cmsPage.seo.ogImage.trim().length > 0
+      ? cmsPage.seo.ogImage.trim()
+      : null;
+
+  return resolveSeo({
+    routeKey: pathname,
+    pathname,
+    defaults: {
+      title,
+      description,
+    },
+    source: cmsPage
+      ? {
+          title,
+          description,
+          ogImageUrl: ogImage,
+        }
       : undefined,
-  } as any;
+    schema: webPageSchema({
+      urlPath: pathname,
+      title,
+      description,
+    }),
+    indexable: Boolean(cmsPage),
+    modifiedTime: cmsPage?.updated_at ?? undefined,
+  });
 }
 
-export default async function GenericCmsPage({
+export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const pathname = `/${slug}`;
+  const cmsPage = await getPublishedPageBySlug(slug);
+  const seo = await getSeo(pathname, cmsPage);
+  return seo.metadata;
+}
+
+export default async function GenericCmsPage({ params }: PageProps) {
+  const { slug } = await params;
+  const pathname = `/${slug}`;
+
+  await maybeRedirectFromLegacyPath(pathname);
+
   const cmsPage = await getPublishedPageBySlug(slug);
 
   if (!cmsPage || !cmsPage.content?.length) {
     return notFound();
   }
 
+  const seo = await getSeo(pathname, cmsPage);
+
   return (
-    <div className="min-h-screen">
-      <Header />
-      <main>
-        <BlockRenderer blocks={cmsPage.content} />
-      </main>
-      <Footer />
-    </div>
+    <>
+      <StructuredDataScripts payload={seo.jsonLd} />
+      <div className="min-h-screen">
+        <Header />
+        <main>
+          <BlockRenderer blocks={cmsPage.content} />
+        </main>
+        <Footer />
+      </div>
+    </>
   );
 }
