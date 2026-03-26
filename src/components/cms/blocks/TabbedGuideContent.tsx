@@ -919,7 +919,7 @@ function SectionRenderer({
     }
     case "cta":
       return (
-        <Card className="bg-gradient-card text-center">
+        <Card className="bg-surface-subtle text-center">
           <CardContent className="space-y-4 p-8">
             {section.eyebrow ? (
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
