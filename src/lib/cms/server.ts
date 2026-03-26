@@ -62,7 +62,12 @@ const TREATMENT_SELECT =
 const DOCTOR_SELECT =
   "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
-export async function getTreatmentsForBlock(config: BlockValue<"treatments">) {
+type TreatmentBlockQuery = Pick<
+  BlockValue<"treatments">,
+  "manualTreatments" | "limit" | "featuredOnly" | "categories"
+>;
+
+export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
   const supabase = await createClient();
   const manual = (config.manualTreatments ?? [])
     .map((entry) => entry.trim())
