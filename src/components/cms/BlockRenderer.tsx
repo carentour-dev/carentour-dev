@@ -4,6 +4,11 @@ import { cn } from "@/lib/utils";
 import { AnimationController } from "./AnimationController";
 import {
   HeroBlock,
+  HomeHeroBlock,
+  FeaturedTreatmentsHomeBlock,
+  JourneyStepsBlock,
+  DifferentiatorsBlock,
+  HomeCtaBlock,
   StatGridBlock,
   RichTextBlock,
   ImageFeatureBlock,
@@ -35,6 +40,16 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
           switch (block.type) {
             case "hero":
               return <HeroBlock key={key} block={block} />;
+            case "homeHero":
+              return <HomeHeroBlock key={key} block={block} />;
+            case "featuredTreatmentsHome":
+              return <FeaturedTreatmentsHomeBlock key={key} block={block} />;
+            case "journeySteps":
+              return <JourneyStepsBlock key={key} block={block} />;
+            case "differentiators":
+              return <DifferentiatorsBlock key={key} block={block} />;
+            case "homeCta":
+              return <HomeCtaBlock key={key} block={block} />;
             case "statGrid":
               return <StatGridBlock key={key} block={block} />;
             case "richText":
