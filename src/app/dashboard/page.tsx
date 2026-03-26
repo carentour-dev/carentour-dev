@@ -1613,7 +1613,7 @@ export default function DashboardPage() {
       icon: Star,
       action: () => setReviewDialogOpen(true),
       accentClass:
-        "bg-amber-500/15 text-amber-600 dark:text-amber-100 group-hover:bg-amber-500/25 group-hover:text-amber-700 dark:group-hover:text-amber-50",
+        "bg-premium/15 text-premium dark:text-premium-light group-hover:bg-premium/25 group-hover:text-premium dark:group-hover:text-premium-light",
     },
     {
       title: "Share Your Story",
