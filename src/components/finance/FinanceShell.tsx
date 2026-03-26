@@ -181,7 +181,7 @@ export function FinanceShell({ children }: FinanceShellProps) {
     hasOperationsEntry(operationsEntitlements) ||
     hasAnyOperationsSection(operationsEntitlements);
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
-  const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
   const visibleFinanceNavItems = useMemo(
     () =>
       FINANCE_NAV_ITEMS.filter((item) =>
