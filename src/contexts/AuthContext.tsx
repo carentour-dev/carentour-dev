@@ -395,18 +395,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      const previousUserId = lastKnownUserId.current;
-      const isNewSignIn =
-        currentUserId !== null &&
-        (previousUserId === null || previousUserId !== currentUserId);
+      if (event === "SIGNED_IN" && !isRecoveryFlowInUrl) {
+        if (canAutoRedirectFromCurrentPath()) {
+          // Allow manual re-auth on /auth even when Supabase already has
+          // the same user id in local state.
+          redirectedForCurrentUser.current = false;
+        }
 
-      if (
-        event === "SIGNED_IN" &&
-        isNewSignIn &&
-        !isRecoveryFlowInUrl &&
-        !redirectedForCurrentUser.current
-      ) {
-        maybeRedirectToAccessibleWorkspace(session ?? null, currentUserId);
+        if (!redirectedForCurrentUser.current) {
+          maybeRedirectToAccessibleWorkspace(session ?? null, currentUserId);
+        }
       }
 
       if (currentUserId) {
