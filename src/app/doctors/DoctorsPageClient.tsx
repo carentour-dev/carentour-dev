@@ -83,7 +83,7 @@ export default function Doctors() {
 
       <main>
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-6">
@@ -91,9 +91,7 @@ export default function Doctors() {
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Meet Our
-                <span className="block bg-gradient-hero bg-clip-text text-transparent">
-                  Specialist Doctors
-                </span>
+                <span className="block text-primary">Specialist Doctors</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 World-class physicians with international training and extensive
@@ -191,7 +189,7 @@ export default function Doctors() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-hero">
+        <section className="bg-surface-brand py-20">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
               Schedule a Consultation
@@ -201,7 +199,7 @@ export default function Doctors() {
               discuss your treatment options.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="accent" asChild>
+              <Button size="lg" variant="premium" asChild>
                 <Link href="/consultation">Get Free Consultation</Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
