@@ -41,7 +41,7 @@ const USPSection = () => {
       description:
         "Transparent pricing with no hidden costs. Includes medical care, accommodation, transfers, and 24/7 support.",
       highlight: "Up to 70% Savings",
-      color: "text-accent",
+      color: "text-emphasis",
     },
     {
       icon: Clock,
@@ -65,7 +65,7 @@ const USPSection = () => {
       description:
         "From visa assistance to luxury accommodations and cultural tours - we handle every detail of your stay.",
       highlight: "End-to-End Care",
-      color: "text-accent",
+      color: "text-emphasis",
     },
   ];
 
@@ -105,10 +105,7 @@ const USPSection = () => {
             Why Choose Care N Tour
           </Badge>
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            What Makes Us{" "}
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Different
-            </span>
+            What Makes Us <span className="text-primary">Different</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Experience the perfect blend of world-class medical care, cost
@@ -129,7 +126,7 @@ const USPSection = () => {
                 <CardContent className="p-8">
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-gradient-hero rounded-lg flex items-center justify-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
                         <Icon className="h-6 w-6 text-background" />
                       </div>
                     </div>
@@ -157,7 +154,7 @@ const USPSection = () => {
         </div>
 
         {/* Achievements Bar */}
-        <div className="bg-gradient-hero rounded-xl p-8 hidden">
+        <div className="hidden rounded-xl bg-surface-brand p-8">
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-background mb-2">
               Proven Excellence in Medical Tourism
