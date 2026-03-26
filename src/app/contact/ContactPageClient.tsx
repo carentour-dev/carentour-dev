@@ -150,7 +150,7 @@ export default function Contact() {
 
       <main>
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-6">
@@ -158,9 +158,7 @@ export default function Contact() {
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Get in Touch with
-                <span className="block bg-gradient-hero bg-clip-text text-transparent">
-                  Our Medical Team
-                </span>
+                <span className="block text-primary">Our Medical Team</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Our medical coordinators are ready to help you plan your
@@ -372,10 +370,10 @@ export default function Contact() {
                 </div>
 
                 {/* Emergency Contact */}
-                <Card className="bg-gradient-hero text-background border-0">
+                <Card className="bg-surface-brand text-surface-brand-foreground border-0 shadow-elegant">
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-4">
-                      <Clock className="h-8 w-8 text-accent" />
+                      <Clock className="h-8 w-8 text-emphasis-on-brand" />
                       <div>
                         <h3 className="font-semibold text-xl mb-2">
                           24/7 Emergency Support
@@ -384,7 +382,7 @@ export default function Contact() {
                           For urgent medical questions or emergencies during
                           your treatment
                         </p>
-                        <p className="text-accent font-semibold">
+                        <p className="text-emphasis-on-brand font-semibold">
                           Emergency Hotline: +20 122 9503333
                         </p>
                       </div>
