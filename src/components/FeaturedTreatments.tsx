@@ -15,11 +15,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import { useTreatments } from "@/hooks/useTreatments";
-import { selectPrimaryProcedure } from "@/lib/treatments";
-
-type TreatmentPresentation = {
-  image: string;
-};
+import {
+  isRemoteImageUrl,
+  resolveTreatmentCardImage,
+  selectPrimaryProcedure,
+} from "@/lib/treatments";
 
 type FeaturedTreatmentCard = {
   id: string;
@@ -33,28 +33,6 @@ type FeaturedTreatmentCard = {
   isFeatured: boolean;
 };
 
-const DEFAULT_PRESENTATION: TreatmentPresentation = {
-  image: "/hero-medical-facility.webp",
-};
-
-const TREATMENT_PRESENTATION: Record<string, TreatmentPresentation> = {
-  "cardiac-surgery": { image: "/surgery-suite.webp" },
-  cardiology: { image: "/surgery-suite.webp" },
-  "advanced-cardiac-bypass": { image: "/surgery-suite.webp" },
-  "tavr-program": { image: "/surgery-suite.webp" },
-  "eye-surgery": { image: "/consultation.webp" },
-  ophthalmology: { image: "/consultation.webp" },
-  "retinal-repair-macular-care": { image: "/consultation.webp" },
-  "laser-vision-elite": { image: "/consultation.webp" },
-  "dental-care": { image: "/surgery-suite.webp" },
-  dentistry: { image: "/surgery-suite.webp" },
-  "signature-smile-makeover": { image: "/surgery-suite.webp" },
-  "cosmetic-surgery": { image: "/consultation.webp" },
-  cosmetic: { image: "/consultation.webp" },
-  "orthopedic-surgery": { image: "/surgery-suite.webp" },
-  orthopedic: { image: "/surgery-suite.webp" },
-};
-
 const formatCurrency = (value: number, currency?: string | null) => {
   try {
     return new Intl.NumberFormat("en-US", {
@@ -66,25 +44,6 @@ const formatCurrency = (value: number, currency?: string | null) => {
     return `$${value.toLocaleString()}`;
   }
 };
-
-const getPresentation = (
-  slug?: string | null,
-  category?: string | null,
-): TreatmentPresentation => {
-  const slugKey = slug?.toLowerCase();
-  if (slugKey && TREATMENT_PRESENTATION[slugKey]) {
-    return TREATMENT_PRESENTATION[slugKey];
-  }
-
-  const categoryKey = category?.toLowerCase();
-  if (categoryKey && TREATMENT_PRESENTATION[categoryKey]) {
-    return TREATMENT_PRESENTATION[categoryKey];
-  }
-
-  return DEFAULT_PRESENTATION;
-};
-
-const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
 
 const FeaturedTreatments = () => {
   const router = useRouter();
@@ -112,8 +71,11 @@ const FeaturedTreatments = () => {
         return acc;
       }
 
-      const presentation = getPresentation(treatment.slug, treatment.category);
-      const cardImage = treatment.cardImageUrl ?? presentation.image;
+      const cardImage = resolveTreatmentCardImage({
+        slug: treatment.slug,
+        category: treatment.category,
+        cardImageUrl: treatment.cardImageUrl,
+      });
       const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
 
       const basePriceCandidate =
@@ -157,8 +119,8 @@ const FeaturedTreatments = () => {
             ? `From ${formatCurrency(basePriceCandidate, treatment.currency)}`
             : "Contact us for pricing",
         durationLabel,
-        image: cardImage,
-        fallbackImage: presentation.image,
+        image: cardImage.image,
+        fallbackImage: cardImage.fallbackImage,
         isFeatured: true,
         priceValue:
           typeof basePriceCandidate === "number" ? basePriceCandidate : null,
