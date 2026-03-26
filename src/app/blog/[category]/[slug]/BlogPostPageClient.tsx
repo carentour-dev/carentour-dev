@@ -92,7 +92,7 @@ export default function BlogPostPage() {
 
         <main>
           {/* Article Header */}
-          <section className="py-12 md:py-20 bg-gradient-card">
+          <section className="bg-surface-subtle py-12 md:py-20">
             <div className="container mx-auto px-4">
               <Button
                 variant="outline"
@@ -236,7 +236,7 @@ export default function BlogPostPage() {
           )}
 
           {/* CTA Section */}
-          <section className="py-20 bg-gradient-hero">
+          <section className="bg-surface-brand py-20">
             <div className="container mx-auto px-4 text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
                 Ready to Start Your Medical Journey?
@@ -246,7 +246,7 @@ export default function BlogPostPage() {
                 needs
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="accent" asChild>
+                <Button size="lg" variant="premium" asChild>
                   <Link href="/consultation">Get Free Consultation</Link>
                 </Button>
                 <Button size="lg" variant="hero" asChild>
