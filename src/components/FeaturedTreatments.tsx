@@ -221,14 +221,11 @@ const FeaturedTreatments = () => {
   const showEmptyState = !loading && !error && featuredTreatments.length === 0;
 
   return (
-    <section className="py-20 bg-gradient-card">
+    <section className="bg-surface-subtle py-20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Featured{" "}
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Treatments
-            </span>
+            Featured <span className="text-primary">Treatments</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Discover our most popular medical procedures, performed by
@@ -281,7 +278,7 @@ const FeaturedTreatments = () => {
                         <div className="absolute top-4 right-4 z-10">
                           <Badge
                             variant="secondary"
-                            className="bg-accent text-accent-foreground text-center"
+                            className="bg-emphasis-light text-emphasis text-center"
                           >
                             Featured
                           </Badge>
