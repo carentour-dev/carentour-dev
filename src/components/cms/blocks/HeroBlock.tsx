@@ -18,8 +18,8 @@ const backgroundPresets: Record<
   { className: string; layered?: "linear" | "glow" }
 > = {
   white: { className: "bg-background" },
-  muted: { className: "bg-muted/40" },
-  gradient: { className: "bg-gradient-card" },
+  muted: { className: "bg-surface-subtle" },
+  gradient: { className: "bg-surface-subtle" },
   primary: { className: "bg-primary text-primary-foreground" },
   layeredLinear: {
     className: "bg-[#040812] text-primary-foreground",
@@ -147,9 +147,7 @@ export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
               >
                 {block.heading}
                 {block.highlight ? (
-                  <span className="block bg-gradient-hero bg-clip-text text-transparent">
-                    {block.highlight}
-                  </span>
+                  <span className="block text-primary">{block.highlight}</span>
                 ) : null}
               </h1>
 
