@@ -267,7 +267,6 @@ export default function TreatmentDetails() {
                   sizes="(min-width: 1280px) 1200px, (min-width: 768px) 90vw, 100vw"
                   unoptimized={isRemoteImageUrl(treatment.heroImage)}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/10 via-transparent to-transparent" />
               </div>
             </div>
           </section>
