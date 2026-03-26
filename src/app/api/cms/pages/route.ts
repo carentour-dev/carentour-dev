@@ -9,7 +9,7 @@ export async function GET() {
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
-    .select("id, slug, title, status, updated_at, seo, content")
+    .select("id, slug, title, status, updated_at, seo, settings, content")
     .order("updated_at", { ascending: false });
 
   if (error) {
