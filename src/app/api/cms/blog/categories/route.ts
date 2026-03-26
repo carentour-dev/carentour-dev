@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
+
+const toBlogCategoryPath = (slug: string) =>
+  `/blog/${slug.replace(/^\/+/, "")}`;
+
+const toBlogPostPath = (categorySlug: string, postSlug: string) =>
+  `/blog/${categorySlug.replace(/^\/+/, "")}/${postSlug.replace(/^\/+/, "")}`;
 
 export async function GET() {
   try {
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await requirePermission("cms.write");
+    const context = await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
@@ -94,6 +101,28 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "Category ID is required" },
         { status: 400 },
+      );
+    }
+
+    const { data: existingCategory, error: existingCategoryError } =
+      await supabase
+        .from("blog_categories")
+        .select("id, slug")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (existingCategoryError) {
+      console.error("Error loading existing category:", existingCategoryError);
+      return NextResponse.json(
+        { error: "Failed to load existing category" },
+        { status: 500 },
+      );
+    }
+
+    if (!existingCategory) {
+      return NextResponse.json(
+        { error: "Category not found" },
+        { status: 404 },
       );
     }
 
@@ -110,6 +139,86 @@ export async function PUT(request: NextRequest) {
         { error: updateError.message || "Failed to update category" },
         { status: 400 },
       );
+    }
+
+    const oldSlug = existingCategory.slug;
+    const newSlug = category.slug;
+
+    if (oldSlug && newSlug && oldSlug !== newSlug) {
+      const oldCategoryPath = toBlogCategoryPath(oldSlug);
+      const newCategoryPath = toBlogCategoryPath(newSlug);
+
+      try {
+        await recordPathRedirect({
+          fromPath: oldCategoryPath,
+          toPath: newCategoryPath,
+          source: "cms.blog.categories.update",
+          sourceMetadata: { categoryId: id },
+          createdBy: context.user.id,
+        });
+      } catch (redirectError) {
+        console.error("Failed to record category redirect", {
+          categoryId: id,
+          oldCategoryPath,
+          newCategoryPath,
+          redirectError,
+        });
+      }
+
+      const { data: postsInCategory, error: postsInCategoryError } =
+        await supabase
+          .from("blog_posts")
+          .select("id, slug")
+          .eq("category_id", id);
+
+      if (postsInCategoryError) {
+        console.error("Failed to load posts for category redirect updates", {
+          categoryId: id,
+          postsInCategoryError,
+        });
+      } else {
+        for (const post of postsInCategory ?? []) {
+          if (!post.slug) continue;
+          const oldPostPath = toBlogPostPath(oldSlug, post.slug);
+          const newPostPath = toBlogPostPath(newSlug, post.slug);
+          if (oldPostPath === newPostPath) continue;
+
+          try {
+            await recordPathRedirect({
+              fromPath: oldPostPath,
+              toPath: newPostPath,
+              source: "cms.blog.categories.update",
+              sourceMetadata: { categoryId: id, postId: post.id },
+              createdBy: context.user.id,
+            });
+          } catch (postRedirectError) {
+            console.error("Failed to record category post redirect", {
+              categoryId: id,
+              postId: post.id,
+              oldPostPath,
+              newPostPath,
+              postRedirectError,
+            });
+          }
+        }
+      }
+
+      const revalidatePaths = [
+        "/blog",
+        oldCategoryPath,
+        newCategoryPath,
+        ...(postsInCategory ?? []).flatMap((post) =>
+          post.slug
+            ? [
+                toBlogPostPath(oldSlug, post.slug),
+                toBlogPostPath(newSlug, post.slug),
+              ]
+            : [],
+        ),
+      ];
+      revalidateSeoPaths(revalidatePaths);
+    } else if (newSlug) {
+      revalidateSeoPaths(["/blog", toBlogCategoryPath(newSlug)]);
     }
 
     return NextResponse.json({ category });
