@@ -290,6 +290,7 @@ export type Database = {
           created_at: string;
           id: string;
           seo: Json | null;
+          settings: Json | null;
           slug: string;
           status: string;
           title: string;
@@ -301,6 +302,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           seo?: Json | null;
+          settings?: Json | null;
           slug: string;
           status?: string;
           title: string;
@@ -312,6 +314,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           seo?: Json | null;
+          settings?: Json | null;
           slug?: string;
           status?: string;
           title?: string;
