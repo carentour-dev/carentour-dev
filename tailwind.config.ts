@@ -51,6 +51,33 @@ export default {
           foreground: "hsl(var(--accent-foreground))",
           light: "hsl(var(--accent-light))",
         },
+        highlight: {
+          DEFAULT: "hsl(var(--highlight))",
+          foreground: "hsl(var(--highlight-foreground))",
+          light: "hsl(var(--highlight-light))",
+        },
+        premium: {
+          DEFAULT: "hsl(var(--premium))",
+          foreground: "hsl(var(--premium-foreground))",
+          light: "hsl(var(--premium-light))",
+        },
+        emphasis: {
+          DEFAULT: "hsl(var(--emphasis))",
+          foreground: "hsl(var(--emphasis-foreground))",
+          light: "hsl(var(--emphasis-light))",
+          "on-brand": "hsl(var(--emphasis-on-brand))",
+        },
+        surface: {
+          subtle: "hsl(var(--surface-subtle))",
+          muted: "hsl(var(--surface-muted))",
+          elevated: "hsl(var(--surface-elevated))",
+          brand: "hsl(var(--surface-brand))",
+          "brand-foreground": "hsl(var(--surface-brand-foreground))",
+          "brand-soft": "hsl(var(--surface-brand-soft))",
+          "accent-soft": "hsl(var(--surface-accent-soft))",
+          "premium-soft": "hsl(var(--surface-premium-soft))",
+          border: "hsl(var(--surface-border))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -74,11 +101,13 @@ export default {
         "gradient-hero": "var(--gradient-hero)",
         "gradient-card": "var(--gradient-card)",
         "gradient-accent": "var(--gradient-accent)",
+        "gradient-premium": "var(--gradient-premium)",
       },
       boxShadow: {
         elegant: "var(--shadow-elegant)",
         "card-hover": "var(--shadow-card)",
         accent: "var(--shadow-accent)",
+        premium: "var(--shadow-premium)",
       },
       transitionTimingFunction: {
         smooth: "var(--transition-smooth)",
