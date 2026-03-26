@@ -45,8 +45,8 @@ const socialLinks = [
 
 const Footer = () => {
   const { resolvedTheme } = useTheme();
-  const [email, setEmail] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [email, setEmail] = useState("");
   const { subscribe, loading } = useNewsletter();
   const initialNavigationLinks = useInitialNavigationLinks();
   const [quickLinks, setQuickLinks] = useState<NavigationLink[]>(() =>
@@ -91,7 +91,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-foreground text-background">
+    <footer className="border-t border-border bg-background text-foreground">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -99,15 +99,15 @@ const Footer = () => {
             <Image
               src={
                 mounted && resolvedTheme === "dark"
-                  ? "/carentour-logo-dark.png"
-                  : "/carentour-logo-light.png"
+                  ? "/carentour-logo-light.png"
+                  : "/carentour-logo-dark.png"
               }
               alt="Care N Tour"
               width={260}
               height={94}
               className="mb-4 h-[72px] w-auto max-w-[280px] object-contain"
             />
-            <p className="text-background/80 mb-6">
+            <p className="mb-6 text-muted-foreground">
               Your trusted partner for premium medical care in Egypt. Combining
               excellence in healthcare with exceptional hospitality.
             </p>
@@ -119,7 +119,7 @@ const Footer = () => {
                   target="_blank"
                   rel="noreferrer noopener"
                   aria-label={`Visit our ${label}`}
-                  className="text-background/60 hover:text-accent transition-smooth"
+                  className="text-muted-foreground transition-smooth hover:text-foreground"
                 >
                   <Icon className="h-5 w-5" />
                 </Link>
@@ -129,7 +129,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 text-accent">
+            <h4 className="mb-4 text-lg font-semibold text-foreground">
               Quick Links
             </h4>
             <ul className="space-y-2">
@@ -137,7 +137,7 @@ const Footer = () => {
                 <li key={link.id}>
                   <Link
                     href={link.href}
-                    className="text-background/80 hover:text-accent transition-smooth"
+                    className="text-muted-foreground transition-smooth hover:text-foreground"
                   >
                     {link.label}
                   </Link>
@@ -148,31 +148,33 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 text-accent">
+            <h4 className="mb-4 text-lg font-semibold text-foreground">
               Contact Info
             </h4>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-accent" />
-                <span className="text-background/80">+20 122 9503333</span>
+                <Phone className="h-5 w-5 text-muted-foreground" />
+                <span className="text-muted-foreground">+20 122 9503333</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-accent" />
-                <span className="text-background/80">info@carentour.com</span>
+                <Mail className="h-5 w-5 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  info@carentour.com
+                </span>
               </div>
               <div className="flex items-center space-x-3">
-                <MapPin className="h-5 w-5 text-accent" />
-                <span className="text-background/80">Cairo, Egypt</span>
+                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <span className="text-muted-foreground">Cairo, Egypt</span>
               </div>
             </div>
           </div>
 
           {/* Newsletter */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 text-accent">
+            <h4 className="mb-4 text-lg font-semibold text-foreground">
               Stay Updated
             </h4>
-            <p className="text-background/80 mb-4">
+            <p className="mb-4 text-muted-foreground">
               Subscribe to our newsletter for the latest medical tourism
               updates.
             </p>
@@ -182,18 +184,18 @@ const Footer = () => {
                 placeholder="Your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-background/10 border-background/20 text-background placeholder:text-background/60"
+                className="bg-background text-foreground"
                 required
               />
-              <Button type="submit" variant="accent" disabled={loading}>
+              <Button type="submit" variant="premium" disabled={loading}>
                 {loading ? "Subscribing..." : "Subscribe"}
               </Button>
             </form>
           </div>
         </div>
 
-        <div className="border-t border-background/20 mt-12 pt-8 text-center">
-          <p className="text-background/60">
+        <div className="mt-12 border-t border-border pt-8 text-center">
+          <p className="text-muted-foreground">
             © {currentYear} Care N Tour. All rights reserved.
           </p>
         </div>
