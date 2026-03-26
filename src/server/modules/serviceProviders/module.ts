@@ -4,6 +4,8 @@ import { financeCounterpartySync } from "@/server/modules/finance/counterpartySy
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import type { Json } from "@/integrations/supabase/types";
+import { revalidateSeoPaths } from "@/lib/seo";
+import { recordPathRedirect } from "@/lib/seo/redirects";
 
 const serviceProvidersService = new CrudService(
   "service_providers",
@@ -194,28 +196,27 @@ export const serviceProviderController = {
       throw new ApiError(400, "No valid fields provided for update");
     }
 
+    const supabase = getSupabaseAdmin();
+    const { data: existingProvider, error: existingProviderError } =
+      await supabase
+        .from("service_providers")
+        .select("id, slug, procedure_ids")
+        .eq("id", serviceProviderId)
+        .maybeSingle();
+
+    if (existingProviderError) {
+      throw new ApiError(
+        500,
+        "Failed to load service provider before update",
+        existingProviderError.message,
+      );
+    }
+
+    if (!existingProvider) {
+      throw new ApiError(404, "Service provider not found");
+    }
+
     if (sanitizedUpdate.procedure_ids !== undefined) {
-      const supabase = getSupabaseAdmin();
-
-      const { data: existingProvider, error: existingProviderError } =
-        await supabase
-          .from("service_providers")
-          .select("procedure_ids")
-          .eq("id", serviceProviderId)
-          .maybeSingle();
-
-      if (existingProviderError) {
-        throw new ApiError(
-          500,
-          "Failed to load provider procedure links before update",
-          existingProviderError.message,
-        );
-      }
-
-      if (!existingProvider) {
-        throw new ApiError(404, "Service provider not found");
-      }
-
       const existingProcedureIds = (
         Array.isArray(existingProvider.procedure_ids)
           ? existingProvider.procedure_ids
@@ -295,6 +296,35 @@ export const serviceProviderController = {
       serviceProviderId,
       sanitizedUpdate,
     );
+
+    const previousSlug =
+      typeof existingProvider.slug === "string"
+        ? existingProvider.slug.trim()
+        : "";
+    const nextSlug =
+      typeof updated.slug === "string" ? updated.slug.trim() : previousSlug;
+
+    if (previousSlug && nextSlug && previousSlug !== nextSlug) {
+      const previousPath = `/medical-facilities/${previousSlug}`;
+      const nextPath = `/medical-facilities/${nextSlug}`;
+      try {
+        await recordPathRedirect({
+          fromPath: previousPath,
+          toPath: nextPath,
+          source: "admin.service_providers.update",
+          sourceMetadata: { serviceProviderId },
+        });
+      } catch (redirectError) {
+        console.error("Failed to record service provider redirect", {
+          serviceProviderId,
+          previousSlug,
+          nextSlug,
+          redirectError,
+        });
+      }
+
+      revalidateSeoPaths([previousPath, nextPath, "/medical-facilities"]);
+    }
 
     financeCounterpartySync
       .syncServiceProviderEvent(serviceProviderId)
