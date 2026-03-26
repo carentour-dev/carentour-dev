@@ -10,6 +10,10 @@ import DoctorsSection from "@/components/DoctorsSection";
 import CTASection from "@/components/CTASection";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
+import {
+  resolveHomeHeroImageUrl,
+  shouldUseLegacyHomepageLayout,
+} from "@/lib/cms/pageSettings";
 import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
 import {
   maybeRedirectFromLegacyPath,
@@ -77,8 +81,12 @@ export default async function HomePage() {
   await maybeRedirectFromLegacyPath(PATHNAME);
   const cmsPage = await getPublishedPageBySlug("home");
   const seo = await getSeo(cmsPage);
+  const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
+  const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
+    cmsPage?.settings,
+  );
 
-  if (cmsPage?.content?.length) {
+  if (cmsPage?.content?.length && !useLegacyHomepageLayout) {
     return (
       <>
         <StructuredDataScripts payload={seo.jsonLd} />
@@ -99,7 +107,7 @@ export default async function HomePage() {
       <div className="min-h-screen">
         <Header />
         <main>
-          <Hero />
+          <Hero backgroundImageUrl={heroImageUrl} />
           <FeaturedTreatments />
           <ProcessSection />
           <USPSection />
