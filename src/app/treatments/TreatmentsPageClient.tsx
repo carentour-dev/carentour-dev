@@ -1,7 +1,8 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -13,7 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { buildPriceComparison, selectPrimaryProcedure } from "@/lib/treatments";
+import {
+  buildPriceComparison,
+  isRemoteImageUrl,
+  resolveTreatmentCardImage,
+  selectPrimaryProcedure,
+} from "@/lib/treatments";
 import {
   Activity,
   ChevronDown,
@@ -63,6 +69,9 @@ export default function Treatments() {
   const [expandedComparison, setExpandedComparison] = useState<string | null>(
     null,
   );
+  const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
+    Record<string, true>
+  >({});
   const [searchTerm, setSearchTerm] = useState("");
 
   const visibleTreatments = useMemo(
@@ -76,9 +85,13 @@ export default function Treatments() {
 
   const cards = useMemo(() => {
     return visibleTreatments.map((treatment) => {
-      const key = treatment.slug || treatment.category || treatment.name;
       const iconKey = treatment.slug || treatment.category || "";
       const Icon = iconMap[iconKey.toLowerCase()] || Stethoscope;
+      const cardImage = resolveTreatmentCardImage({
+        slug: treatment.slug,
+        category: treatment.category,
+        cardImageUrl: treatment.cardImageUrl,
+      });
 
       const dbComparison = buildPriceComparison(treatment.procedures);
       const comparison = dbComparison ?? null;
@@ -91,7 +104,8 @@ export default function Treatments() {
           : (primaryProcedure?.egyptPrice ?? null);
 
       return {
-        id: treatment.slug || treatment.id,
+        id: treatment.id,
+        slug: treatment.slug,
         title: treatment.name,
         icon: Icon,
         summary:
@@ -102,6 +116,8 @@ export default function Treatments() {
         basePrice: basePriceValue,
         currency: treatment.currency || "USD",
         isActive: treatment.isActive !== false,
+        image: cardImage.image,
+        fallbackImage: cardImage.fallbackImage,
         comparison,
       };
     });
@@ -124,6 +140,23 @@ export default function Treatments() {
   }, [cards, searchTerm]);
 
   const comparisonEntries = cards.filter((card) => card.comparison);
+
+  const handleCardImageError = useCallback(
+    (treatmentId: string, image: string, fallbackImage: string) => {
+      if (!isRemoteImageUrl(image) || image === fallbackImage) {
+        return;
+      }
+
+      setImageFallbackByTreatmentId((current) => {
+        if (current[treatmentId]) {
+          return current;
+        }
+
+        return { ...current, [treatmentId]: true };
+      });
+    },
+    [],
+  );
 
   if (loading) {
     return (
@@ -236,14 +269,35 @@ export default function Treatments() {
                     category.basePrice !== null
                       ? formatCurrency(category.basePrice, category.currency)
                       : "Contact us for pricing";
+                  const imageSrc = imageFallbackByTreatmentId[category.id]
+                    ? category.fallbackImage
+                    : category.image;
 
                   return (
                     <Card
                       key={category.id}
-                      className="border-border/50 hover:shadow-card-hover transition-spring group"
+                      className="border-border/50 hover:shadow-card-hover transition-spring group overflow-hidden"
                     >
+                      <div className="relative h-48 overflow-hidden">
+                        <Image
+                          src={imageSrc}
+                          alt={category.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-spring"
+                          sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                          unoptimized={isRemoteImageUrl(imageSrc)}
+                          onError={() =>
+                            handleCardImageError(
+                              category.id,
+                              imageSrc,
+                              category.fallbackImage,
+                            )
+                          }
+                        />
+                      </div>
+
                       <CardHeader className="text-center">
-                        <Icon className="h-10 w-10 text-primary mx-auto mb-4" />
+                        <Icon className="h-8 w-8 text-primary mx-auto mb-4" />
                         <CardTitle className="text-xl font-bold text-foreground">
                           {category.title}
                         </CardTitle>
@@ -273,7 +327,7 @@ export default function Treatments() {
                               className="w-full"
                               variant="outline"
                               onClick={() =>
-                                router.push(`/treatments/${category.id}`)
+                                router.push(`/treatments/${category.slug}`)
                               }
                             >
                               Learn More
@@ -283,7 +337,7 @@ export default function Treatments() {
                               className="w-full"
                               onClick={() =>
                                 router.push(
-                                  `/start-journey?treatment=${category.id}`,
+                                  `/start-journey?treatment=${category.slug}`,
                                 )
                               }
                             >
