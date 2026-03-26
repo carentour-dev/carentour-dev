@@ -1,9 +1,18 @@
-"use client";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import AdminLayoutClient from "./AdminLayoutClient";
 
-import { ReactNode } from "react";
-import { AdminShell } from "@/components/admin/AdminShell";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  // Wrap every admin route with the shared navigation shell.
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }
