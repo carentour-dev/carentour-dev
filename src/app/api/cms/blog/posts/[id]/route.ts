@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
+import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
+
+const toBlogPostPath = (categorySlug: string, postSlug: string) =>
+  `/blog/${categorySlug.replace(/^\/+/, "")}/${postSlug.replace(/^\/+/, "")}`;
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +58,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requirePermission("cms.write");
+    const context = await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
     const { id } = await params;
 
@@ -79,6 +83,27 @@ export async function PUT(
     } = body;
 
     const sanitizedContent = sanitizeContentPayload(content);
+
+    const { data: existingPost, error: existingPostError } = await supabase
+      .from("blog_posts")
+      .select("id, slug, category:blog_categories(slug)")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingPostError) {
+      console.error("Error loading existing blog post:", existingPostError);
+      return NextResponse.json(
+        { error: "Failed to load existing blog post" },
+        { status: 500 },
+      );
+    }
+
+    if (!existingPost) {
+      return NextResponse.json(
+        { error: "Blog post not found" },
+        { status: 404 },
+      );
+    }
 
     // Update blog post
     const { data: post, error: updateError } = await supabase
@@ -131,6 +156,52 @@ export async function PUT(
         if (tagsError) {
           console.error("Error updating tags:", tagsError);
         }
+      }
+    }
+
+    const { data: updatedPostPath, error: updatedPostPathError } =
+      await supabase
+        .from("blog_posts")
+        .select("slug, category:blog_categories(slug)")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (!updatedPostPathError && updatedPostPath) {
+      const oldCategorySlug = (existingPost as any)?.category?.slug;
+      const newCategorySlug = (updatedPostPath as any)?.category?.slug;
+      const oldPostSlug = existingPost.slug;
+      const newPostSlug = updatedPostPath.slug;
+
+      if (oldCategorySlug && newCategorySlug && oldPostSlug && newPostSlug) {
+        const oldPath = toBlogPostPath(oldCategorySlug, oldPostSlug);
+        const newPath = toBlogPostPath(newCategorySlug, newPostSlug);
+
+        if (oldPath !== newPath) {
+          try {
+            await recordPathRedirect({
+              fromPath: oldPath,
+              toPath: newPath,
+              source: "cms.blog.posts.update",
+              sourceMetadata: { postId: id },
+              createdBy: context.user.id,
+            });
+          } catch (redirectError) {
+            console.error("Failed to record blog post redirect", {
+              postId: id,
+              oldPath,
+              newPath,
+              redirectError,
+            });
+          }
+        }
+
+        revalidateSeoPaths([
+          "/blog",
+          `/blog/${oldCategorySlug}`,
+          `/blog/${newCategorySlug}`,
+          oldPath,
+          newPath,
+        ]);
       }
     }
 
