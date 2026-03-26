@@ -1,269 +1,175 @@
-"use client";
+import type { Metadata } from "next";
+import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
+import {
+  blogPostingSchema,
+  maybeRedirectFromLegacyPath,
+  resolveSeo,
+  webPageSchema,
+} from "@/lib/seo";
+import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import BlogPostPageClient from "./BlogPostPageClient";
 
-import { use } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, User, Eye } from "lucide-react";
-import { useBlogPost } from "@/hooks/useBlogPost";
-import { useRelatedPosts } from "@/hooks/useRelatedPosts";
-import { useTableOfContents } from "@/hooks/useTableOfContents";
-import { BlogContent } from "@/components/blog/BlogContent";
-import { TableOfContents } from "@/components/blog/TableOfContents";
-import { SocialShare } from "@/components/blog/SocialShare";
-import { ReadingProgress } from "@/components/blog/ReadingProgress";
-import { CategoryBadge } from "@/components/blog/CategoryBadge";
-import { TagList } from "@/components/blog/TagList";
-import { AuthorCard } from "@/components/blog/AuthorCard";
-import { RelatedPosts } from "@/components/blog/RelatedPosts";
-import { NewsletterSubscribe } from "@/components/blog/NewsletterSubscribe";
-// SEO metadata is handled by generateMetadata export in server components
-import { formatDistanceToNow } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
+export const revalidate = 300;
 
-interface BlogPostPageProps {
+type PageProps = {
   params: Promise<{ category: string; slug: string }>;
+};
+
+type BlogPostSeoRecord = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_keywords: string | null;
+  og_image: string | null;
+  featured_image: string | null;
+  publish_date: string | null;
+  updated_at: string | null;
+  category: { slug: string; name: string } | null;
+  author: { name: string } | null;
+};
+
+async function getBlogPost(categorySlug: string, slug: string) {
+  const supabase = getSupabaseAdmin();
+
+  const { data: category, error: categoryError } = await supabase
+    .from("blog_categories")
+    .select("id, slug")
+    .eq("slug", categorySlug)
+    .maybeSingle();
+
+  if (categoryError) {
+    console.error("Failed to load blog category for post SEO", {
+      categorySlug,
+      error: categoryError,
+    });
+    return null;
+  }
+
+  if (!category) {
+    return null;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const { data: post, error: postError } = await supabase
+    .from("blog_posts")
+    .select(
+      "id, slug, title, excerpt, seo_title, seo_description, seo_keywords, og_image, featured_image, publish_date, updated_at, category:blog_categories(slug, name), author:blog_authors(name)",
+    )
+    .eq("slug", slug)
+    .eq("category_id", category.id)
+    .eq("status", "published")
+    .or(`publish_date.is.null,publish_date.lte.${nowIso}`)
+    .maybeSingle();
+
+  if (postError) {
+    console.error("Failed to load blog post for SEO", {
+      categorySlug,
+      slug,
+      error: postError,
+    });
+    return null;
+  }
+
+  return post as BlogPostSeoRecord | null;
 }
 
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const { category, slug } = use(params);
-  const router = useRouter();
+function parseSeoKeywords(keywords: string | null): string[] | undefined {
+  if (!keywords) return undefined;
 
-  const { data: post, isLoading, error } = useBlogPost(category, slug);
-  const { data: relatedPosts } = useRelatedPosts(post?.id);
+  const normalized = keywords
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
-  // All hooks must be called before conditional returns (Rules of Hooks)
-  const tocItems = useTableOfContents(post?.content);
+  return normalized.length > 0 ? normalized : undefined;
+}
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto space-y-8">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-96 w-full" />
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+async function getSeo(categorySlug: string, slug: string) {
+  const pathname = `/blog/${categorySlug}/${slug}`;
+  const post = await getBlogPost(categorySlug, slug);
 
-  if (error || !post) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="py-20">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-2xl font-bold mb-4 text-foreground">
-              Article Not Found
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              The article you&apos;re looking for doesn&apos;t exist or has been
-              removed.
-            </p>
-            <Button onClick={() => router.push("/blog")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Blog
-            </Button>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  const postTitle = post?.seo_title ?? post?.title;
+  const postDescription = post?.seo_description ?? post?.excerpt;
+  const defaultTitle = postTitle ?? "Blog Article | Care N Tour";
+  const defaultDescription = postDescription ?? "Read the latest blog article.";
+
+  return resolveSeo({
+    routeKey: pathname,
+    pathname,
+    defaults: {
+      title: defaultTitle,
+      description: defaultDescription,
+    },
+    source: post
+      ? {
+          title: postTitle,
+          description: postDescription,
+          keywords: parseSeoKeywords(post.seo_keywords),
+          ogImageUrl: post.og_image ?? post.featured_image,
+        }
+      : undefined,
+    schema: post
+      ? [
+          webPageSchema({
+            urlPath: pathname,
+            title: defaultTitle,
+            description: defaultDescription,
+            breadcrumbs: [
+              { name: "Blog", path: "/blog" },
+              {
+                name: post.category?.name ?? "Category",
+                path: `/blog/${post.category?.slug ?? categorySlug}`,
+              },
+              { name: post.title, path: pathname },
+            ],
+          }),
+          blogPostingSchema({
+            title: post.title,
+            description: postDescription,
+            path: pathname,
+            imageUrl: post.og_image ?? post.featured_image,
+            publishedTime: post.publish_date,
+            modifiedTime: post.updated_at,
+            authorName: post.author?.name,
+            keywords: parseSeoKeywords(post.seo_keywords),
+          }),
+        ]
+      : webPageSchema({
+          urlPath: pathname,
+          title: defaultTitle,
+          description: defaultDescription,
+        }),
+    indexable: Boolean(post),
+    openGraphType: "article",
+    imageUrl: post?.og_image ?? post?.featured_image,
+    publishedTime: post?.publish_date ?? undefined,
+    modifiedTime: post?.updated_at ?? undefined,
+  });
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { category, slug } = await params;
+  const seo = await getSeo(category, slug);
+  return seo.metadata;
+}
+
+export default async function BlogPostPage({ params }: PageProps) {
+  const { category, slug } = await params;
+  const pathname = `/blog/${category}/${slug}`;
+
+  await maybeRedirectFromLegacyPath(pathname);
+  const seo = await getSeo(category, slug);
 
   return (
     <>
-      <ReadingProgress />
-
-      <div className="min-h-screen">
-        <Header />
-
-        <main>
-          {/* Article Header */}
-          <section className="py-12 md:py-20 bg-gradient-card">
-            <div className="container mx-auto px-4">
-              <Button
-                variant="outline"
-                className="mb-6"
-                onClick={() => router.push("/blog")}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Blog
-              </Button>
-
-              <div className="max-w-4xl mx-auto">
-                {post.category && (
-                  <CategoryBadge
-                    name={post.category.name}
-                    color={post.category.color}
-                    className="mb-4"
-                  />
-                )}
-
-                <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
-                  {post.title}
-                </h1>
-
-                {post.excerpt && (
-                  <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-                    {post.excerpt}
-                  </p>
-                )}
-
-                {/* Post Meta */}
-                <div className="flex flex-wrap items-center gap-4 md:gap-6 text-sm md:text-base text-muted-foreground mb-8">
-                  {post.author && (
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4" />
-                      <span>{post.author.name}</span>
-                    </div>
-                  )}
-                  {post.publish_date && (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {formatDistanceToNow(new Date(post.publish_date), {
-                          addSuffix: true,
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  {post.reading_time && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{post.reading_time} min read</span>
-                    </div>
-                  )}
-                  <div className="flex items-center space-x-2">
-                    <Eye className="h-4 w-4" />
-                    <span>{post.view_count || 0} views</span>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                {post.tags && post.tags.length > 0 && (
-                  <div className="mb-8">
-                    <TagList tags={post.tags} />
-                  </div>
-                )}
-
-                {/* Social Share */}
-                <SocialShare
-                  url={`/blog/${post.category?.slug}/${post.slug}`}
-                  title={post.title}
-                  description={post.excerpt}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Featured Image */}
-          {post.featured_image && (
-            <section className="py-0 mt-8">
-              <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto">
-                  <div className="relative aspect-video overflow-hidden rounded-lg">
-                    <Image
-                      src={post.featured_image}
-                      alt={post.title}
-                      fill
-                      className="object-cover"
-                      sizes="(min-width: 1024px) 60vw, 100vw"
-                      priority
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Article Content with TOC */}
-          <section className="py-12 md:py-16 bg-background">
-            <div className="container mx-auto px-4">
-              <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-8">
-                  {/* Main Content */}
-                  <div className="max-w-4xl">
-                    <BlogContent content={post.content} />
-
-                    {/* Author Card */}
-                    {post.author && (
-                      <div className="mt-12 pt-8 border-t border-border">
-                        <AuthorCard author={post.author} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Sidebar - Table of Contents */}
-                  <aside className="hidden lg:block">
-                    <div className="sticky top-24">
-                      <TableOfContents items={tocItems} />
-                    </div>
-                  </aside>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Newsletter Subscription */}
-          <section className="py-16 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="max-w-4xl mx-auto">
-                <NewsletterSubscribe />
-              </div>
-            </div>
-          </section>
-
-          {/* Related Posts */}
-          {relatedPosts && relatedPosts.length > 0 && (
-            <section className="py-16 bg-background">
-              <div className="container mx-auto px-4">
-                <RelatedPosts posts={relatedPosts} />
-              </div>
-            </section>
-          )}
-
-          {/* CTA Section */}
-          <section className="py-20 bg-gradient-hero">
-            <div className="container mx-auto px-4 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
-                Ready to Start Your Medical Journey?
-              </h2>
-              <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-                Get personalized advice and a free consultation for your medical
-                needs
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="accent" asChild>
-                  <Link href="/consultation">Get Free Consultation</Link>
-                </Button>
-                <Button size="lg" variant="hero" asChild>
-                  <Link href="/contact">Contact Us Today</Link>
-                </Button>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        <Footer />
-      </div>
+      <StructuredDataScripts payload={seo.jsonLd} />
+      <BlogPostPageClient />
     </>
   );
 }
-
-// SEO is handled by generateMetadata in the parent layout or through Next.js metadata API
