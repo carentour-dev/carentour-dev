@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
+import { cmsPageSettingsSchema } from "@/lib/cms/pageSettings";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 
 const toCmsPath = (slug: string) =>
@@ -16,7 +17,7 @@ export async function GET(
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
-    .select("id, slug, title, seo, content, status, updated_at")
+    .select("id, slug, title, seo, settings, content, status, updated_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -50,6 +51,21 @@ export async function PUT(
     );
   }
 
+  const parsedSettings = cmsPageSettingsSchema.safeParse(
+    updates.settings ?? {},
+  );
+  if (!parsedSettings.success) {
+    const issue = parsedSettings.error.issues[0];
+    const fieldPath = issue?.path?.length
+      ? issue.path.map(String).join(".")
+      : undefined;
+    const message = issue?.message ?? "Invalid page settings";
+    return NextResponse.json(
+      { error: fieldPath ? `${message} (field: ${fieldPath})` : message },
+      { status: 400 },
+    );
+  }
+
   const supabaseAdmin = getSupabaseAdmin();
   const { data: existingPage, error: existingPageError } = await supabaseAdmin
     .from("cms_pages")
@@ -74,11 +90,12 @@ export async function PUT(
       slug: updates.slug,
       title: updates.title,
       seo: updates.seo,
+      settings: parsedSettings.data,
       content: parsedContent.data,
       status: updates.status,
     })
     .eq("id", id)
-    .select("id, slug, title, seo, content, status, updated_at")
+    .select("id, slug, title, seo, settings, content, status, updated_at")
     .single();
 
   if (error) {
