@@ -84,7 +84,7 @@ export default function PatientProfilePage() {
         </section>
 
         {/* Patient Header */}
-        <section className="py-12 bg-gradient-card">
+        <section className="bg-surface-subtle py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-4">
@@ -249,7 +249,7 @@ export default function PatientProfilePage() {
         )}
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-hero">
+        <section className="bg-surface-brand py-20">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
               Ready to Start Your Journey?
@@ -261,7 +261,7 @@ export default function PatientProfilePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                variant="accent"
+                variant="premium"
                 onClick={() => router.push("/consultation")}
               >
                 Get Free Consultation
