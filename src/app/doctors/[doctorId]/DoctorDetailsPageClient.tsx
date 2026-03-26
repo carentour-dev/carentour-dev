@@ -87,7 +87,7 @@ export default function DoctorDetail() {
         </section>
 
         {/* Doctor Header */}
-        <section className="py-12 bg-gradient-card">
+        <section className="bg-surface-subtle py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -296,7 +296,7 @@ export default function DoctorDetail() {
                 )}
 
                 {/* Contact CTA */}
-                <Card className="bg-gradient-card">
+                <Card className="bg-surface-subtle">
                   <CardHeader>
                     <CardTitle>Ready to Schedule?</CardTitle>
                   </CardHeader>
