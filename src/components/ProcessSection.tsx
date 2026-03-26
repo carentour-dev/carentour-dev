@@ -53,10 +53,7 @@ const ProcessSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Your Journey to{" "}
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Better Health
-            </span>
+            Your Journey to <span className="text-primary">Better Health</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             A seamless, step-by-step process designed to make your medical
@@ -73,7 +70,7 @@ const ProcessSection = () => {
                 className="relative group overflow-visible hover:shadow-card-hover transition-spring border-border/50"
               >
                 {/* Step Number */}
-                <div className="absolute -top-4 -left-4 w-8 h-8 bg-gradient-hero rounded-full flex items-center justify-center text-background font-bold text-sm z-10">
+                <div className="absolute -top-4 -left-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
                   {index + 1}
                 </div>
 
