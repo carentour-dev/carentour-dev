@@ -1,4 +1,10 @@
 export { HeroBlock } from "./HeroBlock";
+export { HomeHeroBlock } from "./HomeHeroBlock";
+export { FeaturedTreatmentsHomeBlock } from "./FeaturedTreatmentsHomeBlock";
+export { FeaturedTreatmentsHomePreview } from "./FeaturedTreatmentsHomePreview";
+export { JourneyStepsBlock } from "./JourneyStepsBlock";
+export { DifferentiatorsBlock } from "./DifferentiatorsBlock";
+export { HomeCtaBlock } from "./HomeCtaBlock";
 export { StatGridBlock } from "./StatGridBlock";
 export { RichTextBlock } from "./RichTextBlock";
 export { ImageFeatureBlock } from "./ImageFeatureBlock";
