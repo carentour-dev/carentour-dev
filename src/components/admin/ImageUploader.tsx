@@ -22,6 +22,10 @@ type ImageUploaderProps = {
   mode?: "image" | "file";
   emptyStateTitle?: string;
   emptyStateDescription?: string;
+  acceptedMimeTypes?: string[];
+  maxSizeMb?: number;
+  minWidth?: number;
+  minHeight?: number;
 };
 
 export function ImageUploader({
@@ -36,11 +40,80 @@ export function ImageUploader({
   mode = "image",
   emptyStateTitle = "Drag & drop or click to upload",
   emptyStateDescription = "PNG, JPG up to 5MB",
+  acceptedMimeTypes,
+  maxSizeMb,
+  minWidth,
+  minHeight,
 }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isRemoteAsset = typeof value === "string" && /^https?:\/\//.test(value);
+
+  const readImageDimensions = (file: File) =>
+    new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new window.Image();
+      image.onload = () => {
+        resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        URL.revokeObjectURL(objectUrl);
+      };
+      image.onerror = () => {
+        reject(new Error("Unable to read image dimensions."));
+        URL.revokeObjectURL(objectUrl);
+      };
+      image.src = objectUrl;
+    });
+
+  const validateFile = async (file: File) => {
+    if (
+      acceptedMimeTypes?.length &&
+      file.type &&
+      !acceptedMimeTypes.includes(file.type)
+    ) {
+      const allowedTypes = acceptedMimeTypes
+        .map((type) => type.replace("image/", "").toUpperCase())
+        .join(", ");
+      setError(`Unsupported file type. Use ${allowedTypes}.`);
+      return false;
+    }
+
+    if (typeof maxSizeMb === "number") {
+      const maxBytes = maxSizeMb * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setError(`File is too large. Maximum size is ${maxSizeMb}MB.`);
+        return false;
+      }
+    }
+
+    if (
+      mode === "image" &&
+      (typeof minWidth === "number" || typeof minHeight === "number")
+    ) {
+      try {
+        const dimensions = await readImageDimensions(file);
+        if (
+          (typeof minWidth === "number" && dimensions.width < minWidth) ||
+          (typeof minHeight === "number" && dimensions.height < minHeight)
+        ) {
+          const widthLabel =
+            typeof minWidth === "number" ? `${minWidth}px` : "auto";
+          const heightLabel =
+            typeof minHeight === "number" ? `${minHeight}px` : "auto";
+          setError(
+            `Image is too small. Minimum size is ${widthLabel} x ${heightLabel}.`,
+          );
+          return false;
+        }
+      } catch (validationError) {
+        console.error(validationError);
+        setError("Unable to validate the selected image.");
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const extractStoragePath = (url: string | null) => {
     if (!url) return null;
@@ -119,6 +192,11 @@ export function ImageUploader({
     };
 
     try {
+      const isValid = await validateFile(file);
+      if (!isValid) {
+        return;
+      }
+
       const originalName = (() => {
         const candidate = file.name.split(/[/\\]/).pop()?.trim() ?? "";
         if (candidate.length > 0) {
@@ -169,6 +247,9 @@ export function ImageUploader({
   return (
     <div className={cn("space-y-2", className)}>
       <Label className="text-sm font-medium text-foreground">{label}</Label>
+      {description ? (
+        <p className="text-xs leading-5 text-muted-foreground">{description}</p>
+      ) : null}
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-muted-foreground/40 bg-muted/40 p-4">
         {value ? (
           mode === "image" ? (
