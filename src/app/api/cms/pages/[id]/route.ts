@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
+import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
+
+const toCmsPath = (slug: string) =>
+  slug === "home" ? "/" : `/${slug.replace(/^\/+/, "")}`;
 
 export async function GET(
   _: NextRequest,
@@ -30,7 +34,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await requirePermission("cms.write");
+  const context = await requirePermission("cms.write");
   const updates = await req.json();
   const sanitizedContent = sanitizeCmsBlocks(updates.content ?? []);
   const parsedContent = blockArraySchema.safeParse(sanitizedContent);
@@ -47,6 +51,23 @@ export async function PUT(
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+  const { data: existingPage, error: existingPageError } = await supabaseAdmin
+    .from("cms_pages")
+    .select("id, slug, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingPageError) {
+    return NextResponse.json(
+      { error: existingPageError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!existingPage) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
     .update({
@@ -63,6 +84,35 @@ export async function PUT(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  const oldPath = toCmsPath(existingPage.slug);
+  const newPath = toCmsPath(data.slug);
+
+  if (oldPath !== newPath) {
+    try {
+      await recordPathRedirect({
+        fromPath: oldPath,
+        toPath: newPath,
+        source: "cms.pages.update",
+        sourceMetadata: {
+          pageId: id,
+          previousStatus: existingPage.status,
+          nextStatus: data.status,
+        },
+        createdBy: context.user.id,
+      });
+    } catch (redirectError) {
+      console.error("Failed to record CMS page redirect", {
+        pageId: id,
+        oldPath,
+        newPath,
+        redirectError,
+      });
+    }
+  }
+
+  revalidateSeoPaths([oldPath, newPath]);
+
   return NextResponse.json({ page: data });
 }
 
@@ -73,9 +123,27 @@ export async function DELETE(
   const { id } = await params;
   await requirePermission("cms.write");
   const supabaseAdmin = getSupabaseAdmin();
+
+  const { data: existingPage, error: existingError } = await supabaseAdmin
+    .from("cms_pages")
+    .select("slug")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  if (!existingPage) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const { error } = await supabaseAdmin.from("cms_pages").delete().eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  revalidateSeoPaths([toCmsPath(existingPage.slug)]);
+
   return NextResponse.json({ ok: true });
 }
