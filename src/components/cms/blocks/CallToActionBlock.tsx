@@ -15,12 +15,12 @@ const backgroundPresets: Record<
   }
 > = {
   muted: {
-    section: "bg-muted/40",
+    section: "bg-surface-subtle",
     text: "text-foreground",
     description: "text-muted-foreground",
   },
   accent: {
-    section: "bg-primary/10",
+    section: "bg-surface-brand-soft",
     text: "text-primary",
     description: "text-primary/80",
   },
