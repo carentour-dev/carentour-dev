@@ -77,7 +77,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
   const roles = profile?.roles ?? [];
   const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
-  const hasCmsAccess = hasCmsWorkspaceAccess(permissions);
+  const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
   const moduleTabs = useMemo(
     () =>
       buildModuleTabs({
