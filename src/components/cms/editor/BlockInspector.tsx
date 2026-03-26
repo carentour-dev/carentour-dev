@@ -4267,6 +4267,743 @@ function HeroBlockFields({
   );
 }
 
+function InlineActionFields({
+  form,
+  path,
+  title,
+}: {
+  form: AnyForm;
+  path: "primaryAction" | "secondaryAction";
+  title: string;
+}) {
+  return (
+    <div className="space-y-4">
+      <Label className="text-sm font-semibold">{title}</Label>
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`${path}.label` as const}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Button text"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${path}.href` as const}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Link</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="/start-journey"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${path}.variant` as const}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Style</FormLabel>
+              <Select
+                value={field.value ?? "default"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {blockActionVariants.map((variant) => (
+                    <SelectItem key={variant} value={variant}>
+                      {variant}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${path}.target` as const}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Target</FormLabel>
+              <Select
+                value={field.value ?? "_self"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="_self">Same tab</SelectItem>
+                  <SelectItem value="_blank">New tab</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function HomeHeroBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"homeHero">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="headingPrefix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Heading prefix</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="headingHighlight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Highlighted line</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="headingSuffix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Heading suffix</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={5}
+                  placeholder="Supports line breaks for the two-paragraph hero copy."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="backgroundImageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Background image</FormLabel>
+              <ImageUploader
+                label="Hero background"
+                value={field.value ?? null}
+                onChange={(url) =>
+                  form.setValue("backgroundImageUrl", url ?? "", {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                bucket="media"
+                folder="cms/homepage"
+              />
+              <FormDescription>
+                Upload or paste the hero background image.
+              </FormDescription>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <InlineActionFields
+        form={form as AnyForm}
+        path="primaryAction"
+        title="Primary Action"
+      />
+      <InlineActionFields
+        form={form as AnyForm}
+        path="secondaryAction"
+        title="Secondary Action"
+      />
+    </div>
+  );
+}
+
+function FeaturedTreatmentsHomeBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"featuredTreatmentsHome">>;
+}) {
+  const listToArray = (value: string) =>
+    value
+      .split(/[\n,]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Featured Treatments"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Supporting section copy"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="limit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Card count</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={8}
+                  value={field.value ?? 4}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="featuredOnly"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Featured only</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Limit automatic selection to featured treatments.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="manualTreatments"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Manual treatment slugs</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={4}
+                placeholder="dental-implants&#10;ivf-program"
+                value={(field.value ?? []).join("\n")}
+                onChange={(event) =>
+                  field.onChange(listToArray(event.target.value))
+                }
+              />
+            </FormControl>
+            <FormDescription>
+              One treatment slug per line. When provided, order is preserved and
+              live treatment data fills the cards.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
+function JourneyStepsBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"journeySteps">>;
+}) {
+  const steps = useFieldArray({
+    control: form.control,
+    name: "steps",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="highlight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Highlighted word</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        {steps.fields.map((step, index) => (
+          <div
+            key={step.id}
+            className="space-y-4 rounded-lg border border-dashed border-border/60 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-foreground">
+                Step {index + 1}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => index > 0 && steps.move(index, index - 1)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    index < steps.fields.length - 1 &&
+                    steps.move(index, index + 1)
+                  }
+                  disabled={index === steps.fields.length - 1}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => steps.remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`steps.${index}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`steps.${index}.icon`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lucide icon</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="MessageCircle"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`steps.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea rows={3} {...field} value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            steps.append({
+              icon: "MessageCircle",
+              title: "New step",
+              description: "Describe this step.",
+            })
+          }
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add step
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DifferentiatorsBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"differentiators">>;
+}) {
+  const items = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="highlight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Highlighted word</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        {items.fields.map((item, index) => (
+          <div
+            key={item.id}
+            className="space-y-4 rounded-lg border border-dashed border-border/60 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-foreground">
+                Card {index + 1}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => index > 0 && items.move(index, index - 1)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    index < items.fields.length - 1 &&
+                    items.move(index, index + 1)
+                  }
+                  disabled={index === items.fields.length - 1}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => items.remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`items.${index}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.highlight`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.icon`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lucide icon</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Award"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`items.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea rows={3} {...field} value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            items.append({
+              icon: "Award",
+              title: "New differentiator",
+              description: "Describe the differentiator.",
+              highlight: "Proof point",
+            })
+          }
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add card
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function HomeCtaBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"homeCta">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="headingPrefix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Heading prefix</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="headingHighlight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Highlighted words</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <InlineActionFields
+        form={form as AnyForm}
+        path="primaryAction"
+        title="Primary Action"
+      />
+      <InlineActionFields
+        form={form as AnyForm}
+        path="secondaryAction"
+        title="Secondary Action"
+      />
+    </div>
+  );
+}
+
 function StatGridBlockFields({
   form,
 }: {
@@ -6520,6 +7257,13 @@ const blockEditors: Record<
   (form: UseFormReturn<any>) => React.ReactElement
 > = {
   hero: (form) => <HeroBlockFields form={form} />,
+  homeHero: (form) => <HomeHeroBlockFields form={form} />,
+  featuredTreatmentsHome: (form) => (
+    <FeaturedTreatmentsHomeBlockFields form={form} />
+  ),
+  journeySteps: (form) => <JourneyStepsBlockFields form={form} />,
+  differentiators: (form) => <DifferentiatorsBlockFields form={form} />,
+  homeCta: (form) => <HomeCtaBlockFields form={form} />,
   statGrid: (form) => <StatGridBlockFields form={form} />,
   richText: (form) => <RichTextBlockFields form={form} />,
   imageFeature: (form) => <ImageFeatureBlockFields form={form} />,
@@ -6684,6 +7428,16 @@ export function blockSummary(block: BlockInstance): string {
   switch (block.type) {
     case "hero":
       return block.heading;
+    case "homeHero":
+      return `${block.headingPrefix} ${block.headingHighlight}`.trim();
+    case "featuredTreatmentsHome":
+      return block.title ?? `${block.limit} homepage treatments`;
+    case "journeySteps":
+      return `${block.steps.length} step${block.steps.length === 1 ? "" : "s"}`;
+    case "differentiators":
+      return `${block.items.length} differentiator${block.items.length === 1 ? "" : "s"}`;
+    case "homeCta":
+      return `${block.headingPrefix} ${block.headingHighlight}`.trim();
     case "statGrid":
       return `${block.items.length} stats`;
     case "richText":
