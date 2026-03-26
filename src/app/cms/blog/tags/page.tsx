@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,15 +26,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Loader2, Tag as TagIcon, Search } from "lucide-react";
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  Loader2,
+  Tag as TagIcon,
+  Search,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function TagsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: tags, isLoading } = useQuery({
     queryKey: ["blog-tags-cms"],
@@ -56,7 +62,15 @@ export default function TagsPage() {
     tag.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const maxCount = Math.max(...(tags?.map((t: any) => t.post_count) || [1]));
+  const handleOpenDialog = (tag?: any) => {
+    setEditingTag(tag || null);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setEditingTag(null);
+    setDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -68,14 +82,22 @@ export default function TagsPage() {
             Manage tags for your blog posts
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setEditingTag(null);
+            }
+          }}
+        >
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
               New Tag
             </Button>
           </DialogTrigger>
-          <TagDialog onClose={() => setDialogOpen(false)} />
+          <TagDialog tag={editingTag} onClose={handleCloseDialog} />
         </Dialog>
       </div>
 
@@ -94,19 +116,23 @@ export default function TagsPage() {
         </CardContent>
       </Card>
 
-      {/* Tags Cloud */}
+      {/* Tags List */}
       {isLoading ? (
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+        <div className="space-y-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-20" />
           ))}
         </div>
       ) : filteredTags && filteredTags.length > 0 ? (
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-3">
+          <CardContent className="p-0">
+            <div className="divide-y">
               {filteredTags.map((tag: any) => (
-                <TagChip key={tag.id} tag={tag} maxCount={maxCount} />
+                <TagRow
+                  key={tag.id}
+                  tag={tag}
+                  onEdit={() => handleOpenDialog(tag)}
+                />
               ))}
             </div>
           </CardContent>
@@ -121,7 +147,7 @@ export default function TagsPage() {
                 : "No tags yet. Create your first tag!"}
             </p>
             {!searchTerm && (
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => handleOpenDialog()}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Tag
               </Button>
@@ -133,19 +159,10 @@ export default function TagsPage() {
   );
 }
 
-function TagChip({ tag, maxCount }: { tag: any; maxCount: number }) {
+function TagRow({ tag, onEdit }: { tag: any; onEdit: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
-
-  // Calculate font size based on post count (tag cloud effect)
-  const getSize = () => {
-    if (maxCount === 0) return "text-sm";
-    const ratio = tag.post_count / maxCount;
-    if (ratio > 0.7) return "text-lg";
-    if (ratio > 0.4) return "text-base";
-    return "text-sm";
-  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -170,6 +187,7 @@ function TagChip({ tag, maxCount }: { tag: any; maxCount: number }) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["blog-tags-cms"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags"] });
     } catch (error) {
       toast({
         title: "Delete failed",
@@ -182,61 +200,72 @@ function TagChip({ tag, maxCount }: { tag: any; maxCount: number }) {
   };
 
   return (
-    <div className="group relative">
-      <Badge
-        variant="secondary"
-        className={`${getSize()} px-4 py-2 hover:bg-secondary/80 transition-all cursor-default`}
-      >
-        <TagIcon className="mr-2 h-3 w-3" />
-        {tag.name}
-        <span className="ml-2 text-xs opacity-70">({tag.post_count})</span>
-      </Badge>
+    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <TagIcon className="h-4 w-4 text-muted-foreground" />
+          <p className="font-semibold text-foreground truncate">{tag.name}</p>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground truncate">
+          /blog/tag/{tag.slug}
+        </p>
+      </div>
 
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button
-            variant="destructive"
-            size="icon"
-            className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            disabled={deleting}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this tag?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Posts with this tag will be
-              unaffected.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary">{tag.post_count} posts</Badge>
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          <Edit3 className="mr-2 h-3.5 w-3.5" />
+          Edit
+        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" disabled={deleting}>
+              <Trash2 className="mr-2 h-3.5 w-3.5" />
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this tag?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. Posts with this tag will be
+                unaffected.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
 
-function TagDialog({ onClose }: { onClose: () => void }) {
-  const initialName = "";
-  const initialSlug = "";
+function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
+  const initialName = tag?.name || "";
+  const initialSlug = tag?.slug || "";
 
   const [name, setName] = useState(initialName);
   const [slug, setSlug] = useState(initialSlug);
-  const [autoSlug, setAutoSlug] = useState(true);
+  const [autoSlug, setAutoSlug] = useState(!tag);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setName(tag?.name || "");
+    setSlug(tag?.slug || "");
+    setAutoSlug(!tag?.id);
+  }, [tag?.id, tag?.name, tag?.slug]);
 
   const generateSlug = (text: string) => {
     return text
@@ -263,12 +292,13 @@ function TagDialog({ onClose }: { onClose: () => void }) {
       const token = session?.access_token;
 
       const payload = {
+        id: tag?.id,
         name: name.trim(),
         slug: slug.trim(),
       };
 
       const res = await fetch("/api/cms/blog/tags", {
-        method: "POST",
+        method: tag ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -278,19 +308,20 @@ function TagDialog({ onClose }: { onClose: () => void }) {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Failed to create tag");
+        throw new Error(error.error || "Failed to save tag");
       }
 
       toast({
-        title: "Tag created",
-        description: `"${name}" has been created successfully.`,
+        title: tag ? "Tag updated" : "Tag created",
+        description: `"${name}" has been saved successfully.`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["blog-tags-cms"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags"] });
       onClose();
     } catch (error: any) {
       toast({
-        title: "Create failed",
+        title: "Save failed",
         description: error.message,
         variant: "destructive",
       });
@@ -311,7 +342,7 @@ function TagDialog({ onClose }: { onClose: () => void }) {
   return (
     <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
-        <DialogTitle>Create Tag</DialogTitle>
+        <DialogTitle>{tag ? "Edit Tag" : "Create Tag"}</DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -346,7 +377,7 @@ function TagDialog({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2 pt-4">
           <Button type="submit" disabled={submitting} className="flex-1">
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create
+            {tag ? "Save" : "Create"}
           </Button>
           <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
