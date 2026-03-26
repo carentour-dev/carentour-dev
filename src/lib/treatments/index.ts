@@ -63,8 +63,66 @@ export type NormalizedTreatment = {
   procedures: TreatmentProcedure[];
 };
 
+export type TreatmentCardImageInput = {
+  slug?: string | null;
+  category?: string | null;
+  cardImageUrl?: string | null;
+};
+
+const DEFAULT_TREATMENT_CARD_IMAGE = "/hero-medical-facility.webp";
+
+const TREATMENT_CARD_IMAGE_BY_KEY: Record<string, string> = {
+  "cardiac-surgery": "/surgery-suite.webp",
+  cardiology: "/surgery-suite.webp",
+  "advanced-cardiac-bypass": "/surgery-suite.webp",
+  "tavr-program": "/surgery-suite.webp",
+  "eye-surgery": "/consultation.webp",
+  ophthalmology: "/consultation.webp",
+  "retinal-repair-macular-care": "/consultation.webp",
+  "laser-vision-elite": "/consultation.webp",
+  "dental-care": "/surgery-suite.webp",
+  dentistry: "/surgery-suite.webp",
+  "signature-smile-makeover": "/surgery-suite.webp",
+  "cosmetic-surgery": "/consultation.webp",
+  cosmetic: "/consultation.webp",
+  "orthopedic-surgery": "/surgery-suite.webp",
+  orthopedic: "/surgery-suite.webp",
+};
+
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
+
+export const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
+
+export const getTreatmentCardFallbackImage = (
+  slug?: string | null,
+  category?: string | null,
+) => {
+  const slugKey = slug?.toLowerCase();
+  if (slugKey && TREATMENT_CARD_IMAGE_BY_KEY[slugKey]) {
+    return TREATMENT_CARD_IMAGE_BY_KEY[slugKey];
+  }
+
+  const categoryKey = category?.toLowerCase();
+  if (categoryKey && TREATMENT_CARD_IMAGE_BY_KEY[categoryKey]) {
+    return TREATMENT_CARD_IMAGE_BY_KEY[categoryKey];
+  }
+
+  return DEFAULT_TREATMENT_CARD_IMAGE;
+};
+
+export const resolveTreatmentCardImage = ({
+  slug,
+  category,
+  cardImageUrl,
+}: TreatmentCardImageInput) => {
+  const fallbackImage = getTreatmentCardFallbackImage(slug, category);
+
+  return {
+    image: cardImageUrl ?? fallbackImage,
+    fallbackImage,
+  };
+};
 
 const normalizeProcedureRow = (
   row: RawTreatmentProcedureRow,
