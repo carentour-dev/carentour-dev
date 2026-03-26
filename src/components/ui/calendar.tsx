@@ -40,7 +40,7 @@ const CalendarDayButton: typeof DefaultDayButton = ({
         isSelected &&
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         isRangeMiddle &&
-          "bg-accent text-accent-foreground hover:bg-accent focus:bg-accent",
+          "bg-highlight text-highlight-foreground hover:bg-highlight focus:bg-highlight",
         isToday &&
           !isSelected &&
           !isRangeMiddle &&
@@ -94,12 +94,12 @@ function Calendar({
         hidden: "invisible",
         disabled: "text-muted-foreground opacity-50",
         outside:
-          "text-muted-foreground opacity-50 data-[selected]:bg-accent/50 data-[selected]:text-muted-foreground data-[selected]:opacity-30",
+          "text-muted-foreground opacity-50 data-[selected]:bg-highlight/50 data-[selected]:text-muted-foreground data-[selected]:opacity-30",
         selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         today: "text-primary font-semibold",
         range_middle:
-          "bg-accent text-accent-foreground data-[selected]:bg-accent data-[selected]:text-accent-foreground",
+          "bg-highlight text-highlight-foreground data-[selected]:bg-highlight data-[selected]:text-highlight-foreground",
         range_start: "rounded-l-md",
         range_end: "rounded-r-md",
         ...classNames,
