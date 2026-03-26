@@ -3,6 +3,7 @@ import { CrudService } from "@/server/modules/common/crudService";
 import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import type { Database } from "@/integrations/supabase/types";
+import { recordPathRedirect } from "@/lib/seo/redirects";
 
 const treatmentsService = new CrudService("treatments", "treatment");
 
@@ -395,6 +396,9 @@ export const treatmentController = {
   async update(id: unknown, payload: unknown) {
     const treatmentId = treatmentIdSchema.parse(id);
     const parsed = updateTreatmentSchema.parse(payload);
+    const existingTreatment = (await treatmentsService.getById(
+      treatmentId,
+    )) as Database["public"]["Tables"]["treatments"]["Row"];
 
     if (Object.keys(parsed).length === 0) {
       throw new ApiError(400, "No fields provided for update");
@@ -442,6 +446,27 @@ export const treatmentController = {
       treatmentId,
       updatePayload,
     )) as Database["public"]["Tables"]["treatments"]["Row"];
+
+    const previousSlug = existingTreatment.slug?.trim();
+    const nextSlug = updated.slug?.trim();
+
+    if (previousSlug && nextSlug && previousSlug !== nextSlug) {
+      try {
+        await recordPathRedirect({
+          fromPath: `/treatments/${previousSlug}`,
+          toPath: `/treatments/${nextSlug}`,
+          source: "admin.treatments.update",
+          sourceMetadata: { treatmentId },
+        });
+      } catch (redirectError) {
+        console.error("Failed to record treatment redirect", {
+          treatmentId,
+          previousSlug,
+          nextSlug,
+          redirectError,
+        });
+      }
+    }
 
     if (parsed.procedures !== undefined) {
       await upsertProcedures(treatmentId, parsed.procedures ?? []);
