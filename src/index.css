@@ -25,10 +25,26 @@
     --secondary-foreground: 0 0% 100%;
     --secondary-light: 175 45% 90%;
 
-    /* Luxury Gold - Premium Service */
-    --accent: 35 85% 65%;
-    --accent-foreground: 210 20% 15%;
-    --accent-light: 35 60% 95%;
+    /* Interactive highlight - shared focus and selection states */
+    --highlight: 210 90% 94%;
+    --highlight-foreground: 210 68% 28%;
+    --highlight-light: 210 100% 97%;
+
+    /* Legacy accent aliases kept for shared UI compatibility */
+    --accent: 210 90% 94%;
+    --accent-foreground: 210 68% 28%;
+    --accent-light: 210 100% 97%;
+
+    /* Premium gold - reserved for brand CTAs and badges */
+    --premium: 35 85% 65%;
+    --premium-foreground: 210 20% 15%;
+    --premium-light: 35 60% 95%;
+
+    /* Readable emphasis accents for marketing copy and icons */
+    --emphasis: 210 68% 38%;
+    --emphasis-foreground: 0 0% 100%;
+    --emphasis-light: 210 72% 95%;
+    --emphasis-on-brand: 210 100% 94%;
 
     --muted: 210 15% 96%;
     --muted-foreground: 210 15% 45%;
@@ -43,26 +59,43 @@
     --input: 210 15% 95%;
     --ring: 210 85% 45%;
 
-    /* Custom Design Tokens */
+    /* Refined clinical surface tokens */
+    --surface-subtle: 210 40% 98%;
+    --surface-muted: 210 32% 95%;
+    --surface-elevated: 0 0% 100%;
+    --surface-brand: 211 85% 42%;
+    --surface-brand-foreground: 0 0% 100%;
+    --surface-brand-soft: 210 85% 96%;
+    --surface-accent-soft: 210 80% 95%;
+    --surface-premium-soft: 35 80% 94%;
+    --surface-border: 210 24% 86%;
+
+    /* Legacy gradient aliases kept for CMS compatibility */
     --gradient-hero: linear-gradient(
-      135deg,
-      hsl(var(--primary)) 0%,
-      hsl(var(--secondary)) 100%
+      180deg,
+      hsl(var(--surface-brand)) 0%,
+      hsl(var(--surface-brand)) 100%
     );
     --gradient-card: linear-gradient(
       180deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--muted)) 100%
+      hsl(var(--surface-subtle)) 0%,
+      hsl(var(--surface-muted)) 100%
     );
     --gradient-accent: linear-gradient(
-      135deg,
+      180deg,
       hsl(var(--accent)) 0%,
-      hsl(35 75% 75%) 100%
+      hsl(var(--accent)) 100%
+    );
+    --gradient-premium: linear-gradient(
+      180deg,
+      hsl(var(--premium)) 0%,
+      hsl(var(--premium)) 100%
     );
 
-    --shadow-elegant: 0 10px 40px -10px hsl(var(--primary) / 0.15);
-    --shadow-card: 0 4px 20px -4px hsl(var(--foreground) / 0.08);
-    --shadow-accent: 0 8px 30px -8px hsl(var(--accent) / 0.3);
+    --shadow-elegant: 0 18px 44px -18px hsl(var(--primary) / 0.22);
+    --shadow-card: 0 12px 30px -18px hsl(var(--foreground) / 0.12);
+    --shadow-accent: 0 12px 30px -16px hsl(var(--accent) / 0.28);
+    --shadow-premium: 0 12px 30px -16px hsl(var(--premium) / 0.28);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -112,10 +145,26 @@
     --secondary-foreground: 0 0% 100%;
     --secondary-light: 175 45% 20%;
 
-    /* Luxury Gold - Dark mode adaptation */
-    --accent: 35 75% 55%;
-    --accent-foreground: 222 20% 8%;
-    --accent-light: 35 60% 15%;
+    /* Interactive highlight - shared focus and selection states */
+    --highlight: 210 34% 24%;
+    --highlight-foreground: 210 95% 92%;
+    --highlight-light: 210 28% 18%;
+
+    /* Legacy accent aliases kept for shared UI compatibility */
+    --accent: 210 34% 24%;
+    --accent-foreground: 210 95% 92%;
+    --accent-light: 210 28% 18%;
+
+    /* Premium gold - reserved for brand CTAs and badges */
+    --premium: 35 75% 55%;
+    --premium-foreground: 222 20% 8%;
+    --premium-light: 35 60% 15%;
+
+    /* Readable emphasis accents for marketing copy and icons */
+    --emphasis: 210 78% 72%;
+    --emphasis-foreground: 222 20% 8%;
+    --emphasis-light: 210 42% 18%;
+    --emphasis-on-brand: 210 100% 94%;
 
     --muted: 222 15% 15%;
     --muted-foreground: 210 20% 65%;
@@ -130,26 +179,43 @@
     --input: 222 15% 15%;
     --ring: 210 85% 60%;
 
-    /* Custom Design Tokens - Dark mode */
+    /* Refined clinical surface tokens - Dark mode */
+    --surface-subtle: 222 18% 11%;
+    --surface-muted: 222 16% 14%;
+    --surface-elevated: 222 18% 16%;
+    --surface-brand: 210 78% 52%;
+    --surface-brand-foreground: 0 0% 100%;
+    --surface-brand-soft: 211 52% 18%;
+    --surface-accent-soft: 210 30% 20%;
+    --surface-premium-soft: 35 45% 18%;
+    --surface-border: 222 16% 24%;
+
+    /* Legacy gradient aliases kept for CMS compatibility */
     --gradient-hero: linear-gradient(
-      135deg,
-      hsl(var(--primary)) 0%,
-      hsl(var(--secondary)) 100%
+      180deg,
+      hsl(var(--surface-brand)) 0%,
+      hsl(var(--surface-brand)) 100%
     );
     --gradient-card: linear-gradient(
       180deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--muted)) 100%
+      hsl(var(--surface-subtle)) 0%,
+      hsl(var(--surface-muted)) 100%
     );
     --gradient-accent: linear-gradient(
-      135deg,
+      180deg,
       hsl(var(--accent)) 0%,
-      hsl(35 65% 45%) 100%
+      hsl(var(--accent)) 100%
+    );
+    --gradient-premium: linear-gradient(
+      180deg,
+      hsl(var(--premium)) 0%,
+      hsl(var(--premium)) 100%
     );
 
-    --shadow-elegant: 0 10px 40px -10px hsl(var(--primary) / 0.25);
-    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.4);
-    --shadow-accent: 0 8px 30px -8px hsl(var(--accent) / 0.4);
+    --shadow-elegant: 0 18px 44px -18px hsl(var(--primary) / 0.3);
+    --shadow-card: 0 14px 34px -20px hsl(0 0% 0% / 0.42);
+    --shadow-accent: 0 12px 30px -16px hsl(var(--accent) / 0.36);
+    --shadow-premium: 0 12px 30px -16px hsl(var(--premium) / 0.36);
 
     --sidebar-background: 222 20% 12%;
     --sidebar-foreground: 210 40% 95%;
