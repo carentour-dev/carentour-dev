@@ -114,7 +114,7 @@ export default function MedicalFacilitiesPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <section className="bg-gradient-card py-16 sm:py-20">
+        <section className="bg-surface-subtle py-16 sm:py-20">
           <div className="container mx-auto px-4">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-4">
