@@ -2,20 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  FilterComboBox,
+  type FilterComboBoxOption,
+} from "@/components/ui/filter-combobox";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -46,6 +43,30 @@ type Filters = {
   city: string;
   specialty: string;
   procedureId: string;
+};
+
+const ALL_OPTION_VALUE = "__all__";
+
+const buildFilterOptions = (
+  options: string[],
+  allLabel: string,
+  selectedValue: string,
+): FilterComboBoxOption[] => {
+  const values = new Set(options);
+
+  if (selectedValue) {
+    values.add(selectedValue);
+  }
+
+  return [
+    { value: ALL_OPTION_VALUE, label: allLabel, searchTerms: [allLabel] },
+    ...Array.from(values)
+      .sort((a, b) => a.localeCompare(b))
+      .map((option) => ({
+        value: option,
+        label: option,
+      })),
+  ];
 };
 
 const fetchFacilities = async (filters: Filters): Promise<ApiResponse> => {
@@ -81,17 +102,29 @@ export default function MedicalFacilitiesPage() {
   const [city, setCity] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [procedureId, setProcedureId] = useState("");
+  const [selectedProcedureOption, setSelectedProcedureOption] =
+    useState<ProcedureOption | null>(null);
+  const deferredSearch = useDeferredValue(search);
 
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: [
       "medical-facilities",
-      { search, country, city, specialty, procedureId },
+      { search: deferredSearch, country, city, specialty, procedureId },
     ],
     queryFn: () =>
-      fetchFacilities({ search, country, city, specialty, procedureId }),
+      fetchFacilities({
+        search: deferredSearch,
+        country,
+        city,
+        specialty,
+        procedureId,
+      }),
   });
 
-  const specialtyOptions = data?.filters?.specialties ?? [];
+  const specialtyOptions = useMemo(
+    () => data?.filters?.specialties ?? [],
+    [data?.filters?.specialties],
+  );
 
   const proceduresMap = useMemo(() => {
     return buildProcedureMap(data?.filters?.procedures ?? []);
@@ -103,12 +136,121 @@ export default function MedicalFacilitiesPage() {
     setCity("");
     setSpecialty("");
     setProcedureId("");
+    setSelectedProcedureOption(null);
   };
 
   const providers = data?.providers ?? [];
-  const countryOptions = data?.filters?.countries ?? [];
-  const cityOptions = data?.filters?.cities ?? [];
-  const procedureOptions = data?.filters?.procedures ?? [];
+  const countryOptions = useMemo(
+    () => data?.filters?.countries ?? [],
+    [data?.filters?.countries],
+  );
+  const cityOptions = useMemo(
+    () => data?.filters?.cities ?? [],
+    [data?.filters?.cities],
+  );
+  const procedureOptions = useMemo(
+    () => data?.filters?.procedures ?? [],
+    [data?.filters?.procedures],
+  );
+  const countryComboOptions = useMemo(
+    () => buildFilterOptions(countryOptions, "All countries", country),
+    [countryOptions, country],
+  );
+  const cityComboOptions = useMemo(
+    () => buildFilterOptions(cityOptions, "All cities", city),
+    [cityOptions, city],
+  );
+  const specialtyComboOptions = useMemo(
+    () => buildFilterOptions(specialtyOptions, "All specialties", specialty),
+    [specialtyOptions, specialty],
+  );
+  const procedureComboOptions = useMemo(() => {
+    const options = new Map<string, FilterComboBoxOption>();
+
+    options.set(ALL_OPTION_VALUE, {
+      value: ALL_OPTION_VALUE,
+      label: "All procedures",
+      searchTerms: ["All procedures"],
+    });
+
+    procedureOptions.forEach((option) => {
+      options.set(option.id, {
+        value: option.id,
+        label: option.name,
+        description: option.treatmentName ?? undefined,
+        searchTerms: [option.name, option.treatmentName ?? ""],
+      });
+    });
+
+    if (selectedProcedureOption && !options.has(selectedProcedureOption.id)) {
+      options.set(selectedProcedureOption.id, {
+        value: selectedProcedureOption.id,
+        label: selectedProcedureOption.name,
+        description: selectedProcedureOption.treatmentName ?? undefined,
+        searchTerms: [
+          selectedProcedureOption.name,
+          selectedProcedureOption.treatmentName ?? "",
+        ],
+      });
+    }
+
+    const allOption = options.get(ALL_OPTION_VALUE)!;
+    options.delete(ALL_OPTION_VALUE);
+
+    return [
+      allOption,
+      ...Array.from(options.values()).sort((a, b) =>
+        a.label.localeCompare(b.label),
+      ),
+    ];
+  }, [procedureOptions, selectedProcedureOption]);
+
+  useEffect(() => {
+    if (!procedureId) {
+      setSelectedProcedureOption(null);
+      return;
+    }
+
+    const matchedProcedure = procedureOptions.find(
+      (option) => option.id === procedureId,
+    );
+
+    if (matchedProcedure) {
+      setSelectedProcedureOption(matchedProcedure);
+    }
+  }, [procedureId, procedureOptions]);
+
+  const handleCountryChange = (value: string) => {
+    setCountry(value === ALL_OPTION_VALUE ? "" : value);
+    setCity("");
+  };
+
+  const handleCityChange = (value: string) => {
+    setCity(value === ALL_OPTION_VALUE ? "" : value);
+  };
+
+  const handleSpecialtyChange = (value: string) => {
+    setSpecialty(value === ALL_OPTION_VALUE ? "" : value);
+    setProcedureId("");
+    setSelectedProcedureOption(null);
+  };
+
+  const handleProcedureChange = (value: string) => {
+    if (value === ALL_OPTION_VALUE) {
+      setProcedureId("");
+      setSelectedProcedureOption(null);
+      return;
+    }
+
+    setProcedureId(value);
+
+    const matchedProcedure = procedureOptions.find(
+      (option) => option.id === value,
+    );
+    if (matchedProcedure) {
+      setSelectedProcedureOption(matchedProcedure);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -160,84 +302,45 @@ export default function MedicalFacilitiesPage() {
               />
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                <Select
-                  value={country || "all"}
-                  onValueChange={(value) =>
-                    setCountry(value === "all" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All countries" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All countries</SelectItem>
-                    {countryOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={city || "all"}
-                  onValueChange={(value) =>
-                    setCity(value === "all" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All cities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All cities</SelectItem>
-                    {cityOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={specialty || "all"}
-                  onValueChange={(value) =>
-                    setSpecialty(value === "all" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All specialties" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All specialties</SelectItem>
-                    {specialtyOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={procedureId || "all"}
-                  onValueChange={(value) =>
-                    setProcedureId(value === "all" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All procedures" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All procedures</SelectItem>
-                    {procedureOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                        {option.treatmentName
-                          ? ` • ${option.treatmentName}`
-                          : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterComboBox
+                  value={country || ALL_OPTION_VALUE}
+                  options={countryComboOptions}
+                  placeholder="All countries"
+                  searchPlaceholder="Search countries..."
+                  emptyLabel="No countries found."
+                  popoverWidth="trigger"
+                  onChange={handleCountryChange}
+                />
+                <FilterComboBox
+                  value={city || ALL_OPTION_VALUE}
+                  options={cityComboOptions}
+                  placeholder="All cities"
+                  searchPlaceholder="Search cities..."
+                  emptyLabel="No cities found."
+                  popoverWidth="trigger"
+                  onChange={handleCityChange}
+                />
+                <FilterComboBox
+                  value={specialty || ALL_OPTION_VALUE}
+                  options={specialtyComboOptions}
+                  placeholder="All specialties"
+                  searchPlaceholder="Search specialties..."
+                  emptyLabel="No specialties found."
+                  popoverWidth="adaptive"
+                  onChange={handleSpecialtyChange}
+                />
+                <FilterComboBox
+                  value={procedureId || ALL_OPTION_VALUE}
+                  options={procedureComboOptions}
+                  placeholder="All procedures"
+                  searchPlaceholder="Search procedures..."
+                  emptyLabel="No procedures found."
+                  popoverWidth="wide"
+                  onChange={handleProcedureChange}
+                />
                 <Button
                   variant="outline"
-                  className="w-full lg:h-full"
+                  className="h-12 w-full lg:h-full"
                   onClick={clearFilters}
                   disabled={
                     !search && !country && !city && !specialty && !procedureId
