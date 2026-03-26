@@ -260,7 +260,7 @@ export default function TravelInfoFallbackClient() {
       <Header />
       <main>
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-6">
@@ -268,7 +268,7 @@ export default function TravelInfoFallbackClient() {
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Your Complete Guide to
-                <span className="block bg-gradient-hero bg-clip-text text-transparent">
+                <span className="block text-primary">
                   Medical Tourism in Egypt
                 </span>
               </h1>
@@ -860,7 +860,7 @@ export default function TravelInfoFallbackClient() {
                     </CardContent>
                   </Card>
                 </div>
-                <Card className="border-border/50 bg-gradient-card">
+                <Card className="border-border/50 bg-surface-subtle">
                   <CardContent className="p-8 text-center">
                     <h3 className="text-2xl font-bold text-foreground mb-4">
                       Need Assistance?
