@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -22,6 +23,15 @@ export type ComboOption = {
   value: string;
   label: string;
   description?: string;
+  badge?: string;
+  badgeVariant?:
+    | "default"
+    | "secondary"
+    | "ghost"
+    | "success"
+    | "destructive"
+    | "outline";
+  searchTerms?: string[];
 };
 
 export type ComboBoxProps = {
@@ -64,7 +74,13 @@ export const ComboBox = ({
     if (!search) return options;
     const lower = search.toLowerCase();
     return options.filter((option) => {
-      const fields = [option.label, option.description ?? "", option.value];
+      const fields = [
+        option.label,
+        option.description ?? "",
+        option.value,
+        option.badge ?? "",
+        ...(option.searchTerms ?? []),
+      ];
       return fields.some((field) => field.toLowerCase().includes(lower));
     });
   }, [options, search]);
@@ -137,10 +153,22 @@ export const ComboBox = ({
                           <span className="text-base font-semibold text-foreground">
                             {option.label}
                           </span>
-                          {option.description ? (
-                            <p className="text-sm text-muted-foreground">
-                              {option.description}
-                            </p>
+                          {option.description || option.badge ? (
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                              {option.description ? (
+                                <p className="min-w-0 flex-1 truncate">
+                                  {option.description}
+                                </p>
+                              ) : null}
+                              {option.badge ? (
+                                <Badge
+                                  variant={option.badgeVariant ?? "outline"}
+                                  className="h-5 px-2 py-0 text-[10px] normal-case tracking-normal"
+                                >
+                                  {option.badge}
+                                </Badge>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       </div>
