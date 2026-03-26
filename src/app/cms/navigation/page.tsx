@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  ExternalLink,
   Loader2,
   Plus,
   Trash2,
@@ -61,8 +63,16 @@ import {
 } from "@/components/admin/hooks/useAdminFetch";
 import { useToast } from "@/hooks/use-toast";
 import type { NavigationLink } from "@/lib/navigation";
+import {
+  resolveHomePageLayoutMode,
+  sanitizeCmsPageSettings,
+  type CmsPageSettings,
+  type HomePageLayoutMode,
+} from "@/lib/cms/pageSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 const QUERY_KEY = ["cms", "navigation-links"] as const;
+const CMS_PAGES_QUERY_KEY = ["cms", "pages"] as const;
 
 const kindOptions: Array<{ value: NavigationLink["kind"]; label: string }> = [
   { value: "system", label: "System" },
@@ -89,6 +99,14 @@ const linkSchema = z.object({
 });
 
 type LinkFormValues = z.infer<typeof linkSchema>;
+type CmsPageSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  status: "draft" | "published";
+  settings?: CmsPageSettings | null;
+  content?: unknown[];
+};
 
 const PROTECTED_KINDS = new Set<NavigationLink["kind"]>(["system"]);
 
@@ -103,6 +121,27 @@ function useNavigationLinks() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => adminFetch<NavigationLink[]>("/api/navigation/links"),
+  });
+}
+
+function useCmsPages() {
+  return useQuery<{ pages: CmsPageSummary[] }>({
+    queryKey: CMS_PAGES_QUERY_KEY,
+    queryFn: async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const response = await fetch("/api/cms/pages", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load CMS pages");
+      }
+
+      return response.json();
+    },
   });
 }
 
@@ -205,6 +244,7 @@ export default function CmsNavigationPage() {
   const [hasReorderChanges, setHasReorderChanges] = useState(false);
 
   const navigationQuery = useNavigationLinks();
+  const cmsPagesQuery = useCmsPages();
   const rawLinks = navigationQuery.data;
   const [orderedLinks, setOrderedLinks] = useState<NavigationLink[]>(() =>
     normalizeLinksOrder(rawLinks ?? []),
@@ -233,6 +273,16 @@ export default function CmsNavigationPage() {
 
   const storedLinks = rawLinks ?? [];
   const links = orderedLinks;
+  const homePage = cmsPagesQuery.data?.pages.find(
+    (page) => page.slug === "home",
+  );
+  const homeLayoutMode = homePage
+    ? resolveHomePageLayoutMode(
+        sanitizeCmsPageSettings(homePage.settings),
+        homePage.status,
+        Array.isArray(homePage.content) ? homePage.content.length : 0,
+      )
+    : null;
   const isFirstLink = (index: number) => index === 0;
   const isLastLink = (index: number) => index === links.length - 1;
 
@@ -452,6 +502,53 @@ export default function CmsNavigationPage() {
           </Button>
         </div>
       </div>
+
+      <Card className="border border-border/60">
+        <CardHeader className="gap-3">
+          <CardTitle className="text-base">Home route status</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Navigation always points Home to <code>/</code>. This shows which
+            homepage that route currently renders.
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {cmsPagesQuery.isLoading ? (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Checking homepage mode…
+            </div>
+          ) : homePage && homeLayoutMode ? (
+            <>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    Current renderer
+                  </span>
+                  <HomeLayoutModeBadge mode={homeLayoutMode} />
+                  <span className="text-xs text-muted-foreground">
+                    Home page is {homePage.status}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {homeLayoutMode === "cms"
+                    ? "Visitors opening the Home link see the CMS block-based homepage."
+                    : "Visitors opening the Home link see the legacy hardcoded homepage."}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/cms/home/edit">
+                  Open Home page settings
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Home page settings are unavailable right now.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -803,5 +900,20 @@ export default function CmsNavigationPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function HomeLayoutModeBadge({ mode }: { mode: HomePageLayoutMode }) {
+  return (
+    <span
+      className={cn(
+        badgeVariants({ variant: "outline" }),
+        mode === "cms"
+          ? "border-primary/40 bg-primary/10 text-primary-700 dark:text-primary-100"
+          : "border-slate-400/40 bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-100",
+      )}
+    >
+      {mode === "cms" ? "CMS homepage" : "Legacy homepage"}
+    </span>
   );
 }
