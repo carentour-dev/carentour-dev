@@ -1,69 +1,107 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import { pickFacilityImage } from "@/lib/medical-facilities";
+import {
+  maybeRedirectFromLegacyPath,
+  medicalOrganizationSchema,
+  resolveSeo,
+  webPageSchema,
+} from "@/lib/seo";
 import { fetchPublicServiceProviderBySlug } from "@/server/modules/serviceProviders/public";
 import FacilityDetailClient from "./FacilityDetailClient";
 
-type PageParams = {
+export const revalidate = 300;
+
+type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "";
+async function getSeo(
+  slug: string,
+  detail: Awaited<ReturnType<typeof fetchPublicServiceProviderBySlug>>,
+) {
+  const pathname = `/medical-facilities/${slug}`;
+  const provider = detail?.provider;
+  const defaultTitle = provider
+    ? `${provider.name} | Medical Facilities | Care N Tour`
+    : "Medical facility not found | Care N Tour";
+  const defaultDescription =
+    provider?.overview ??
+    provider?.description ??
+    "Explore details about this medical facility.";
+  const image = provider ? pickFacilityImage(provider) : null;
 
-const toAbsoluteUrl = (src: string | null | undefined) => {
-  if (!src) return undefined;
-  if (src.startsWith("http")) return src;
-  if (!baseUrl) return src;
-  const needsSlash = !src.startsWith("/");
-  return `${baseUrl}${needsSlash ? "/" : ""}${src}`;
-};
+  return resolveSeo({
+    routeKey: pathname,
+    pathname,
+    defaults: {
+      title: defaultTitle,
+      description: defaultDescription,
+    },
+    source: provider
+      ? {
+          title: defaultTitle,
+          description: defaultDescription,
+          ogImageUrl: image,
+        }
+      : undefined,
+    schema: provider
+      ? [
+          webPageSchema({
+            urlPath: pathname,
+            title: defaultTitle,
+            description: defaultDescription,
+            breadcrumbs: [
+              { name: "Medical Facilities", path: "/medical-facilities" },
+              { name: provider.name, path: pathname },
+            ],
+          }),
+          medicalOrganizationSchema({
+            path: pathname,
+            name: provider.name,
+            description: defaultDescription,
+            imageUrl: image,
+          }),
+        ]
+      : webPageSchema({
+          urlPath: pathname,
+          title: defaultTitle,
+          description: defaultDescription,
+        }),
+    indexable: Boolean(provider),
+    imageUrl: image,
+    modifiedTime: provider?.updated_at ?? undefined,
+  });
+}
 
-export const generateMetadata = async ({
+export async function generateMetadata({
   params,
-}: PageParams): Promise<Metadata> => {
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const detail = await fetchPublicServiceProviderBySlug(slug);
+  const seo = await getSeo(slug, detail);
+  return seo.metadata;
+}
 
-  if (!detail) {
-    return {
-      title: "Medical facility not found",
-      description: "The requested medical facility could not be located.",
-    };
-  }
-
-  const { provider } = detail;
-  const description =
-    provider.overview ??
-    provider.description ??
-    "Explore details about this medical facility.";
-  const image = pickFacilityImage(provider);
-  const imageUrl = toAbsoluteUrl(image);
-  const url = `${baseUrl}/medical-facilities/${provider.slug}`;
-
-  return {
-    title: `${provider.name} | Medical Facilities | Care N Tour`,
-    description,
-    alternates: {
-      canonical: `/medical-facilities/${provider.slug}`,
-    },
-    openGraph: {
-      title: provider.name,
-      description,
-      url: baseUrl ? url : undefined,
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
-    },
-  };
-};
-
-export default async function MedicalFacilityDetailPage({
-  params,
-}: PageParams) {
+export default async function MedicalFacilityDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const pathname = `/medical-facilities/${slug}`;
+
+  await maybeRedirectFromLegacyPath(pathname);
+
   const detail = await fetchPublicServiceProviderBySlug(slug);
 
   if (!detail) {
     notFound();
   }
 
-  return <FacilityDetailClient slug={slug} initialData={detail} />;
+  const seo = await getSeo(slug, detail);
+
+  return (
+    <>
+      <StructuredDataScripts payload={seo.jsonLd} />
+      <FacilityDetailClient slug={slug} initialData={detail} />
+    </>
+  );
 }
