@@ -29,10 +29,7 @@ const Testimonials = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            What Our{" "}
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Patients Say
-            </span>
+            What Our <span className="text-primary">Patients Say</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Real stories from patients who trusted us with their health and
@@ -54,8 +51,8 @@ const Testimonials = () => {
                 <CardContent className="p-8">
                   {/* Quote Icon */}
                   <div className="flex justify-center mb-6">
-                    <div className="w-12 h-12 bg-accent-light rounded-full flex items-center justify-center">
-                      <Quote className="h-6 w-6 text-accent" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emphasis-light">
+                      <Quote className="h-6 w-6 text-emphasis" />
                     </div>
                   </div>
 
@@ -64,7 +61,7 @@ const Testimonials = () => {
                     {[...Array(Math.round(testimonial.rating))].map((_, i) => (
                       <Star
                         key={i}
-                        className="h-5 w-5 text-accent fill-current"
+                        className="h-5 w-5 fill-current text-emphasis"
                       />
                     ))}
                   </div>
