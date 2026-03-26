@@ -25,6 +25,7 @@ export const cmsPageSettingsSchema = z
   .default({});
 
 export type CmsPageSettings = z.infer<typeof cmsPageSettingsSchema>;
+export type HomePageLayoutMode = "legacy" | "cms";
 
 export function sanitizeCmsPageSettings(input: unknown): CmsPageSettings {
   const parsed = cmsPageSettingsSchema.safeParse(input ?? {});
@@ -38,8 +39,34 @@ export function resolveHomeHeroImageUrl(
   return imageUrl ? imageUrl : null;
 }
 
+export function resolveHomePageLayoutMode(
+  settings: CmsPageSettings | null | undefined,
+  status?: "draft" | "published" | null,
+  contentLength?: number | null,
+): HomePageLayoutMode {
+  const explicitMode = settings?.homeHero?.useLegacyLayout;
+
+  if (explicitMode === true) {
+    return "legacy";
+  }
+
+  if (explicitMode === false) {
+    return "cms";
+  }
+
+  if (status === "published" && (contentLength ?? 0) > 0) {
+    return "cms";
+  }
+
+  return "legacy";
+}
+
 export function shouldUseLegacyHomepageLayout(
   settings: CmsPageSettings | null | undefined,
+  status?: "draft" | "published" | null,
+  contentLength?: number | null,
 ): boolean {
-  return settings?.homeHero?.useLegacyLayout === true;
+  return (
+    resolveHomePageLayoutMode(settings, status, contentLength) === "legacy"
+  );
 }
