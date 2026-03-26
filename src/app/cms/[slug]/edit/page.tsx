@@ -18,9 +18,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ImageUploader } from "@/components/admin/ImageUploader";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { PageBuilder } from "@/components/cms/editor/PageBuilder";
 import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
+import {
+  HOME_HERO_IMAGE_REQUIREMENTS,
+  HOME_HERO_IMAGE_REQUIREMENTS_TEXT,
+  sanitizeCmsPageSettings,
+  type CmsPageSettings,
+} from "@/lib/cms/pageSettings";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
@@ -46,6 +54,7 @@ type PageRecord = {
   title: string;
   status: "draft" | "published";
   seo: PageSeo | null;
+  settings: CmsPageSettings;
   content: BlockInstance[];
   updated_at?: string;
 };
@@ -57,6 +66,7 @@ type ApiPageResponse = {
     title: string;
     status: "draft" | "published";
     seo: PageSeo | null;
+    settings: unknown;
     content: unknown;
     updated_at?: string;
   };
@@ -120,6 +130,7 @@ export default function CmsEditPage() {
         title: detail.page.title,
         status: detail.page.status,
         seo: detail.page.seo ?? {},
+        settings: sanitizeCmsPageSettings(detail.page.settings),
         content: normalizeBlocks(detail.page.content),
         updated_at: detail.page.updated_at,
       };
@@ -154,6 +165,55 @@ export default function CmsEditPage() {
     );
   };
 
+  const resolveEffectiveHomeLayoutMode = (currentPage: PageRecord) => {
+    const explicitMode = currentPage.settings?.homeHero?.useLegacyLayout;
+    if (typeof explicitMode === "boolean") {
+      return explicitMode;
+    }
+
+    if (currentPage.status === "published" && currentPage.content.length > 0) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleHomeHeroImageChange = (value: string | null) => {
+    setPage((prev) =>
+      prev
+        ? {
+            ...prev,
+            settings: {
+              ...(prev.settings ?? {}),
+              homeHero: {
+                ...(value ? { imageUrl: value } : {}),
+                useLegacyLayout: resolveEffectiveHomeLayoutMode(prev),
+              },
+            },
+          }
+        : prev,
+    );
+  };
+
+  const handleHomeLayoutModeChange = (useLegacyLayout: boolean) => {
+    setPage((prev) =>
+      prev
+        ? {
+            ...prev,
+            settings: {
+              ...(prev.settings ?? {}),
+              homeHero: {
+                ...(prev.settings?.homeHero?.imageUrl
+                  ? { imageUrl: prev.settings.homeHero.imageUrl }
+                  : {}),
+                useLegacyLayout,
+              },
+            },
+          }
+        : prev,
+    );
+  };
+
   const handleBlocksChange = (blocks: BlockInstance[]) => {
     setPage((prev) => (prev ? { ...prev, content: blocks } : prev));
   };
@@ -179,6 +239,7 @@ export default function CmsEditPage() {
         ...page,
         status: targetStatus,
         seo: page.seo ?? {},
+        settings: page.settings ?? {},
         content: page.content,
       };
       const res = await fetch(`/api/cms/pages/${page.id}`, {
@@ -214,6 +275,7 @@ export default function CmsEditPage() {
         title: data.page.title,
         status: data.page.status,
         seo: data.page.seo ?? {},
+        settings: sanitizeCmsPageSettings(data.page.settings),
         content: normalizeBlocks(data.page.content),
         updated_at: data.page.updated_at,
       };
@@ -374,6 +436,11 @@ export default function CmsEditPage() {
   }
 
   const statusMeta = statusCopy[page.status];
+  const isHomePage = page.slug === "home";
+  const homeHeroImageUrl = page.settings?.homeHero?.imageUrl ?? null;
+  const useLegacyHomepageLayout = isHomePage
+    ? resolveEffectiveHomeLayoutMode(page)
+    : false;
 
   return (
     <div className="space-y-8 pb-12">
@@ -560,6 +627,76 @@ export default function CmsEditPage() {
                 />
               </div>
             </div>
+
+            {isHomePage ? (
+              <>
+                <Separator />
+
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-medium text-foreground">
+                      Homepage Layout
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose whether the live Home page should keep the current
+                      static layout or use the CMS-built page content.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        Use current static homepage layout
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        On: keep the existing homepage layout and only use the
+                        CMS hero image override below.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Off: publish the CMS-designed Home page content instead.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={useLegacyHomepageLayout}
+                      onCheckedChange={handleHomeLayoutModeChange}
+                      aria-label="Toggle homepage layout mode"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-medium text-foreground">
+                      Homepage Hero Background
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      This image is used only when the static homepage layout
+                      toggle above is on.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Upload validation enforces the same file type, size, and
+                      minimum dimensions listed below. Save and publish the Home
+                      page to update the live site.
+                    </p>
+                  </div>
+
+                  <ImageUploader
+                    label="Hero image"
+                    description={HOME_HERO_IMAGE_REQUIREMENTS_TEXT}
+                    value={homeHeroImageUrl}
+                    onChange={handleHomeHeroImageChange}
+                    bucket="media"
+                    folder="cms/home-hero"
+                    accept={HOME_HERO_IMAGE_REQUIREMENTS.accept}
+                    acceptedMimeTypes={[
+                      ...HOME_HERO_IMAGE_REQUIREMENTS.acceptedMimeTypes,
+                    ]}
+                    maxSizeMb={HOME_HERO_IMAGE_REQUIREMENTS.maxSizeMb}
+                    minWidth={HOME_HERO_IMAGE_REQUIREMENTS.minWidth}
+                    minHeight={HOME_HERO_IMAGE_REQUIREMENTS.minHeight}
+                    emptyStateDescription="JPG, PNG, or WebP. Max 5MB."
+                  />
+                </div>
+              </>
+            ) : null}
           </CardContent>
         </Card>
 
