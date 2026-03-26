@@ -11,6 +11,7 @@ import {
   Edit3,
   FileText,
   Eye,
+  Tag,
   Plus,
   ArrowRight,
 } from "lucide-react";
@@ -127,7 +128,7 @@ export default function BlogDashboard() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <QuickActionButton
               href="/cms/blog/posts"
               icon={<FileText className="h-5 w-5" />}
@@ -145,6 +146,12 @@ export default function BlogDashboard() {
               icon={<Edit3 className="h-5 w-5" />}
               title="Authors"
               description="Manage authors"
+            />
+            <QuickActionButton
+              href="/cms/blog/tags"
+              icon={<Tag className="h-5 w-5" />}
+              title="Tags"
+              description="Manage post tags"
             />
           </div>
         </CardContent>
