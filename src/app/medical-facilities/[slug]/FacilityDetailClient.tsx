@@ -141,7 +141,7 @@ export default function FacilityDetailClient({ slug, initialData }: Props) {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <section className="relative isolate overflow-hidden bg-gradient-card">
+        <section className="relative isolate overflow-hidden bg-surface-subtle">
           <div className="absolute inset-0">
             <Image
               src={heroImage}
@@ -211,7 +211,7 @@ export default function FacilityDetailClient({ slug, initialData }: Props) {
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <Button asChild size="lg" variant="secondary">
+                    <Button asChild size="lg" variant="outline">
                       <Link href="/contact">Contact</Link>
                     </Button>
                     <Button asChild size="lg">
