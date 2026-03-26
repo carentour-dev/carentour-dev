@@ -78,8 +78,21 @@ export function hasAdminWorkspaceAccess({
   return normalizedRoles.includes("admin");
 }
 
-export function hasCmsWorkspaceAccess(permissions: string[]): boolean {
+export function hasCmsWorkspaceAccess(
+  permissions: string[],
+  roles: string[] = [],
+): boolean {
   const normalizedPermissions = normalizePermissionSlugs(permissions);
+  const normalizedRoles = normalizeRoleSlugs(roles);
+
+  if (normalizedRoles.includes("admin")) {
+    return true;
+  }
+
+  if (normalizedPermissions.includes(ADMIN_PERMISSION)) {
+    return true;
+  }
+
   if (!normalizedPermissions.length) {
     return false;
   }
@@ -117,8 +130,17 @@ export function hasFinanceWorkspaceAccess(
   );
 }
 
-export function hasOperationsWorkspaceAccess(permissions: string[]): boolean {
+export function hasOperationsWorkspaceAccess(
+  permissions: string[],
+  roles: string[] = [],
+): boolean {
   const normalizedPermissions = normalizePermissionSlugs(permissions);
+  const normalizedRoles = normalizeRoleSlugs(roles);
+
+  if (normalizedRoles.includes("admin")) {
+    return true;
+  }
+
   if (!normalizedPermissions.length) {
     return false;
   }
@@ -159,7 +181,7 @@ export function resolveAccessibleWorkspaceRoute({
     return "/admin";
   }
 
-  if (hasOperationsWorkspaceAccess(normalizedPermissions)) {
+  if (hasOperationsWorkspaceAccess(normalizedPermissions, normalizedRoles)) {
     return "/operations";
   }
 
@@ -167,7 +189,7 @@ export function resolveAccessibleWorkspaceRoute({
     return "/finance";
   }
 
-  if (hasCmsWorkspaceAccess(normalizedPermissions)) {
+  if (hasCmsWorkspaceAccess(normalizedPermissions, normalizedRoles)) {
     return "/cms";
   }
 
