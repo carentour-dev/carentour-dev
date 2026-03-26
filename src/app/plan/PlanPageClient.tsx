@@ -133,7 +133,7 @@ export default function PlanTrip() {
 
       <main>
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-card">
+        <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <Badge variant="outline" className="mb-6">
@@ -141,9 +141,7 @@ export default function PlanTrip() {
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                 Your Complete
-                <span className="block bg-gradient-hero bg-clip-text text-transparent">
-                  Medical Journey
-                </span>
+                <span className="block text-primary">Medical Journey</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed mb-8">
                 From consultation to recovery, we handle every detail of your
@@ -374,11 +372,11 @@ export default function PlanTrip() {
         </section>
 
         {/* Emergency Contact */}
-        <section className="py-16 bg-gradient-hero">
+        <section className="bg-surface-brand py-16">
           <div className="container mx-auto px-4">
             <Card className="max-w-3xl mx-auto bg-background/10 backdrop-blur-sm border-background/20">
               <CardContent className="p-8 text-center">
-                <Phone className="h-12 w-12 text-accent mx-auto mb-4" />
+                <Phone className="h-12 w-12 text-emphasis-on-brand mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-background mb-2">
                   24/7 Emergency Support
                 </h3>
@@ -386,7 +384,7 @@ export default function PlanTrip() {
                   Our medical coordinators are available around the clock for
                   any urgent needs during your stay
                 </p>
-                <p className="text-accent font-semibold text-xl">
+                <p className="text-emphasis-on-brand font-semibold text-xl">
                   Emergency Hotline: +20 122 9503333
                 </p>
               </CardContent>
