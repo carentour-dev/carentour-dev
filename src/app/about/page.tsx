@@ -121,7 +121,7 @@ export default async function About() {
 
         <main>
           {/* Hero Section */}
-          <section className="py-20 bg-gradient-card">
+          <section className="bg-surface-subtle py-20">
             <div className="container mx-auto px-4">
               <div className="max-w-4xl mx-auto text-center">
                 <Badge variant="outline" className="mb-6">
@@ -129,7 +129,7 @@ export default async function About() {
                 </Badge>
                 <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
                   Transforming Lives Through
-                  <span className="block bg-gradient-hero bg-clip-text text-transparent">
+                  <span className="block text-primary">
                     World-Class Healthcare
                   </span>
                 </h1>
@@ -351,7 +351,7 @@ export default async function About() {
           <PartnerHospitals />
 
           {/* CTA Section */}
-          <section className="py-20 bg-gradient-hero">
+          <section className="bg-surface-brand py-20">
             <div className="container mx-auto px-4 text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
                 Ready to Begin Your Journey?
@@ -361,7 +361,7 @@ export default async function About() {
                 their healthcare journey
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="accent" asChild>
+                <Button size="lg" variant="premium" asChild>
                   <Link href="/consultation">Get Free Consultation</Link>
                 </Button>
                 <Button size="lg" variant="hero" asChild>
