@@ -6,6 +6,10 @@ import {
   type BlockValue,
   type TabbedGuideHotelSection,
 } from "@/lib/cms/blocks";
+import {
+  sanitizeCmsPageSettings,
+  type CmsPageSettings,
+} from "@/lib/cms/pageSettings";
 import { normalizeTreatment } from "@/lib/treatments";
 
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
@@ -18,6 +22,7 @@ export type CmsPage = {
   title: string;
   status: "draft" | "published";
   seo: Record<string, any> | null;
+  settings: CmsPageSettings;
   content: BlockInstance[];
   updated_at: string | null;
 };
@@ -28,7 +33,7 @@ export async function getPublishedPageBySlug(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cms_pages")
-    .select("id, slug, title, status, seo, content, updated_at")
+    .select("id, slug, title, status, seo, settings, content, updated_at")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
@@ -43,6 +48,7 @@ export async function getPublishedPageBySlug(
     title: data.title,
     status: data.status as "draft" | "published",
     seo: data.seo as Record<string, any> | null,
+    settings: sanitizeCmsPageSettings(data.settings),
     content: normalizeBlocks(data.content),
     updated_at: data.updated_at,
   };
