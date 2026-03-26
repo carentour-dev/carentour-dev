@@ -5,10 +5,15 @@ import { blockRegistry, normalizeBlocks } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { AnimationController } from "./AnimationController";
 import { CallToActionBlock } from "./blocks/CallToActionBlock";
+import { DifferentiatorsBlock } from "./blocks/DifferentiatorsBlock";
+import { FeaturedTreatmentsHomePreview } from "./blocks/FeaturedTreatmentsHomePreview";
 import { FeatureGridBlock } from "./blocks/FeatureGridBlock";
 import { FaqBlock } from "./blocks/FaqBlock";
 import { HeroBlock } from "./blocks/HeroBlock";
+import { HomeCtaBlock } from "./blocks/HomeCtaBlock";
+import { HomeHeroBlock } from "./blocks/HomeHeroBlock";
 import { ImageFeatureBlock } from "./blocks/ImageFeatureBlock";
+import { JourneyStepsBlock } from "./blocks/JourneyStepsBlock";
 import { LogoGridBlock } from "./blocks/LogoGridBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
 import { RichTextBlock } from "./blocks/RichTextBlock";
@@ -87,6 +92,18 @@ export function BlockPreviewRenderer({
           switch (block.type) {
             case "hero":
               return <HeroBlock key={blockKey} block={block} />;
+            case "homeHero":
+              return <HomeHeroBlock key={blockKey} block={block} />;
+            case "featuredTreatmentsHome":
+              return (
+                <FeaturedTreatmentsHomePreview key={blockKey} block={block} />
+              );
+            case "journeySteps":
+              return <JourneyStepsBlock key={blockKey} block={block} />;
+            case "differentiators":
+              return <DifferentiatorsBlock key={blockKey} block={block} />;
+            case "homeCta":
+              return <HomeCtaBlock key={blockKey} block={block} />;
             case "statGrid":
               return <StatGridBlock key={blockKey} block={block} />;
             case "richText":
