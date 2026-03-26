@@ -33,6 +33,12 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 import type { BlockValue } from "@/lib/cms/blocks";
+import {
+  resolveHomePageLayoutMode,
+  sanitizeCmsPageSettings,
+  type CmsPageSettings,
+  type HomePageLayoutMode,
+} from "@/lib/cms/pageSettings";
 import { cmsTemplates } from "@/lib/cms/templates";
 import { BlockPreviewRenderer } from "@/components/cms/PreviewRenderer";
 import {
@@ -77,6 +83,7 @@ type PageSummary = {
   status: "draft" | "published";
   updated_at?: string;
   seo?: { title?: string; description?: string } | null;
+  settings?: CmsPageSettings | null;
   content?: BlockValue[];
 };
 
@@ -475,6 +482,14 @@ function PageCard({ page, onDeleted }: PageCardProps) {
 
   const blockCount = Array.isArray(page.content) ? page.content.length : 0;
   const seoReady = Boolean(page.seo?.title && page.seo?.description);
+  const isHomePage = page.slug === "home";
+  const homePageLayoutMode = isHomePage
+    ? resolveHomePageLayoutMode(
+        sanitizeCmsPageSettings(page.settings),
+        page.status,
+        blockCount,
+      )
+    : null;
 
   const handleDelete = async () => {
     if (deleting) return;
@@ -536,6 +551,9 @@ function PageCard({ page, onDeleted }: PageCardProps) {
           >
             {blockCount} block{blockCount === 1 ? "" : "s"}
           </Badge>
+          {homePageLayoutMode ? (
+            <HomePageModeBadge mode={homePageLayoutMode} />
+          ) : null}
           <Badge
             variant="outline"
             className={cn(
@@ -632,6 +650,22 @@ function PageCard({ page, onDeleted }: PageCardProps) {
         </div>
       </CardFooter>
     </Card>
+  );
+}
+
+function HomePageModeBadge({ mode }: { mode: HomePageLayoutMode }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "text-xs border px-3",
+        mode === "cms"
+          ? "border-primary/40 bg-primary/10 text-primary-700 dark:text-primary-100"
+          : "border-slate-400/40 bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-100",
+      )}
+    >
+      {mode === "cms" ? "Home route: CMS" : "Home route: Legacy"}
+    </Badge>
   );
 }
 
