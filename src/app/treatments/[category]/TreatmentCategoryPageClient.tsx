@@ -284,7 +284,7 @@ export default function TreatmentDetails() {
                   {treatment.overview}
                 </p>
 
-                <div className="bg-gradient-card rounded-lg p-6 border border-border/50">
+                <div className="bg-surface-subtle rounded-lg border border-border/50 p-6">
                   <h3 className="text-xl font-semibold text-foreground mb-4">
                     Ideal Candidates
                   </h3>
@@ -312,7 +312,7 @@ export default function TreatmentDetails() {
               </div>
 
               <div>
-                <Card className="border-primary/20 bg-gradient-card">
+                <Card className="border-primary/20 bg-surface-subtle">
                   <CardHeader>
                     <CardTitle className="text-xl text-foreground">
                       Quick Facts
@@ -793,7 +793,7 @@ export default function TreatmentDetails() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-hero">
+        <section className="bg-surface-brand py-20">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
               Ready to Start Your {treatment.title} Journey?
@@ -805,7 +805,7 @@ export default function TreatmentDetails() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                variant="accent"
+                variant="premium"
                 onClick={() =>
                   router.push(`/start-journey?treatment=${category}`)
                 }
