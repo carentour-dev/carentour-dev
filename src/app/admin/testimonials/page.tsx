@@ -506,7 +506,7 @@ export default function TestimonialsAdminPage() {
                               </span>
                             )}
                             {review.highlight && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
+                              <span className="rounded-full bg-premium/15 px-2 py-0.5 text-premium">
                                 Highlight
                               </span>
                             )}
