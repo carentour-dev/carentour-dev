@@ -178,9 +178,46 @@ type StylePreset = {
 
 const stylePresets: StylePreset[] = [
   {
+    id: "hero-clinical",
+    label: "Hero • Refined Clinical",
+    description:
+      "Calm neutral surface with strong blue emphasis and generous hero spacing.",
+    style: {
+      presetId: "hero-clinical",
+      layout: {
+        padding: {
+          top: { base: "xl" },
+          bottom: { base: "xl" },
+        },
+      },
+      background: {
+        variant: "solid",
+        color: {
+          base: "hsl(var(--surface-subtle))",
+        },
+        overlayOpacity: {
+          base: 0,
+        },
+      },
+      typography: {
+        textColor: {
+          base: "hsl(var(--foreground))",
+        },
+        headingAccentColor: "hsl(var(--primary))",
+        scale: {
+          base: "xl",
+        },
+        weight: {
+          base: "semibold",
+        },
+      },
+    },
+  },
+  {
     id: "hero-dark",
-    label: "Hero • Dark Gradient",
-    description: "Midnight gradient with luminous headings and larger spacing.",
+    label: "Legacy • Hero Dark Gradient",
+    description:
+      "Legacy dramatic gradient preset retained for backward-compatible authored content.",
     style: {
       presetId: "hero-dark",
       layout: {
@@ -214,8 +251,8 @@ const stylePresets: StylePreset[] = [
   },
   {
     id: "panel-muted",
-    label: "Panel • Muted Surface",
-    description: "Soft muted panel with balanced spacing and neutral text.",
+    label: "Panel • Refined Clinical",
+    description: "Soft neutral panel with balanced spacing and calm contrast.",
     style: {
       presetId: "panel-muted",
       layout: {
@@ -233,7 +270,7 @@ const stylePresets: StylePreset[] = [
       background: {
         variant: "solid",
         color: {
-          base: "var(--muted)",
+          base: "hsl(var(--surface-subtle))",
         },
         overlayOpacity: {
           base: 0,
@@ -3898,7 +3935,9 @@ function HeroBlockFields({
                 <SelectContent>
                   <SelectItem value="white">Plain</SelectItem>
                   <SelectItem value="muted">Muted</SelectItem>
-                  <SelectItem value="gradient">Gradient</SelectItem>
+                  <SelectItem value="gradient">
+                    Clinical Surface (Legacy Value)
+                  </SelectItem>
                   <SelectItem value="primary">Primary</SelectItem>
                   <SelectItem value="layeredLinear">
                     Layered Gradient
