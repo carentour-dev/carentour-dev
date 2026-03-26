@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 
 const slugify = (value: string) =>
   value
@@ -9,6 +10,9 @@ const slugify = (value: string) =>
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+const toAuthorPath = (slug: string) =>
+  `/blog/author/${slug.replace(/^\/+/, "")}`;
 
 async function ensureUniqueAuthorSlug(
   supabase: SupabaseClient,
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await requirePermission("cms.write");
+    const context = await requirePermission("cms.write");
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
@@ -150,6 +154,24 @@ export async function PUT(request: NextRequest) {
         { error: "Author ID is required" },
         { status: 400 },
       );
+    }
+
+    const { data: existingAuthor, error: existingAuthorError } = await supabase
+      .from("blog_authors")
+      .select("id, slug")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingAuthorError) {
+      console.error("Error loading existing author:", existingAuthorError);
+      return NextResponse.json(
+        { error: "Failed to load existing author" },
+        { status: 500 },
+      );
+    }
+
+    if (!existingAuthor) {
+      return NextResponse.json({ error: "Author not found" }, { status: 404 });
     }
 
     const updates: Record<string, any> = {
@@ -180,6 +202,35 @@ export async function PUT(request: NextRequest) {
         { error: updateError.message || "Failed to update author" },
         { status: 400 },
       );
+    }
+
+    const oldSlug = existingAuthor.slug;
+    const newSlug = author.slug;
+
+    if (oldSlug && newSlug) {
+      const oldPath = toAuthorPath(oldSlug);
+      const newPath = toAuthorPath(newSlug);
+
+      if (oldPath !== newPath) {
+        try {
+          await recordPathRedirect({
+            fromPath: oldPath,
+            toPath: newPath,
+            source: "cms.blog.authors.update",
+            sourceMetadata: { authorId: id },
+            createdBy: context.user.id,
+          });
+        } catch (redirectError) {
+          console.error("Failed to record author redirect", {
+            authorId: id,
+            oldPath,
+            newPath,
+            redirectError,
+          });
+        }
+      }
+
+      revalidateSeoPaths(["/blog", oldPath, newPath]);
     }
 
     return NextResponse.json({ author });
