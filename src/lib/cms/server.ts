@@ -58,17 +58,23 @@ type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type HotelRow = Database["public"]["Tables"]["hotels"]["Row"];
 
 const TREATMENT_SELECT =
-  "id, name, slug, summary, description, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, ideal_candidates, card_image_url, hero_image_url, treatment_procedures:treatment_procedures(*)";
+  "id, name, slug, summary, description, overview, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, is_listed_public, ideal_candidates, card_image_url, hero_image_url, treatment_procedures:treatment_procedures(*)";
 const DOCTOR_SELECT =
   "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
-type TreatmentBlockQuery = Pick<
-  BlockValue<"treatments">,
-  "manualTreatments" | "limit" | "featuredOnly" | "categories"
->;
+type TreatmentListingBlockQuery = {
+  manualTreatments?: string[];
+  limit?: number;
+  featuredOnly?: boolean;
+  categories?: string[];
+};
 
-export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
+export async function getTreatmentsForBlock(
+  config: TreatmentListingBlockQuery,
+) {
   const supabase = await createClient();
+  const limit =
+    typeof config.limit === "number" && config.limit > 0 ? config.limit : 6;
   const manual = (config.manualTreatments ?? [])
     .map((entry) => entry.trim())
     .filter(Boolean);
@@ -77,7 +83,9 @@ export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
     const { data, error } = await supabase
       .from("treatments")
       .select(TREATMENT_SELECT)
-      .in("slug", manual);
+      .in("slug", manual)
+      .eq("is_active", true)
+      .eq("is_listed_public", true);
 
     if (error) {
       console.error("Failed to load manual treatments for block", error);
@@ -94,14 +102,15 @@ export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
       return rankA - rankB;
     });
     return sorted
-      .slice(0, config.limit)
+      .slice(0, limit)
       .map((row) => normalizeTreatment(row, row.treatment_procedures ?? []));
   }
 
   let query = supabase
     .from("treatments")
     .select(TREATMENT_SELECT)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("is_listed_public", true);
 
   if (config.featuredOnly) {
     query = query.eq("is_featured", true);
@@ -114,7 +123,7 @@ export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
   const { data, error } = await query
     .order("is_featured", { ascending: false })
     .order("name", { ascending: true })
-    .limit(config.limit);
+    .limit(limit);
 
   if (error) {
     console.error("Failed to load treatments for block", error);
@@ -127,6 +136,38 @@ export async function getTreatmentsForBlock(config: TreatmentBlockQuery) {
     };
     return normalizeTreatment(record, record.treatment_procedures ?? []);
   });
+}
+
+export async function getPublicTreatmentIndexItems(limit = 50) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("treatments")
+    .select("name, slug")
+    .eq("is_active", true)
+    .eq("is_listed_public", true)
+    .order("is_featured", { ascending: false })
+    .order("name", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to load treatment index items", error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((entry) => ({
+      name:
+        typeof entry.name === "string" && entry.name.trim().length > 0
+          ? entry.name.trim()
+          : null,
+      path:
+        typeof entry.slug === "string" && entry.slug.trim().length > 0
+          ? `/treatments/${entry.slug.trim()}`
+          : null,
+    }))
+    .filter((entry): entry is { name: string; path: string } =>
+      Boolean(entry.name && entry.path),
+    );
 }
 
 export async function getDoctorsForBlock(config: BlockValue<"doctors">) {
