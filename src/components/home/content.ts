@@ -1,6 +1,14 @@
 import type { BlockValue } from "@/lib/cms/blocks";
+import {
+  DEFAULT_HERO_OVERLAY,
+  type HeroOverlaySettings,
+} from "@/lib/heroOverlay";
 
 export type HomeAction = NonNullable<BlockValue["advanced"]>["cta"];
+export type HomeHeroHighlight = {
+  kicker: string;
+  label: string;
+};
 
 export type HomeHeroContent = {
   eyebrow: string;
@@ -8,9 +16,11 @@ export type HomeHeroContent = {
   headingHighlight: string;
   headingSuffix: string;
   description: string;
+  highlights?: HomeHeroHighlight[];
   primaryAction: HomeAction;
   secondaryAction: HomeAction;
   backgroundImageUrl?: string | null;
+  overlay?: Partial<HeroOverlaySettings> | null;
 };
 
 export type JourneyStep = {
@@ -41,6 +51,21 @@ export const DEFAULT_HOME_HERO_CONTENT: HomeHeroContent = {
   headingSuffix: "in Egypt",
   description:
     "Access trusted doctors and accredited hospitals with complete travel coordination and personal guidance at every step. We make your medical journey safe, clear, and comfortable from inquiry to recovery.\n\nVerified specialists. Transparent packages. Concierge-level support.",
+  highlights: [
+    {
+      kicker: "Providers",
+      label: "JCI-accredited hospitals and board-certified specialists",
+    },
+    {
+      kicker: "Support",
+      label:
+        "Transparent packages, multilingual coordination, and concierge-level guidance",
+    },
+    {
+      kicker: "Access",
+      label: "Fast-track treatment planning with end-to-end travel support",
+    },
+  ],
   primaryAction: {
     label: "Start Your Journey",
     href: "/start-journey",
@@ -49,8 +74,9 @@ export const DEFAULT_HOME_HERO_CONTENT: HomeHeroContent = {
   secondaryAction: {
     label: "View Treatments",
     href: "/treatments",
-    variant: "secondary",
+    variant: "hero",
   },
+  overlay: DEFAULT_HERO_OVERLAY,
 };
 
 export const DEFAULT_JOURNEY_STEPS: JourneyStep[] = [
