@@ -1632,7 +1632,7 @@ export const cmsTemplates: CmsTemplate[] = [
           },
           {
             id: "payments-language",
-            label: "Payments, Language & Everyday Egypt",
+            label: "Money & Daily Life",
             icon: "Languages",
             heading:
               "Know the practical basics for payments, communication, climate, and day-to-day comfort.",
