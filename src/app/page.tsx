@@ -16,6 +16,7 @@ import {
 } from "@/lib/cms/pageSettings";
 import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
 import {
+  faqPageSchema,
   maybeRedirectFromLegacyPath,
   organizationSchema,
   resolveSeo,
@@ -27,24 +28,40 @@ export const revalidate = 300;
 
 const PATHNAME = "/";
 
+function extractHomepageFaqs(cmsPage: CmsPage | null) {
+  if (!cmsPage?.content?.length) {
+    return [];
+  }
+
+  return cmsPage.content.flatMap((block) =>
+    block.type === "faq"
+      ? block.items.map((item) => ({
+          question: item.question,
+          answer: item.answer,
+        }))
+      : [],
+  );
+}
+
 async function getSeo(cmsPage: CmsPage | null) {
   const title =
     typeof cmsPage?.seo?.title === "string" &&
     cmsPage.seo.title.trim().length > 0
       ? cmsPage.seo.title.trim()
-      : "Care N Tour | World-Class Medical Care in Egypt";
+      : "Care N Tour | Premium Medical Travel in Egypt";
 
   const description =
     typeof cmsPage?.seo?.description === "string" &&
     cmsPage.seo.description.trim().length > 0
       ? cmsPage.seo.description.trim()
-      : "Experience premium medical treatments in Egypt with significant cost savings.";
+      : "Care N Tour connects international patients with accredited hospitals, verified specialists, and fully coordinated medical travel in Egypt.";
 
   const ogImage =
     typeof cmsPage?.seo?.ogImage === "string" &&
     cmsPage.seo.ogImage.trim().length > 0
       ? cmsPage.seo.ogImage.trim()
       : null;
+  const homeFaqs = extractHomepageFaqs(cmsPage);
 
   return resolveSeo({
     routeKey: PATHNAME,
@@ -66,6 +83,9 @@ async function getSeo(cmsPage: CmsPage | null) {
         title,
         description,
       }),
+      ...(homeFaqs.length > 0
+        ? [faqPageSchema({ path: PATHNAME, faqs: homeFaqs })]
+        : []),
     ],
     modifiedTime: cmsPage?.updated_at ?? undefined,
   });
