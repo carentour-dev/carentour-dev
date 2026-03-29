@@ -248,3 +248,35 @@ export function medicalProcedureSchema(input: {
     url: `${CANONICAL_ORIGIN}${normalizePath(input.path)}`,
   };
 }
+
+export function serviceSchema(input: {
+  path: string;
+  name: string;
+  description?: string | null;
+  serviceType?: string | null;
+  availableLanguage?: string[] | null;
+  areaServed?: string[] | null;
+}): JsonLdNode {
+  const languages =
+    input.availableLanguage
+      ?.map((language) => cleanText(language))
+      .filter((language): language is string => Boolean(language)) ?? undefined;
+  const areas =
+    input.areaServed
+      ?.map((area) => cleanText(area))
+      .filter((area): area is string => Boolean(area)) ?? undefined;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: input.name,
+    description: input.description ?? undefined,
+    url: `${CANONICAL_ORIGIN}${normalizePath(input.path)}`,
+    serviceType: cleanText(input.serviceType ?? undefined),
+    provider: {
+      "@id": organizationId,
+    },
+    availableLanguage: languages,
+    areaServed: areas,
+  };
+}
