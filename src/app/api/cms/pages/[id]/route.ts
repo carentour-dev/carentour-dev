@@ -155,6 +155,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const { error: navigationDeleteError } = await supabaseAdmin
+    .from("navigation_links")
+    .delete()
+    .eq("kind", "cms")
+    .or(`cms_page_id.eq.${id},slug.eq.${existingPage.slug}`);
+
+  if (navigationDeleteError) {
+    return NextResponse.json(
+      { error: navigationDeleteError.message },
+      { status: 500 },
+    );
+  }
+
   const { error } = await supabaseAdmin.from("cms_pages").delete().eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
