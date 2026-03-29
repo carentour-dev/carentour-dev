@@ -37,9 +37,10 @@ export const STATIC_PUBLIC_ROUTE_DEFAULTS = [
   },
   {
     pathname: "/travel-info",
-    title: "Travel Info | Care N Tour",
+    title:
+      "Travel Information for International Patients Visiting Egypt | Care N Tour",
     description:
-      "Plan visas, accommodation, and travel logistics for medical treatment in Egypt.",
+      "Review entry planning, accommodation, local mobility, payments, language support, and recovery-focused travel guidance for medical trips to Egypt with Care N Tour.",
     source: "core",
   },
   {
@@ -72,16 +73,17 @@ export const STATIC_PUBLIC_ROUTE_DEFAULTS = [
   },
   {
     pathname: "/concierge",
-    title: "Concierge Services | Care N Tour",
+    title: "International Patient Concierge Services | Care N Tour",
     description:
-      "Discover concierge services for transportation, accommodation, and recovery support.",
+      "Explore Care N Tour concierge services for international patients, including medical coordination, travel planning, accommodation, airport transfers, multilingual support, and recovery logistics in Egypt.",
     source: "core",
   },
   {
     pathname: "/faq",
-    title: "FAQ | Care N Tour",
+    title:
+      "FAQ for International Patients Seeking Treatment in Egypt | Care N Tour",
     description:
-      "Find answers to common questions about treatments, travel, and patient support.",
+      "Read Care N Tour's FAQ for international patients seeking treatment in Egypt, with answers on doctors, accredited hospitals, medical travel planning, pricing, accommodation, safety, recovery, and follow-up.",
     source: "core",
   },
   {
