@@ -49,7 +49,9 @@ import {
 } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { DoctorMultiSelector } from "@/components/admin/DoctorMultiSelector";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { TreatmentMultiSelector } from "@/components/admin/TreatmentMultiSelector";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -4371,6 +4373,11 @@ function HomeHeroBlockFields({
 }: {
   form: UseFormReturn<BlockValue<"homeHero">>;
 }) {
+  const highlights = useFieldArray({
+    control: form.control,
+    name: "highlights",
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4">
@@ -4470,6 +4477,99 @@ function HomeHeroBlockFields({
         />
       </div>
 
+      <HeroOverlayFields form={form as AnyForm} />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Highlights</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              highlights.append({
+                kicker: "New label",
+                label: "Add a short proof point",
+              })
+            }
+            disabled={highlights.fields.length >= 4}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add highlight
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {highlights.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Highlight #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index > 0 && highlights.move(index, index - 1)
+                    }
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < highlights.fields.length - 1 &&
+                      highlights.move(index, index + 1)
+                    }
+                    disabled={index === highlights.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => highlights.remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`highlights.${index}.kicker` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kicker</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`highlights.${index}.label` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Label</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <InlineActionFields
         form={form as AnyForm}
         path="primaryAction"
@@ -4484,20 +4584,176 @@ function HomeHeroBlockFields({
   );
 }
 
+function HeroOverlayColorField({
+  form,
+  name,
+  label,
+  fallback,
+}: {
+  form: AnyForm;
+  name: string;
+  label: string;
+  fallback: string;
+}) {
+  const currentValue =
+    (form.watch(name as any) as string | undefined) ?? fallback;
+  const colorInputValue = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(currentValue)
+    ? currentValue
+    : fallback;
+
+  return (
+    <FormField
+      control={form.control}
+      name={name as any}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <div className="flex items-center gap-2">
+            <FormControl>
+              <Input
+                {...field}
+                value={field.value ?? fallback}
+                placeholder={fallback}
+              />
+            </FormControl>
+            <Input
+              type="color"
+              value={colorInputValue}
+              onChange={(event) =>
+                field.onChange(event.target.value || fallback)
+              }
+              className="h-10 w-12 min-w-[3rem] px-1"
+              aria-label={`${label} color picker`}
+            />
+          </div>
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function HeroOverlayOpacityField({
+  form,
+  name,
+  label,
+  fallback,
+}: {
+  form: AnyForm;
+  name: string;
+  label: string;
+  fallback: number;
+}) {
+  return (
+    <FormField
+      control={form.control}
+      name={name as any}
+      render={({ field }) => {
+        const value = Number.isFinite(field.value) ? field.value : fallback;
+        return (
+          <FormItem>
+            <FormLabel>{label}</FormLabel>
+            <div className="flex items-center gap-3">
+              <Slider
+                value={[Math.round(value * 100)]}
+                onValueChange={(values) =>
+                  field.onChange(
+                    parseFloat(((values[0] ?? 0) / 100).toFixed(2)),
+                  )
+                }
+                min={0}
+                max={100}
+                step={1}
+              />
+              <span className="w-12 text-right text-xs font-medium text-muted-foreground">
+                {value.toFixed(2)}
+              </span>
+            </div>
+          </FormItem>
+        );
+      }}
+    />
+  );
+}
+
+function HeroOverlayFields({ form }: { form: AnyForm }) {
+  return (
+    <div className="space-y-4 rounded-lg border border-border/60 p-4">
+      <div>
+        <Label className="text-sm font-semibold">Hero Overlay</Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Use the same gradient structure across Home and About hero sections
+          and tune the color stops when needed.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <HeroOverlayColorField
+          form={form}
+          name="overlay.fromColor"
+          label="Start color"
+          fallback="#000000"
+        />
+        <HeroOverlayOpacityField
+          form={form}
+          name="overlay.fromOpacity"
+          label="Start opacity"
+          fallback={0.7}
+        />
+        <HeroOverlayColorField
+          form={form}
+          name="overlay.viaColor"
+          label="Middle color"
+          fallback="#000000"
+        />
+        <HeroOverlayOpacityField
+          form={form}
+          name="overlay.viaOpacity"
+          label="Middle opacity"
+          fallback={0.45}
+        />
+        <HeroOverlayColorField
+          form={form}
+          name="overlay.toColor"
+          label="End color"
+          fallback="#000000"
+        />
+        <HeroOverlayOpacityField
+          form={form}
+          name="overlay.toOpacity"
+          label="End opacity"
+          fallback={0}
+        />
+      </div>
+    </div>
+  );
+}
+
 function FeaturedTreatmentsHomeBlockFields({
   form,
 }: {
   form: UseFormReturn<BlockValue<"featuredTreatmentsHome">>;
 }) {
-  const listToArray = (value: string) =>
-    value
-      .split(/[\n,]+/)
-      .map((entry) => entry.trim())
-      .filter(Boolean);
+  const selectedLimit = Number(form.watch("limit") ?? 4);
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Treatments"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="title"
@@ -4533,6 +4789,29 @@ function FeaturedTreatmentsHomeBlockFields({
         />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="cardAppearance"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Card appearance</FormLabel>
+              <Select
+                value={field.value ?? "original"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select appearance" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="original">Original Home</SelectItem>
+                  <SelectItem value="theme">Theme aware</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="limit"
@@ -4579,20 +4858,17 @@ function FeaturedTreatmentsHomeBlockFields({
         name="manualTreatments"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Manual treatment slugs</FormLabel>
+            <FormLabel>Manual treatment selection</FormLabel>
             <FormControl>
-              <Textarea
-                rows={4}
-                placeholder="dental-implants&#10;ivf-program"
-                value={(field.value ?? []).join("\n")}
-                onChange={(event) =>
-                  field.onChange(listToArray(event.target.value))
-                }
+              <TreatmentMultiSelector
+                values={field.value ?? []}
+                onChange={field.onChange}
+                maxSelections={selectedLimit}
               />
             </FormControl>
             <FormDescription>
-              One treatment slug per line. When provided, order is preserved and
-              live treatment data fills the cards.
+              Search and choose treatments directly. Selected order controls the
+              card order, and live treatment data fills the cards.
             </FormDescription>
           </FormItem>
         )}
@@ -5004,6 +5280,1127 @@ function HomeCtaBlockFields({
   );
 }
 
+function AboutHeroBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"aboutHero">>;
+}) {
+  const highlights = useFieldArray({
+    control: form.control,
+    name: "highlights",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={4} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="backgroundImageUrl"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Background image</FormLabel>
+            <ImageUploader
+              label="Upload hero image"
+              value={field.value ?? null}
+              onChange={(url) => field.onChange(url ?? "")}
+              bucket="media"
+              folder="cms"
+            />
+            <FormControl>
+              <Input {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <HeroOverlayFields form={form as AnyForm} />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Highlights</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              highlights.append({
+                kicker: "New label",
+                label: "Add a short proof point",
+              })
+            }
+            disabled={highlights.fields.length >= 4}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add highlight
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {highlights.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Highlight #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index > 0 && highlights.move(index, index - 1)
+                    }
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < highlights.fields.length - 1 &&
+                      highlights.move(index, index + 1)
+                    }
+                    disabled={index === highlights.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => highlights.remove(index)}
+                    disabled={highlights.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`highlights.${index}.kicker` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kicker</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`highlights.${index}.label` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Label</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <InlineActionFields
+        form={form as AnyForm}
+        path="primaryAction"
+        title="Primary Action"
+      />
+      <InlineActionFields
+        form={form as AnyForm}
+        path="secondaryAction"
+        title="Secondary Action"
+      />
+    </div>
+  );
+}
+
+function StoryNarrativeBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"storyNarrative">>;
+}) {
+  const strengths = useFieldArray({
+    control: form.control,
+    name: "strengths",
+  });
+  const paragraphs = form.watch("paragraphs") ?? [];
+
+  const setParagraphs = (next: string[]) => {
+    form.setValue("paragraphs", next, { shouldDirty: true });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="lead"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Lead</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="closing"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Closing note</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Narrative paragraphs</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setParagraphs([...paragraphs, "New paragraph"])}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add paragraph
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {paragraphs.map((_, index) => (
+            <div
+              key={`paragraph-${index}`}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Paragraph #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index === 0) return;
+                      const next = [...paragraphs];
+                      [next[index - 1], next[index]] = [
+                        next[index],
+                        next[index - 1],
+                      ];
+                      setParagraphs(next);
+                    }}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index === paragraphs.length - 1) return;
+                      const next = [...paragraphs];
+                      [next[index], next[index + 1]] = [
+                        next[index + 1],
+                        next[index],
+                      ];
+                      setParagraphs(next);
+                    }}
+                    disabled={index === paragraphs.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      setParagraphs(
+                        paragraphs.filter((__, item) => item !== index),
+                      )
+                    }
+                    disabled={paragraphs.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <FormField
+                control={form.control}
+                name={`paragraphs.${index}` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Paragraph</FormLabel>
+                    <FormControl>
+                      <Textarea rows={5} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <FormField
+        control={form.control}
+        name="strengthsTitle"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Strengths title</FormLabel>
+            <FormControl>
+              <Input {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Strengths</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              strengths.append({
+                title: "New strength",
+                description: "Explain why this matters.",
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add strength
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {strengths.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Strength #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index > 0 && strengths.move(index, index - 1)
+                    }
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < strengths.fields.length - 1 &&
+                      strengths.move(index, index + 1)
+                    }
+                    disabled={index === strengths.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => strengths.remove(index)}
+                    disabled={strengths.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <FormField
+                control={form.control}
+                name={`strengths.${index}.title` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`strengths.${index}.description` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MissionVisionValuesBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"missionVisionValues">>;
+}) {
+  const values = useFieldArray({
+    control: form.control,
+    name: "values",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="missionTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mission title</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="missionAccentPreset"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mission card accent</FormLabel>
+              <Select
+                value={field.value ?? "neutral"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                  <SelectItem value="warm">Warm</SelectItem>
+                  <SelectItem value="sage">Sage</SelectItem>
+                  <SelectItem value="sky">Sky</SelectItem>
+                  <SelectItem value="brand">Brand</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="visionTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vision title</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="visionAccentPreset"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vision card accent</FormLabel>
+              <Select
+                value={field.value ?? "warm"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                  <SelectItem value="warm">Warm</SelectItem>
+                  <SelectItem value="sage">Sage</SelectItem>
+                  <SelectItem value="sky">Sky</SelectItem>
+                  <SelectItem value="brand">Brand</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="missionBody"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mission body</FormLabel>
+              <FormControl>
+                <Textarea rows={5} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="visionBody"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vision body</FormLabel>
+              <FormControl>
+                <Textarea rows={5} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="valuesTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Values title</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="valuesDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Values description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Values</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              values.append({
+                title: "New value",
+                description: "Explain how this shows up in the experience.",
+                icon: "Shield",
+              })
+            }
+            disabled={values.fields.length >= 6}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add value
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {values.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Value #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => index > 0 && values.move(index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < values.fields.length - 1 &&
+                      values.move(index, index + 1)
+                    }
+                    disabled={index === values.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => values.remove(index)}
+                    disabled={values.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`values.${index}.title` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`values.${index}.icon` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icon</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name={`values.${index}.description` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustSignalsBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"trustSignals">>;
+}) {
+  const items = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Signals</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              items.append({
+                eyebrow: "05",
+                title: "New signal",
+                description: "Explain the operational trust signal.",
+                icon: "Shield",
+              })
+            }
+            disabled={items.fields.length >= 6}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add signal
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {items.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Signal #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => index > 0 && items.move(index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < items.fields.length - 1 &&
+                      items.move(index, index + 1)
+                    }
+                    disabled={index === items.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => items.remove(index)}
+                    disabled={items.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.eyebrow` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Eyebrow</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.icon` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icon</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name={`items.${index}.title` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.description` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LeadershipGridBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"leadershipGrid">>;
+}) {
+  const people = useFieldArray({
+    control: form.control,
+    name: "people",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">People</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              people.append({
+                name: "Executive Name",
+                role: "Role Title",
+                bio: "Approved leadership biography.",
+                expertise: ["Operations"],
+                languages: ["English"],
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add person
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {people.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="rounded-lg border border-border/60 p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Person #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => index > 0 && people.move(index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < people.fields.length - 1 &&
+                      people.move(index, index + 1)
+                    }
+                    disabled={index === people.fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => people.remove(index)}
+                    disabled={people.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`people.${index}.name` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`people.${index}.role` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`people.${index}.image` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image</FormLabel>
+                      <ImageUploader
+                        label="Upload portrait"
+                        value={field.value ?? null}
+                        onChange={(url) => field.onChange(url ?? "")}
+                        bucket="media"
+                        folder="cms"
+                      />
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`people.${index}.languages` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Languages</FormLabel>
+                      <FormControl>
+                        <Input
+                          value={(field.value ?? []).join(", ")}
+                          onChange={(event) =>
+                            field.onChange(
+                              event.target.value
+                                .split(",")
+                                .map((item) => item.trim())
+                                .filter(Boolean),
+                            )
+                          }
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name={`people.${index}.bio` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea rows={4} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`people.${index}.expertise` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expertise</FormLabel>
+                    <FormControl>
+                      <Input
+                        value={(field.value ?? []).join(", ")}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              .split(",")
+                              .map((item) => item.trim())
+                              .filter(Boolean),
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatGridBlockFields({
   form,
 }: {
@@ -5245,6 +6642,315 @@ function StatGridBlockFields({
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AdvisoryNoticeBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"advisoryNotice">>;
+}) {
+  const actionsArray = useFieldArray({
+    control: form.control,
+    name: "actions",
+  });
+  const listToArray = (value: string) =>
+    value
+      .split(/\n+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Before You Book"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Set the advisory headline"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain how the advisory should be used."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="tone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tone</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="lastReviewed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last reviewed</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Reviewed March 2026"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="appliesTo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Applies to</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="International patients planning treatment travel"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="planningScope"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Planning scope</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="General guidance only"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="disclaimer"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Important note</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Call out anything patients should confirm before booking."
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="items"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Advisory bullets</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={5}
+                placeholder={
+                  "Share nationality and travel window early.\nConfirm entry route before booking flights."
+                }
+                value={(field.value ?? []).join("\n")}
+                onChange={(event) =>
+                  field.onChange(listToArray(event.target.value))
+                }
+              />
+            </FormControl>
+            <FormDescription>One advisory per line.</FormDescription>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Optional actions</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              actionsArray.append({
+                label: "Contact our team",
+                href: "/contact",
+                variant: "outline",
+              })
+            }
+            disabled={actionsArray.fields.length >= 2}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add action
+          </Button>
+        </div>
+
+        {actionsArray.fields.length ? (
+          <div className="space-y-4">
+            {actionsArray.fields.map((fieldItem, index) => (
+              <div
+                key={fieldItem.id}
+                className="rounded-lg border border-border/60 p-4 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary">Action #{index + 1}</Badge>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => actionsArray.remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`actions.${index}.label` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Label</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`actions.${index}.href` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`actions.${index}.variant` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Variant</FormLabel>
+                        <Select
+                          value={field.value ?? "outline"}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="secondary">Secondary</SelectItem>
+                            <SelectItem value="outline">Outline</SelectItem>
+                            <SelectItem value="ghost">Ghost</SelectItem>
+                            <SelectItem value="link">Link</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`actions.${index}.target` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target</FormLabel>
+                        <Select
+                          value={field.value ?? "_self"}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="_self">Same tab</SelectItem>
+                            <SelectItem value="_blank">New tab</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -6075,6 +7781,1313 @@ function FeatureGridBlockFields({
   );
 }
 
+function DataGridBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"dataGrid">>;
+}) {
+  const columns = useFieldArray({
+    control: form.control,
+    name: "columns",
+  });
+  const rows = useFieldArray({
+    control: form.control,
+    name: "rows",
+  });
+  const watchedColumns = form.watch("columns");
+  const safeColumns = Array.isArray(watchedColumns) ? watchedColumns : [];
+  const layoutValue = form.watch("layout") ?? "cards";
+  const pillOptions = safeColumns.filter(
+    (column): column is { key: string; label?: string } =>
+      typeof column?.key === "string" && column.key.trim().length > 0,
+  );
+  const NONE_PILL_VALUE = "__none__";
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Requirements"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Section heading"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Optional supporting description"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="layout"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Layout</FormLabel>
+            <Select
+              value={field.value ?? "cards"}
+              onValueChange={field.onChange}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select layout" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="cards">Card grid</SelectItem>
+                <SelectItem value="stacked">Stacked list</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+
+      {layoutValue === "stacked" ? (
+        <FormField
+          control={form.control}
+          name="pillColumnKey"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pill column</FormLabel>
+              <Select
+                value={field.value ?? NONE_PILL_VALUE}
+                onValueChange={(value) =>
+                  field.onChange(value === NONE_PILL_VALUE ? undefined : value)
+                }
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No pill" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={NONE_PILL_VALUE}>None</SelectItem>
+                  {pillOptions.map((column, index) => (
+                    <SelectItem
+                      key={`pill-option-${column.key ?? index}`}
+                      value={column.key}
+                    >
+                      {column.label ?? column.key}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Display one column value as a badge beside each row title in
+                stacked layout.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+      ) : null}
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Columns</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              columns.append({
+                label: "Column label",
+                key: `column-${columns.fields.length + 1}`,
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add column
+          </Button>
+        </div>
+        {columns.fields.map((column, index) => (
+          <div
+            key={column.id}
+            className="grid gap-3 rounded-lg border border-border/60 p-4 md:grid-cols-[1fr_1fr_auto]"
+          >
+            <FormField
+              control={form.control}
+              name={`columns.${index}.label`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Label</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Requirement"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`columns.${index}.key`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Key</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="requirement"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => columns.remove(index)}
+              disabled={columns.fields.length <= 2}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Rows</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              rows.append({
+                title: "Row title",
+                badge: "",
+                values: {},
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add row
+          </Button>
+        </div>
+        {rows.fields.map((row, rowIndex) => (
+          <div
+            key={row.id}
+            className="space-y-4 rounded-lg border border-border/60 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <Badge variant="secondary">Row {rowIndex + 1}</Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => rows.remove(rowIndex)}
+                disabled={rows.fields.length <= 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`rows.${rowIndex}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Row title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="United States"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`rows.${rowIndex}.badge`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Optional badge"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {safeColumns.map((column, columnIndex) => (
+                <FormField
+                  key={`${column.key ?? columnIndex}-${rowIndex}`}
+                  control={form.control}
+                  name={`rows.${rowIndex}.values.${
+                    column.key ?? `column-${columnIndex}`
+                  }`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {column.label ?? `Column ${columnIndex + 1}`}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Value"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InfoPanelsBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"infoPanels">>;
+}) {
+  const panels = useFieldArray({
+    control: form.control,
+    name: "panels",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Key Facts"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Section heading"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Optional supporting description"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Panels</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              panels.append({
+                title: "Panel title",
+                description: "",
+                badge: "",
+                items: [],
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add panel
+          </Button>
+        </div>
+        {panels.fields.map((panel, index) => (
+          <div
+            key={panel.id}
+            className="space-y-4 rounded-lg border border-border/60 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <Badge variant="secondary">Panel {index + 1}</Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => panels.remove(index)}
+                disabled={panels.fields.length <= 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`panels.${index}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Climate"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`panels.${index}.badge`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Optional badge"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`panels.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Optional supporting description"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`panels.${index}.items`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Items</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="One item per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HotelShowcaseBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"hotelShowcase">>;
+}) {
+  const items = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Accommodation"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Section heading"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Optional supporting description"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="layout"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Layout</FormLabel>
+            <Select
+              value={field.value ?? "grid"}
+              onValueChange={field.onChange}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="grid">Grid</SelectItem>
+                <SelectItem value="carousel">Carousel</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Stays</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              items.append({
+                title: "Stay name",
+                description: "",
+                heroImage: "",
+                addressDetails: "",
+                contactPhone: "",
+                contactEmail: "",
+                website: "",
+                amenities: [],
+                medicalServices: [],
+                priceLabel: "",
+                locationLabel: "",
+                icon: "Hotel",
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add stay
+          </Button>
+        </div>
+        {items.fields.map((item, index) => (
+          <div
+            key={item.id}
+            className="space-y-4 rounded-lg border border-border/60 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <Badge variant="secondary">Stay {index + 1}</Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => items.remove(index)}
+                disabled={items.fields.length <= 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name={`items.${index}.title`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Luxury medical hotel"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`items.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Short description"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`items.${index}.heroImage`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hero image</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="/images/stay.jpg"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.icon`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Hotel"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`items.${index}.priceLabel`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price label</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="$150 - $300/night"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.locationLabel`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location label</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="New Cairo"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`items.${index}.addressDetails`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address details</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="District or exact address"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`items.${index}.contactPhone`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact phone</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="+20 2 1234 5678"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.contactEmail`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="stay@example.com"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`items.${index}.website`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="https://example.com"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <FormField
+                control={form.control}
+                name={`items.${index}.starRating`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Star rating</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={5}
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.rating`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Guest rating</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step="0.1"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.reviewCount`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Review count</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          )
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name={`items.${index}.amenities`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amenities</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="One amenity per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`items.${index}.medicalServices`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Medical services</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="One service per line"
+                      value={(field.value ?? []).join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean),
+                        )
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ServiceCatalogBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"serviceCatalog">>;
+}) {
+  const { fields, append, remove, move } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+  const listToArray = (value: string) =>
+    value
+      .split(/[\n,]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="International Patient Services"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="How Care N Tour supports the patient journey"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain the operating model behind the services."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Services</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              append({
+                title: "New service",
+                description: "",
+                icon: "",
+                availability: "",
+                note: "",
+                bullets: ["Service detail"],
+                languages: ["English"],
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add service
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="space-y-4 rounded-lg border border-border/60 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Service #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => index > 0 && move(index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      index < fields.length - 1 && move(index, index + 1)
+                    }
+                    disabled={index === fields.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={fields.length <= 1}
+                    onClick={() => {
+                      if (fields.length <= 1) return;
+                      remove(index);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.title` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Medical coordination"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.icon` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lucide icon</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="HeartHandshake"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name={`items.${index}.description` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="What this service covers and why it matters."
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.availability` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Availability label</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="24/7 coordination window"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.note` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Footer note</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Optional note or qualifier"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.bullets` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service details</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={5}
+                          placeholder={
+                            "Case review\nProvider matching\nFollow-up planning"
+                          }
+                          value={(field.value ?? []).join("\n")}
+                          onChange={(event) =>
+                            field.onChange(listToArray(event.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        One detail per line. These become the main service list.
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.languages` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Languages</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={5}
+                          placeholder={"English\nArabic\nFrench"}
+                          value={(field.value ?? []).join("\n")}
+                          onChange={(event) =>
+                            field.onChange(listToArray(event.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        One language per line or comma-separated.
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">
+                    Optional action
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Add a contextual deep link for this specific service.
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.action.label` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Action label</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Explore planning support"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(event) => {
+                              const next = event.target.value;
+                              field.onChange(
+                                next.trim().length > 0 ? next : undefined,
+                              );
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.action.href` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Action URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="/plan"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(event) => {
+                              const next = event.target.value;
+                              field.onChange(
+                                next.trim().length > 0 ? next : undefined,
+                              );
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.action.variant` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Action style</FormLabel>
+                        <Select
+                          value={field.value ?? "outline"}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {blockActionVariants.map((variant) => (
+                              <SelectItem key={variant} value={variant}>
+                                {variant}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.action.target` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link target</FormLabel>
+                        <Select
+                          value={field.value ?? "_self"}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="_self">Same tab</SelectItem>
+                            <SelectItem value="_blank">New tab</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LogoGridBlockFields({
   form,
 }: {
@@ -6551,6 +9564,268 @@ function CallToActionBlockFields({
   );
 }
 
+function StartJourneyEmbedBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"startJourneyEmbed">>;
+}) {
+  const supportBullets = form.watch("supportBullets") ?? [];
+
+  const updateSupportBullets = (next: string[]) => {
+    form.setValue("supportBullets", next, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Start Your Journey"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Share your case and we will coordinate the next steps."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Supporting introduction shown above the intake."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="supportCardTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Support card title</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="What happens after submitting?"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="supportCardDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Support card description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain what the team will coordinate next."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="responseTimeLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Response time label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Average response time: under 2 hours"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="reassuranceLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Reassurance label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="No payment required to submit your intake"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="successRedirectHref"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Success redirect</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="Leave empty to stay on the current page"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormDescription>
+              Optional path to navigate to after a successful submission.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Support bullets</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              updateSupportBullets([
+                ...supportBullets,
+                "Add another support point",
+              ])
+            }
+            disabled={supportBullets.length >= 6}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add bullet
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {supportBullets.map((bullet, index) => (
+            <div
+              key={`${index}-${bullet}`}
+              className="rounded-lg border border-border/60 p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Bullet #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index === 0) return;
+                      const next = [...supportBullets];
+                      [next[index - 1], next[index]] = [
+                        next[index],
+                        next[index - 1],
+                      ];
+                      updateSupportBullets(next);
+                    }}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index >= supportBullets.length - 1) return;
+                      const next = [...supportBullets];
+                      [next[index], next[index + 1]] = [
+                        next[index + 1],
+                        next[index],
+                      ];
+                      updateSupportBullets(next);
+                    }}
+                    disabled={index === supportBullets.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={supportBullets.length <= 1}
+                    onClick={() => {
+                      if (supportBullets.length <= 1) return;
+                      updateSupportBullets(
+                        supportBullets.filter(
+                          (_, bulletIndex) => bulletIndex !== index,
+                        ),
+                      );
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <FormField
+                control={form.control}
+                name={`supportBullets.${index}` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bullet text</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Describe what happens after submission"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FaqBlockFields({ form }: { form: UseFormReturn<BlockValue<"faq">> }) {
   const { fields, append, remove, move } = useFieldArray({
     control: form.control,
@@ -6728,6 +10003,232 @@ function FaqBlockFields({ form }: { form: UseFormReturn<BlockValue<"faq">> }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FaqDirectoryBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"faqDirectory">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Optional label"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="FAQ directory heading"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Describe how Care N Tour answers questions for international patients"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="layout"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Layout</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="sidebar">Sidebar navigation</SelectItem>
+                  <SelectItem value="stacked">Stacked navigation</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="navigationHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Navigation heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Browse by topic"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="showSearch"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show search</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>Enable keyword search.</FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showCategoryDescriptions"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show topic descriptions</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>Display topic summaries.</FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showSourceBadge"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show source badge</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>Show fallback status.</FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="searchPlaceholder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Search placeholder</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search by treatment, travel, pricing, or recovery"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emptyStateHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="No questions match your search"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emptyStateDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Guide the visitor to broaden or clear the search"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="clearSearchLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Clear search button label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Clear search"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
       </div>
     </div>
   );
@@ -6926,6 +10427,7 @@ function TreatmentsBlockFields({
       .split(/[\n,]+/)
       .map((entry) => entry.trim())
       .filter(Boolean);
+  const selectedLimit = Number(form.watch("limit") ?? 6);
 
   return (
     <div className="space-y-6">
@@ -7061,23 +10563,413 @@ function TreatmentsBlockFields({
           name="manualTreatments"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Manual treatments</FormLabel>
+              <FormLabel>Manual treatment selection</FormLabel>
+              <FormControl>
+                <TreatmentMultiSelector
+                  values={field.value ?? []}
+                  onChange={field.onChange}
+                  maxSelections={selectedLimit}
+                />
+              </FormControl>
+              <FormDescription>
+                Search and choose treatments directly. When provided, this
+                overrides automatic selection.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TreatmentSpecialtiesBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"treatmentSpecialties">>;
+}) {
+  const listToArray = (value: string) =>
+    value
+      .split(/[\n,]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  const categoriesToString = (value?: string[]) => (value ?? []).join(", ");
+  const selectedLimit = Number(form.watch("limit") ?? 6);
+  const overrides = useFieldArray({
+    control: form.control,
+    name: "overrides",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="eyebrow"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Eyebrow</FormLabel>
+                <FormControl>
+                  <Input placeholder="Our Medical Specialties" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="heading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Heading</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Explore our most requested treatments"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
                   rows={3}
-                  placeholder="UUIDs or slugs, one per line"
-                  value={(field.value ?? []).join("\n")}
+                  placeholder="Supporting section copy"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="limit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Card count</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={field.value ?? 6}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="featuredOnly"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Featured only</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Limit automatic selection to featured treatments.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="showSearch"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show search</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Adds the live search input above the cards.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="searchPlaceholder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Search placeholder</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search treatments by name or specialty..."
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="priceLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price label</FormLabel>
+              <FormControl>
+                <Input placeholder="Starting at" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="primaryActionLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Primary card action</FormLabel>
+              <FormControl>
+                <Input placeholder="Learn More" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="secondaryActionLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Secondary card action</FormLabel>
+              <FormControl>
+                <Input placeholder="Start Your Journey" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="emptyStateHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="No specialties match your search"
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emptyStateDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Try another keyword or clear the search."
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="categories"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categories</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="cardiac-surgery, dental-care"
+                  value={categoriesToString(field.value)}
                   onChange={(event) =>
                     field.onChange(listToArray(event.target.value))
                   }
                 />
               </FormControl>
               <FormDescription>
-                Overrides auto-selection when entries are provided.
+                Optional comma-separated category slugs to filter.
               </FormDescription>
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="manualTreatments"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Manual treatment selection</FormLabel>
+              <FormControl>
+                <TreatmentMultiSelector
+                  values={field.value ?? []}
+                  onChange={field.onChange}
+                  maxSelections={selectedLimit}
+                />
+              </FormControl>
+              <FormDescription>
+                Search and choose treatments directly. Selected order controls
+                card order.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4 rounded-lg border border-border/60 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-medium text-foreground">
+              Card overrides
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Override icon, summary, or body copy for specific treatment slugs
+              without hardcoding the cards in JSX.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              overrides.append({
+                treatmentSlug: "",
+                icon: "",
+                summary: "",
+                description: "",
+              })
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add override
+          </Button>
+        </div>
+
+        {overrides.fields.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No overrides added. Cards will render directly from the treatments
+            catalog.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {overrides.fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="space-y-4 rounded-lg border border-border/60 bg-muted/20 p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline">Override {index + 1}</Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => overrides.remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`overrides.${index}.treatmentSlug`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormLabel>Treatment slug</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="advanced-dental-care"
+                            {...itemField}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`overrides.${index}.icon`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormLabel>Lucide icon</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Smile" {...itemField} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name={`overrides.${index}.summary`}
+                  render={({ field: itemField }) => (
+                    <FormItem>
+                      <FormLabel>Summary override</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          {...itemField}
+                          value={itemField.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`overrides.${index}.description`}
+                  render={({ field: itemField }) => (
+                    <FormItem>
+                      <FormLabel>Description override</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={4}
+                          {...itemField}
+                          value={itemField.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -7093,6 +10985,7 @@ function DoctorsBlockFields({
       .split(/[\n,]+/)
       .map((entry) => entry.trim())
       .filter(Boolean);
+  const selectedLimit = Number(form.watch("limit") ?? 6);
 
   return (
     <div className="space-y-6">
@@ -7230,19 +11123,17 @@ function DoctorsBlockFields({
           name="manualDoctors"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Manual doctors</FormLabel>
+              <FormLabel>Manual doctor selection</FormLabel>
               <FormControl>
-                <Textarea
-                  rows={3}
-                  placeholder="UUIDs or slugs, one per line"
-                  value={(field.value ?? []).join("\n")}
-                  onChange={(event) =>
-                    field.onChange(listToArray(event.target.value))
-                  }
+                <DoctorMultiSelector
+                  values={field.value ?? []}
+                  onChange={field.onChange}
+                  maxSelections={selectedLimit}
                 />
               </FormControl>
               <FormDescription>
-                Overrides filters when entries are provided.
+                Search and choose doctors directly. When provided, this
+                overrides automatic selection.
               </FormDescription>
             </FormItem>
           )}
@@ -7258,20 +11149,35 @@ const blockEditors: Record<
 > = {
   hero: (form) => <HeroBlockFields form={form} />,
   homeHero: (form) => <HomeHeroBlockFields form={form} />,
+  aboutHero: (form) => <AboutHeroBlockFields form={form} />,
   featuredTreatmentsHome: (form) => (
     <FeaturedTreatmentsHomeBlockFields form={form} />
   ),
   journeySteps: (form) => <JourneyStepsBlockFields form={form} />,
   differentiators: (form) => <DifferentiatorsBlockFields form={form} />,
   homeCta: (form) => <HomeCtaBlockFields form={form} />,
+  storyNarrative: (form) => <StoryNarrativeBlockFields form={form} />,
+  missionVisionValues: (form) => <MissionVisionValuesBlockFields form={form} />,
+  trustSignals: (form) => <TrustSignalsBlockFields form={form} />,
+  leadershipGrid: (form) => <LeadershipGridBlockFields form={form} />,
   statGrid: (form) => <StatGridBlockFields form={form} />,
+  advisoryNotice: (form) => <AdvisoryNoticeBlockFields form={form} />,
   richText: (form) => <RichTextBlockFields form={form} />,
   imageFeature: (form) => <ImageFeatureBlockFields form={form} />,
   featureGrid: (form) => <FeatureGridBlockFields form={form} />,
+  dataGrid: (form) => <DataGridBlockFields form={form} />,
+  infoPanels: (form) => <InfoPanelsBlockFields form={form} />,
+  hotelShowcase: (form) => <HotelShowcaseBlockFields form={form} />,
+  serviceCatalog: (form) => <ServiceCatalogBlockFields form={form} />,
   logoGrid: (form) => <LogoGridBlockFields form={form} />,
   callToAction: (form) => <CallToActionBlockFields form={form} />,
+  startJourneyEmbed: (form) => <StartJourneyEmbedBlockFields form={form} />,
   faq: (form) => <FaqBlockFields form={form} />,
+  faqDirectory: (form) => <FaqDirectoryBlockFields form={form} />,
   quote: (form) => <QuoteBlockFields form={form} />,
+  treatmentSpecialties: (form) => (
+    <TreatmentSpecialtiesBlockFields form={form} />
+  ),
   treatments: (form) => <TreatmentsBlockFields form={form} />,
   doctors: (form) => <DoctorsBlockFields form={form} />,
   tabbedGuide: (form) => <TabbedGuideBlockFields form={form} />,
@@ -7430,6 +11336,8 @@ export function blockSummary(block: BlockInstance): string {
       return block.heading;
     case "homeHero":
       return `${block.headingPrefix} ${block.headingHighlight}`.trim();
+    case "aboutHero":
+      return block.heading;
     case "featuredTreatmentsHome":
       return block.title ?? `${block.limit} homepage treatments`;
     case "journeySteps":
@@ -7438,6 +11346,14 @@ export function blockSummary(block: BlockInstance): string {
       return `${block.items.length} differentiator${block.items.length === 1 ? "" : "s"}`;
     case "homeCta":
       return `${block.headingPrefix} ${block.headingHighlight}`.trim();
+    case "storyNarrative":
+      return block.heading;
+    case "missionVisionValues":
+      return block.heading ?? block.valuesTitle;
+    case "trustSignals":
+      return `${block.items.length} signals`;
+    case "leadershipGrid":
+      return `${block.people.length} people`;
     case "statGrid":
       return `${block.items.length} stats`;
     case "richText":
@@ -7446,14 +11362,28 @@ export function blockSummary(block: BlockInstance): string {
       return block.heading;
     case "featureGrid":
       return `${block.items.length} features`;
+    case "dataGrid":
+      return `${block.rows.length} rows`;
+    case "infoPanels":
+      return `${block.panels.length} panels`;
+    case "hotelShowcase":
+      return `${block.items.length} stays`;
+    case "serviceCatalog":
+      return `${block.items.length} services`;
     case "logoGrid":
       return `${block.logos.length} logos`;
     case "callToAction":
       return block.heading;
+    case "startJourneyEmbed":
+      return block.heading;
     case "faq":
       return `${block.items.length} questions`;
+    case "faqDirectory":
+      return block.heading ?? "Dynamic FAQ directory";
     case "quote":
       return block.attribution ?? "Quote";
+    case "treatmentSpecialties":
+      return block.heading ?? `${block.limit} treatment specialties`;
     case "treatments":
       return block.title ?? `${block.limit} treatments`;
     case "doctors":
