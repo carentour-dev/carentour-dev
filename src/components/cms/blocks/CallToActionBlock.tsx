@@ -25,10 +25,12 @@ const backgroundPresets: Record<
     description: "text-primary/80",
   },
   dark: {
-    section: "bg-slate-900",
-    text: "text-slate-50",
-    description: "text-white/80",
-    secondaryButton: "border border-white/40 bg-transparent",
+    section:
+      "border-y border-[hsl(var(--editorial-ink-foreground)/0.08)] bg-[hsl(var(--editorial-ink))]",
+    text: "text-[hsl(var(--editorial-ink-foreground))]",
+    description: "text-[hsl(var(--editorial-ink-muted))]",
+    secondaryButton:
+      "border-[hsl(var(--editorial-ink-foreground)/0.4)] bg-transparent text-[hsl(var(--editorial-ink-foreground))] hover:bg-[hsl(var(--editorial-ink-foreground)/0.1)] hover:text-[hsl(var(--editorial-ink-foreground))]",
   },
   image: {
     section: "relative overflow-hidden",
