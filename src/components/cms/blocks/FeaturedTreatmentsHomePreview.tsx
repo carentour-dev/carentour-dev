@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { FeaturedTreatmentsSection } from "@/components/home";
 import { useTreatments } from "@/hooks/useTreatments";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { BlockSurface } from "./BlockSurface";
 
 function selectPreviewTreatments(
   treatments: ReturnType<typeof useTreatments>["treatments"],
@@ -52,12 +53,24 @@ export function FeaturedTreatmentsHomePreview({
   );
 
   return (
-    <FeaturedTreatmentsSection
-      treatments={selectedTreatments}
-      title={block.title}
-      description={block.description}
-      loading={loading}
-      error={error}
-    />
+    <BlockSurface
+      block={block}
+      className="overflow-visible"
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName="space-y-10"
+    >
+      {() => (
+        <FeaturedTreatmentsSection
+          embedded
+          treatments={selectedTreatments}
+          eyebrow={block.eyebrow}
+          title={block.title}
+          description={block.description}
+          appearance={block.cardAppearance}
+          loading={loading}
+          error={error}
+        />
+      )}
+    </BlockSurface>
   );
 }
