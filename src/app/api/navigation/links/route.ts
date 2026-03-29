@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { filterOrphanedNavigationRows } from "@/lib/navigation";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { Database } from "@/integrations/supabase/types";
@@ -14,17 +15,27 @@ export async function GET() {
   await requirePermission("nav.manage");
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
-    .from("navigation_links")
-    .select(SELECT_COLUMNS)
-    .order("position", { ascending: true })
-    .order("label", { ascending: true });
+  const [{ data, error }, { data: cmsPages, error: cmsPagesError }] =
+    await Promise.all([
+      supabase
+        .from("navigation_links")
+        .select(SELECT_COLUMNS)
+        .order("position", { ascending: true })
+        .order("label", { ascending: true }),
+      supabase.from("cms_pages").select("id, slug"),
+    ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ data: data ?? [] });
+  if (cmsPagesError) {
+    return NextResponse.json({ error: cmsPagesError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    data: filterOrphanedNavigationRows(data ?? [], cmsPages ?? []),
+  });
 }
 
 export async function POST(request: NextRequest) {
