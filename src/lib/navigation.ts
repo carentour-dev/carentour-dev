@@ -17,6 +17,7 @@ export type NavigationLink = {
 };
 
 type NavigationRow = Database["public"]["Tables"]["navigation_links"]["Row"];
+type CmsPageRow = Database["public"]["Tables"]["cms_pages"]["Row"];
 
 type NavigationQueryOptions = {
   includeHidden?: boolean;
@@ -27,6 +28,8 @@ export type NavigationQueryResult = {
   fallback: boolean;
   error?: string;
 };
+
+export type CmsPageReference = Pick<CmsPageRow, "id" | "slug">;
 
 // Documented snapshot of the hardcoded routes that previously lived in Header.tsx.
 export const DEFAULT_NAVIGATION_ENTRIES: Array<{
@@ -96,6 +99,25 @@ export function mapNavigationRow(row: NavigationRow): NavigationLink {
     cmsPageId,
     isAutoManaged: Boolean(cmsPageId),
   };
+}
+
+export function filterOrphanedNavigationRows<
+  T extends Pick<NavigationRow, "kind" | "slug" | "cms_page_id">,
+>(rows: T[], cmsPages: CmsPageReference[]): T[] {
+  const cmsPageIds = new Set(cmsPages.map((page) => page.id));
+  const cmsPageSlugs = new Set(cmsPages.map((page) => page.slug));
+
+  return rows.filter((row) => {
+    if (row.cms_page_id) {
+      return cmsPageIds.has(row.cms_page_id);
+    }
+
+    if (row.kind !== "cms") {
+      return true;
+    }
+
+    return cmsPageSlugs.has(row.slug);
+  });
 }
 
 export function sortNavigationLinks(links: NavigationLink[]): NavigationLink[] {
