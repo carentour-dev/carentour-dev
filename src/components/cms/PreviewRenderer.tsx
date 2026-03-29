@@ -8,17 +8,30 @@ import { CallToActionBlock } from "./blocks/CallToActionBlock";
 import { DifferentiatorsBlock } from "./blocks/DifferentiatorsBlock";
 import { FeaturedTreatmentsHomePreview } from "./blocks/FeaturedTreatmentsHomePreview";
 import { FeatureGridBlock } from "./blocks/FeatureGridBlock";
+import { DataGridBlock } from "./blocks/DataGridBlock";
 import { FaqBlock } from "./blocks/FaqBlock";
+import { FaqDirectoryPreview } from "./blocks/FaqDirectoryPreview";
+import { LeadershipGridBlock } from "./blocks/LeadershipGridBlock";
 import { HeroBlock } from "./blocks/HeroBlock";
 import { HomeCtaBlock } from "./blocks/HomeCtaBlock";
 import { HomeHeroBlock } from "./blocks/HomeHeroBlock";
 import { ImageFeatureBlock } from "./blocks/ImageFeatureBlock";
 import { JourneyStepsBlock } from "./blocks/JourneyStepsBlock";
 import { LogoGridBlock } from "./blocks/LogoGridBlock";
+import { AboutHeroBlock } from "./blocks/AboutHeroBlock";
+import { MissionVisionValuesBlock } from "./blocks/MissionVisionValuesBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
 import { RichTextBlock } from "./blocks/RichTextBlock";
+import { HotelShowcaseBlock } from "./blocks/HotelShowcaseBlock";
+import { InfoPanelsBlock } from "./blocks/InfoPanelsBlock";
+import { ServiceCatalogBlock } from "./blocks/ServiceCatalogBlock";
 import { StatGridBlock } from "./blocks/StatGridBlock";
+import { AdvisoryNoticeBlock } from "./blocks/AdvisoryNoticeBlock";
+import { StoryNarrativeBlock } from "./blocks/StoryNarrativeBlock";
 import { TabbedGuidePreview } from "./blocks/TabbedGuidePreview";
+import { TreatmentSpecialtiesPreview } from "./blocks/TreatmentSpecialtiesPreview";
+import { TrustSignalsBlock } from "./blocks/TrustSignalsBlock";
+import { StartJourneyEmbedBlock } from "./blocks/StartJourneyEmbedBlock";
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -94,6 +107,8 @@ export function BlockPreviewRenderer({
               return <HeroBlock key={blockKey} block={block} />;
             case "homeHero":
               return <HomeHeroBlock key={blockKey} block={block} />;
+            case "aboutHero":
+              return <AboutHeroBlock key={blockKey} block={block} />;
             case "featuredTreatmentsHome":
               return (
                 <FeaturedTreatmentsHomePreview key={blockKey} block={block} />
@@ -104,22 +119,48 @@ export function BlockPreviewRenderer({
               return <DifferentiatorsBlock key={blockKey} block={block} />;
             case "homeCta":
               return <HomeCtaBlock key={blockKey} block={block} />;
+            case "storyNarrative":
+              return <StoryNarrativeBlock key={blockKey} block={block} />;
+            case "missionVisionValues":
+              return <MissionVisionValuesBlock key={blockKey} block={block} />;
+            case "trustSignals":
+              return <TrustSignalsBlock key={blockKey} block={block} />;
+            case "leadershipGrid":
+              return <LeadershipGridBlock key={blockKey} block={block} />;
             case "statGrid":
               return <StatGridBlock key={blockKey} block={block} />;
+            case "advisoryNotice":
+              return <AdvisoryNoticeBlock key={blockKey} block={block} />;
             case "richText":
               return <RichTextBlock key={blockKey} block={block} />;
             case "imageFeature":
               return <ImageFeatureBlock key={blockKey} block={block} />;
             case "featureGrid":
               return <FeatureGridBlock key={blockKey} block={block} />;
+            case "dataGrid":
+              return <DataGridBlock key={blockKey} block={block} />;
+            case "infoPanels":
+              return <InfoPanelsBlock key={blockKey} block={block} />;
+            case "hotelShowcase":
+              return <HotelShowcaseBlock key={blockKey} block={block} />;
+            case "serviceCatalog":
+              return <ServiceCatalogBlock key={blockKey} block={block} />;
             case "logoGrid":
               return <LogoGridBlock key={blockKey} block={block} />;
             case "callToAction":
               return <CallToActionBlock key={blockKey} block={block} />;
+            case "startJourneyEmbed":
+              return <StartJourneyEmbedBlock key={blockKey} block={block} />;
             case "faq":
               return <FaqBlock key={blockKey} block={block} />;
+            case "faqDirectory":
+              return <FaqDirectoryPreview key={blockKey} block={block} />;
             case "quote":
               return <QuoteBlock key={blockKey} block={block} />;
+            case "treatmentSpecialties":
+              return (
+                <TreatmentSpecialtiesPreview key={blockKey} block={block} />
+              );
             case "treatments":
               return <Placeholder key={blockKey} title="Treatments" />;
             case "doctors":
