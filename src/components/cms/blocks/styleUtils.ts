@@ -282,7 +282,7 @@ export function buildTypographyCss(
   if (textColor?.base) {
     css.push(
       `#${domId},#${domId} .cms-block__inner{color:${textColor.base} !important;}` +
-        `#${domId} .cms-block__inner p,#${domId} .cms-block__inner li,#${domId} .cms-block__inner blockquote,#${domId} .cms-block__inner strong,#${domId} .cms-block__inner em,#${domId} .cms-block__inner span{color:${textColor.base} !important;}`,
+        `#${domId} .cms-block__inner h1,#${domId} .cms-block__inner h2,#${domId} .cms-block__inner h3,#${domId} .cms-block__inner h4,#${domId} .cms-block__inner h5,#${domId} .cms-block__inner h6,#${domId} .cms-block__inner p,#${domId} .cms-block__inner li,#${domId} .cms-block__inner blockquote,#${domId} .cms-block__inner strong,#${domId} .cms-block__inner em,#${domId} .cms-block__inner span{color:${textColor.base} !important;}`,
     );
   }
 
@@ -290,7 +290,7 @@ export function buildTypographyCss(
     const value = textColor?.[bp];
     if (!value) return;
     css.push(
-      `${breakpointMediaQuery[bp]}{#${domId},#${domId} .cms-block__inner{color:${value} !important;}#${domId} .cms-block__inner p,#${domId} .cms-block__inner li,#${domId} .cms-block__inner blockquote,#${domId} .cms-block__inner strong,#${domId} .cms-block__inner em,#${domId} .cms-block__inner span{color:${value} !important;}}`,
+      `${breakpointMediaQuery[bp]}{#${domId},#${domId} .cms-block__inner{color:${value} !important;}#${domId} .cms-block__inner h1,#${domId} .cms-block__inner h2,#${domId} .cms-block__inner h3,#${domId} .cms-block__inner h4,#${domId} .cms-block__inner h5,#${domId} .cms-block__inner h6,#${domId} .cms-block__inner p,#${domId} .cms-block__inner li,#${domId} .cms-block__inner blockquote,#${domId} .cms-block__inner strong,#${domId} .cms-block__inner em,#${domId} .cms-block__inner span{color:${value} !important;}}`,
     );
   });
 
