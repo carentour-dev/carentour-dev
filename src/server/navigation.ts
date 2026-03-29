@@ -1,4 +1,5 @@
 import {
+  filterOrphanedNavigationRows,
   getFallbackNavigationLinks,
   mapNavigationRow,
   sortNavigationLinks,
@@ -44,7 +45,11 @@ export async function loadPublicNavigationLinks(): Promise<NavigationQueryResult
       };
     }
 
-    const navLinks = (navRows ?? []).map(mapNavigationRow);
+    const filteredNavRows = filterOrphanedNavigationRows(
+      navRows ?? [],
+      cmsPages ?? [],
+    );
+    const navLinks = filteredNavRows.map(mapNavigationRow);
     const existingSlugs = new Set(navLinks.map((link) => link.slug));
 
     const cmsLinks: NavigationLink[] = (cmsPages ?? [])
