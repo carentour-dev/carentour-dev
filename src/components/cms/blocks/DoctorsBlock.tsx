@@ -109,6 +109,7 @@ export async function DoctorsBlock({
   return (
     <BlockSurface
       block={block}
+      className="border-y border-border/50"
       defaultPadding={{ top: "4rem", bottom: "4rem" }}
       contentClassName="space-y-10"
     >
