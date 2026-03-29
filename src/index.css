@@ -70,6 +70,14 @@
     --surface-premium-soft: 35 80% 94%;
     --surface-border: 210 24% 86%;
 
+    /* Editorial marketing surfaces shared by CMS-driven Home and About pages */
+    --editorial-ink: 222 47% 11%;
+    --editorial-ink-soft: 223 33% 16%;
+    --editorial-ink-foreground: 210 40% 98%;
+    --editorial-ink-muted: 214 24% 78%;
+    --editorial-accent: 190 78% 74%;
+    --home-section-band: 0 0% 99%;
+
     /* Legacy gradient aliases kept for CMS compatibility */
     --gradient-hero: linear-gradient(
       180deg,
@@ -189,6 +197,14 @@
     --surface-accent-soft: 210 30% 20%;
     --surface-premium-soft: 35 45% 18%;
     --surface-border: 222 16% 24%;
+
+    /* Editorial marketing surfaces shared by CMS-driven Home and About pages */
+    --editorial-ink: 222 22% 12%;
+    --editorial-ink-soft: 222 18% 16%;
+    --editorial-ink-foreground: 210 40% 98%;
+    --editorial-ink-muted: 214 20% 74%;
+    --editorial-accent: 190 74% 74%;
+    --home-section-band: 222 22% 12%;
 
     /* Legacy gradient aliases kept for CMS compatibility */
     --gradient-hero: linear-gradient(
