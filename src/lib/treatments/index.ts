@@ -89,6 +89,36 @@ const TREATMENT_CARD_IMAGE_BY_KEY: Record<string, string> = {
   orthopedic: "/surgery-suite.webp",
 };
 
+const DEFAULT_TREATMENT_ICON = "Stethoscope";
+
+const TREATMENT_ICON_BY_KEY: Record<string, string> = {
+  "cardiac-surgery": "Heart",
+  "heart-surgery": "Heart",
+  cardiology: "Heart",
+  "advanced-cardiac-bypass": "Heart",
+  "tavr-program": "Heart",
+  "eye-surgery": "Eye",
+  ophthalmology: "Eye",
+  "retinal-repair-macular-care": "Eye",
+  "laser-vision-elite": "Eye",
+  "dental-care": "Smile",
+  dental: "Smile",
+  dentistry: "Smile",
+  "advanced-dental-care": "Smile",
+  "signature-smile-makeover": "Smile",
+  "cosmetic-surgery": "Scissors",
+  cosmetic: "Scissors",
+  "cosmetic-plastic-surgery": "Scissors",
+  "general-surgery": "Activity",
+  general: "Activity",
+  "orthopedic-surgery": "Activity",
+  orthopedic: "Activity",
+  "fertility-treatment": "Sparkles",
+  fertility: "Sparkles",
+  "ivf-fertility-treatments": "Sparkles",
+  "comprehensive-fertility-journey": "Sparkles",
+};
+
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
@@ -109,6 +139,23 @@ export const getTreatmentCardFallbackImage = (
   }
 
   return DEFAULT_TREATMENT_CARD_IMAGE;
+};
+
+export const getTreatmentIconName = (
+  slug?: string | null,
+  category?: string | null,
+) => {
+  const slugKey = slug?.toLowerCase();
+  if (slugKey && TREATMENT_ICON_BY_KEY[slugKey]) {
+    return TREATMENT_ICON_BY_KEY[slugKey];
+  }
+
+  const categoryKey = category?.toLowerCase();
+  if (categoryKey && TREATMENT_ICON_BY_KEY[categoryKey]) {
+    return TREATMENT_ICON_BY_KEY[categoryKey];
+  }
+
+  return DEFAULT_TREATMENT_ICON;
 };
 
 export const resolveTreatmentCardImage = ({
