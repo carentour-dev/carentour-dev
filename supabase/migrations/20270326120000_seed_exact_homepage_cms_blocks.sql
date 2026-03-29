@@ -29,7 +29,7 @@ SET
       "headingHighlight": "Medical Care",
       "headingSuffix": "in Egypt",
       "description": "Access trusted doctors and accredited hospitals with complete travel coordination and personal guidance at every step. We make your medical journey safe, clear, and comfortable from inquiry to recovery.\n\nVerified specialists. Transparent packages. Concierge-level support.",
-      "backgroundImageUrl": "/hero-medical-facility.webp",
+      "backgroundImageUrl": "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png",
       "primaryAction": {
         "label": "Start Your Journey",
         "href": "/start-journey",
@@ -45,7 +45,7 @@ SET
       "type": "featuredTreatmentsHome",
       "title": "Featured Treatments",
       "description": "Discover our most popular medical procedures, performed by internationally certified specialists",
-      "limit": 4,
+      "limit": 12,
       "featuredOnly": true
     },
     {
