@@ -49,6 +49,8 @@ export type FaqCategory = {
   color?: string | null;
   fragment?: string | null;
   position?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export const FAQ_CATEGORY_ORDER: FaqCategoryId[] = [
