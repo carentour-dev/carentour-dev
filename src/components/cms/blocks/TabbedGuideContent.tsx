@@ -35,6 +35,14 @@ const autoGridColumnsClassName: Record<number, string> = {
   3: "md:grid-cols-2 lg:grid-cols-3",
 };
 
+const guideTabsLayoutClassName: Record<number, string> = {
+  1: "max-w-xl grid-cols-1",
+  2: "max-w-3xl grid-cols-1 sm:grid-cols-2",
+  3: "max-w-4xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  4: "max-w-5xl grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
+  5: "max-w-6xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
+};
+
 const guidePanelClassName =
   "border border-border/60 bg-card/90 shadow-sm backdrop-blur-sm dark:border-[hsl(var(--editorial-ink-foreground)/0.12)] dark:bg-[hsl(var(--editorial-ink-soft)/0.92)]";
 
@@ -209,6 +217,10 @@ export function TabbedGuideContent({
   };
 
   const resolvedValue = activeValue ?? tabValues[0] ?? fallbackValueRef.current;
+  const tabsLayoutClassName =
+    guideTabsLayoutClassName[Math.min(Math.max(block.tabs.length, 1), 5)] ??
+    guideTabsLayoutClassName[5];
+
   return (
     <BlockSurface
       block={block}
@@ -249,7 +261,12 @@ export function TabbedGuideContent({
             onValueChange={handleTabChange}
             className="space-y-6"
           >
-            <TabsList className="mx-auto flex w-full max-w-6xl items-center gap-3 overflow-x-auto rounded-[2rem] border border-border/60 bg-[hsl(var(--surface-subtle))] p-2.5 md:gap-4 md:p-3 shadow-sm backdrop-blur-sm scrollbar-none dark:border-[hsl(var(--editorial-ink-foreground)/0.08)] dark:bg-[hsl(var(--editorial-ink-soft)/0.78)]">
+            <TabsList
+              className={cn(
+                "mx-auto grid w-full items-stretch gap-2 rounded-[2rem] border border-border/60 bg-[hsl(var(--surface-subtle))] p-1 shadow-sm backdrop-blur-sm md:gap-3 md:p-1.5 dark:border-[hsl(var(--editorial-ink-foreground)/0.08)] dark:bg-[hsl(var(--editorial-ink-soft)/0.78)]",
+                tabsLayoutClassName,
+              )}
+            >
               {block.tabs.map((tab, index) => {
                 const value = tabValues[index] ?? `tab-${index}`;
                 const Icon = resolveIcon(tab.icon);
@@ -258,12 +275,14 @@ export function TabbedGuideContent({
                     key={value}
                     value={value}
                     type="button"
-                    className="shrink-0 gap-2.5 whitespace-nowrap rounded-full border border-transparent px-5 py-3.5 text-sm font-semibold text-muted-foreground transition-colors md:px-6 dark:text-[hsl(var(--editorial-ink-muted))] data-[state=active]:border-primary/40 data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-[hsl(var(--editorial-accent)/0.32)] dark:data-[state=active]:bg-[hsl(var(--editorial-ink-foreground)/0.05)] dark:data-[state=active]:text-[hsl(var(--editorial-ink-foreground))]"
+                    className="h-full min-h-[3rem] w-full gap-2 whitespace-normal rounded-full border border-transparent px-3 py-2 text-center text-[0.95rem] font-semibold leading-tight text-muted-foreground transition-colors md:px-4 md:py-2.5 md:text-sm dark:text-[hsl(var(--editorial-ink-muted))] data-[state=active]:border-primary/40 data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-[hsl(var(--editorial-accent)/0.32)] dark:data-[state=active]:bg-[hsl(var(--editorial-ink-foreground)/0.05)] dark:data-[state=active]:text-[hsl(var(--editorial-ink-foreground))]"
                   >
                     {Icon ? (
-                      <Icon className="h-[1.125rem] w-[1.125rem]" />
+                      <Icon className="h-4 w-4 md:h-[1.125rem] md:w-[1.125rem]" />
                     ) : null}
-                    {tab.label}
+                    <span className="max-w-full whitespace-normal text-center">
+                      {tab.label}
+                    </span>
                   </TabsTrigger>
                 );
               })}
