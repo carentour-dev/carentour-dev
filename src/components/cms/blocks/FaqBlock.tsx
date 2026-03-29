@@ -16,12 +16,12 @@ function renderColumn(items: BlockValue<"faq">["items"], prefix: string) {
         <AccordionItem
           key={`${prefix}-${index}`}
           value={`${prefix}-${index}`}
-          className="border border-border/60 rounded-xl px-4"
+          className="rounded-xl border border-border/60 px-4 dark:border-slate-200 dark:bg-white"
         >
-          <AccordionTrigger className="text-left text-lg font-semibold text-foreground">
+          <AccordionTrigger className="text-left text-lg font-semibold text-foreground dark:text-slate-950">
             {item.question}
           </AccordionTrigger>
-          <AccordionContent className="text-muted-foreground leading-relaxed">
+          <AccordionContent className="leading-relaxed text-muted-foreground dark:text-slate-600">
             {item.answer}
           </AccordionContent>
         </AccordionItem>
@@ -60,18 +60,22 @@ export function FaqBlock({ block }: { block: BlockInstance<"faq"> }) {
       : "text-center";
 
   return (
-    <BlockSurface block={block} contentClassName="space-y-12">
+    <BlockSurface
+      block={block}
+      className="bg-background dark:border-y dark:border-slate-200 dark:bg-slate-50"
+      contentClassName="space-y-12"
+    >
       {() => (
         <>
           {(block.eyebrow || block.heading || block.description) && (
             <div className={cn("max-w-3xl space-y-3", headerAlignClass)}>
               {block.eyebrow ? (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs uppercase tracking-wide text-primary">
+                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs uppercase tracking-wide text-primary dark:border-slate-200 dark:text-slate-500">
                   {block.eyebrow}
                 </span>
               ) : null}
               {block.heading ? (
-                <h2 className="text-3xl font-semibold text-foreground">
+                <h2 className="text-3xl font-semibold text-foreground dark:text-slate-950">
                   {block.heading}
                 </h2>
               ) : null}
@@ -80,6 +84,7 @@ export function FaqBlock({ block }: { block: BlockInstance<"faq"> }) {
                   className={cn(
                     "text-lg text-muted-foreground",
                     descriptionAlignClass,
+                    "dark:text-slate-600",
                   )}
                 >
                   {block.description}
