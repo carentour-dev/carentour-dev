@@ -29,6 +29,18 @@ const columnClassName: Record<number, string> = {
   3: "md:grid-cols-3",
 };
 
+const autoGridColumnsClassName: Record<number, string> = {
+  1: "md:grid-cols-1",
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-2 lg:grid-cols-3",
+};
+
+const guidePanelClassName =
+  "border border-border/60 bg-card/90 shadow-sm backdrop-blur-sm dark:border-[hsl(var(--editorial-ink-foreground)/0.12)] dark:bg-[hsl(var(--editorial-ink-soft)/0.92)]";
+
+const guideSubtlePanelClassName =
+  "border border-border/50 bg-background/50 dark:border-[hsl(var(--editorial-ink-foreground)/0.08)] dark:bg-[hsl(var(--editorial-ink-foreground)/0.04)]";
+
 const cardMarkdownComponents: Components = {
   h1: ({ node, ...props }) => (
     <h4 className="text-lg font-semibold text-foreground" {...props} />
@@ -197,32 +209,35 @@ export function TabbedGuideContent({
   };
 
   const resolvedValue = activeValue ?? tabValues[0] ?? fallbackValueRef.current;
-
   return (
     <BlockSurface
       block={block}
-      defaultPadding={{ top: "4rem", bottom: "4rem" }}
-      contentClassName="space-y-10"
+      className="border-y border-border/50 bg-background"
+      defaultPadding={{ top: "6rem", bottom: "6rem" }}
+      contentClassName="space-y-12"
     >
       {() => (
-        <div ref={tabsAnchorRef} className="space-y-10 scroll-mt-24">
+        <div ref={tabsAnchorRef} className="space-y-12 scroll-mt-24">
           <div className="space-y-4 text-center">
             {block.badge ? (
-              <Badge variant="outline" className="px-4 py-1 text-xs uppercase">
+              <Badge
+                variant="outline"
+                className="px-4 py-1 text-[0.7rem] uppercase tracking-[0.22em]"
+              >
                 {block.badge}
               </Badge>
             ) : null}
             <div className="space-y-3">
               {block.eyebrow ? (
-                <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
                   {block.eyebrow}
                 </p>
               ) : null}
-              <h2 className="text-4xl font-bold text-foreground">
+              <h2 className="mx-auto max-w-4xl text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-5xl">
                 {block.heading}
               </h2>
               {block.description ? (
-                <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
+                <p className="mx-auto max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
                   {block.description}
                 </p>
               ) : null}
@@ -234,7 +249,7 @@ export function TabbedGuideContent({
             onValueChange={handleTabChange}
             className="space-y-6"
           >
-            <TabsList className="grid w-full grid-cols-1 gap-2 rounded-full bg-muted/30 p-2 md:grid-cols-2 lg:grid-cols-4">
+            <TabsList className="mx-auto flex w-full max-w-6xl items-center gap-3 overflow-x-auto rounded-[2rem] border border-border/60 bg-[hsl(var(--surface-subtle))] p-2.5 md:gap-4 md:p-3 shadow-sm backdrop-blur-sm scrollbar-none dark:border-[hsl(var(--editorial-ink-foreground)/0.08)] dark:bg-[hsl(var(--editorial-ink-soft)/0.78)]">
               {block.tabs.map((tab, index) => {
                 const value = tabValues[index] ?? `tab-${index}`;
                 const Icon = resolveIcon(tab.icon);
@@ -243,11 +258,11 @@ export function TabbedGuideContent({
                     key={value}
                     value={value}
                     type="button"
-                    className={cn(
-                      "flex items-center justify-center gap-2 rounded-full border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-background data-[state=active]:text-foreground",
-                    )}
+                    className="shrink-0 gap-2.5 whitespace-nowrap rounded-full border border-transparent px-5 py-3.5 text-sm font-semibold text-muted-foreground transition-colors md:px-6 dark:text-[hsl(var(--editorial-ink-muted))] data-[state=active]:border-primary/40 data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-[hsl(var(--editorial-accent)/0.32)] dark:data-[state=active]:bg-[hsl(var(--editorial-ink-foreground)/0.05)] dark:data-[state=active]:text-[hsl(var(--editorial-ink-foreground))]"
                   >
-                    {Icon ? <Icon className="h-4 w-4" /> : null}
+                    {Icon ? (
+                      <Icon className="h-[1.125rem] w-[1.125rem]" />
+                    ) : null}
                     {tab.label}
                   </TabsTrigger>
                 );
@@ -258,22 +273,22 @@ export function TabbedGuideContent({
               const value = tabValues[tabIndex] ?? `tab-${tabIndex}`;
               return (
                 <TabsContent key={value} value={value}>
-                  <div className="space-y-8">
+                  <div className="mx-auto w-full max-w-6xl space-y-10">
                     {(tab.heading || tab.description) && (
-                      <div className="space-y-2 text-center">
+                      <div className="mx-auto max-w-3xl space-y-3 text-center">
                         {tab.heading ? (
-                          <h3 className="text-3xl font-semibold text-foreground">
+                          <h3 className="text-2xl font-semibold leading-tight text-foreground md:text-4xl">
                             {tab.heading}
                           </h3>
                         ) : null}
                         {tab.description ? (
-                          <p className="text-lg text-muted-foreground">
+                          <p className="text-base leading-8 text-muted-foreground md:text-lg">
                             {tab.description}
                           </p>
                         ) : null}
                       </div>
                     )}
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-8 md:grid-cols-2">
                       {tab.sections.map((section, sectionIndex) => {
                         const sectionKey = resolveSectionKey(
                           value,
@@ -321,17 +336,23 @@ function SectionRenderer({
   hotelMap: TabbedGuideHotelsMap;
   isPreview?: boolean;
 }) {
+  const resolveAutoGridColumnsClass = (count: number) =>
+    autoGridColumnsClassName[Math.min(Math.max(count, 1), 3)] ??
+    autoGridColumnsClassName[3];
+
   switch (section.type) {
     case "cardGrid":
       return (
         <div className="space-y-4">
           {section.title ? (
-            <h4 className="text-2xl font-semibold text-foreground">
+            <h4 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
               {section.title}
             </h4>
           ) : null}
           {section.description ? (
-            <p className="text-muted-foreground">{section.description}</p>
+            <p className="max-w-3xl text-base leading-8 text-muted-foreground">
+              {section.description}
+            </p>
           ) : null}
           <div
             className={cn(
@@ -351,7 +372,13 @@ function SectionRenderer({
               const hasContent =
                 hasMarkdown || hasBullets || hasHelper || hasActions;
               return (
-                <Card key={`${sectionKey}-card-${index}`} className="h-full">
+                <Card
+                  key={`${sectionKey}-card-${index}`}
+                  className={cn(
+                    "h-full rounded-[1.75rem]",
+                    guidePanelClassName,
+                  )}
+                >
                   <CardHeader className="space-y-3">
                     <div className="flex items-center gap-3">
                       {Icon ? (
@@ -440,7 +467,7 @@ function SectionRenderer({
     case "compactList": {
       const Icon = resolveIcon(section.icon);
       return (
-        <Card className="border-border/70 bg-card/95 shadow-sm">
+        <Card className={guidePanelClassName}>
           <CardContent className="space-y-5 p-5">
             <div className="flex items-center gap-3">
               {Icon ? (
@@ -466,7 +493,7 @@ function SectionRenderer({
                 <div
                   key={`${sectionKey}-compact-${index}`}
                   className={cn(
-                    "rounded-lg border border-border/40 bg-card/60 px-4 py-3",
+                    `${guideSubtlePanelClassName} rounded-lg px-4 py-3`,
                     "flex flex-col gap-1",
                   )}
                 >
@@ -504,8 +531,8 @@ function SectionRenderer({
             {section.description ? (
               <p className="text-muted-foreground">{section.description}</p>
             ) : null}
-            <Card className="border-border/70 bg-card/90">
-              <CardContent className="p-0">
+            <Card className={guidePanelClassName}>
+              <CardContent className="space-y-4 p-3 md:p-4">
                 {section.rows.map((row, rowIndex) => {
                   const pillValue =
                     pillKey && row.values[pillKey] ? row.values[pillKey] : null;
@@ -516,8 +543,7 @@ function SectionRenderer({
                     <div
                       key={`${sectionKey}-stacked-row-${rowIndex}`}
                       className={cn(
-                        "flex flex-col gap-4 px-6 py-6",
-                        rowIndex > 0 && "border-t border-border/60",
+                        "rounded-[1.5rem] border border-border/60 bg-background px-5 py-5 md:px-6",
                       )}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -525,7 +551,7 @@ function SectionRenderer({
                           {row.title}
                         </h5>
                         {pillValue ? (
-                          <Badge className="rounded-full bg-muted px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground">
+                          <Badge className="rounded-full bg-muted px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                             {pillValue}
                           </Badge>
                         ) : row.badge ? (
@@ -533,16 +559,16 @@ function SectionRenderer({
                         ) : null}
                       </div>
                       {infoColumns.length ? (
-                        <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
+                        <div className="grid gap-5 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
                           {infoColumns.map((column) => (
                             <div
                               key={`${sectionKey}-${column.key}-${rowIndex}`}
                               className="space-y-1"
                             >
-                              <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground/70">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/70">
                                 {column.label}
                               </span>
-                              <p className="text-base text-foreground">
+                              <p className="text-base leading-7 text-foreground">
                                 {row.values[column.key] ?? "—"}
                               </p>
                             </div>
@@ -560,14 +586,26 @@ function SectionRenderer({
       return (
         <div className="space-y-4">
           {section.title ? (
-            <h4 className="text-2xl font-semibold">{section.title}</h4>
+            <h4 className="text-2xl font-semibold tracking-[-0.02em]">
+              {section.title}
+            </h4>
           ) : null}
           {section.description ? (
-            <p className="text-muted-foreground">{section.description}</p>
+            <p className="max-w-3xl text-base leading-8 text-muted-foreground">
+              {section.description}
+            </p>
           ) : null}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div
+            className={cn(
+              "grid gap-4",
+              resolveAutoGridColumnsClass(section.rows.length),
+            )}
+          >
             {section.rows.map((row, rowIndex) => (
-              <Card key={`${sectionKey}-row-${rowIndex}`}>
+              <Card
+                key={`${sectionKey}-row-${rowIndex}`}
+                className={guidePanelClassName}
+              >
                 <CardContent className="space-y-3 p-5">
                   <div className="flex items-center justify-between">
                     <h5 className="text-lg font-semibold text-foreground">
@@ -601,21 +639,23 @@ function SectionRenderer({
       const calloutBullets = cleanList(section.bullets);
       const toneClasses =
         section.tone === "warning"
-          ? "bg-amber-500/10 border-amber-500/40"
+          ? "border-amber-300/60 bg-amber-50/80"
           : section.tone === "muted"
-            ? "bg-muted/40 border-border/60"
-            : "bg-primary/10 border-primary/30";
+            ? "border-border/60 bg-[hsl(var(--surface-subtle))]"
+            : "border-primary/20 bg-primary/5";
       return (
-        <Card className={cn("border", toneClasses)}>
+        <Card className={cn("rounded-[1.75rem] border", toneClasses)}>
           <CardContent className="space-y-3 p-6">
             <h5 className="text-xl font-semibold text-foreground">
               {section.title}
             </h5>
             {section.body ? (
-              <p className="text-sm text-muted-foreground">{section.body}</p>
+              <p className="text-sm leading-7 text-muted-foreground">
+                {section.body}
+              </p>
             ) : null}
             {calloutBullets.length ? (
-              <ul className="space-y-1 text-sm text-muted-foreground">
+              <ul className="space-y-1 text-sm leading-7 text-muted-foreground">
                 {calloutBullets.map((bullet, index) => (
                   <li key={`${sectionKey}-bullet-${index}`}>• {bullet}</li>
                 ))}
@@ -672,20 +712,42 @@ function SectionRenderer({
         </div>
       );
     }
-    case "infoPanels":
+    case "infoPanels": {
+      const useEditorialGrid = section.panels.length === 4;
       return (
         <div className="space-y-4">
           {section.title ? (
-            <h4 className="text-2xl font-semibold">{section.title}</h4>
+            <h4 className="text-2xl font-semibold tracking-[-0.02em]">
+              {section.title}
+            </h4>
           ) : null}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {section.panels.map((panel, index) => {
-              const panelItems = cleanList(panel.items);
-              return (
-                <Card key={`${sectionKey}-panel-${index}`}>
-                  <CardContent className="space-y-3 p-5">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-lg font-semibold">{panel.title}</h5>
+          {useEditorialGrid ? (
+            <div
+              className={cn(
+                "grid gap-x-10 gap-y-8 rounded-[2rem] border border-border/60 bg-card/70 p-6 shadow-sm backdrop-blur-sm md:grid-cols-2 md:p-8",
+                "dark:border-[hsl(var(--editorial-ink-foreground)/0.12)] dark:bg-[hsl(var(--editorial-ink-soft)/0.7)]",
+              )}
+            >
+              {section.panels.map((panel, index) => {
+                const panelItems = cleanList(panel.items);
+                const isRightColumn = index % 2 === 1;
+                const isBottomRow = index >= 2;
+
+                return (
+                  <article
+                    key={`${sectionKey}-panel-${index}`}
+                    className={cn(
+                      "space-y-4",
+                      isRightColumn &&
+                        "md:border-l md:border-border/40 md:pl-8 dark:md:border-[hsl(var(--editorial-ink-foreground)/0.08)]",
+                      isBottomRow &&
+                        "md:border-t md:border-border/40 md:pt-8 dark:md:border-[hsl(var(--editorial-ink-foreground)/0.08)]",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h5 className="text-lg font-semibold text-foreground">
+                        {panel.title}
+                      </h5>
                       {panel.badge ? (
                         <Badge variant="outline" className="text-xs">
                           {panel.badge}
@@ -693,26 +755,76 @@ function SectionRenderer({
                       ) : null}
                     </div>
                     {panel.description ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="max-w-xl text-sm leading-7 text-muted-foreground">
                         {panel.description}
                       </p>
                     ) : null}
                     {panelItems.length ? (
-                      <ul className="space-y-2 text-sm text-muted-foreground">
+                      <ul className="space-y-3 text-sm leading-7 text-muted-foreground">
                         {panelItems.map((item, itemIndex) => (
-                          <li key={`${sectionKey}-panel-item-${itemIndex}`}>
-                            • {item}
+                          <li
+                            key={`${sectionKey}-panel-item-${itemIndex}`}
+                            className="flex items-start gap-3"
+                          >
+                            <span
+                              aria-hidden
+                              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                            />
+                            <span>{item}</span>
                           </li>
                         ))}
                       </ul>
                     ) : null}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "grid gap-4",
+                resolveAutoGridColumnsClass(section.panels.length),
+              )}
+            >
+              {section.panels.map((panel, index) => {
+                const panelItems = cleanList(panel.items);
+                return (
+                  <Card
+                    key={`${sectionKey}-panel-${index}`}
+                    className={cn("rounded-[1.75rem]", guidePanelClassName)}
+                  >
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-lg font-semibold">{panel.title}</h5>
+                        {panel.badge ? (
+                          <Badge variant="outline" className="text-xs">
+                            {panel.badge}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {panel.description ? (
+                        <p className="text-sm text-muted-foreground">
+                          {panel.description}
+                        </p>
+                      ) : null}
+                      {panelItems.length ? (
+                        <ul className="space-y-2 text-sm leading-7 text-muted-foreground">
+                          {panelItems.map((item, itemIndex) => (
+                            <li key={`${sectionKey}-panel-item-${itemIndex}`}>
+                              • {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
+    }
     case "hotelShowcase": {
       const hotelsFromMap = hotelMap[sectionKey] ?? [];
       const fallbackEntries = (section.manualFallback ?? []).map((entry) => ({
@@ -784,7 +896,8 @@ function SectionRenderer({
                   <Card
                     key={hotel.id ?? `${sectionKey}-hotel-${index}`}
                     className={cn(
-                      "flex h-full flex-col overflow-hidden border-border/70 bg-card/95 shadow-sm",
+                      "flex h-full flex-col overflow-hidden",
+                      guidePanelClassName,
                       cardClass,
                     )}
                   >
@@ -919,10 +1032,15 @@ function SectionRenderer({
     }
     case "cta":
       return (
-        <Card className="bg-surface-subtle text-center">
-          <CardContent className="space-y-4 p-8">
+        <Card
+          className={cn(
+            guidePanelClassName,
+            "rounded-[2rem] border-border/70 text-center",
+          )}
+        >
+          <CardContent className="space-y-4 p-8 md:p-10">
             {section.eyebrow ? (
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-primary">
                 {section.eyebrow}
               </p>
             ) : null}
@@ -930,7 +1048,9 @@ function SectionRenderer({
               {section.title}
             </h4>
             {section.description ? (
-              <p className="text-muted-foreground">{section.description}</p>
+              <p className="mx-auto max-w-2xl text-base leading-8 text-muted-foreground">
+                {section.description}
+              </p>
             ) : null}
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               {section.actions.map((action, index) => (
