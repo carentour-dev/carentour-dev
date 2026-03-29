@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/integrations/supabase/server";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -41,6 +42,8 @@ function mapCategoryRow(row: FaqCategoryRow): FaqCategory {
     color: row.color,
     fragment: row.fragment,
     position: row.position,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
   };
 }
 
@@ -108,3 +111,5 @@ export async function getFaqsWithFallback(): Promise<{
     error: error ?? "No FAQs available from the CMS. Using fallback content.",
   };
 }
+
+export const getFaqsWithFallbackCached = cache(getFaqsWithFallback);
