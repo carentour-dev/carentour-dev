@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ import {
   selectPrimaryProcedure,
   type NormalizedTreatment,
 } from "@/lib/treatments";
+import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number, currency?: string | null) => {
   try {
@@ -33,13 +33,22 @@ const formatCurrency = (value: number, currency?: string | null) => {
   }
 };
 
+const formatDuration = (duration?: number | null) => {
+  if (typeof duration === "number" && Number.isFinite(duration)) {
+    return `${duration} day${duration === 1 ? "" : "s"}`;
+  }
+  return null;
+};
+
 type FeaturedTreatmentCard = {
   id: string;
   slug: string;
   title: string;
+  category?: string | null;
   summary: string;
   priceLabel: string;
   durationLabel: string;
+  successRate?: string | null;
   image: string;
   fallbackImage: string;
   isFeatured: boolean;
@@ -59,48 +68,38 @@ export function buildFeaturedTreatmentCards(
       cardImageUrl: treatment.cardImageUrl,
     });
     const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
+    const stay = formatDuration(treatment.durationDays);
+    const recovery = formatDuration(treatment.recoveryTimeDays);
 
-    const basePriceCandidate =
-      typeof treatment.basePrice === "number"
-        ? treatment.basePrice
-        : (primaryProcedure?.egyptPrice ?? null);
-
-    const stay =
-      typeof treatment.durationDays === "number" &&
-      Number.isFinite(treatment.durationDays)
-        ? `${treatment.durationDays} day${treatment.durationDays === 1 ? "" : "s"}`
-        : null;
-
-    const recovery =
-      typeof treatment.recoveryTimeDays === "number" &&
-      Number.isFinite(treatment.recoveryTimeDays)
-        ? `${treatment.recoveryTimeDays} day${treatment.recoveryTimeDays === 1 ? "" : "s"} recovery`
-        : null;
-
-    let durationLabel = "Personalized itinerary";
+    let durationLabel = primaryProcedure?.duration ?? "Personalized itinerary";
     if (stay && recovery) {
-      durationLabel = `${stay} · ${recovery}`;
+      durationLabel = `${stay} • ${recovery}`;
     } else if (stay) {
       durationLabel = stay;
     } else if (recovery) {
-      durationLabel = recovery;
-    } else if (primaryProcedure?.duration) {
-      durationLabel = primaryProcedure.duration;
+      durationLabel = `${recovery} recovery`;
     }
+
+    const priceCandidate =
+      typeof treatment.basePrice === "number"
+        ? treatment.basePrice
+        : (primaryProcedure?.egyptPrice ?? null);
 
     acc.push({
       id: treatment.id,
       slug: treatment.slug,
       title: treatment.name,
+      category: treatment.category,
       summary:
         treatment.summary ??
         treatment.description ??
         "World-class medical care tailored to international patients.",
       priceLabel:
-        typeof basePriceCandidate === "number"
-          ? `From ${formatCurrency(basePriceCandidate, treatment.currency)}`
-          : "Contact us for pricing",
+        typeof priceCandidate === "number"
+          ? `From ${formatCurrency(priceCandidate, treatment.currency)}`
+          : "Custom pricing",
       durationLabel,
+      successRate: primaryProcedure?.successRate ?? null,
       image: cardImage.image,
       fallbackImage: cardImage.fallbackImage,
       isFeatured: treatment.isFeatured === true,
@@ -112,18 +111,23 @@ export function buildFeaturedTreatmentCards(
 
 export function FeaturedTreatmentsSection({
   treatments,
+  eyebrow,
   title = "Featured Treatments",
   description = "Discover our most popular medical procedures, performed by internationally certified specialists",
+  appearance = "original",
   loading = false,
   error = null,
+  embedded = false,
 }: {
   treatments: NormalizedTreatment[];
+  eyebrow?: string;
   title?: string;
   description?: string;
+  appearance?: "original" | "theme";
   loading?: boolean;
   error?: string | null;
+  embedded?: boolean;
 }) {
-  const router = useRouter();
   const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
     Record<string, true>
   >({});
@@ -132,19 +136,12 @@ export function FeaturedTreatmentsSection({
     () => buildFeaturedTreatmentCards(treatments),
     [treatments],
   );
-
   const showEmptyState = !loading && !error && featuredTreatments.length === 0;
-  const titleSegments = useMemo(() => {
-    const trimmed = title.trim();
-    const lastSpaceIndex = trimmed.lastIndexOf(" ");
-    if (lastSpaceIndex <= 0) {
-      return { prefix: trimmed, highlight: "" };
-    }
-    return {
-      prefix: trimmed.slice(0, lastSpaceIndex),
-      highlight: trimmed.slice(lastSpaceIndex + 1),
-    };
-  }, [title]);
+  const usesOriginalAppearance = appearance === "original";
+  const needsHorizontalScroll =
+    !usesOriginalAppearance && featuredTreatments.length > 4;
+  const needsWrappedDesktopLayout =
+    usesOriginalAppearance && featuredTreatments.length > 4;
 
   const handleCardImageError = (
     treatmentId: string,
@@ -164,49 +161,119 @@ export function FeaturedTreatmentsSection({
     });
   };
 
-  return (
-    <section className="bg-surface-subtle py-20">
-      <div className="container mx-auto px-4">
-        <div className="mb-16 text-center">
-          <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-            {titleSegments.prefix}{" "}
-            {titleSegments.highlight ? (
-              <span className="text-primary">{titleSegments.highlight}</span>
-            ) : null}
+  const content = (
+    <>
+      <div className="mx-auto max-w-3xl text-center">
+        {eyebrow ? (
+          <div className="flex items-center justify-center gap-2 text-sm text-primary">
+            <Badge
+              variant="outline"
+              className={
+                usesOriginalAppearance
+                  ? "border-border/60 bg-background/80 text-muted-foreground"
+                  : undefined
+              }
+            >
+              {eyebrow}
+            </Badge>
+          </div>
+        ) : null}
+        {title ? (
+          <h2 className="mt-4 text-4xl font-bold text-foreground md:text-5xl">
+            {title}
           </h2>
-          <p className="mx-auto max-w-2xl text-xl text-muted-foreground">
+        ) : null}
+        {description ? (
+          <p
+            className={
+              usesOriginalAppearance
+                ? "mt-4 text-xl text-muted-foreground"
+                : "mt-2 text-muted-foreground"
+            }
+          >
             {description}
           </p>
-        </div>
+        ) : null}
+      </div>
 
+      <div
+        className={
+          needsHorizontalScroll
+            ? "-mx-8 my-[-2.5rem] overflow-visible px-8 py-10"
+            : ""
+        }
+      >
         <div
-          className={
-            featuredTreatments.length > 4 ? "overflow-x-auto pb-4" : ""
-          }
+          className={needsHorizontalScroll ? "overflow-x-auto px-2 py-2" : ""}
         >
           <div
             className={
-              featuredTreatments.length > 4
-                ? "grid grid-flow-col gap-8 auto-cols-[minmax(260px,1fr)] md:auto-cols-[minmax(300px,1fr)]"
-                : "grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4"
+              usesOriginalAppearance && needsHorizontalScroll
+                ? "flex items-stretch gap-6"
+                : usesOriginalAppearance
+                  ? cn(
+                      "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3",
+                      needsWrappedDesktopLayout
+                        ? "xl:grid-cols-3"
+                        : "xl:grid-cols-4",
+                    )
+                  : needsHorizontalScroll
+                    ? "grid auto-cols-[minmax(300px,1fr)] grid-flow-col gap-8 md:auto-cols-[minmax(360px,1fr)]"
+                    : "grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4"
             }
           >
             {loading
               ? Array.from({ length: 4 }).map((_, index) => (
                   <Card
                     key={`featured-skeleton-${index}`}
-                    className="overflow-hidden border-border/50"
+                    className={
+                      usesOriginalAppearance
+                        ? cn(
+                            "overflow-hidden border-border/60 bg-card shadow-sm",
+                            needsHorizontalScroll &&
+                              "w-[300px] flex-none md:w-[320px] xl:w-[340px]",
+                          )
+                        : "flex h-full w-full flex-col border-border/60 bg-card/90 shadow-sm"
+                    }
                   >
-                    <div className="h-48 animate-pulse bg-muted" />
-                    <CardHeader>
-                      <div className="mb-3 h-6 w-2/3 animate-pulse rounded bg-muted" />
-                      <div className="mb-2 h-4 w-full animate-pulse rounded bg-muted" />
-                      <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mb-4 h-10 animate-pulse rounded bg-muted" />
-                      <div className="h-10 animate-pulse rounded bg-muted" />
-                    </CardContent>
+                    {usesOriginalAppearance ? (
+                      <>
+                        <div className="h-40 animate-pulse bg-muted xl:h-44" />
+                        <div className="space-y-3 bg-card px-5 py-5">
+                          <div className="h-7 w-2/3 animate-pulse rounded bg-muted" />
+                          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                          <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+                        </div>
+                        <div className="border-t border-border/60 bg-card px-5 py-5">
+                          <div className="h-10 w-1/2 animate-pulse rounded bg-muted" />
+                          <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-muted" />
+                          <div className="mt-5 space-y-2.5">
+                            <div className="h-10 animate-pulse rounded bg-muted" />
+                            <div className="h-10 animate-pulse rounded bg-muted" />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <CardHeader>
+                          <div className="mb-3 h-6 w-2/3 animate-pulse rounded bg-muted" />
+                          <div className="mb-2 h-4 w-20 animate-pulse rounded bg-muted" />
+                          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                          <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="h-4 animate-pulse rounded bg-muted" />
+                            <div className="h-4 animate-pulse rounded bg-muted" />
+                            <div className="h-4 animate-pulse rounded bg-muted" />
+                          </div>
+                          <div className="mt-6 grid grid-cols-2 gap-2">
+                            <div className="h-9 animate-pulse rounded bg-muted" />
+                            <div className="h-9 animate-pulse rounded bg-muted" />
+                          </div>
+                        </CardContent>
+                      </>
+                    )}
                   </Card>
                 ))
               : featuredTreatments.map((treatment) => {
@@ -214,93 +281,156 @@ export function FeaturedTreatmentsSection({
                     ? treatment.fallbackImage
                     : treatment.image;
 
+                  if (usesOriginalAppearance) {
+                    return (
+                      <Card
+                        key={treatment.id}
+                        className={cn(
+                          "group/featured relative flex h-full flex-col overflow-hidden border-border/60 bg-card text-card-foreground shadow-sm transition-all duration-300 ease-out hover:z-10 hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.14),0_0_0_1px_rgba(59,130,246,0.08),0_0_26px_rgba(59,130,246,0.16)]",
+                          needsHorizontalScroll &&
+                            "w-[300px] flex-none md:w-[320px] xl:w-[340px]",
+                        )}
+                      >
+                        <div className="relative h-40 overflow-hidden xl:h-44">
+                          {treatment.isFeatured ? (
+                            <div className="absolute right-3 top-3 z-10">
+                              <Badge
+                                variant="outline"
+                                className="border-transparent bg-background/92 px-3 py-1 text-[0.72rem] font-semibold tracking-[0.12em] text-primary shadow-sm backdrop-blur-sm hover:bg-background/92 hover:text-primary"
+                              >
+                                Featured
+                              </Badge>
+                            </div>
+                          ) : null}
+                          <Image
+                            src={imageSrc}
+                            alt={treatment.title}
+                            fill
+                            className="object-cover transition-transform duration-500 ease-out group-hover/featured:scale-[1.04]"
+                            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
+                            unoptimized={isRemoteImageUrl(imageSrc)}
+                            onError={() =>
+                              handleCardImageError(
+                                treatment.id,
+                                imageSrc,
+                                treatment.fallbackImage,
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div className="flex flex-1 flex-col bg-card">
+                          <div className="flex-1 space-y-3 px-5 py-5">
+                            <h3 className="text-[1.05rem] font-semibold leading-snug tracking-[-0.02em] text-foreground transition-colors duration-300 group-hover/featured:text-primary">
+                              {treatment.title}
+                            </h3>
+                            <p className="text-[0.92rem] leading-7 text-muted-foreground">
+                              {treatment.summary}
+                            </p>
+                          </div>
+
+                          <div className="border-t border-border/60 bg-card px-5 py-5">
+                            <p className="text-[1.55rem] font-semibold leading-none tracking-[-0.03em] text-primary">
+                              {treatment.priceLabel}
+                            </p>
+                            <p className="mt-2 text-[0.92rem] text-muted-foreground">
+                              {treatment.durationLabel}
+                            </p>
+
+                            <div className="mt-5 space-y-2.5">
+                              <Button
+                                asChild
+                                className="h-10 w-full text-sm transition-transform duration-300 group-hover/featured:translate-x-0.5"
+                              >
+                                <Link
+                                  href={`/start-journey?treatment=${treatment.slug}`}
+                                >
+                                  Start Your Journey
+                                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/featured:translate-x-1" />
+                                </Link>
+                              </Button>
+                              <Button
+                                asChild
+                                variant="outline"
+                                className="h-10 w-full border-border bg-background text-sm font-semibold text-foreground hover:bg-muted hover:text-foreground"
+                              >
+                                <Link href={`/treatments/${treatment.slug}`}>
+                                  Learn More
+                                </Link>
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  }
+
                   return (
                     <Card
                       key={treatment.id}
-                      className="group cursor-pointer overflow-hidden border-border/50 transition-spring hover:shadow-elegant"
-                      role="link"
-                      tabIndex={0}
-                      onClick={() =>
-                        router.push(`/treatments/${treatment.slug}`)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          router.push(`/treatments/${treatment.slug}`);
-                        }
-                      }}
+                      className="group/featured flex h-full w-full flex-col border-border/60 bg-card/90 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.14),0_0_0_1px_rgba(59,130,246,0.08),0_0_22px_rgba(59,130,246,0.14)]"
                     >
-                      {treatment.isFeatured ? (
-                        <div className="absolute right-4 top-4 z-10">
-                          <Badge
-                            variant="secondary"
-                            className="bg-emphasis-light text-center text-emphasis"
-                          >
-                            Featured
-                          </Badge>
-                        </div>
-                      ) : null}
-
-                      <div className="relative h-48 overflow-hidden">
-                        <Image
-                          src={imageSrc}
-                          alt={treatment.title}
-                          fill
-                          className="object-cover transition-spring group-hover:scale-105"
-                          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 40vw, 100vw"
-                          unoptimized={isRemoteImageUrl(imageSrc)}
-                          onError={() =>
-                            handleCardImageError(
-                              treatment.id,
-                              imageSrc,
-                              treatment.fallbackImage,
-                            )
-                          }
-                        />
-                      </div>
-
                       <CardHeader>
-                        <CardTitle className="text-xl transition-smooth group-hover:text-primary">
+                        <CardTitle className="text-xl text-foreground transition-colors duration-300 group-hover/featured:text-primary">
                           {treatment.title}
                         </CardTitle>
-                        <CardDescription className="text-muted-foreground">
+                        {treatment.category ? (
+                          <Badge
+                            variant="secondary"
+                            className="w-fit text-xs capitalize"
+                          >
+                            {treatment.category}
+                          </Badge>
+                        ) : treatment.isFeatured ? (
+                          <Badge variant="secondary" className="w-fit text-xs">
+                            Featured
+                          </Badge>
+                        ) : null}
+                        <CardDescription className="text-sm text-muted-foreground">
                           {treatment.summary}
                         </CardDescription>
                       </CardHeader>
-
-                      <CardContent>
-                        <div className="mb-4 flex items-center justify-between">
-                          <div>
-                            <p className="text-2xl font-bold text-primary">
-                              {treatment.priceLabel}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {treatment.durationLabel}
-                            </p>
-                          </div>
+                      <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Itinerary</span>
+                          <span className="text-foreground">
+                            {treatment.durationLabel}
+                          </span>
                         </div>
-
-                        <div className="space-y-2">
-                          <Button className="w-full" asChild>
-                            <Link
-                              href={`/start-journey?treatment=${treatment.slug}`}
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              Start Your Journey
-                              <ArrowRight className="ml-2 h-4 w-4" />
+                        {treatment.successRate ? (
+                          <div className="flex items-center justify-between text-xs">
+                            <span>Success rate</span>
+                            <span className="text-foreground">
+                              {treatment.successRate}
+                            </span>
+                          </div>
+                        ) : null}
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Investment</span>
+                          <span className="text-foreground">
+                            {treatment.priceLabel}
+                          </span>
+                        </div>
+                        <div className="mt-auto flex gap-2 pt-2">
+                          <Button
+                            asChild
+                            size="sm"
+                            className="flex-1 transition-transform duration-300 group-hover/featured:translate-x-0.5"
+                          >
+                            <Link href={`/treatments/${treatment.slug}`}>
+                              View treatment
                             </Link>
                           </Button>
-
                           <Button
-                            variant="outline"
-                            className="w-full transition-smooth hover:bg-primary hover:text-primary-foreground"
                             asChild
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
                           >
                             <Link
-                              href={`/treatments/${treatment.slug}`}
-                              onClick={(event) => event.stopPropagation()}
+                              href={`/start-journey?treatment=${treatment.slug}`}
                             >
-                              Learn More
+                              Plan journey
                             </Link>
                           </Button>
                         </div>
@@ -310,20 +440,36 @@ export function FeaturedTreatmentsSection({
                 })}
           </div>
         </div>
-
-        {error ? (
-          <p className="mt-10 text-center text-destructive">
-            Unable to load featured treatments right now. Please try again
-            shortly.
-          </p>
-        ) : null}
-
-        {showEmptyState ? (
-          <p className="mt-10 text-center text-muted-foreground">
-            Featured treatments will appear here once they are available.
-          </p>
-        ) : null}
       </div>
+
+      {error ? (
+        <p className="mt-10 text-center text-destructive">
+          Unable to load featured treatments right now. Please try again
+          shortly.
+        </p>
+      ) : null}
+
+      {showEmptyState ? (
+        <p
+          className={
+            usesOriginalAppearance
+              ? "mt-10 text-center text-slate-500"
+              : "mt-10 text-center text-muted-foreground"
+          }
+        >
+          Featured treatments will appear here once they are available.
+        </p>
+      ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <section className="bg-surface-subtle py-20">
+      <div className="container mx-auto px-4">{content}</div>
     </section>
   );
 }
