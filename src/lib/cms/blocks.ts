@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { DEFAULT_HERO_OVERLAY } from "@/lib/heroOverlay";
 
 const breakpointOrder = [
   "base",
@@ -187,6 +188,7 @@ const actionVariants = [
   "default",
   "secondary",
   "outline",
+  "hero",
   "ghost",
   "link",
 ] as const;
@@ -199,6 +201,19 @@ const actionSchema = z.object({
   variant: z.enum(actionVariants).default("default"),
   target: linkTargetSchema.optional(),
   icon: z.string().optional(),
+});
+
+const heroOverlaySchema = z.object({
+  fromColor: z.string().default(DEFAULT_HERO_OVERLAY.fromColor),
+  fromOpacity: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(DEFAULT_HERO_OVERLAY.fromOpacity),
+  viaColor: z.string().default(DEFAULT_HERO_OVERLAY.viaColor),
+  viaOpacity: z.number().min(0).max(1).default(DEFAULT_HERO_OVERLAY.viaOpacity),
+  toColor: z.string().default(DEFAULT_HERO_OVERLAY.toColor),
+  toOpacity: z.number().min(0).max(1).default(DEFAULT_HERO_OVERLAY.toOpacity),
 });
 
 const blockAdvancedObjectSchema = z.object({
@@ -261,21 +276,68 @@ const homeHeroBlockSchema = z
     headingSuffix: z.string().min(1, "Heading suffix is required"),
     description: z.string().min(1, "Description is required"),
     backgroundImageUrl: z.string().optional(),
+    overlay: heroOverlaySchema.default(DEFAULT_HERO_OVERLAY),
+    highlights: z
+      .array(
+        z.object({
+          kicker: z.string().min(1, "Kicker is required"),
+          label: z.string().min(1, "Label is required"),
+        }),
+      )
+      .max(4, "Use up to four highlights")
+      .default([]),
     primaryAction: actionSchema,
     secondaryAction: actionSchema,
+  })
+  .extend(blockMetaShape);
+
+const aboutHeroBlockSchema = z
+  .object({
+    type: z.literal("aboutHero"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    backgroundImageUrl: z.string().min(1, "Background image is required"),
+    overlay: heroOverlaySchema.default(DEFAULT_HERO_OVERLAY),
+    highlights: z
+      .array(
+        z.object({
+          kicker: z.string().min(1, "Kicker is required"),
+          label: z.string().min(1, "Label is required"),
+        }),
+      )
+      .min(1, "Add at least one highlight")
+      .max(4, "Use up to four highlights"),
+    primaryAction: actionSchema.optional(),
+    secondaryAction: actionSchema.optional(),
   })
   .extend(blockMetaShape);
 
 const featuredTreatmentsHomeBlockSchema = z
   .object({
     type: z.literal("featuredTreatmentsHome"),
+    eyebrow: z.string().optional(),
     title: z.string().optional(),
     description: z.string().optional(),
-    limit: z.number().min(1).max(8).default(4),
+    cardAppearance: z.enum(["original", "theme"]).default("original"),
+    limit: z.number().min(1).max(12).default(12),
     featuredOnly: z.boolean().default(true),
     manualTreatments: z.array(z.string()).optional(),
   })
-  .extend(blockMetaShape);
+  .extend(blockMetaShape)
+  .extend({
+    style: blockStyleObjectSchema.default({
+      background: {
+        variant: "solid",
+        color: {
+          base: "hsl(var(--background))",
+        },
+        overlayOpacity: {
+          base: 0,
+        },
+      },
+    }),
+  });
 
 const journeyStepItemSchema = z.object({
   title: z.string().min(1, "Step title is required"),
@@ -324,6 +386,98 @@ const homeCtaBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const storyNarrativeBlockSchema = z
+  .object({
+    type: z.literal("storyNarrative"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    lead: z.string().min(1, "Lead is required"),
+    paragraphs: z.array(z.string().min(1)).min(1, "Add at least one paragraph"),
+    strengthsTitle: z.string().min(1, "Strengths title is required"),
+    strengths: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Title is required"),
+          description: z.string().optional(),
+        }),
+      )
+      .min(1, "Add at least one strength"),
+    closing: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
+const missionVisionValuesBlockSchema = z
+  .object({
+    type: z.literal("missionVisionValues"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    missionTitle: z.string().min(1, "Mission title is required"),
+    missionBody: z.string().min(1, "Mission copy is required"),
+    missionAccentPreset: z
+      .enum(["neutral", "warm", "sage", "sky", "brand", "none"])
+      .default("neutral"),
+    visionTitle: z.string().min(1, "Vision title is required"),
+    visionBody: z.string().min(1, "Vision copy is required"),
+    visionAccentPreset: z
+      .enum(["neutral", "warm", "sage", "sky", "brand", "none"])
+      .default("warm"),
+    valuesTitle: z.string().min(1, "Values title is required"),
+    valuesDescription: z.string().optional(),
+    values: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Value title is required"),
+          description: z.string().min(1, "Value description is required"),
+          icon: z.string().optional(),
+        }),
+      )
+      .min(1, "Add at least one value")
+      .max(6, "Use up to six values"),
+  })
+  .extend(blockMetaShape);
+
+const trustSignalsBlockSchema = z
+  .object({
+    type: z.literal("trustSignals"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    items: z
+      .array(
+        z.object({
+          eyebrow: z.string().optional(),
+          title: z.string().min(1, "Title is required"),
+          description: z.string().min(1, "Description is required"),
+          icon: z.string().optional(),
+        }),
+      )
+      .min(1, "Add at least one signal")
+      .max(6, "Use up to six signals"),
+  })
+  .extend(blockMetaShape);
+
+const leadershipGridBlockSchema = z
+  .object({
+    type: z.literal("leadershipGrid"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    people: z
+      .array(
+        z.object({
+          name: z.string().min(1, "Name is required"),
+          role: z.string().min(1, "Role is required"),
+          bio: z.string().min(1, "Bio is required"),
+          image: z.string().optional(),
+          languages: z.array(z.string().min(1)).optional(),
+          expertise: z.array(z.string().min(1)).optional(),
+        }),
+      )
+      .min(1, "Add at least one person"),
+  })
+  .extend(blockMetaShape);
+
 const statGridBlockSchema = z
   .object({
     type: z.literal("statGrid"),
@@ -342,6 +496,26 @@ const statGridBlockSchema = z
         }),
       )
       .min(1, "At least one stat is required"),
+  })
+  .extend(blockMetaShape);
+
+const advisoryNoticeBlockSchema = z
+  .object({
+    type: z.literal("advisoryNotice"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    tone: z.enum(["neutral", "info", "warning"]).default("neutral"),
+    lastReviewed: z.string().optional(),
+    appliesTo: z.string().optional(),
+    planningScope: z.string().optional(),
+    disclaimer: z.string().optional(),
+    items: z
+      .array(z.string().min(1, "Bullet text is required"))
+      .min(1, "Add at least one advisory bullet")
+      .max(6, "Use up to six advisory bullets")
+      .optional(),
+    actions: z.array(actionSchema).min(1).max(2).optional(),
   })
   .extend(blockMetaShape);
 
@@ -405,6 +579,118 @@ const featureGridBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const dataGridBlockSchema = z
+  .object({
+    type: z.literal("dataGrid"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    columns: z
+      .array(
+        z.object({
+          key: z
+            .string()
+            .min(1, "Column key is required")
+            .regex(
+              /^[a-z0-9_-]+$/i,
+              "Use letters, numbers, dash, or underscore",
+            ),
+          label: z.string().min(1, "Column label is required"),
+        }),
+      )
+      .min(2)
+      .max(5),
+    rows: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Row title is required"),
+          badge: z.string().optional(),
+          values: z.record(z.string()),
+        }),
+      )
+      .min(1),
+    layout: z.enum(["cards", "stacked"]).default("cards"),
+    pillColumnKey: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
+const infoPanelsBlockSchema = z
+  .object({
+    type: z.literal("infoPanels"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    panels: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Panel title is required"),
+          description: z.string().optional(),
+          items: z.array(z.string()).optional(),
+          badge: z.string().optional(),
+        }),
+      )
+      .min(1, "Add at least one info panel"),
+  })
+  .extend(blockMetaShape);
+
+const hotelShowcaseBlockSchema = z
+  .object({
+    type: z.literal("hotelShowcase"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    layout: z.enum(["grid", "carousel"]).default("grid"),
+    items: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          amenities: z.array(z.string()).optional(),
+          medicalServices: z.array(z.string()).optional(),
+          priceLabel: z.string().optional(),
+          locationLabel: z.string().optional(),
+          icon: z.string().optional(),
+          starRating: z.number().min(0).max(5).optional(),
+          heroImage: z.string().optional(),
+          contactPhone: z.string().optional(),
+          contactEmail: z.string().optional(),
+          website: z.string().optional(),
+          rating: z.number().min(0).max(5).optional(),
+          reviewCount: z.number().min(0).optional(),
+          addressDetails: z.string().optional(),
+        }),
+      )
+      .min(1),
+  })
+  .extend(blockMetaShape);
+
+const serviceCatalogBlockSchema = z
+  .object({
+    type: z.literal("serviceCatalog"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    items: z
+      .array(
+        z.object({
+          title: z.string().min(1, "Title is required"),
+          description: z.string().optional(),
+          icon: z.string().optional(),
+          availability: z.string().optional(),
+          note: z.string().optional(),
+          bullets: z
+            .array(z.string().min(1, "Bullet text is required"))
+            .min(1, "Add at least one service detail")
+            .max(8, "Use up to eight service details")
+            .optional(),
+          languages: z.array(z.string().min(1)).optional(),
+          action: actionSchema.optional(),
+        }),
+      )
+      .min(1),
+  })
+  .extend(blockMetaShape);
+
 const logoGridBlockSchema = z
   .object({
     type: z.literal("logoGrid"),
@@ -445,6 +731,24 @@ const callToActionBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const startJourneyEmbedBlockSchema = z
+  .object({
+    type: z.literal("startJourneyEmbed"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    supportCardTitle: z.string().optional(),
+    supportCardDescription: z.string().optional(),
+    supportBullets: z
+      .array(z.string().min(1, "Bullet text is required"))
+      .min(1, "Add at least one support bullet")
+      .max(6, "Use up to six support bullets"),
+    responseTimeLabel: z.string().optional(),
+    reassuranceLabel: z.string().optional(),
+    successRedirectHref: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
 const faqBlockSchema = z
   .object({
     type: z.literal("faq"),
@@ -463,6 +767,32 @@ const faqBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const faqDirectoryBlockSchema = z
+  .object({
+    type: z.literal("faqDirectory"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    layout: z.enum(["sidebar", "stacked"]).default("sidebar"),
+    navigationHeading: z.string().default("Browse by topic"),
+    showSearch: z.boolean().default(true),
+    showCategoryDescriptions: z.boolean().default(true),
+    showSourceBadge: z.boolean().default(true),
+    searchPlaceholder: z
+      .string()
+      .default(
+        "Search questions about treatments, travel, pricing, safety, or recovery",
+      ),
+    emptyStateHeading: z.string().default("No questions match your search"),
+    emptyStateDescription: z
+      .string()
+      .default(
+        "Try a broader keyword or clear the search to browse every topic.",
+      ),
+    clearSearchLabel: z.string().default("Clear search"),
+  })
+  .extend(blockMetaShape);
+
 const quoteBlockSchema = z
   .object({
     type: z.literal("quote"),
@@ -477,6 +807,40 @@ const quoteBlockSchema = z
       })
       .optional(),
     highlight: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
+const treatmentSpecialtyOverrideSchema = z.object({
+  treatmentSlug: z.string().min(1, "Treatment slug is required"),
+  icon: z.string().optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
+});
+
+const treatmentSpecialtiesBlockSchema = z
+  .object({
+    type: z.literal("treatmentSpecialties"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    showSearch: z.boolean().default(true),
+    searchPlaceholder: z
+      .string()
+      .default("Search treatments by name or specialty..."),
+    emptyStateHeading: z.string().default("No specialties match your search"),
+    emptyStateDescription: z
+      .string()
+      .default(
+        "Try another keyword or clear the search to browse all specialties.",
+      ),
+    priceLabel: z.string().default("Starting at"),
+    primaryActionLabel: z.string().default("Learn More"),
+    secondaryActionLabel: z.string().default("Start Your Journey"),
+    limit: z.number().min(1).max(12).default(6),
+    featuredOnly: z.boolean().default(false),
+    categories: z.array(z.string()).optional(),
+    manualTreatments: z.array(z.string()).optional(),
+    overrides: z.array(treatmentSpecialtyOverrideSchema).optional(),
   })
   .extend(blockMetaShape);
 
@@ -673,18 +1037,31 @@ const tabbedGuideBlockSchema = z
 const blockSchemas = [
   heroBlockSchema,
   homeHeroBlockSchema,
+  aboutHeroBlockSchema,
   featuredTreatmentsHomeBlockSchema,
   journeyStepsBlockSchema,
   differentiatorsBlockSchema,
   homeCtaBlockSchema,
+  storyNarrativeBlockSchema,
+  missionVisionValuesBlockSchema,
+  trustSignalsBlockSchema,
+  leadershipGridBlockSchema,
   statGridBlockSchema,
+  advisoryNoticeBlockSchema,
   richTextBlockSchema,
   imageFeatureBlockSchema,
   featureGridBlockSchema,
+  dataGridBlockSchema,
+  infoPanelsBlockSchema,
+  hotelShowcaseBlockSchema,
+  serviceCatalogBlockSchema,
   logoGridBlockSchema,
   callToActionBlockSchema,
+  startJourneyEmbedBlockSchema,
   faqBlockSchema,
+  faqDirectoryBlockSchema,
   quoteBlockSchema,
+  treatmentSpecialtiesBlockSchema,
   treatmentsBlockSchema,
   doctorsBlockSchema,
   tabbedGuideBlockSchema,
@@ -734,7 +1111,24 @@ export const blockRegistry = {
       headingSuffix: "in Egypt",
       description:
         "Access trusted doctors and accredited hospitals with complete travel coordination and personal guidance at every step. We make your medical journey safe, clear, and comfortable from inquiry to recovery.\n\nVerified specialists. Transparent packages. Concierge-level support.",
-      backgroundImageUrl: "/hero-medical-facility.webp",
+      backgroundImageUrl:
+        "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png",
+      overlay: DEFAULT_HERO_OVERLAY,
+      highlights: [
+        {
+          kicker: "Providers",
+          label: "JCI-accredited hospitals and board-certified specialists",
+        },
+        {
+          kicker: "Support",
+          label:
+            "Transparent packages, multilingual coordination, and concierge-level guidance",
+        },
+        {
+          kicker: "Access",
+          label: "Fast-track treatment planning with end-to-end travel support",
+        },
+      ],
       primaryAction: {
         label: "Start Your Journey",
         href: "/start-journey",
@@ -743,10 +1137,47 @@ export const blockRegistry = {
       secondaryAction: {
         label: "View Treatments",
         href: "/treatments",
-        variant: "secondary",
+        variant: "hero",
       },
     },
   } satisfies BlockDefinition<typeof homeHeroBlockSchema>,
+  aboutHero: {
+    type: "aboutHero",
+    label: "About Hero",
+    description:
+      "Full-bleed corporate hero with a narrative headline, actions, and proof highlights.",
+    category: "hero",
+    schema: aboutHeroBlockSchema,
+    defaultItem: {
+      type: "aboutHero",
+      eyebrow: "About Care N Tour",
+      heading:
+        "Medical travel guidance designed for patients who need clarity, trust, and personal support.",
+      description:
+        "Care N Tour connects international patients with trusted treatment providers in Egypt and coordinates the journey from first enquiry through recovery support.",
+      backgroundImageUrl:
+        "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png",
+      overlay: DEFAULT_HERO_OVERLAY,
+      highlights: [
+        { kicker: "Established", label: "Formally established in 2025" },
+        { kicker: "Based In", label: "Egypt with international patient focus" },
+        {
+          kicker: "Model",
+          label: "Verified partners, coordination, and concierge support",
+        },
+      ],
+      primaryAction: {
+        label: "Speak with our team",
+        href: "/contact",
+        variant: "default",
+      },
+      secondaryAction: {
+        label: "Start your journey",
+        href: "/start-journey",
+        variant: "secondary",
+      },
+    },
+  } satisfies BlockDefinition<typeof aboutHeroBlockSchema>,
   featuredTreatmentsHome: {
     type: "featuredTreatmentsHome",
     label: "Home Treatments",
@@ -756,10 +1187,12 @@ export const blockRegistry = {
     schema: featuredTreatmentsHomeBlockSchema,
     defaultItem: {
       type: "featuredTreatmentsHome",
+      eyebrow: "Treatments",
       title: "Featured Treatments",
       description:
         "Discover our most popular medical procedures, performed by internationally certified specialists",
-      limit: 4,
+      cardAppearance: "original",
+      limit: 12,
       featuredOnly: true,
     },
   } satisfies BlockDefinition<typeof featuredTreatmentsHomeBlockSchema>,
@@ -901,6 +1334,154 @@ export const blockRegistry = {
       },
     },
   } satisfies BlockDefinition<typeof homeCtaBlockSchema>,
+  storyNarrative: {
+    type: "storyNarrative",
+    label: "Story Narrative",
+    description:
+      "Editorial story layout for company origin, long-form context, and structured strengths.",
+    category: "content",
+    schema: storyNarrativeBlockSchema,
+    defaultItem: {
+      type: "storyNarrative",
+      eyebrow: "Our Story",
+      heading:
+        "Built to make medical travel feel informed, coordinated, and human.",
+      lead: "Care N Tour was created to remove the uncertainty patients often face when they need treatment outside their home country.",
+      paragraphs: [
+        "Care N Tour is a medical tourism company based in Egypt, built to help patients access premium healthcare with confidence, comfort, and ease.",
+        "The company grew out of years of partnerships, practical experience, and work across healthcare, digital transformation, and service delivery.",
+      ],
+      strengthsTitle: "Our approach is built on three main strengths",
+      strengths: [
+        {
+          title: "Carefully selected and verified medical partners",
+        },
+        {
+          title: "Complete end-to-end coordination supported by technology",
+        },
+        {
+          title: "A personalized, concierge-style experience",
+        },
+      ],
+      closing:
+        "Use the closing note to reinforce the company point of view and the experience patients can expect.",
+    },
+  } satisfies BlockDefinition<typeof storyNarrativeBlockSchema>,
+  missionVisionValues: {
+    type: "missionVisionValues",
+    label: "Mission, Vision & Values",
+    description:
+      "Structured block for company mission, long-term vision, and core values.",
+    category: "content",
+    schema: missionVisionValuesBlockSchema,
+    defaultItem: {
+      type: "missionVisionValues",
+      eyebrow: "What Guides Us",
+      heading: "The principles behind every patient journey",
+      description:
+        "Use this section to explain what the company does today, where it is going, and what standards shape every decision.",
+      missionTitle: "Mission",
+      missionBody:
+        "Explain how the company helps patients and what operational promise it makes.",
+      missionAccentPreset: "neutral",
+      visionTitle: "Vision",
+      visionBody:
+        "Explain the long-term ambition for the business and the market it serves.",
+      visionAccentPreset: "warm",
+      valuesTitle: "Our Core Values",
+      valuesDescription:
+        "Use short, specific value statements rather than generic brand slogans.",
+      values: [
+        {
+          title: "Safety First",
+          description:
+            "Maintain clear standards for providers, process, and patient support.",
+          icon: "Shield",
+        },
+        {
+          title: "Patient-Centered Care",
+          description:
+            "Keep planning and communication focused on the patient’s needs.",
+          icon: "Heart",
+        },
+        {
+          title: "24/7 Support",
+          description:
+            "Show how support continues before, during, and after treatment.",
+          icon: "Clock",
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof missionVisionValuesBlockSchema>,
+  trustSignals: {
+    type: "trustSignals",
+    label: "Trust Signals",
+    description:
+      "High-credibility grid for operating model, standards, and differentiators.",
+    category: "content",
+    schema: trustSignalsBlockSchema,
+    defaultItem: {
+      type: "trustSignals",
+      eyebrow: "Why Patients Trust The Model",
+      heading: "Built for global patients who need more than a referral",
+      description:
+        "Highlight the operating standards, care model, and support structure that make the service credible.",
+      items: [
+        {
+          eyebrow: "01",
+          title: "Verified medical providers",
+          description:
+            "Partner selection should be based on quality, reputation, and patient suitability.",
+          icon: "Shield",
+        },
+        {
+          eyebrow: "02",
+          title: "Coordinated planning",
+          description:
+            "Show how medical review, scheduling, travel, and accommodation connect into one experience.",
+          icon: "Route",
+        },
+        {
+          eyebrow: "03",
+          title: "Transparent guidance",
+          description:
+            "Reassure patients with clear information, realistic planning, and ongoing communication.",
+          icon: "MessagesSquare",
+        },
+        {
+          eyebrow: "04",
+          title: "Support beyond treatment",
+          description:
+            "Explain how follow-up and continuity are handled after procedures and travel.",
+          icon: "HeartHandshake",
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof trustSignalsBlockSchema>,
+  leadershipGrid: {
+    type: "leadershipGrid",
+    label: "Leadership Grid",
+    description:
+      "Editorial leadership or advisory profiles with bios, expertise, and languages.",
+    category: "social",
+    schema: leadershipGridBlockSchema,
+    defaultItem: {
+      type: "leadershipGrid",
+      eyebrow: "Leadership",
+      heading: "Meet the people shaping the patient experience",
+      description:
+        "Use approved leadership profiles only. Avoid placeholder bios or stock credentials.",
+      people: [
+        {
+          name: "Executive Name",
+          role: "Role Title",
+          bio: "Provide a concise biography focused on expertise relevant to the company’s care model and governance.",
+          expertise: ["Healthcare operations", "Patient experience"],
+          languages: ["English", "Arabic"],
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof leadershipGridBlockSchema>,
   statGrid: {
     type: "statGrid",
     label: "Stats",
@@ -919,6 +1500,32 @@ export const blockRegistry = {
       ],
     },
   } satisfies BlockDefinition<typeof statGridBlockSchema>,
+  advisoryNotice: {
+    type: "advisoryNotice",
+    label: "Advisory Notice",
+    description:
+      "High-trust notice for freshness, scope, and important guidance before detailed content.",
+    category: "content",
+    schema: advisoryNoticeBlockSchema,
+    defaultItem: {
+      type: "advisoryNotice",
+      eyebrow: "Travel Advisory",
+      heading: "Set expectations early with current, practical guidance.",
+      description:
+        "Use this block to show when the guidance was reviewed, who it applies to, and what patients should confirm directly with the Care N Tour team.",
+      tone: "info",
+      lastReviewed: "Reviewed March 2026",
+      appliesTo: "International patients planning treatment travel to Egypt",
+      planningScope:
+        "General preparation guidance. Final travel and visa requirements depend on passport, itinerary, and treatment timeline.",
+      disclaimer:
+        "We provide planning guidance, but official travel requirements should still be confirmed before flights are booked.",
+      items: [
+        "Update this block whenever travel conditions, coordination standards, or patient preparation guidance changes.",
+        "Keep the copy specific, current, and easy for search engines and AI systems to parse.",
+      ],
+    },
+  } satisfies BlockDefinition<typeof advisoryNoticeBlockSchema>,
   richText: {
     type: "richText",
     label: "Rich Text",
@@ -968,6 +1575,132 @@ export const blockRegistry = {
       ],
     },
   } satisfies BlockDefinition<typeof featureGridBlockSchema>,
+  dataGrid: {
+    type: "dataGrid",
+    label: "Data Grid",
+    description:
+      "Structured comparison or requirements matrix with card and stacked layouts.",
+    category: "content",
+    schema: dataGridBlockSchema,
+    defaultItem: {
+      type: "dataGrid",
+      eyebrow: "Requirements",
+      heading: "A structured way to present travel or planning details",
+      description:
+        "Use this block when visitors need to compare requirements, timelines, or costs across a set of rows.",
+      layout: "cards",
+      columns: [
+        { key: "requirement", label: "Requirement" },
+        { key: "duration", label: "Duration" },
+        { key: "process", label: "Process" },
+        { key: "cost", label: "Cost" },
+      ],
+      rows: [
+        {
+          title: "Example row",
+          badge: "Recommended",
+          values: {
+            requirement: "Tourist visa",
+            duration: "30 days",
+            process: "Online application",
+            cost: "$25 USD",
+          },
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof dataGridBlockSchema>,
+  infoPanels: {
+    type: "infoPanels",
+    label: "Info Panels",
+    description:
+      "Editorial information cards for climate, culture, payments, or patient guidance.",
+    category: "content",
+    schema: infoPanelsBlockSchema,
+    defaultItem: {
+      type: "infoPanels",
+      eyebrow: "Key Facts",
+      heading: "Organize supporting guidance into clear panels",
+      description:
+        "Use this block to present contextual information that should be easy to scan and easy to update through the CMS.",
+      panels: [
+        {
+          title: "Panel title",
+          description: "Optional supporting description.",
+          items: ["First detail", "Second detail"],
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof infoPanelsBlockSchema>,
+  hotelShowcase: {
+    type: "hotelShowcase",
+    label: "Hotel Showcase",
+    description:
+      "Curated accommodation cards for recovery stays, partner hotels, or serviced apartments.",
+    category: "content",
+    schema: hotelShowcaseBlockSchema,
+    defaultItem: {
+      type: "hotelShowcase",
+      eyebrow: "Accommodation",
+      heading: "Recovery-ready stays patients can review with confidence",
+      description:
+        "Use curated accommodation cards to showcase hotel types, recovery stays, or serviced apartments through fully editable CMS content.",
+      layout: "grid",
+      items: [
+        {
+          title: "Luxury medical hotel",
+          description:
+            "Five-star accommodation with concierge support and recovery-friendly amenities.",
+          amenities: ["Medical concierge", "24/7 support", "Recovery suites"],
+          priceLabel: "$150 - $300/night",
+          locationLabel: "New Cairo",
+          icon: "Hotel",
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof hotelShowcaseBlockSchema>,
+  serviceCatalog: {
+    type: "serviceCatalog",
+    label: "Service Catalog",
+    description:
+      "Editorial service matrix with details, languages, and optional deep links.",
+    category: "content",
+    schema: serviceCatalogBlockSchema,
+    defaultItem: {
+      type: "serviceCatalog",
+      eyebrow: "International Patient Services",
+      heading: "What Care N Tour coordinates beyond the treatment itself",
+      description:
+        "Use this section to define the operational services patients and families can expect before arrival, during treatment, and through recovery.",
+      items: [
+        {
+          title: "Medical coordination",
+          description:
+            "Explain how consultations, records, specialist access, and scheduling are managed.",
+          icon: "HeartHandshake",
+          availability: "24/7 coordination window",
+          bullets: [
+            "Record collection and case preparation",
+            "Provider shortlisting and appointment coordination",
+            "Post-treatment follow-up planning",
+          ],
+          languages: ["English", "Arabic"],
+        },
+        {
+          title: "Travel and recovery logistics",
+          description:
+            "Describe the accommodation, transfer, and on-ground planning patients can rely on.",
+          icon: "Plane",
+          availability: "Arrival-to-departure support",
+          bullets: [
+            "Airport transfer coordination",
+            "Recovery-friendly accommodation planning",
+            "Companion and family logistics",
+          ],
+          languages: ["English", "Arabic"],
+        },
+      ],
+    },
+  } satisfies BlockDefinition<typeof serviceCatalogBlockSchema>,
   logoGrid: {
     type: "logoGrid",
     label: "Logo Grid",
@@ -1005,6 +1738,32 @@ export const blockRegistry = {
       ],
     },
   } satisfies BlockDefinition<typeof callToActionBlockSchema>,
+  startJourneyEmbed: {
+    type: "startJourneyEmbed",
+    label: "Start Journey Embed",
+    description:
+      "Embed the intake wizard with CMS-authored introduction and support copy.",
+    category: "engagement",
+    schema: startJourneyEmbedBlockSchema,
+    defaultItem: {
+      type: "startJourneyEmbed",
+      eyebrow: "Start Your Journey",
+      heading: "Share your case and we will coordinate the next steps.",
+      description:
+        "Complete the intake below to receive a tailored treatment and travel plan from the Care N Tour team.",
+      supportCardTitle: "What happens after submitting?",
+      supportCardDescription:
+        "Our medical concierges coordinate surgeons, travel, and recovery in one itinerary.",
+      supportBullets: [
+        "Specialists review your medical history and eligibility",
+        "Coordinators prepare treatment timelines and price ranges",
+        "Travel team drafts flights, recovery hotels, and companion itineraries",
+        "You receive a detailed plan with next steps in under 24 hours",
+      ],
+      responseTimeLabel: "Average response time: under 2 hours",
+      reassuranceLabel: "No payment required to submit your intake",
+    },
+  } satisfies BlockDefinition<typeof startJourneyEmbedBlockSchema>,
   faq: {
     type: "faq",
     label: "FAQ",
@@ -1027,6 +1786,32 @@ export const blockRegistry = {
       ],
     },
   } satisfies BlockDefinition<typeof faqBlockSchema>,
+  faqDirectory: {
+    type: "faqDirectory",
+    label: "FAQ Directory",
+    description:
+      "Render the public FAQ dataset with searchable categories and editorial framing.",
+    category: "content",
+    schema: faqDirectoryBlockSchema,
+    defaultItem: {
+      type: "faqDirectory",
+      eyebrow: "FAQ Directory",
+      heading: "Find answers across the full patient journey",
+      description:
+        "We answer the questions international patients ask most often before treatment, travel, arrival, recovery, and follow-up.",
+      layout: "sidebar",
+      navigationHeading: "Browse by topic",
+      showSearch: true,
+      showCategoryDescriptions: true,
+      showSourceBadge: true,
+      searchPlaceholder:
+        "Search questions about treatments, travel, pricing, safety, or recovery",
+      emptyStateHeading: "No questions match your search",
+      emptyStateDescription:
+        "Try a broader keyword or clear the search to browse every topic.",
+      clearSearchLabel: "Clear search",
+    },
+  } satisfies BlockDefinition<typeof faqDirectoryBlockSchema>,
   quote: {
     type: "quote",
     label: "Quote",
@@ -1041,6 +1826,30 @@ export const blockRegistry = {
       role: "Procedure • Country",
     },
   } satisfies BlockDefinition<typeof quoteBlockSchema>,
+  treatmentSpecialties: {
+    type: "treatmentSpecialties",
+    label: "Treatment Specialties",
+    description:
+      "Editorial treatments catalog that preserves the current specialties card design with CMS controls.",
+    category: "content",
+    schema: treatmentSpecialtiesBlockSchema,
+    defaultItem: {
+      type: "treatmentSpecialties",
+      heading: "Our Medical Specialties",
+      description:
+        "World-class medical care across multiple specialties with significant cost savings.",
+      showSearch: true,
+      searchPlaceholder: "Search treatments by name or specialty...",
+      emptyStateHeading: "No specialties match your search",
+      emptyStateDescription:
+        "Try another keyword or clear the search to browse all specialties.",
+      priceLabel: "Starting at",
+      primaryActionLabel: "Learn More",
+      secondaryActionLabel: "Start Your Journey",
+      limit: 4,
+      featuredOnly: false,
+    },
+  } satisfies BlockDefinition<typeof treatmentSpecialtiesBlockSchema>,
   treatments: {
     type: "treatments",
     label: "Treatments",
