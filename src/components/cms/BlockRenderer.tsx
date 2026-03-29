@@ -5,18 +5,31 @@ import { AnimationController } from "./AnimationController";
 import {
   HeroBlock,
   HomeHeroBlock,
+  AboutHeroBlock,
   FeaturedTreatmentsHomeBlock,
   JourneyStepsBlock,
   DifferentiatorsBlock,
   HomeCtaBlock,
+  StoryNarrativeBlock,
+  MissionVisionValuesBlock,
+  TrustSignalsBlock,
+  LeadershipGridBlock,
   StatGridBlock,
+  AdvisoryNoticeBlock,
   RichTextBlock,
   ImageFeatureBlock,
   FeatureGridBlock,
+  DataGridBlock,
+  InfoPanelsBlock,
+  HotelShowcaseBlock,
+  ServiceCatalogBlock,
   LogoGridBlock,
   CallToActionBlock,
+  StartJourneyEmbedBlock,
   FaqBlock,
+  FaqDirectoryBlock,
   QuoteBlock,
+  TreatmentSpecialtiesBlock,
   TreatmentsBlock,
   DoctorsBlock,
   TabbedGuideBlock,
@@ -42,6 +55,8 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
               return <HeroBlock key={key} block={block} />;
             case "homeHero":
               return <HomeHeroBlock key={key} block={block} />;
+            case "aboutHero":
+              return <AboutHeroBlock key={key} block={block} />;
             case "featuredTreatmentsHome":
               return <FeaturedTreatmentsHomeBlock key={key} block={block} />;
             case "journeySteps":
@@ -50,22 +65,46 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
               return <DifferentiatorsBlock key={key} block={block} />;
             case "homeCta":
               return <HomeCtaBlock key={key} block={block} />;
+            case "storyNarrative":
+              return <StoryNarrativeBlock key={key} block={block} />;
+            case "missionVisionValues":
+              return <MissionVisionValuesBlock key={key} block={block} />;
+            case "trustSignals":
+              return <TrustSignalsBlock key={key} block={block} />;
+            case "leadershipGrid":
+              return <LeadershipGridBlock key={key} block={block} />;
             case "statGrid":
               return <StatGridBlock key={key} block={block} />;
+            case "advisoryNotice":
+              return <AdvisoryNoticeBlock key={key} block={block} />;
             case "richText":
               return <RichTextBlock key={key} block={block} />;
             case "imageFeature":
               return <ImageFeatureBlock key={key} block={block} />;
             case "featureGrid":
               return <FeatureGridBlock key={key} block={block} />;
+            case "dataGrid":
+              return <DataGridBlock key={key} block={block} />;
+            case "infoPanels":
+              return <InfoPanelsBlock key={key} block={block} />;
+            case "hotelShowcase":
+              return <HotelShowcaseBlock key={key} block={block} />;
+            case "serviceCatalog":
+              return <ServiceCatalogBlock key={key} block={block} />;
             case "logoGrid":
               return <LogoGridBlock key={key} block={block} />;
             case "callToAction":
               return <CallToActionBlock key={key} block={block} />;
+            case "startJourneyEmbed":
+              return <StartJourneyEmbedBlock key={key} block={block} />;
             case "faq":
               return <FaqBlock key={key} block={block} />;
+            case "faqDirectory":
+              return <FaqDirectoryBlock key={key} block={block} />;
             case "quote":
               return <QuoteBlock key={key} block={block} />;
+            case "treatmentSpecialties":
+              return <TreatmentSpecialtiesBlock key={key} block={block} />;
             case "treatments":
               return <TreatmentsBlock key={key} block={block} />;
             case "doctors":
