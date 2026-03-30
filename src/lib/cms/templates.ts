@@ -250,42 +250,45 @@ export const cmsTemplates: CmsTemplate[] = [
       {
         type: "faq",
         eyebrow: "Frequently Asked Questions",
-        heading: "Common questions from international patients and families",
+        heading:
+          "Questions we answer before international patients choose treatment in Egypt",
         description:
-          "Clear answers help patients compare options, understand timelines, and plan treatment in Egypt with more confidence.",
+          "At Care N Tour, we explain how specialist review, accredited hospitals in Egypt, treatment timelines, travel planning, accommodation, companion support, pricing guidance, and follow-up work so patients and families can move forward with confidence.",
         layout: "twoColumn",
         items: [
           {
             question:
-              "What does Care N Tour coordinate for international patients?",
+              "How does Care N Tour help international patients plan treatment in Egypt?",
             answer:
-              "Care N Tour helps patients access trusted doctors and accredited hospitals in Egypt while coordinating treatment planning, travel logistics, accommodation, transfers, and follow-up support.",
+              "We review each patient's goals and medical records, coordinate specialist matching, and build a personalized treatment and medical travel plan that can include hospital access, timing, accommodation, transfers, and follow-up support.",
           },
           {
-            question: "How are hospitals and specialists selected?",
+            question: "How do you choose doctors and hospitals in Egypt?",
             answer:
-              "Patients are introduced to verified providers based on their medical needs, with a focus on reputable hospitals, accredited facilities, and experienced specialists.",
-          },
-          {
-            question: "How quickly can treatment be arranged?",
-            answer:
-              "Fast-track planning is available, and many treatment journeys can be scheduled within 2-3 weeks of confirmation depending on the procedure and provider availability.",
+              "We introduce patients to trusted doctors and accredited hospitals in Egypt based on medical needs, treatment goals, and practical travel considerations, so provider evaluation is clearer before any decision is made.",
           },
           {
             question:
-              "Do you support patients from different countries and languages?",
+              "Will I understand the expected cost before I decide to travel?",
             answer:
-              "Yes. The service model is designed for international patients, with multilingual coordination available across more than 15 languages.",
+              "We prepare pricing guidance based on the recommended treatment, hospital, expected length of stay, accommodation, and support scope, so patients can understand the package structure and expected costs before committing.",
           },
           {
-            question: "What happens after treatment is completed?",
+            question:
+              "What do you need from me before you can build a treatment and travel plan?",
             answer:
-              "Patients receive aftercare guidance, follow-up coordination, and continued support so they can stay connected with their doctor even after returning home.",
+              "We usually need medical records, recent test results or imaging, passport details, and the preferred travel window. With that information, we can coordinate specialist review and outline a realistic treatment and travel timeline.",
           },
           {
-            question: "Are package costs transparent?",
+            question:
+              "Can Care N Tour arrange accommodation, airport transfers, and support for family members?",
             answer:
-              "Care N Tour emphasizes transparent packages so patients can understand treatment, logistics, and support costs before committing.",
+              "Yes. We coordinate accommodation, airport reception, local transportation, and companion planning so patients and families have one point of contact before arrival, during treatment, and throughout recovery in Egypt.",
+          },
+          {
+            question: "What happens after treatment in Egypt is completed?",
+            answer:
+              "We continue coordinating discharge guidance, recovery planning, return-travel logistics, and follow-up communication so the patient leaves Egypt with clear documentation, defined next steps, and continuity after returning home.",
           },
         ],
       },
