@@ -32,6 +32,7 @@ import { TabbedGuidePreview } from "./blocks/TabbedGuidePreview";
 import { TreatmentSpecialtiesPreview } from "./blocks/TreatmentSpecialtiesPreview";
 import { TrustSignalsBlock } from "./blocks/TrustSignalsBlock";
 import { StartJourneyEmbedBlock } from "./blocks/StartJourneyEmbedBlock";
+import { ContactFormEmbedBlock } from "./blocks/ContactFormEmbedBlock";
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -151,6 +152,8 @@ export function BlockPreviewRenderer({
               return <CallToActionBlock key={blockKey} block={block} />;
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={blockKey} block={block} />;
+            case "contactFormEmbed":
+              return <ContactFormEmbedBlock key={blockKey} block={block} />;
             case "faq":
               return <FaqBlock key={blockKey} block={block} />;
             case "faqDirectory":
