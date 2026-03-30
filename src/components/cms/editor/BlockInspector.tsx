@@ -9826,6 +9826,754 @@ function StartJourneyEmbedBlockFields({
   );
 }
 
+function ContactFormEmbedBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"contactFormEmbed">>;
+}) {
+  const channels = useFieldArray({
+    control: form.control,
+    name: "channels",
+  });
+  const supportItems = form.watch("supportItems") ?? [];
+
+  const updateSupportItems = (next: string[]) => {
+    form.setValue("supportItems", next, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Contact Care N Tour"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Speak with our international patient desk, care coordinators, and partner support teams."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain who should use this form and how Care N Tour responds."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="channelsHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Channels heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Contact Channels"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="channelsDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Channels description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain how visitors should choose the right communication path."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Contact channels</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              channels.append({
+                icon: "Phone",
+                title: "Contact channel",
+                content: "Add channel detail",
+                description: "Explain when to use this channel.",
+                href: "",
+                schemaContactType: "customer support",
+              })
+            }
+            disabled={channels.fields.length >= 6}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add channel
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {channels.fields.map((fieldItem, index) => (
+            <div
+              key={fieldItem.id}
+              className="space-y-4 rounded-lg border border-border/60 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Channel #{index + 1}</Badge>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={channels.fields.length <= 1}
+                  onClick={() => {
+                    if (channels.fields.length <= 1) return;
+                    channels.remove(index);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.title` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.icon` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icon</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Phone"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.content` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Displayed content</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.href` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="tel:+201229503333"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.description` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder="Explain when or why this channel should be used."
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`channels.${index}.schemaContactType` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Schema contact type</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="customer support"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Used for structured data such as customer support or
+                        emergency.
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="supportHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Support heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="What Happens Next"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="supportDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Support description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain the review and response process."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Support items</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              updateSupportItems([...supportItems, "Add another support item"])
+            }
+            disabled={supportItems.length >= 6}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add item
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {supportItems.map((item, index) => (
+            <div
+              key={`${index}-${item}`}
+              className="space-y-3 rounded-lg border border-border/60 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">Item #{index + 1}</Badge>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index === 0) return;
+                      const next = [...supportItems];
+                      [next[index - 1], next[index]] = [
+                        next[index],
+                        next[index - 1],
+                      ];
+                      updateSupportItems(next);
+                    }}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index >= supportItems.length - 1) return;
+                      const next = [...supportItems];
+                      [next[index], next[index + 1]] = [
+                        next[index + 1],
+                        next[index],
+                      ];
+                      updateSupportItems(next);
+                    }}
+                    disabled={index === supportItems.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      updateSupportItems(
+                        supportItems.filter(
+                          (_, itemIndex) => itemIndex !== index,
+                        ),
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <FormField
+                control={form.control}
+                name={`supportItems.${index}` as const}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item text</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Explain the next step after submission"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="formTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Form title</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Send A Message"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="formDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Form description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain what visitors should share in the form."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <Label className="text-sm font-semibold">Field labels</Label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="labels.firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First name label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last name label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.treatment"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Treatment label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.message"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Message label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <Label className="text-sm font-semibold">Field placeholders</Label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="placeholders.firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First name placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last name placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.treatment"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Treatment placeholder</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="placeholders.message"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Message placeholder</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="submitLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Submit label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Send Message"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="submittingLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Submitting label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Sending…"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="responseTimeLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Response time label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Typical response window: within 2 hours"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name="privacyNote"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Privacy note</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="Add a short privacy or consent note shown below the form."
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="successTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Success title</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Message Sent"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="errorTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Error title</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Unable To Send Message"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="successDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Success description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain what happens after a successful submission."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="errorDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Error description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain the fallback if submission fails."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
 function FaqBlockFields({ form }: { form: UseFormReturn<BlockValue<"faq">> }) {
   const { fields, append, remove, move } = useFieldArray({
     control: form.control,
@@ -11172,6 +11920,7 @@ const blockEditors: Record<
   logoGrid: (form) => <LogoGridBlockFields form={form} />,
   callToAction: (form) => <CallToActionBlockFields form={form} />,
   startJourneyEmbed: (form) => <StartJourneyEmbedBlockFields form={form} />,
+  contactFormEmbed: (form) => <ContactFormEmbedBlockFields form={form} />,
   faq: (form) => <FaqBlockFields form={form} />,
   faqDirectory: (form) => <FaqDirectoryBlockFields form={form} />,
   quote: (form) => <QuoteBlockFields form={form} />,
@@ -11375,6 +12124,8 @@ export function blockSummary(block: BlockInstance): string {
     case "callToAction":
       return block.heading;
     case "startJourneyEmbed":
+      return block.heading;
+    case "contactFormEmbed":
       return block.heading;
     case "faq":
       return `${block.items.length} questions`;
