@@ -280,3 +280,90 @@ export function serviceSchema(input: {
     areaServed: areas,
   };
 }
+
+export function contactPageSchema(input: {
+  path: string;
+  title: string;
+  description?: string | null;
+}): JsonLdNode {
+  const url = `${CANONICAL_ORIGIN}${normalizePath(input.path)}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "@id": `${url}#contact-page`,
+    url,
+    name: input.title,
+    description: input.description ?? undefined,
+    isPartOf: {
+      "@id": websiteId,
+    },
+    about: {
+      "@id": organizationId,
+    },
+    mainEntity: {
+      "@id": organizationId,
+    },
+  };
+}
+
+export function organizationContactSchema(input: {
+  contactPoints: Array<{
+    contactType?: string | null;
+    telephone?: string | null;
+    email?: string | null;
+    url?: string | null;
+    areaServed?: string[] | null;
+    availableLanguage?: string[] | null;
+  }>;
+}): JsonLdNode {
+  type ContactPointNode = {
+    "@type": "ContactPoint";
+    contactType?: string;
+    telephone?: string;
+    email?: string;
+    url?: string;
+    areaServed?: string[];
+    availableLanguage?: string[];
+  };
+
+  const contactPoint = input.contactPoints
+    .map((entry) => {
+      const areaServed =
+        entry.areaServed
+          ?.map((area) => cleanText(area))
+          .filter((area): area is string => Boolean(area)) ?? undefined;
+      const availableLanguage =
+        entry.availableLanguage
+          ?.map((language) => cleanText(language))
+          .filter((language): language is string => Boolean(language)) ??
+        undefined;
+
+      const point: ContactPointNode = {
+        "@type": "ContactPoint",
+        contactType: cleanText(entry.contactType ?? undefined),
+        telephone: cleanText(entry.telephone ?? undefined),
+        email: cleanText(entry.email ?? undefined),
+        url: cleanText(entry.url ?? undefined),
+        areaServed,
+        availableLanguage,
+      };
+
+      return point.contactType ||
+        point.telephone ||
+        point.email ||
+        point.url ||
+        (point.areaServed?.length ?? 0) > 0 ||
+        (point.availableLanguage?.length ?? 0) > 0
+        ? point
+        : null;
+    })
+    .filter((entry): entry is ContactPointNode => entry !== null);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": organizationId,
+    contactPoint,
+  };
+}
