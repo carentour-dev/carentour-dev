@@ -749,6 +749,70 @@ const startJourneyEmbedBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const contactFormChannelSchema = z.object({
+  icon: z.string().optional(),
+  title: z.string().min(1, "Channel title is required"),
+  content: z.string().min(1, "Channel content is required"),
+  description: z.string().optional(),
+  href: z.string().optional(),
+  target: linkTargetSchema.optional(),
+  schemaContactType: z.string().optional(),
+});
+
+const contactFormLabelsSchema = z.object({
+  firstName: z.string().min(1, "First name label is required"),
+  lastName: z.string().min(1, "Last name label is required"),
+  email: z.string().min(1, "Email label is required"),
+  phone: z.string().min(1, "Phone label is required"),
+  country: z.string().min(1, "Country label is required"),
+  treatment: z.string().min(1, "Treatment label is required"),
+  message: z.string().min(1, "Message label is required"),
+});
+
+const contactFormPlaceholdersSchema = z.object({
+  firstName: z.string().min(1, "First name placeholder is required"),
+  lastName: z.string().min(1, "Last name placeholder is required"),
+  email: z.string().min(1, "Email placeholder is required"),
+  phone: z.string().min(1, "Phone placeholder is required"),
+  country: z.string().min(1, "Country placeholder is required"),
+  treatment: z.string().min(1, "Treatment placeholder is required"),
+  message: z.string().min(1, "Message placeholder is required"),
+});
+
+const contactFormEmbedBlockSchema = z
+  .object({
+    type: z.literal("contactFormEmbed"),
+    eyebrow: z.string().optional(),
+    heading: z.string().min(1, "Heading is required"),
+    description: z.string().optional(),
+    channelsHeading: z.string().optional(),
+    channelsDescription: z.string().optional(),
+    channels: z
+      .array(contactFormChannelSchema)
+      .min(1, "Add at least one contact channel")
+      .max(6, "Use up to six contact channels"),
+    supportHeading: z.string().optional(),
+    supportDescription: z.string().optional(),
+    supportItems: z
+      .array(z.string().min(1, "Support item text is required"))
+      .max(6, "Use up to six support items")
+      .optional(),
+    formTitle: z.string().min(1, "Form title is required"),
+    formDescription: z.string().optional(),
+    labels: contactFormLabelsSchema,
+    placeholders: contactFormPlaceholdersSchema,
+    submitLabel: z.string().min(1, "Submit label is required"),
+    submittingLabel: z.string().min(1, "Submitting label is required"),
+    responseTimeLabel: z.string().optional(),
+    reassuranceLabel: z.string().optional(),
+    privacyNote: z.string().optional(),
+    successTitle: z.string().optional(),
+    successDescription: z.string().optional(),
+    errorTitle: z.string().optional(),
+    errorDescription: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
 const faqBlockSchema = z
   .object({
     type: z.literal("faq"),
@@ -1058,6 +1122,7 @@ const blockSchemas = [
   logoGridBlockSchema,
   callToActionBlockSchema,
   startJourneyEmbedBlockSchema,
+  contactFormEmbedBlockSchema,
   faqBlockSchema,
   faqDirectoryBlockSchema,
   quoteBlockSchema,
@@ -1764,6 +1829,93 @@ export const blockRegistry = {
       reassuranceLabel: "No payment required to submit your intake",
     },
   } satisfies BlockDefinition<typeof startJourneyEmbedBlockSchema>,
+  contactFormEmbed: {
+    type: "contactFormEmbed",
+    label: "Contact Form Embed",
+    description:
+      "Embed the live contact form with CMS-authored messaging, field copy, and contact channels.",
+    category: "engagement",
+    schema: contactFormEmbedBlockSchema,
+    defaultItem: {
+      type: "contactFormEmbed",
+      eyebrow: "Contact Care N Tour",
+      heading:
+        "Speak with our international patient desk, care coordinators, and partner support teams.",
+      description:
+        "Use this section to guide patients, families, referral partners, and corporate stakeholders to the right Care N Tour team through one editable CMS block.",
+      channelsHeading: "Contact Channels",
+      channelsDescription:
+        "Make every communication path explicit so visitors can choose the right team and search engines can interpret the page clearly.",
+      channels: [
+        {
+          icon: "Phone",
+          title: "International Patient Desk",
+          content: "+20 122 9503333",
+          description:
+            "Care coordination, treatment planning, and urgent support.",
+          href: "tel:+201229503333",
+          schemaContactType: "customer support",
+        },
+        {
+          icon: "Mail",
+          title: "General Enquiries",
+          content: "info@carentour.com",
+          description:
+            "General questions, pre-travel planning, and case coordination follow-up.",
+          href: "mailto:info@carentour.com",
+          schemaContactType: "customer support",
+        },
+        {
+          icon: "Building2",
+          title: "Head Office",
+          content: "Agora Mall, New Cairo, Egypt",
+          description:
+            "Corporate office for scheduled meetings, partner visits, and coordination.",
+        },
+      ],
+      supportHeading: "What Happens Next",
+      supportDescription:
+        "Clarify the response model so international visitors understand how Care N Tour handles inbound enquiries.",
+      supportItems: [
+        "We review each enquiry against treatment goals, travel timing, and coordination requirements.",
+        "We route partner, patient, and institutional requests to the appropriate team without asking visitors to start over.",
+        "We respond with the next practical step, whether that is planning guidance, a consultation path, or partner follow-up.",
+      ],
+      formTitle: "Send A Message",
+      formDescription:
+        "Share your enquiry and the Care N Tour team will respond with the right next step.",
+      labels: {
+        firstName: "First Name",
+        lastName: "Last Name",
+        email: "Email Address",
+        phone: "Phone Number",
+        country: "Country",
+        treatment: "Treatment Or Enquiry Type",
+        message: "Message",
+      },
+      placeholders: {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        phone: "+1 555 123 4567",
+        country: "United States",
+        treatment: "Cardiac surgery, referral partnership, corporate enquiry…",
+        message:
+          "Tell us about your enquiry, timeline, and the support you need…",
+      },
+      submitLabel: "Send Message",
+      submittingLabel: "Sending…",
+      responseTimeLabel: "Typical response window: within 2 hours",
+      privacyNote:
+        "By submitting this form, you allow Care N Tour to review your enquiry and contact you about the next step.",
+      successTitle: "Message Sent",
+      successDescription:
+        "We have received your enquiry and our team will contact you shortly.",
+      errorTitle: "Unable To Send Message",
+      errorDescription:
+        "Please try again or use one of the listed contact channels.",
+    },
+  } satisfies BlockDefinition<typeof contactFormEmbedBlockSchema>,
   faq: {
     type: "faq",
     label: "FAQ",
