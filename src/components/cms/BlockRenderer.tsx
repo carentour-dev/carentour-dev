@@ -26,6 +26,7 @@ import {
   LogoGridBlock,
   CallToActionBlock,
   StartJourneyEmbedBlock,
+  ContactFormEmbedBlock,
   FaqBlock,
   FaqDirectoryBlock,
   QuoteBlock,
@@ -97,6 +98,8 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
               return <CallToActionBlock key={key} block={block} />;
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={key} block={block} />;
+            case "contactFormEmbed":
+              return <ContactFormEmbedBlock key={key} block={block} />;
             case "faq":
               return <FaqBlock key={key} block={block} />;
             case "faqDirectory":
