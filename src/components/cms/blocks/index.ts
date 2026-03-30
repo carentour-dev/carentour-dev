@@ -22,6 +22,7 @@ export { ServiceCatalogBlock } from "./ServiceCatalogBlock";
 export { LogoGridBlock } from "./LogoGridBlock";
 export { CallToActionBlock } from "./CallToActionBlock";
 export { StartJourneyEmbedBlock } from "./StartJourneyEmbedBlock";
+export { ContactFormEmbedBlock } from "./ContactFormEmbedBlock";
 export { FaqBlock } from "./FaqBlock";
 export { FaqDirectoryBlock } from "./FaqDirectoryBlock";
 export { FaqDirectoryPreview } from "./FaqDirectoryPreview";
