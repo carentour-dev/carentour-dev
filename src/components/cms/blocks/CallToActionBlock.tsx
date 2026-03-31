@@ -79,11 +79,11 @@ export function CallToActionBlock({
     !(derivedBackground && styleBackgroundVariant === "image");
   const shouldApplyPreset =
     backgroundChoice && !styleExplicitNone && !styleOverridesPreset;
-  const appliedPreset = shouldApplyPreset
+  const visualPreset = backgroundChoice
     ? backgroundPresets[backgroundChoice]
     : undefined;
-  const descriptionClass =
-    appliedPreset?.description ?? "text-muted-foreground";
+  const appliedPreset = shouldApplyPreset ? visualPreset : undefined;
+  const descriptionClass = visualPreset?.description ?? "text-muted-foreground";
   const styleAlignValue = getFirstDefinedResponsiveValue(
     blockWithStyle.style?.layout?.horizontalAlign,
   );
@@ -105,7 +105,7 @@ export function CallToActionBlock({
   return (
     <BlockSurface
       block={blockWithStyle}
-      className={cn(appliedPreset?.section, appliedPreset?.text)}
+      className={cn(appliedPreset?.section, visualPreset?.text)}
       defaultPadding={{ top: "4rem", bottom: "4rem" }}
       contentClassName={cn(
         "grid items-center gap-8",
@@ -151,8 +151,8 @@ export function CallToActionBlock({
                   }
                   size="lg"
                   className={cn(
-                    appliedPreset?.secondaryButton && index > 0
-                      ? appliedPreset.secondaryButton
+                    visualPreset?.secondaryButton && index > 0
+                      ? visualPreset.secondaryButton
                       : undefined,
                   )}
                 >
