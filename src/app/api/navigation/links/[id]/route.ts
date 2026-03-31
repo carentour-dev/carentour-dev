@@ -39,20 +39,6 @@ export async function PATCH(
   }
 
   const isAutoManaged = Boolean(existing.cms_page_id);
-  const requestedStatus = payload.status;
-
-  if (isAutoManaged && requestedStatus && requestedStatus !== existing.status) {
-    const targetPageStatus =
-      requestedStatus === "published" ? "published" : "draft";
-    const { error: cmsError } = await supabase
-      .from("cms_pages")
-      .update({ status: targetPageStatus })
-      .eq("id", existing.cms_page_id);
-
-    if (cmsError) {
-      return NextResponse.json({ error: cmsError.message }, { status: 500 });
-    }
-  }
 
   const updates = isAutoManaged
     ? {
