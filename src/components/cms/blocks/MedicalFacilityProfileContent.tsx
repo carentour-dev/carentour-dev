@@ -1,0 +1,575 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  Globe,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Star,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import type { BlockInstance } from "@/lib/cms/blocks";
+import {
+  buildProcedureMap,
+  formatFacilityLocation,
+  getProceduresForProvider,
+  pickFacilityImage,
+  type MedicalFacilityDetail,
+} from "@/lib/medical-facilities";
+import { formatInfrastructureEntries } from "@/lib/infrastructure";
+
+type Props = {
+  block: BlockInstance<"medicalFacilityProfile">;
+  detail?: MedicalFacilityDetail | null;
+  isLoading?: boolean;
+  isFetching?: boolean;
+  errorStatus?: number;
+};
+
+type ContactInfo = Record<string, unknown>;
+
+const extractField = (keys: string[], source: ContactInfo) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+};
+
+const toText = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value.trim() : undefined;
+
+function SectionDescription({ text }: { text?: string }) {
+  if (!text) {
+    return null;
+  }
+
+  return <p className="text-sm leading-6 text-muted-foreground">{text}</p>;
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+export function MedicalFacilityProfileContent({
+  block,
+  detail,
+  isLoading = false,
+  isFetching = false,
+  errorStatus,
+}: Props) {
+  const provider = detail?.provider;
+  const proceduresMap = buildProcedureMap(detail?.procedures ?? []);
+  const procedures = provider
+    ? getProceduresForProvider(provider, proceduresMap)
+    : [];
+  const location = provider ? formatFacilityLocation(provider) : "";
+  const heroImage = provider ? pickFacilityImage(provider) : "";
+  const contactInfo = (provider?.contact_info ?? {}) as ContactInfo;
+  const address = (provider?.address ?? {}) as Record<string, unknown>;
+  const infrastructure = (provider?.infrastructure ?? null) as Record<
+    string,
+    unknown
+  > | null;
+  const infrastructureEntries = formatInfrastructureEntries(infrastructure);
+  const gallery = Array.isArray(provider?.gallery_urls)
+    ? Array.from(new Set(provider.gallery_urls.filter(Boolean)))
+    : [];
+
+  const phone = extractField(
+    ["phone", "phone_number", "telephone", "mobile"],
+    contactInfo,
+  );
+  const email = extractField(["email", "contact_email"], contactInfo);
+  const website = extractField(["website", "url", "site"], contactInfo);
+  const whatsapp = extractField(["whatsapp", "whatsapp_number"], contactInfo);
+  const normalizedWebsite =
+    website && (website.startsWith("http") ? website : `https://${website}`);
+  const addressLine1 = toText(address["line1"]);
+  const addressLine2 = toText(address["line2"]);
+  const addressState = toText(address["state"] ?? address["region"]);
+  const postalCode = toText(address["postal_code"] ?? address["postalCode"]);
+
+  const isNotFound = errorStatus === 404;
+
+  if (isLoading && !provider) {
+    return (
+      <div className="flex min-h-[28rem] items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          {block.fallbacks.loading}
+        </div>
+      </div>
+    );
+  }
+
+  if (!provider || isNotFound) {
+    return (
+      <div className="flex min-h-[28rem] items-center justify-center">
+        <div className="space-y-4 text-center">
+          <p className="text-lg font-semibold text-foreground">
+            {block.fallbacks.notFoundHeading}
+          </p>
+          <p className="max-w-xl text-muted-foreground">
+            {block.fallbacks.notFoundDescription}
+          </p>
+          <Button asChild>
+            <Link href="/medical-facilities">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {block.labels.backLink}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const overviewText =
+    provider.overview ?? provider.description ?? block.fallbacks.noOverview;
+
+  return (
+    <div className="space-y-0">
+      <section className="relative isolate overflow-hidden bg-surface-subtle">
+        <div className="absolute inset-0">
+          <Image
+            src={heroImage}
+            alt={provider.name}
+            fill
+            sizes="100vw"
+            className="object-cover opacity-40"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/50" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
+            <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              <Link
+                href="/medical-facilities"
+                className="inline-flex items-center gap-2 text-foreground underline-offset-4 hover:underline"
+              >
+                {block.labels.backLink}
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-4xl space-y-4">
+                {block.eyebrow ? (
+                  <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                    {block.eyebrow}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge variant="secondary" className="bg-background/90">
+                    <Building2 className="mr-1 h-4 w-4" />
+                    {provider.facility_type.replace("_", " ")}
+                  </Badge>
+                  {location ? (
+                    <Badge variant="outline" className="bg-background/80">
+                      <MapPin className="mr-1 h-4 w-4" />
+                      {location}
+                    </Badge>
+                  ) : null}
+                  {provider.is_partner === false ? null : (
+                    <Badge variant="outline" className="bg-background/80">
+                      <CheckCircle2 className="mr-1 h-4 w-4 text-green-500" />
+                      {block.labels.partnerBadge}
+                    </Badge>
+                  )}
+                </div>
+
+                <h1 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+                  {provider.name}
+                </h1>
+
+                <p className="max-w-3xl text-base text-muted-foreground sm:text-lg">
+                  {overviewText}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  {typeof provider.rating === "number" ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-background/80 px-4 py-2 text-sm font-semibold shadow-sm">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      {provider.rating.toFixed(1)}
+                      {provider.review_count ? (
+                        <span className="text-muted-foreground">
+                          ({provider.review_count} {block.labels.reviewsSuffix})
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : provider.review_count ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-background/80 px-4 py-2 text-sm font-semibold shadow-sm">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      {provider.review_count} {block.labels.reviewsSuffix}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild size="lg" variant="outline">
+                    <Link href="/contact">{block.ctas.secondary}</Link>
+                  </Button>
+                  <Button asChild size="lg">
+                    <Link href="/start-journey">{block.ctas.primary}</Link>
+                  </Button>
+                </div>
+
+                {block.trustStatement ? (
+                  <div className="max-w-2xl rounded-2xl border border-border/60 bg-background/75 p-4 text-sm leading-6 text-muted-foreground shadow-sm backdrop-blur">
+                    {block.trustStatement}
+                  </div>
+                ) : null}
+
+                {isFetching ? (
+                  <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {block.fallbacks.updating}
+                  </div>
+                ) : null}
+              </div>
+
+              {provider.logo_url ? (
+                <div className="relative aspect-square w-full max-w-[22rem] overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-10 shadow-sm backdrop-blur lg:w-[22rem]">
+                  <Image
+                    src={provider.logo_url}
+                    alt={`${provider.name} logo`}
+                    fill
+                    sizes="(min-width: 1024px) 22rem, 90vw"
+                    className="object-contain"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-background py-12 sm:py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{block.sectionTitles.overview}</CardTitle>
+                  <SectionDescription
+                    text={block.sectionDescriptions.overview}
+                  />
+                </CardHeader>
+                <CardContent>
+                  <p className="leading-relaxed text-muted-foreground">
+                    {overviewText}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {provider.specialties && provider.specialties.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.specialties}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.specialties}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {provider.specialties.map((specialty) => (
+                        <Badge key={specialty} variant="outline">
+                          {specialty}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {procedures.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.procedures}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.procedures}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {procedures.map((procedure) => (
+                        <Badge key={procedure.id} variant="secondary">
+                          {procedure.name}
+                          {procedure.treatmentName
+                            ? ` • ${procedure.treatmentName}`
+                            : ""}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {provider.facilities && provider.facilities.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.facilities}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.facilities}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {provider.facilities.map((item) => (
+                        <Badge key={item} variant="outline">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {provider.amenities && provider.amenities.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.amenities}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.amenities}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {provider.amenities.map((item) => (
+                        <Badge key={item} variant="outline">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {infrastructureEntries.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.infrastructure}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.infrastructure}
+                    />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {infrastructureEntries.map((entry) => (
+                      <MetaRow
+                        key={entry.key}
+                        label={entry.label}
+                        value={entry.value}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {gallery.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{block.sectionTitles.gallery}</CardTitle>
+                    <SectionDescription
+                      text={block.sectionDescriptions.gallery}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {gallery.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="relative h-48 overflow-hidden rounded-lg"
+                        >
+                          <Image
+                            src={url}
+                            alt={`${provider.name} gallery`}
+                            fill
+                            sizes="(min-width: 768px) 50vw, 100vw"
+                            className="object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{block.sectionTitles.keyDetails}</CardTitle>
+                  <SectionDescription
+                    text={block.sectionDescriptions.keyDetails}
+                  />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <MetaRow
+                    label={block.labels.facilityType}
+                    value={provider.facility_type.replace("_", " ")}
+                  />
+                  <Separator />
+                  <MetaRow
+                    label={block.labels.location}
+                    value={location || block.labels.unavailable}
+                  />
+                  <Separator />
+                  <MetaRow
+                    label={block.labels.partner}
+                    value={
+                      provider.is_partner === false
+                        ? block.labels.no
+                        : block.labels.yes
+                    }
+                  />
+                  {typeof provider.rating === "number" ? (
+                    <>
+                      <Separator />
+                      <MetaRow
+                        label={block.labels.rating}
+                        value={provider.rating.toFixed(1)}
+                      />
+                    </>
+                  ) : null}
+                  {typeof provider.review_count === "number" ? (
+                    <>
+                      <Separator />
+                      <MetaRow
+                        label={block.labels.reviews}
+                        value={String(provider.review_count)}
+                      />
+                    </>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>{block.sectionTitles.contact}</CardTitle>
+                  <SectionDescription
+                    text={block.sectionDescriptions.contact}
+                  />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {phone ? (
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {block.labels.phone}
+                        </p>
+                        <p className="text-foreground">{phone}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                  {email ? (
+                    <div className="flex items-start gap-3">
+                      <Mail className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {block.labels.email}
+                        </p>
+                        <p className="text-foreground">{email}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                  {website ? (
+                    <div className="flex items-start gap-3">
+                      <Globe className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {block.labels.website}
+                        </p>
+                        <Link
+                          href={normalizedWebsite}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-foreground underline-offset-4 hover:underline"
+                        >
+                          {website}
+                        </Link>
+                      </div>
+                    </div>
+                  ) : null}
+                  {whatsapp ? (
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {block.labels.whatsapp}
+                        </p>
+                        <p className="text-foreground">{whatsapp}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {addressLine1 ||
+                  addressLine2 ||
+                  addressState ||
+                  location ||
+                  postalCode ? (
+                    <div className="space-y-1 text-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {block.labels.address}
+                      </p>
+                      {addressLine1 ? (
+                        <p className="text-foreground">{addressLine1}</p>
+                      ) : null}
+                      {addressLine2 ? (
+                        <p className="text-foreground">{addressLine2}</p>
+                      ) : null}
+                      {addressState ? (
+                        <p className="text-muted-foreground">{addressState}</p>
+                      ) : null}
+                      {location ? (
+                        <p className="text-muted-foreground">{location}</p>
+                      ) : null}
+                      {postalCode ? (
+                        <p className="text-muted-foreground">{postalCode}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {provider.coordinates ? (
+                    <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+                      <div className="font-semibold text-foreground">
+                        {block.labels.coordinates}
+                      </div>
+                      <div>{JSON.stringify(provider.coordinates, null, 0)}</div>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline">
+                      <Link href="/contact">{block.ctas.secondary}</Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/start-journey">{block.ctas.primary}</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
