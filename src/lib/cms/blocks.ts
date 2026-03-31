@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { DEFAULT_HERO_OVERLAY } from "@/lib/heroOverlay";
+import { buildCallToActionBaseStyle } from "@/lib/cms/callToActionStyle";
 
 const breakpointOrder = [
   "base",
@@ -857,6 +858,144 @@ const faqDirectoryBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const medicalFacilitiesDirectoryFilterLabelsSchema = z.object({
+  search: z.string().default("Search"),
+  country: z.string().default("Country"),
+  city: z.string().default("City"),
+  specialty: z.string().default("Specialty"),
+  procedure: z.string().default("Procedure"),
+});
+
+const medicalFacilitiesDirectoryFilterPlaceholdersSchema = z.object({
+  country: z.string().default("All countries"),
+  city: z.string().default("All cities"),
+  specialty: z.string().default("All specialties"),
+  procedure: z.string().default("All procedures"),
+});
+
+const medicalFacilitiesDirectoryFilterSearchSchema = z.object({
+  country: z.string().default("Search countries..."),
+  city: z.string().default("Search cities..."),
+  specialty: z.string().default("Search specialties..."),
+  procedure: z.string().default("Search procedures..."),
+});
+
+const medicalFacilitiesDirectoryFilterEmptySchema = z.object({
+  country: z.string().default("No countries found."),
+  city: z.string().default("No cities found."),
+  specialty: z.string().default("No specialties found."),
+  procedure: z.string().default("No procedures found."),
+});
+
+const medicalFacilitiesDirectoryTrustCalloutSchema = z.object({
+  eyebrow: z.string().default("Trusted providers"),
+  title: z.string().default("Curated and vetted by Care N Tour"),
+  description: z
+    .string()
+    .default(
+      "We present live facility data inside a care model designed for international patients, multidisciplinary planning, and clear next steps.",
+    ),
+});
+
+const medicalFacilitiesDirectoryStateCopySchema = z.object({
+  resultsIntro: z
+    .string()
+    .default(
+      "Explore live medical facilities across Egypt and refine the list using your preferred location, specialty, or procedure.",
+    ),
+  resultsCountLabel: z.string().default("facilities available"),
+  loading: z.string().default("Loading medical facilities..."),
+  updating: z.string().default("Updating results..."),
+  emptyHeading: z.string().default("No medical facilities found"),
+  emptyDescription: z
+    .string()
+    .default("Adjust your filters to see more options."),
+  errorTitle: z.string().default("Unable to load medical facilities"),
+  errorDescription: z.string().default("Please try again later."),
+});
+
+const medicalFacilitiesDirectoryCardLabelsSchema = z.object({
+  specialties: z.string().default("Specialties"),
+  procedures: z.string().default("Procedures"),
+  facilities: z.string().default("Facilities provided"),
+  amenities: z.string().default("Amenities"),
+  contact: z.string().default("Contact"),
+  primaryCta: z.string().default("Start your journey"),
+  viewProfile: z.string().default("View profile"),
+  reviewsSuffix: z.string().default("reviews"),
+  fallbackMeta: z.string().default("Partner facility"),
+  partnerBadge: z.string().default("Partner facility"),
+});
+
+const medicalFacilitiesDirectoryBlockSchema = z
+  .object({
+    type: z.literal("medicalFacilitiesDirectory"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    trustCallout: medicalFacilitiesDirectoryTrustCalloutSchema.default({
+      eyebrow: "Trusted providers",
+      title: "Curated and vetted by Care N Tour",
+      description:
+        "We present live facility data inside a care model designed for international patients, multidisciplinary planning, and clear next steps.",
+    }),
+    searchPlaceholder: z
+      .string()
+      .default("Search by facility, country, city, specialty, or procedure..."),
+    filterLabels: medicalFacilitiesDirectoryFilterLabelsSchema.default({
+      search: "Search",
+      country: "Country",
+      city: "City",
+      specialty: "Specialty",
+      procedure: "Procedure",
+    }),
+    filterPlaceholders:
+      medicalFacilitiesDirectoryFilterPlaceholdersSchema.default({
+        country: "All countries",
+        city: "All cities",
+        specialty: "All specialties",
+        procedure: "All procedures",
+      }),
+    filterSearchPlaceholders:
+      medicalFacilitiesDirectoryFilterSearchSchema.default({
+        country: "Search countries...",
+        city: "Search cities...",
+        specialty: "Search specialties...",
+        procedure: "Search procedures...",
+      }),
+    filterEmptyCopy: medicalFacilitiesDirectoryFilterEmptySchema.default({
+      country: "No countries found.",
+      city: "No cities found.",
+      specialty: "No specialties found.",
+      procedure: "No procedures found.",
+    }),
+    clearButtonLabel: z.string().default("Clear filters"),
+    states: medicalFacilitiesDirectoryStateCopySchema.default({
+      resultsIntro:
+        "Explore live medical facilities across Egypt and refine the list using your preferred location, specialty, or procedure.",
+      resultsCountLabel: "facilities available",
+      loading: "Loading medical facilities...",
+      updating: "Updating results...",
+      emptyHeading: "No medical facilities found",
+      emptyDescription: "Adjust your filters to see more options.",
+      errorTitle: "Unable to load medical facilities",
+      errorDescription: "Please try again later.",
+    }),
+    cardLabels: medicalFacilitiesDirectoryCardLabelsSchema.default({
+      specialties: "Specialties",
+      procedures: "Procedures",
+      facilities: "Facilities provided",
+      amenities: "Amenities",
+      contact: "Contact",
+      primaryCta: "Start your journey",
+      viewProfile: "View profile",
+      reviewsSuffix: "reviews",
+      fallbackMeta: "Partner facility",
+      partnerBadge: "Partner facility",
+    }),
+  })
+  .extend(blockMetaShape);
+
 const quoteBlockSchema = z
   .object({
     type: z.literal("quote"),
@@ -871,6 +1010,124 @@ const quoteBlockSchema = z
       })
       .optional(),
     highlight: z.string().optional(),
+  })
+  .extend(blockMetaShape);
+
+const medicalFacilityProfileSectionTitlesSchema = z.object({
+  overview: z.string().default("About this facility"),
+  specialties: z.string().default("Specialties"),
+  procedures: z.string().default("Procedures"),
+  facilities: z.string().default("Facilities provided"),
+  amenities: z.string().default("Amenities"),
+  infrastructure: z.string().default("Infrastructure & technology"),
+  gallery: z.string().default("Gallery"),
+  keyDetails: z.string().default("Key details"),
+  contact: z.string().default("Contact & location"),
+});
+
+const medicalFacilityProfileSectionDescriptionsSchema = z.object({
+  overview: z.string().optional(),
+  specialties: z.string().optional(),
+  procedures: z.string().optional(),
+  facilities: z.string().optional(),
+  amenities: z.string().optional(),
+  infrastructure: z.string().optional(),
+  gallery: z.string().optional(),
+  keyDetails: z.string().optional(),
+  contact: z.string().optional(),
+});
+
+const medicalFacilityProfileLabelsSchema = z.object({
+  backLink: z.string().default("Back to Medical Facilities"),
+  partnerBadge: z.string().default("Partner facility"),
+  reviewsSuffix: z.string().default("reviews"),
+  facilityType: z.string().default("Facility type"),
+  location: z.string().default("Location"),
+  partner: z.string().default("Partner"),
+  rating: z.string().default("Rating"),
+  reviews: z.string().default("Reviews"),
+  phone: z.string().default("Phone"),
+  email: z.string().default("Email"),
+  website: z.string().default("Website"),
+  whatsapp: z.string().default("WhatsApp"),
+  address: z.string().default("Address"),
+  coordinates: z.string().default("Coordinates"),
+  unavailable: z.string().default("Not available"),
+  yes: z.string().default("Yes"),
+  no: z.string().default("No"),
+});
+
+const medicalFacilityProfileCtasSchema = z.object({
+  secondary: z.string().default("Contact"),
+  primary: z.string().default("Start your journey"),
+});
+
+const medicalFacilityProfileFallbacksSchema = z.object({
+  loading: z.string().default("Loading medical facility..."),
+  updating: z.string().default("Updating latest details..."),
+  notFoundHeading: z.string().default("Medical facility not found"),
+  notFoundDescription: z
+    .string()
+    .default(
+      "The facility you are looking for may have been removed or is not available to view.",
+    ),
+  noOverview: z
+    .string()
+    .default(
+      "Care N Tour can provide more context on this facility during your planning conversation.",
+    ),
+});
+
+const medicalFacilityProfileBlockSchema = z
+  .object({
+    type: z.literal("medicalFacilityProfile"),
+    eyebrow: z.string().optional(),
+    trustStatement: z.string().optional(),
+    sectionTitles: medicalFacilityProfileSectionTitlesSchema.default({
+      overview: "About this facility",
+      specialties: "Specialties",
+      procedures: "Procedures",
+      facilities: "Facilities provided",
+      amenities: "Amenities",
+      infrastructure: "Infrastructure & technology",
+      gallery: "Gallery",
+      keyDetails: "Key details",
+      contact: "Contact & location",
+    }),
+    sectionDescriptions:
+      medicalFacilityProfileSectionDescriptionsSchema.default({}),
+    labels: medicalFacilityProfileLabelsSchema.default({
+      backLink: "Back to Medical Facilities",
+      partnerBadge: "Partner facility",
+      reviewsSuffix: "reviews",
+      facilityType: "Facility type",
+      location: "Location",
+      partner: "Partner",
+      rating: "Rating",
+      reviews: "Reviews",
+      phone: "Phone",
+      email: "Email",
+      website: "Website",
+      whatsapp: "WhatsApp",
+      address: "Address",
+      coordinates: "Coordinates",
+      unavailable: "Not available",
+      yes: "Yes",
+      no: "No",
+    }),
+    ctas: medicalFacilityProfileCtasSchema.default({
+      secondary: "Contact",
+      primary: "Start your journey",
+    }),
+    fallbacks: medicalFacilityProfileFallbacksSchema.default({
+      loading: "Loading medical facility...",
+      updating: "Updating latest details...",
+      notFoundHeading: "Medical facility not found",
+      notFoundDescription:
+        "The facility you are looking for may have been removed or is not available to view.",
+      noOverview:
+        "Care N Tour can provide more context on this facility during your planning conversation.",
+    }),
   })
   .extend(blockMetaShape);
 
@@ -1125,7 +1382,9 @@ const blockSchemas = [
   contactFormEmbedBlockSchema,
   faqBlockSchema,
   faqDirectoryBlockSchema,
+  medicalFacilitiesDirectoryBlockSchema,
   quoteBlockSchema,
+  medicalFacilityProfileBlockSchema,
   treatmentSpecialtiesBlockSchema,
   treatmentsBlockSchema,
   doctorsBlockSchema,
@@ -1793,6 +2052,7 @@ export const blockRegistry = {
       type: "callToAction",
       layout: "centered",
       background: "muted",
+      style: buildCallToActionBaseStyle("muted"),
       heading: "Ready to take the next step?",
       actions: [
         {
@@ -1964,6 +2224,79 @@ export const blockRegistry = {
       clearSearchLabel: "Clear search",
     },
   } satisfies BlockDefinition<typeof faqDirectoryBlockSchema>,
+  medicalFacilitiesDirectory: {
+    type: "medicalFacilitiesDirectory",
+    label: "Medical Facilities Directory",
+    description:
+      "Live medical facilities listing with CMS-managed framing, labels, and state copy.",
+    category: "content",
+    schema: medicalFacilitiesDirectoryBlockSchema,
+    defaultItem: {
+      type: "medicalFacilitiesDirectory",
+      eyebrow: "Medical Facilities",
+      heading:
+        "Search accredited hospitals and medical facilities across Egypt",
+      description:
+        "Compare live facility profiles while keeping the surrounding guidance, trust framing, and patient-facing copy fully editable in the CMS.",
+      trustCallout: {
+        eyebrow: "Trusted providers",
+        title: "Curated and vetted by Care N Tour",
+        description:
+          "We present live facility data inside a care model designed for international patients, multidisciplinary planning, and clear next steps.",
+      },
+      searchPlaceholder:
+        "Search by facility, country, city, specialty, or procedure...",
+      filterLabels: {
+        search: "Search",
+        country: "Country",
+        city: "City",
+        specialty: "Specialty",
+        procedure: "Procedure",
+      },
+      filterPlaceholders: {
+        country: "All countries",
+        city: "All cities",
+        specialty: "All specialties",
+        procedure: "All procedures",
+      },
+      filterSearchPlaceholders: {
+        country: "Search countries...",
+        city: "Search cities...",
+        specialty: "Search specialties...",
+        procedure: "Search procedures...",
+      },
+      filterEmptyCopy: {
+        country: "No countries found.",
+        city: "No cities found.",
+        specialty: "No specialties found.",
+        procedure: "No procedures found.",
+      },
+      clearButtonLabel: "Clear filters",
+      states: {
+        resultsIntro:
+          "Explore live medical facilities across Egypt and refine the list using your preferred location, specialty, or procedure.",
+        resultsCountLabel: "facilities available",
+        loading: "Loading medical facilities...",
+        updating: "Updating results...",
+        emptyHeading: "No medical facilities found",
+        emptyDescription: "Adjust your filters to see more options.",
+        errorTitle: "Unable to load medical facilities",
+        errorDescription: "Please try again later.",
+      },
+      cardLabels: {
+        specialties: "Specialties",
+        procedures: "Procedures",
+        facilities: "Facilities provided",
+        amenities: "Amenities",
+        contact: "Contact",
+        primaryCta: "Start your journey",
+        viewProfile: "View profile",
+        reviewsSuffix: "reviews",
+        fallbackMeta: "Partner facility",
+        partnerBadge: "Partner facility",
+      },
+    },
+  } satisfies BlockDefinition<typeof medicalFacilitiesDirectoryBlockSchema>,
   quote: {
     type: "quote",
     label: "Quote",
@@ -1978,6 +2311,71 @@ export const blockRegistry = {
       role: "Procedure • Country",
     },
   } satisfies BlockDefinition<typeof quoteBlockSchema>,
+  medicalFacilityProfile: {
+    type: "medicalFacilityProfile",
+    label: "Medical Facility Profile",
+    description:
+      "Live facility detail shell with CMS-managed section headings, labels, and CTA copy.",
+    category: "content",
+    schema: medicalFacilityProfileBlockSchema,
+    defaultItem: {
+      type: "medicalFacilityProfile",
+      eyebrow: "Care N Tour Medical Facility Profile",
+      trustStatement:
+        "Care N Tour coordinates specialist review, international patient planning, and multilingual support around the live provider record shown below.",
+      sectionTitles: {
+        overview: "About this facility",
+        specialties: "Specialties",
+        procedures: "Procedures",
+        facilities: "Facilities provided",
+        amenities: "Amenities",
+        infrastructure: "Infrastructure & technology",
+        gallery: "Gallery",
+        keyDetails: "Key details",
+        contact: "Contact & location",
+      },
+      sectionDescriptions: {
+        overview:
+          "Review the provider profile, operational strengths, and planning context before speaking with the Care N Tour team.",
+        procedures:
+          "Procedures shown below reflect the live provider record currently available through Care N Tour.",
+        contact:
+          "Use the live contact and location details below as a starting point, and speak with Care N Tour for coordinated next steps.",
+      },
+      labels: {
+        backLink: "Back to Medical Facilities",
+        partnerBadge: "Partner facility",
+        reviewsSuffix: "reviews",
+        facilityType: "Facility type",
+        location: "Location",
+        partner: "Partner",
+        rating: "Rating",
+        reviews: "Reviews",
+        phone: "Phone",
+        email: "Email",
+        website: "Website",
+        whatsapp: "WhatsApp",
+        address: "Address",
+        coordinates: "Coordinates",
+        unavailable: "Not available",
+        yes: "Yes",
+        no: "No",
+      },
+      ctas: {
+        secondary: "Contact",
+        primary: "Start your journey",
+      },
+      fallbacks: {
+        loading: "Loading medical facility...",
+        updating: "Updating latest details...",
+        notFoundHeading: "Medical facility not found",
+        notFoundDescription:
+          "The facility you are looking for may have been removed or is not available to view.",
+        noOverview:
+          "Care N Tour can provide more context on this facility during your planning conversation.",
+      },
+    },
+  } satisfies BlockDefinition<typeof medicalFacilityProfileBlockSchema>,
   treatmentSpecialties: {
     type: "treatmentSpecialties",
     label: "Treatment Specialties",
@@ -2434,6 +2832,36 @@ function sanitizeAvatar(raw: unknown) {
   return cleaned;
 }
 
+function sanitizeImageAsset(raw: unknown) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return undefined;
+  }
+
+  const image = { ...(raw as UnknownRecord) };
+  const srcValue = image.src;
+  const src =
+    typeof srcValue === "string"
+      ? srcValue.trim()
+      : typeof srcValue === "undefined" || srcValue === null
+        ? ""
+        : String(srcValue);
+
+  if (!src) {
+    return undefined;
+  }
+
+  const cleaned: UnknownRecord = { ...image, src };
+  if (typeof cleaned.alt === "string") {
+    const alt = cleaned.alt.trim();
+    if (!alt) {
+      delete cleaned.alt;
+    } else {
+      cleaned.alt = alt;
+    }
+  }
+  return cleaned;
+}
+
 function sanitizeBlock(raw: unknown): unknown {
   if (Array.isArray(raw)) {
     return raw.map((item) => sanitizeBlock(item));
@@ -2450,6 +2878,15 @@ function sanitizeBlock(raw: unknown): unknown {
       block.avatar = cleanedAvatar;
     } else {
       delete block.avatar;
+    }
+  }
+
+  if (block.type === "callToAction" && "image" in block) {
+    const cleanedImage = sanitizeImageAsset(block.image);
+    if (cleanedImage) {
+      block.image = cleanedImage;
+    } else {
+      delete block.image;
     }
   }
 
