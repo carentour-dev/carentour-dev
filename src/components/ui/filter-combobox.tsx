@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,13 @@ export const FilterComboBox = ({
   popoverWidth = "trigger",
   onChange,
 }: FilterComboBoxProps) => {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const selectedOption = options.find((option) => option.value === value);
   const filteredOptions = useMemo(() => {
@@ -87,31 +92,37 @@ export const FilterComboBox = ({
       "w-[min(40rem,calc(100vw-2rem))] min-w-[max(16rem,var(--radix-popover-trigger-width))]",
   );
 
+  const trigger = (
+    <Button
+      type="button"
+      variant="outline"
+      role="combobox"
+      aria-expanded={open}
+      disabled={disabled}
+      className={cn(
+        "h-12 w-full justify-between overflow-hidden text-left font-normal",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "flex-1 truncate",
+          !selectedOption && "text-muted-foreground",
+        )}
+      >
+        {selectedOption?.label ?? placeholder}
+      </span>
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  );
+
+  if (!mounted) {
+    return trigger;
+  }
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            "h-12 w-full justify-between overflow-hidden text-left font-normal",
-            className,
-          )}
-        >
-          <span
-            className={cn(
-              "flex-1 truncate",
-              !selectedOption && "text-muted-foreground",
-            )}
-          >
-            {selectedOption?.label ?? placeholder}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         align="start"
         className={cn(popoverWidthClassName, "p-0")}
