@@ -13,6 +13,10 @@ import {
 
 export const revalidate = 300;
 
+const INTERNAL_CMS_TEMPLATE_SLUGS = new Set([
+  "medical-facilities-detail-template",
+]);
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
@@ -77,6 +81,10 @@ export default async function GenericCmsPage({ params }: PageProps) {
   const pathname = `/${slug}`;
 
   await maybeRedirectFromLegacyPath(pathname);
+
+  if (INTERNAL_CMS_TEMPLATE_SLUGS.has(slug)) {
+    return notFound();
+  }
 
   const cmsPage = await getPublishedPageBySlug(slug);
 
