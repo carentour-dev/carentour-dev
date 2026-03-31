@@ -11,6 +11,7 @@ import { FeatureGridBlock } from "./blocks/FeatureGridBlock";
 import { DataGridBlock } from "./blocks/DataGridBlock";
 import { FaqBlock } from "./blocks/FaqBlock";
 import { FaqDirectoryPreview } from "./blocks/FaqDirectoryPreview";
+import { MedicalFacilitiesDirectoryPreview } from "./blocks/MedicalFacilitiesDirectoryPreview";
 import { LeadershipGridBlock } from "./blocks/LeadershipGridBlock";
 import { HeroBlock } from "./blocks/HeroBlock";
 import { HomeCtaBlock } from "./blocks/HomeCtaBlock";
@@ -21,6 +22,7 @@ import { LogoGridBlock } from "./blocks/LogoGridBlock";
 import { AboutHeroBlock } from "./blocks/AboutHeroBlock";
 import { MissionVisionValuesBlock } from "./blocks/MissionVisionValuesBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
+import { MedicalFacilityProfilePreview } from "./blocks/MedicalFacilityProfilePreview";
 import { RichTextBlock } from "./blocks/RichTextBlock";
 import { HotelShowcaseBlock } from "./blocks/HotelShowcaseBlock";
 import { InfoPanelsBlock } from "./blocks/InfoPanelsBlock";
@@ -158,8 +160,19 @@ export function BlockPreviewRenderer({
               return <FaqBlock key={blockKey} block={block} />;
             case "faqDirectory":
               return <FaqDirectoryPreview key={blockKey} block={block} />;
+            case "medicalFacilitiesDirectory":
+              return (
+                <MedicalFacilitiesDirectoryPreview
+                  key={blockKey}
+                  block={block}
+                />
+              );
             case "quote":
               return <QuoteBlock key={blockKey} block={block} />;
+            case "medicalFacilityProfile":
+              return (
+                <MedicalFacilityProfilePreview key={blockKey} block={block} />
+              );
             case "treatmentSpecialties":
               return (
                 <TreatmentSpecialtiesPreview key={blockKey} block={block} />
