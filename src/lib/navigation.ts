@@ -30,6 +30,10 @@ export type NavigationQueryResult = {
 };
 
 export type CmsPageReference = Pick<CmsPageRow, "id" | "slug">;
+export type PublicNavigationCmsPage = Pick<
+  CmsPageRow,
+  "id" | "slug" | "title" | "status"
+>;
 
 // Documented snapshot of the hardcoded routes that previously lived in Header.tsx.
 export const DEFAULT_NAVIGATION_ENTRIES: Array<{
@@ -127,6 +131,36 @@ export function sortNavigationLinks(links: NavigationLink[]): NavigationLink[] {
     }
     return a.label.localeCompare(b.label);
   });
+}
+
+export function buildPublicNavigationLinks(
+  rows: NavigationRow[],
+  cmsPages: PublicNavigationCmsPage[],
+): NavigationLink[] {
+  const filteredRows = filterOrphanedNavigationRows(rows, cmsPages);
+  const mappedRows = filteredRows.map(mapNavigationRow);
+  const visibleLinks = mappedRows.filter(isNavigationVisible);
+  const reservedSlugs = new Set(mappedRows.map((link) => link.slug));
+
+  const cmsLinks: NavigationLink[] = cmsPages
+    .filter(
+      (page) =>
+        page?.slug &&
+        page.status === "published" &&
+        !reservedSlugs.has(page.slug),
+    )
+    .map((page, index) => ({
+      id: `cms-${page.id ?? page.slug}`,
+      label: page.title ?? page.slug,
+      href: page.slug === "home" ? "/" : `/${page.slug}`,
+      slug: page.slug!,
+      status: "published",
+      position: visibleLinks.length + index + 1000,
+      kind: "cms",
+      cmsPageId: page.id ?? null,
+    }));
+
+  return sortNavigationLinks([...visibleLinks, ...cmsLinks]);
 }
 
 export function mergeWithFallback(links: NavigationLink[]): NavigationLink[] {
