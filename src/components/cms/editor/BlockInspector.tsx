@@ -26,6 +26,10 @@ import {
   type TabbedGuideSection,
   type TabbedGuideTab,
 } from "@/lib/cms/blocks";
+import {
+  buildCallToActionBackgroundStyle,
+  buildCallToActionBaseStyle,
+} from "@/lib/cms/callToActionStyle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9282,11 +9286,112 @@ function CallToActionBlockFields({
 }: {
   form: UseFormReturn<BlockValue<"callToAction">>;
 }) {
+  type CallToActionThemePreset = {
+    id: "shared-dark-split" | "soft-centered";
+    label: string;
+    description: string;
+    layout: BlockValue<"callToAction">["layout"];
+    background: BlockValue<"callToAction">["background"];
+    actionVariants: Array<
+      NonNullable<BlockValue<"callToAction">["actions"][number]["variant"]>
+    >;
+  };
+
+  const themePresets: CallToActionThemePreset[] = [
+    {
+      id: "shared-dark-split",
+      label: "Shared CMS CTA",
+      description:
+        "Matches the About, Treatments, Plan, Travel Info, and FAQ page CTA treatment.",
+      layout: "split",
+      background: "dark",
+      actionVariants: ["default", "outline"],
+    },
+    {
+      id: "soft-centered",
+      label: "Soft Centered CTA",
+      description:
+        "Centered CTA with the lighter muted surface used by the earlier facilities setup.",
+      layout: "centered",
+      background: "muted",
+      actionVariants: ["default", "secondary"],
+    },
+  ];
   const actionsArray = useFieldArray({
     control: form.control,
     name: "actions",
   });
-  const imageEnabled = form.watch("background") === "image";
+  const layout = form.watch("layout");
+  const background = form.watch("background");
+  const imageSrc = form.watch("image.src");
+  const imageAlt = form.watch("image.alt");
+  const imageOverlay = form.watch("image.overlay");
+  const actions = form.watch("actions") ?? [];
+  const imageEnabled = background === "image";
+  const didSyncBackgroundRef = useRef(false);
+
+  const activeThemeId =
+    themePresets.find((preset) => {
+      if (preset.layout !== layout || preset.background !== background) {
+        return false;
+      }
+
+      return preset.actionVariants.every(
+        (variant, index) => (actions[index]?.variant ?? "default") === variant,
+      );
+    })?.id ?? null;
+
+  const applyThemePreset = (preset: CallToActionThemePreset) => {
+    const nextActions = actions.map((action, index) => ({
+      ...action,
+      variant: preset.actionVariants[index] ?? action.variant ?? "default",
+    }));
+
+    form.setValue("layout", preset.layout, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    form.setValue("background", preset.background, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    form.setValue("actions", nextActions, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    form.setValue("style", buildCallToActionBaseStyle(preset.background), {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
+
+  useEffect(() => {
+    if (!didSyncBackgroundRef.current) {
+      didSyncBackgroundRef.current = true;
+      return;
+    }
+
+    const previousStyle = form.getValues("style") as BlockStyle | undefined;
+    form.setValue(
+      "style",
+      {
+        ...(previousStyle ?? {}),
+        background: buildCallToActionBackgroundStyle(background, {
+          src: imageSrc,
+          alt: imageAlt,
+          overlay: imageOverlay,
+        }),
+      } as BlockStyle,
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    );
+  }, [background, imageAlt, imageOverlay, imageSrc, form]);
 
   return (
     <div className="space-y-6">
@@ -9340,6 +9445,32 @@ function CallToActionBlockFields({
             </FormItem>
           )}
         />
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-4">
+        <div className="space-y-1">
+          <Label className="text-sm font-semibold">Quick styles</Label>
+          <p className="text-sm text-muted-foreground">
+            Apply the shared CTA treatment used across the other CMS-based
+            pages, or switch back to the softer centered version.
+          </p>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2">
+          {themePresets.map((preset) => (
+            <Button
+              key={preset.id}
+              type="button"
+              variant={activeThemeId === preset.id ? "default" : "outline"}
+              className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
+              onClick={() => applyThemePreset(preset)}
+            >
+              <div className="space-y-1">
+                <div className="font-medium">{preset.label}</div>
+                <div className="text-xs opacity-80">{preset.description}</div>
+              </div>
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -11163,6 +11294,1400 @@ function QuoteBlockFields({
   );
 }
 
+function MedicalFacilitiesDirectoryBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"medicalFacilitiesDirectory">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Medical Facilities"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search accredited hospitals and medical facilities across Egypt"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Supporting directory copy"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Trust callout</h4>
+          <p className="text-sm text-muted-foreground">
+            Configure the editorial trust framing shown beside the directory
+            introduction.
+          </p>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="trustCallout.eyebrow"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust eyebrow</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Trusted providers"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="trustCallout.title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Curated and vetted by Care N Tour"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="trustCallout.description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain the institutional trust context behind the directory."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="searchPlaceholder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Search placeholder</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search by facility, country, city, specialty, or procedure..."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="clearButtonLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Clear button label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Clear filters"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Filter labels</h4>
+          <p className="text-sm text-muted-foreground">
+            Controls the visible labels above the live directory filters.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="filterLabels.search"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Search label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Country"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="City"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Specialty"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.procedure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedure label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Procedure"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Filter placeholders
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Controls the button placeholder text and the combobox search states.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All countries"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All cities"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All specialties"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.procedure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedure placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All procedures"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search countries..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search cities..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search specialties..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.procedure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedure search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search procedures..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Results and state copy
+          </h4>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="states.resultsIntro"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results intro</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain what visitors can do with the live directory."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="states.resultsCountLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results count label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="facilities available"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.loading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Loading copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Loading medical facilities..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.updating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Updating copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Updating results..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyHeading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty state heading</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="No medical facilities found"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty state description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Adjust your filters to see more options."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.errorTitle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Error title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Unable to load medical facilities"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.errorDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Error description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Please try again later."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Card labels</h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="cardLabels.specialties"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialties label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Specialties"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Procedures"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.facilities"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Facilities label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Facilities provided"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.amenities"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Amenities label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Amenities"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.contact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Secondary CTA label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Contact"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.primaryCta"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Primary CTA label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Start your journey"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.viewProfile"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>View profile label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="View profile"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Used in the card link accessibility label.
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.partnerBadge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Partner badge label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Partner facility"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.reviewsSuffix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reviews suffix</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="reviews"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.fallbackMeta"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fallback footer label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Partner facility"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MedicalFacilityProfileBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"medicalFacilityProfile">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Care N Tour Medical Facility Profile"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="trustStatement"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trust statement</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain how Care N Tour supports the international patient journey around the live provider record."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Section titles
+          </h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="sectionTitles.overview"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Overview</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="About this facility"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.specialties"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialties</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Specialties"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Procedures"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.facilities"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Facilities</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Facilities provided"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.amenities"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Amenities</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Amenities"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.infrastructure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Infrastructure</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Infrastructure & technology"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.gallery"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gallery</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Gallery"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.keyDetails"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Key details</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Key details"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.contact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Contact & location"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Supporting copy
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Optional section descriptions shown below the headings.
+          </p>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.overview"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Overview description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Optional supporting copy for the overview card."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Optional guidance for the procedures card."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.contact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Optional note for the contact and location panel."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.keyDetails"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Key details description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Optional note for the key details card."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Labels and badges
+          </h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="labels.backLink"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Back link label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Back to Medical Facilities"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.partnerBadge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Partner badge</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Partner facility"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.reviewsSuffix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reviews suffix</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="reviews"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.facilityType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Facility type label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Facility type"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Location"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.partner"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Partner label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Partner"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.rating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rating label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Rating"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.reviews"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reviews label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Reviews"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Phone"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Email"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.website"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Website label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Website"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.whatsapp"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>WhatsApp label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="WhatsApp"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Address"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.coordinates"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Coordinates label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Coordinates"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.unavailable"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unavailable label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Not available"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.yes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Yes label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Yes"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="labels.no"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>No label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="No"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="ctas.secondary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Secondary CTA</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Contact"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="ctas.primary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Primary CTA</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Start your journey"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Fallback and loading states
+          </h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="fallbacks.loading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Loading copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Loading medical facility..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fallbacks.updating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Updating copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Updating latest details..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fallbacks.notFoundHeading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Not found heading</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Medical facility not found"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fallbacks.notFoundDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Not found description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain that the requested facility is unavailable."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fallbacks.noOverview"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Overview fallback</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Used when the provider has no overview text."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TreatmentsBlockFields({
   form,
 }: {
@@ -11923,7 +13448,13 @@ const blockEditors: Record<
   contactFormEmbed: (form) => <ContactFormEmbedBlockFields form={form} />,
   faq: (form) => <FaqBlockFields form={form} />,
   faqDirectory: (form) => <FaqDirectoryBlockFields form={form} />,
+  medicalFacilitiesDirectory: (form) => (
+    <MedicalFacilitiesDirectoryBlockFields form={form} />
+  ),
   quote: (form) => <QuoteBlockFields form={form} />,
+  medicalFacilityProfile: (form) => (
+    <MedicalFacilityProfileBlockFields form={form} />
+  ),
   treatmentSpecialties: (form) => (
     <TreatmentSpecialtiesBlockFields form={form} />
   ),
@@ -12131,8 +13662,12 @@ export function blockSummary(block: BlockInstance): string {
       return `${block.items.length} questions`;
     case "faqDirectory":
       return block.heading ?? "Dynamic FAQ directory";
+    case "medicalFacilitiesDirectory":
+      return block.heading ?? "Medical facilities directory";
     case "quote":
       return block.attribution ?? "Quote";
+    case "medicalFacilityProfile":
+      return block.eyebrow ?? "Medical facility profile";
     case "treatmentSpecialties":
       return block.heading ?? `${block.limit} treatment specialties`;
     case "treatments":
