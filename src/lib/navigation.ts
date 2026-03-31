@@ -18,6 +18,17 @@ export type NavigationLink = {
 
 type NavigationRow = Database["public"]["Tables"]["navigation_links"]["Row"];
 type CmsPageRow = Database["public"]["Tables"]["cms_pages"]["Row"];
+type NavigationRowInput = Pick<
+  NavigationRow,
+  | "id"
+  | "label"
+  | "href"
+  | "slug"
+  | "status"
+  | "position"
+  | "kind"
+  | "cms_page_id"
+>;
 
 type NavigationQueryOptions = {
   includeHidden?: boolean;
@@ -80,7 +91,7 @@ export function getFallbackNavigationLinks(): NavigationLink[] {
   }));
 }
 
-export function mapNavigationRow(row: NavigationRow): NavigationLink {
+export function mapNavigationRow(row: NavigationRowInput): NavigationLink {
   const {
     id,
     label,
@@ -134,7 +145,7 @@ export function sortNavigationLinks(links: NavigationLink[]): NavigationLink[] {
 }
 
 export function buildPublicNavigationLinks(
-  rows: NavigationRow[],
+  rows: NavigationRowInput[],
   cmsPages: PublicNavigationCmsPage[],
 ): NavigationLink[] {
   const filteredRows = filterOrphanedNavigationRows(rows, cmsPages);
@@ -199,12 +210,14 @@ export async function fetchNavigationLinks(
     }
 
     const json = (await response.json()) as {
-      links?: Array<NavigationLink | NavigationRow>;
+      links?: Array<NavigationLink | NavigationRowInput>;
     };
     const data = Array.isArray(json.links) ? json.links : [];
 
     const normalizedLinks = data.map((link) =>
-      "cms_page_id" in link ? mapNavigationRow(link as NavigationRow) : link,
+      "cms_page_id" in link
+        ? mapNavigationRow(link as NavigationRowInput)
+        : link,
     );
 
     return {
