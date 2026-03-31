@@ -1,5 +1,9 @@
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { normalizeBlocks } from "@/lib/cms/blocks";
+import type {
+  MedicalFacilitiesDirectoryResponse,
+  MedicalFacilityDetail,
+} from "@/lib/medical-facilities";
 import { cn } from "@/lib/utils";
 import { AnimationController } from "./AnimationController";
 import {
@@ -29,19 +33,32 @@ import {
   ContactFormEmbedBlock,
   FaqBlock,
   FaqDirectoryBlock,
+  MedicalFacilitiesDirectoryBlock,
   QuoteBlock,
+  MedicalFacilityProfileBlock,
   TreatmentSpecialtiesBlock,
   TreatmentsBlock,
   DoctorsBlock,
   TabbedGuideBlock,
 } from "./blocks";
 
+export type CmsBlockRenderContext = {
+  medicalFacilitiesDirectoryData?: MedicalFacilitiesDirectoryResponse | null;
+  medicalFacility?: MedicalFacilityDetail | null;
+  medicalFacilitySlug?: string;
+};
+
 interface BlockRendererProps {
   blocks: unknown;
   className?: string;
+  context?: CmsBlockRenderContext;
 }
 
-export function BlockRenderer({ blocks, className }: BlockRendererProps) {
+export function BlockRenderer({
+  blocks,
+  className,
+  context,
+}: BlockRendererProps) {
   const parsedBlocks = normalizeBlocks(blocks);
 
   if (!parsedBlocks.length) return null;
@@ -104,8 +121,24 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
               return <FaqBlock key={key} block={block} />;
             case "faqDirectory":
               return <FaqDirectoryBlock key={key} block={block} />;
+            case "medicalFacilitiesDirectory":
+              return (
+                <MedicalFacilitiesDirectoryBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                />
+              );
             case "quote":
               return <QuoteBlock key={key} block={block} />;
+            case "medicalFacilityProfile":
+              return (
+                <MedicalFacilityProfileBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                />
+              );
             case "treatmentSpecialties":
               return <TreatmentSpecialtiesBlock key={key} block={block} />;
             case "treatments":
