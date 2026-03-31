@@ -1,9 +1,6 @@
 import {
-  filterOrphanedNavigationRows,
+  buildPublicNavigationLinks,
   getFallbackNavigationLinks,
-  mapNavigationRow,
-  sortNavigationLinks,
-  type NavigationLink,
   type NavigationQueryResult,
 } from "@/lib/navigation";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
@@ -27,7 +24,6 @@ export async function loadPublicNavigationLinks(): Promise<NavigationQueryResult
       supabase
         .from("navigation_links")
         .select(NAVIGATION_COLUMNS)
-        .eq("status", "published")
         .order("position", { ascending: true })
         .order("label", { ascending: true }),
       supabase
@@ -45,30 +41,7 @@ export async function loadPublicNavigationLinks(): Promise<NavigationQueryResult
       };
     }
 
-    const filteredNavRows = filterOrphanedNavigationRows(
-      navRows ?? [],
-      cmsPages ?? [],
-    );
-    const navLinks = filteredNavRows.map(mapNavigationRow);
-    const existingSlugs = new Set(navLinks.map((link) => link.slug));
-
-    const cmsLinks: NavigationLink[] = (cmsPages ?? [])
-      .filter(
-        (page) =>
-          page?.slug &&
-          page.status === "published" &&
-          !existingSlugs.has(page.slug),
-      )
-      .map((page, index) => ({
-        id: `cms-${page.id ?? page.slug}`,
-        label: page.title ?? page.slug,
-        href: page.slug === "home" ? "/" : `/${page.slug}`,
-        slug: page.slug!,
-        status: "published",
-        position: navLinks.length + index + 1000,
-        kind: "cms",
-        cmsPageId: page.id ?? null,
-      }));
+    const links = buildPublicNavigationLinks(navRows ?? [], cmsPages ?? []);
 
     if (cmsError) {
       console.warn(
@@ -77,11 +50,8 @@ export async function loadPublicNavigationLinks(): Promise<NavigationQueryResult
       );
     }
 
-    const combined = sortNavigationLinks([...navLinks, ...cmsLinks]);
-    const links = combined.length ? combined : getFallbackNavigationLinks();
-
     return {
-      links,
+      links: links.length ? links : getFallbackNavigationLinks(),
       fallback: Boolean(cmsError),
       error: undefined,
     };
