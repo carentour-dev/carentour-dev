@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, Shield } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
+import type { PublicLocale } from "@/i18n/routing";
 import { buildHeroOverlayGradient } from "@/lib/heroOverlay";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import type { HomeAction, HomeHeroContent } from "./content";
 
@@ -13,6 +15,7 @@ type HomeHeroSectionProps = {
   className?: string;
   containerClassName?: string;
   contentColumnClassName?: string;
+  locale?: PublicLocale;
 };
 
 function resolveHeroButtonVariant(
@@ -35,6 +38,7 @@ export function HomeHeroSection({
   className,
   containerClassName,
   contentColumnClassName,
+  locale = "en",
 }: HomeHeroSectionProps) {
   const resolvedBackgroundImageUrl =
     typeof content.backgroundImageUrl === "string" &&
@@ -74,20 +78,20 @@ export function HomeHeroSection({
               <div className="flex items-center space-x-2">
                 <Shield className="h-6 w-6 text-premium" />
                 <span className="font-semibold text-premium">
-                  {content.eyebrow}
+                  {localizeOptionalDigits(content.eyebrow, locale)}
                 </span>
               </div>
 
               <h1 className="text-5xl font-bold leading-tight text-primary-foreground md:text-7xl">
-                {content.headingPrefix}
+                {localizeOptionalDigits(content.headingPrefix, locale)}
                 <span className="block text-premium [text-shadow:0_4px_18px_rgba(0,0,0,0.35)]">
-                  {content.headingHighlight}
+                  {localizeOptionalDigits(content.headingHighlight, locale)}
                 </span>
-                {content.headingSuffix}
+                {localizeOptionalDigits(content.headingSuffix, locale)}
               </h1>
 
               <p className="max-w-3xl whitespace-pre-line text-xl leading-relaxed text-primary-foreground/90 md:text-2xl">
-                {content.description}
+                {localizeOptionalDigits(content.description, locale)}
               </p>
 
               <div className="flex flex-col gap-4 pt-2 sm:flex-row">
@@ -102,7 +106,10 @@ export function HomeHeroSection({
                     target={content.primaryAction.target ?? "_self"}
                     rel={resolveLinkRel(content.primaryAction.target)}
                   >
-                    {content.primaryAction.label}
+                    {localizeOptionalDigits(
+                      content.primaryAction.label,
+                      locale,
+                    )}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -117,7 +124,10 @@ export function HomeHeroSection({
                     target={content.secondaryAction.target ?? "_self"}
                     rel={resolveLinkRel(content.secondaryAction.target)}
                   >
-                    {content.secondaryAction.label}
+                    {localizeOptionalDigits(
+                      content.secondaryAction.label,
+                      locale,
+                    )}
                   </Link>
                 </Button>
               </div>
@@ -134,10 +144,10 @@ export function HomeHeroSection({
                   className="space-y-2 border-l border-[hsl(var(--editorial-accent)/0.28)] pl-4"
                 >
                   <p className="text-xs font-medium uppercase tracking-[0.22em] text-[hsl(var(--editorial-accent))]">
-                    {highlight.kicker}
+                    {localizeOptionalDigits(highlight.kicker, locale)}
                   </p>
                   <p className="text-sm leading-6 text-[hsl(var(--editorial-ink-foreground))] md:text-base">
-                    {highlight.label}
+                    {localizeOptionalDigits(highlight.label, locale)}
                   </p>
                 </div>
               ))}
