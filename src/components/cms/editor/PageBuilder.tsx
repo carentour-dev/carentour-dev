@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BlockPreviewRenderer } from "@/components/cms/PreviewRenderer";
+import type { PublicLocale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -69,12 +70,14 @@ interface PageBuilderProps {
   blocks: BlockInstance[];
   onChange: (blocks: BlockInstance[]) => void;
   previewKey?: string;
+  previewLocale?: PublicLocale;
 }
 
 export function PageBuilder({
   blocks,
   onChange,
   previewKey,
+  previewLocale = "en",
 }: PageBuilderProps) {
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     blocks.length ? blocks[0].blockId : null,
@@ -338,6 +341,7 @@ export function PageBuilder({
           <BlockPreviewRenderer
             blocks={previewBlocks}
             key={`${previewInstanceKey}${keySuffix}`}
+            locale={previewLocale}
           />
         </div>
       </div>
