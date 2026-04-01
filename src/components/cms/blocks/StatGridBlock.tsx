@@ -1,4 +1,3 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { localizeOptionalDigits } from "@/lib/public/numbers";
@@ -8,12 +7,13 @@ import { withBlockStyleDefaults } from "./blockStyleDefaults";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 import { resolveIcon } from "./utils";
 
-export async function StatGridBlock({
+export function StatGridBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"statGrid">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   const IconSize = 28;
   const blockWithStyle = withBlockStyleDefaults(block, {
     background: {
