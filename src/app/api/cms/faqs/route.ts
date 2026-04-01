@@ -5,6 +5,8 @@ import { z } from "zod";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import type { Database } from "@/integrations/supabase/types";
+import { revalidateSeoPaths } from "@/lib/seo";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { sortFaqs, type FaqEntry, type FaqStatus } from "@/lib/faq/data";
 
 type FaqRow = Database["public"]["Tables"]["faqs"]["Row"];
@@ -94,12 +96,13 @@ async function resolvePosition(
 }
 
 function revalidateFaqCaches() {
-  revalidatePath("/faq");
+  revalidateSeoPaths(["/faq", "/ar/faq"]);
   revalidatePath("/api/faq");
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   await requirePermission("cms.read");
+  const locale = resolveAdminLocale(request);
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -113,13 +116,58 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (locale === "ar") {
+    const translationsResult = await (supabase as any)
+      .from("faq_translations")
+      .select("faq_id, question, answer, status, updated_at")
+      .eq("locale", "ar");
+
+    if (translationsResult.error) {
+      return NextResponse.json(
+        { error: translationsResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    const translationsByFaqId = new Map<string, any>(
+      (translationsResult.data ?? []).map((row: any) => [row.faq_id, row]),
+    );
+
+    const faqs = sortFaqs(
+      (data ?? []).map((row) => {
+        const translation = translationsByFaqId.get(row.id);
+        return {
+          ...mapRow(row),
+          question: translation?.question ?? row.question,
+          answer: translation?.answer ?? row.answer,
+          status: (translation?.status ?? "draft") as FaqStatus,
+          updated_at: translation?.updated_at ?? row.updated_at,
+        };
+      }),
+    );
+
+    return NextResponse.json({ data: faqs });
+  }
+
   const faqs = sortFaqs((data ?? []).map(mapRow));
   return NextResponse.json({ data: faqs });
 }
 
 export async function POST(request: NextRequest) {
   await requirePermission("cms.write");
+  const locale = resolveAdminLocale(request);
   const payload = await request.json();
+
+  if (locale === "ar") {
+    return NextResponse.json(
+      {
+        error:
+          "Create the English FAQ first, then add the Arabic translation from the existing entry.",
+      },
+      { status: 400 },
+    );
+  }
+
   const parsed = faqSchema.safeParse(payload);
 
   if (!parsed.success) {
