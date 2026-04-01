@@ -3,7 +3,11 @@ import { ArrowUpRight } from "lucide-react";
 import { ContactRequestForm } from "@/components/contact/ContactRequestForm";
 import { type PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
-import { formatPhoneNumberForDisplay } from "@/lib/public/contact";
+import {
+  formatPhoneNumberForDisplay,
+  getPhoneNumberDisplayDirection,
+} from "@/lib/public/contact";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
@@ -17,6 +21,8 @@ export function ContactFormEmbedBlockContent({
   block,
   locale,
 }: ContactFormEmbedBlockContentProps) {
+  const phoneNumberDirection = getPhoneNumberDisplayDirection(locale);
+
   return (
     <BlockSurface
       block={block}
@@ -78,7 +84,7 @@ export function ContactFormEmbedBlockContent({
                     href.startsWith("https://") || href.startsWith("http://");
                   const displayContent = isTelephone
                     ? formatPhoneNumberForDisplay(channel.content, locale)
-                    : channel.content;
+                    : localizeOptionalDigits(channel.content, locale);
                   const isLastOddCard =
                     block.channels.length % 2 === 1 &&
                     index === block.channels.length - 1;
@@ -113,7 +119,22 @@ export function ContactFormEmbedBlockContent({
                               className="inline-flex items-center gap-2 break-words text-base font-medium text-primary transition-colors hover:text-primary/80"
                             >
                               {isTelephone || isEmail || isUrl ? (
-                                <bdi dir="ltr">{displayContent}</bdi>
+                                <span
+                                  dir={
+                                    isTelephone
+                                      ? phoneNumberDirection
+                                      : isEmail
+                                        ? "ltr"
+                                        : undefined
+                                  }
+                                  className={
+                                    isTelephone || isEmail
+                                      ? "[unicode-bidi:plaintext]"
+                                      : undefined
+                                  }
+                                >
+                                  {displayContent}
+                                </span>
                               ) : (
                                 <span>{displayContent}</span>
                               )}
