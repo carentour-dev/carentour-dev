@@ -1,14 +1,18 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
 
-export function ServiceCatalogBlock({
+export async function ServiceCatalogBlock({
   block,
 }: {
   block: BlockInstance<"serviceCatalog">;
 }) {
+  const locale = (await getLocale()) as PublicLocale;
   return (
     <BlockSurface
       block={block}
@@ -23,18 +27,18 @@ export function ServiceCatalogBlock({
               <div className="space-y-4">
                 {block.eyebrow ? (
                   <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-primary">
-                    {block.eyebrow}
+                    {localizeOptionalDigits(block.eyebrow, locale)}
                   </span>
                 ) : null}
                 {block.heading ? (
                   <h2 className="max-w-2xl text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-5xl">
-                    {block.heading}
+                    {localizeOptionalDigits(block.heading, locale)}
                   </h2>
                 ) : null}
               </div>
               {block.description ? (
                 <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-                  {block.description}
+                  {localizeOptionalDigits(block.description, locale)}
                 </p>
               ) : null}
             </div>
@@ -54,16 +58,22 @@ export function ServiceCatalogBlock({
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                            {String(index + 1).padStart(2, "0")}
+                            {localizeDigits(
+                              String(index + 1).padStart(2, "0"),
+                              locale,
+                            )}
                           </span>
                           {item.availability ? (
                             <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/50 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-foreground/80">
-                              {item.availability}
+                              {localizeOptionalDigits(
+                                item.availability,
+                                locale,
+                              )}
                             </span>
                           ) : null}
                         </div>
                         <h3 className="max-w-lg text-2xl font-semibold tracking-[-0.03em] text-foreground md:text-[2rem]">
-                          {item.title}
+                          {localizeOptionalDigits(item.title, locale)}
                         </h3>
                       </div>
                       {Icon ? (
@@ -75,7 +85,7 @@ export function ServiceCatalogBlock({
 
                     {item.description ? (
                       <p className="max-w-xl text-base leading-8 text-muted-foreground">
-                        {item.description}
+                        {localizeOptionalDigits(item.description, locale)}
                       </p>
                     ) : null}
                   </div>
@@ -111,7 +121,7 @@ export function ServiceCatalogBlock({
                                   key={`${item.title}-language-${languageIndex}`}
                                   className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground"
                                 >
-                                  {language}
+                                  {localizeOptionalDigits(language, locale)}
                                 </span>
                               ))}
                             </div>
@@ -120,7 +130,7 @@ export function ServiceCatalogBlock({
 
                         {item.note ? (
                           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            {item.note}
+                            {localizeOptionalDigits(item.note, locale)}
                           </p>
                         ) : null}
                       </div>
@@ -137,7 +147,7 @@ export function ServiceCatalogBlock({
                             }
                             className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
                           >
-                            {item.action.label}
+                            {localizeOptionalDigits(item.action.label, locale)}
                             <ArrowRight className="h-4 w-4" />
                           </Link>
                         </div>
