@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { localizePublicPathname } from "@/lib/public/routing";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { Database } from "@/integrations/supabase/types";
 
 type NavigationLinkRow =
@@ -16,6 +19,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   await requirePermission("nav.manage");
+  const locale = resolveAdminLocale(request);
 
   const payload = (await request.json()) as Partial<NavigationLinkRow>;
 
@@ -36,6 +40,42 @@ export async function PATCH(
       { error: "Navigation link not found" },
       { status: 404 },
     );
+  }
+
+  if (locale === "ar") {
+    const { data, error } = await (supabase as any)
+      .from("navigation_link_translations")
+      .upsert(
+        {
+          navigation_link_id: id,
+          locale: "ar",
+          label: payload.label ?? existing.label,
+          status: payload.status ?? "draft",
+        },
+        { onConflict: "navigation_link_id,locale" },
+      )
+      .select("label, status, updated_at")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateSeoPaths([
+      "/",
+      "/ar",
+      existing.href,
+      localizePublicPathname(existing.href, "ar"),
+    ]);
+
+    return NextResponse.json({
+      data: {
+        ...existing,
+        label: data?.label ?? existing.label,
+        status: data?.status ?? "draft",
+        updated_at: data?.updated_at ?? existing.updated_at,
+      },
+    });
   }
 
   const isAutoManaged = Boolean(existing.cms_page_id);
@@ -75,8 +115,25 @@ export async function DELETE(
 ) {
   const { id } = await params;
   await requirePermission("nav.manage");
+  const locale = resolveAdminLocale(_request);
 
   const supabase = getSupabaseAdmin();
+
+  if (locale === "ar") {
+    const { error } = await (supabase as any)
+      .from("navigation_link_translations")
+      .delete()
+      .eq("navigation_link_id", id)
+      .eq("locale", "ar");
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateSeoPaths(["/", "/ar"]);
+    return NextResponse.json({ data: { id } });
+  }
+
   const { error } = await supabase
     .from("navigation_links")
     .delete()
