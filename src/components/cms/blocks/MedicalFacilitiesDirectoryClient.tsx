@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocale } from "next-intl";
 import { Building2, Loader2, MapPin, Star } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import {
   buildMedicalFacilitiesDirectoryState,
@@ -15,6 +17,7 @@ import {
   type MedicalFacilitiesDirectoryResponse,
   type ProcedureOption,
 } from "@/lib/medical-facilities";
+import { localizePublicPathname } from "@/lib/public/routing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +97,7 @@ export function MedicalFacilitiesDirectoryClient({
   initialData,
   disableLiveFetch = false,
 }: Props) {
+  const locale = useLocale() as PublicLocale;
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
@@ -509,7 +513,10 @@ export function MedicalFacilitiesDirectoryClient({
                   className="overflow-hidden border-border/60 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                 >
                   <Link
-                    href={`/medical-facilities/${provider.slug}`}
+                    href={localizePublicPathname(
+                      `/medical-facilities/${provider.slug}`,
+                      locale,
+                    )}
                     className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     aria-label={`${block.cardLabels.viewProfile}: ${provider.name}`}
                   >
