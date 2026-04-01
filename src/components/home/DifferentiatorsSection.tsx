@@ -1,6 +1,8 @@
+import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { resolveIcon } from "@/lib/icons";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import type { Differentiator } from "./content";
 
 export function DifferentiatorsSection({
@@ -9,25 +11,30 @@ export function DifferentiatorsSection({
   highlight = "Different",
   description = "Experience the perfect blend of world-class medical care, cost savings, and Egyptian hospitality with our comprehensive medical tourism services",
   items,
+  locale = "en",
 }: {
   eyebrow?: string;
   title?: string;
   highlight?: string;
   description?: string;
   items: Differentiator[];
+  locale?: PublicLocale;
 }) {
   return (
     <section className="bg-gradient-to-b from-background to-muted/30 py-20">
       <div className="container mx-auto px-4">
         <div className="mb-16 text-center">
           <Badge variant="outline" className="mb-6 text-center">
-            {eyebrow}
+            {localizeOptionalDigits(eyebrow, locale)}
           </Badge>
           <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-            {title} <span className="text-primary">{highlight}</span>
+            {localizeOptionalDigits(title, locale)}{" "}
+            <span className="text-primary">
+              {localizeOptionalDigits(highlight, locale)}
+            </span>
           </h2>
           <p className="mx-auto max-w-3xl text-xl text-muted-foreground">
-            {description}
+            {localizeOptionalDigits(description, locale)}
           </p>
         </div>
 
@@ -52,17 +59,17 @@ export function DifferentiatorsSection({
                     <div className="flex-1">
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <h3 className="text-lg font-semibold text-foreground">
-                          {item.title}
+                          {localizeOptionalDigits(item.title, locale)}
                         </h3>
                         <Badge
                           variant="secondary"
                           className="text-center text-xs"
                         >
-                          {item.highlight}
+                          {localizeOptionalDigits(item.highlight, locale)}
                         </Badge>
                       </div>
                       <p className="text-sm leading-relaxed text-muted-foreground">
-                        {item.description}
+                        {localizeOptionalDigits(item.description, locale)}
                       </p>
                     </div>
                   </div>
