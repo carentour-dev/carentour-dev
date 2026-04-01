@@ -1,15 +1,15 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 
-export async function StoryNarrativeBlock({
+export function StoryNarrativeBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"storyNarrative">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   return (
     <BlockSurface
       block={block}
