@@ -1,9 +1,13 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockStyle, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
-import { getFirstDefinedResponsiveValue } from "./styleUtils";
+import {
+  getFirstDefinedResponsiveValue,
+  resolveLogicalTextAlign,
+} from "./styleUtils";
 
 const backgroundPresets: Record<
   Exclude<BlockValue<"callToAction">["background"], "none">,
@@ -87,16 +91,15 @@ export function CallToActionBlock({
   const styleAlignValue = getFirstDefinedResponsiveValue(
     blockWithStyle.style?.layout?.horizontalAlign,
   );
-  const textAlignClass =
-    styleAlignValue === "center"
-      ? "text-center"
-      : styleAlignValue === "end"
-        ? "text-right"
-        : "text-left";
+  const resolvedAlign =
+    styleAlignValue ?? (block.layout === "centered" ? "center" : "start");
+  const contentTextStyle: CSSProperties = {
+    textAlign: resolveLogicalTextAlign(resolvedAlign),
+  };
   const actionsAlignClass =
-    styleAlignValue === "center"
+    resolvedAlign === "center"
       ? "justify-center"
-      : styleAlignValue === "end"
+      : resolvedAlign === "end"
         ? "justify-end"
         : block.layout === "centered"
           ? "justify-center"
@@ -112,14 +115,12 @@ export function CallToActionBlock({
         block.layout === "split"
           ? "lg:grid-cols-[2fr_1fr]"
           : "lg:max-w-4xl mx-auto",
-        block.layout === "centered" && !styleAlignValue
-          ? "text-center justify-items-center"
-          : textAlignClass,
+        resolvedAlign === "center" && "justify-items-center",
       )}
     >
       {() => (
         <>
-          <div className="space-y-4">
+          <div className="space-y-4" style={contentTextStyle}>
             {block.eyebrow ? (
               <span className="text-sm font-semibold uppercase tracking-wide opacity-80">
                 {block.eyebrow}
@@ -129,13 +130,7 @@ export function CallToActionBlock({
               {block.heading}
             </h2>
             {block.description ? (
-              <p
-                className={cn(
-                  "text-lg md:max-w-3xl",
-                  descriptionClass,
-                  textAlignClass,
-                )}
-              >
+              <p className={cn("text-lg md:max-w-3xl", descriptionClass)}>
                 {block.description}
               </p>
             ) : null}
