@@ -1,6 +1,8 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { getDefaultCategories, getFallbackFaqs } from "@/lib/faq/data";
 import { BlockSurface } from "./BlockSurface";
 import { FaqDirectoryContent } from "./FaqDirectoryContent";
@@ -13,6 +15,11 @@ export function FaqDirectoryPreview({
 }: {
   block: BlockInstance<"faqDirectory">;
 }) {
+  const searchParams = useSearchParams();
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+
   return (
     <BlockSurface
       block={block}
@@ -26,6 +33,7 @@ export function FaqDirectoryPreview({
           heading={block.heading}
           description={block.description}
           layout={block.layout}
+          locale={locale}
           navigationHeading={block.navigationHeading}
           showSearch={block.showSearch}
           showCategoryDescriptions={block.showCategoryDescriptions}
