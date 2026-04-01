@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BlockValue } from "@/lib/cms/blocks";
+import type { PublicLocale } from "@/i18n/routing";
 import {
   buildFaqCategories,
   type FaqCategory,
@@ -47,6 +48,7 @@ type FaqDirectoryContentProps = Pick<
 > & {
   faqs: FaqEntry[];
   categories: FaqCategory[];
+  locale?: PublicLocale;
   source: FaqSource;
 };
 
@@ -60,6 +62,7 @@ export function FaqDirectoryContent({
   faqs,
   heading,
   layout,
+  locale = "en",
   navigationHeading,
   searchPlaceholder,
   showCategoryDescriptions,
@@ -67,6 +70,7 @@ export function FaqDirectoryContent({
   showSourceBadge,
   source,
 }: FaqDirectoryContentProps) {
+  const isArabicLocale = locale === "ar";
   const searchInputId = useId();
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -105,8 +109,12 @@ export function FaqDirectoryContent({
   const hasSearchTerm = deferredSearchTerm.trim().length > 0;
   const usesSidebarLayout = layout === "sidebar";
   const searchSummary = hasSearchTerm
-    ? `Showing ${visibleQuestionCount} of ${totalQuestions} questions`
-    : `${totalQuestions} questions across ${categoryBuckets.length} topics`;
+    ? isArabicLocale
+      ? `عرض ${visibleQuestionCount} من أصل ${totalQuestions} سؤالًا`
+      : `Showing ${visibleQuestionCount} of ${totalQuestions} questions`
+    : isArabicLocale
+      ? `${totalQuestions} سؤالًا ضمن ${categoryBuckets.length} موضوعات`
+      : `${totalQuestions} questions across ${categoryBuckets.length} topics`;
 
   return (
     <div className="space-y-10">
@@ -139,7 +147,9 @@ export function FaqDirectoryContent({
                 variant="outline"
                 className="rounded-full border-amber-300 bg-amber-50 px-4 py-1.5 text-sm text-amber-700"
               >
-                Showing fallback FAQ content
+                {isArabicLocale
+                  ? "يتم عرض محتوى بديل للأسئلة الشائعة"
+                  : "Showing fallback FAQ content"}
               </Badge>
             ) : null}
           </div>
@@ -166,14 +176,18 @@ export function FaqDirectoryContent({
                   {navigationHeading}
                 </p>
                 <p className="text-sm leading-7 text-[hsl(var(--editorial-ink-muted))]">
-                  Jump directly to the topic that matches your question.
+                  {isArabicLocale
+                    ? "انتقل مباشرة إلى الموضوع الذي يطابق سؤالك."
+                    : "Jump directly to the topic that matches your question."}
                 </p>
               </div>
 
               {showSearch ? (
                 <div className="space-y-3">
                   <label htmlFor={searchInputId} className="sr-only">
-                    Search frequently asked questions
+                    {isArabicLocale
+                      ? "ابحث في الأسئلة الشائعة"
+                      : "Search frequently asked questions"}
                   </label>
                   <div className="relative">
                     <Search
@@ -192,7 +206,11 @@ export function FaqDirectoryContent({
                         });
                       }}
                       className="h-12 rounded-full border-[hsl(var(--editorial-ink-foreground)/0.12)] bg-[hsl(var(--editorial-ink-soft))] pl-11 text-[hsl(var(--editorial-ink-foreground))] placeholder:text-[hsl(var(--editorial-ink-muted))]"
-                      aria-label="Search frequently asked questions"
+                      aria-label={
+                        isArabicLocale
+                          ? "ابحث في الأسئلة الشائعة"
+                          : "Search frequently asked questions"
+                      }
                     />
                   </div>
                   <p className="text-sm text-[hsl(var(--editorial-ink-muted))]">
@@ -287,7 +305,9 @@ export function FaqDirectoryContent({
                         variant="outline"
                         className="rounded-full border-border/60 px-4 py-1.5 text-sm text-muted-foreground dark:border-slate-200 dark:text-slate-600"
                       >
-                        {bucket.items.length} questions
+                        {isArabicLocale
+                          ? `${bucket.items.length} سؤالًا`
+                          : `${bucket.items.length} questions`}
                       </Badge>
                     </div>
                   </div>
