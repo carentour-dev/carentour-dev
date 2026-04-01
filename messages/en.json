@@ -1,0 +1,255 @@
+{
+  "Header": {
+    "dashboardGreeting": "Welcome, {name}",
+    "userFallback": "User",
+    "signOut": "Sign Out",
+    "signIn": "Sign In",
+    "consultationCta": "Get Free Consultation",
+    "toggleMenu": "Toggle menu",
+    "closeMenu": "Close menu"
+  },
+  "Footer": {
+    "description": "Your trusted partner for premium medical care in Egypt. Combining excellence in healthcare with exceptional hospitality.",
+    "quickLinks": "Quick Links",
+    "contactInfo": "Contact Info",
+    "location": "Cairo, Egypt",
+    "newsletterTitle": "Stay Updated",
+    "newsletterDescription": "Subscribe to our newsletter for the latest medical tourism updates.",
+    "newsletterPlaceholder": "Your email",
+    "newsletterSubmitting": "Subscribing...",
+    "newsletterSubscribe": "Subscribe",
+    "copyright": "© {year} Care N Tour. All rights reserved.",
+    "visitSocial": "Visit our {label}"
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "PriceComparison": {
+    "title": "Price Comparison - {treatment}",
+    "saveUpTo": "Save up to {percentage}%",
+    "egypt": "Egypt",
+    "ourPrice": "Our Price",
+    "bestValue": "Best Value",
+    "typicalCost": "Typical Cost",
+    "saveAmount": "Save {amount} ({percentage}%)",
+    "averageSavings": "Average Savings",
+    "averageSavingsDescription": "Up to {percentage}% less than international prices"
+  },
+  "TreatmentsPage": {
+    "loading": "Loading treatments...",
+    "errorLoading": "Error loading treatments: {error}",
+    "tryAgain": "Try Again",
+    "heroBadge": "Medical Treatments",
+    "heroTitleLead": "Comprehensive",
+    "heroTitleAccent": "Medical Services",
+    "heroDescription": "Discover our full range of medical treatments performed by certified specialists in state-of-the-art service providers across Egypt.",
+    "specialtiesHeading": "Our Medical Specialties",
+    "specialtiesDescription": "World-class medical care across multiple specialties with significant cost savings.",
+    "searchPlaceholder": "Search treatments by name or specialty...",
+    "showingFiltered": "Showing {filtered} of {total} treatments",
+    "showingAll": "Showing all {total} treatments",
+    "noSearchResults": "No treatments match your search. Try a different keyword.",
+    "noPublished": "Treatments will appear here once they are published in the admin dashboard.",
+    "clearSearch": "Clear Search",
+    "fallbackSummary": "World-class treatment delivered by accredited specialists.",
+    "contactPricing": "Contact us for pricing",
+    "startingAt": "Starting at",
+    "learnMore": "Learn More",
+    "startJourney": "Start Your Journey",
+    "hidePriceComparison": "Hide Price Comparison",
+    "viewSavings": "View Savings",
+    "whyEgyptHeading": "Why Choose Egypt for Your Medical Treatment?",
+    "whyEgyptDescription": "Experience world-class healthcare at a fraction of international costs. Our patients save an average of 70-85% compared to Western countries.",
+    "noComparison": "Dynamic price comparisons will appear once treatments include pricing data.",
+    "statsAverageSavingsTitle": "Average Savings",
+    "statsAverageSavingsDescription": "Compared to US prices",
+    "statsMoneySavedTitle": "Money Saved",
+    "statsMoneySavedDescription": "Average per procedure",
+    "statsHappyPatientsTitle": "Happy Patients",
+    "statsHappyPatientsDescription": "From around the world",
+    "specialistsHeading": "Meet Our Specialists",
+    "specialistsDescription": "Connect with our experienced doctors who specialize in your treatment area.",
+    "specialistsAvailable": "{count} Specialist Doctors Available",
+    "browseAllDoctors": "Browse All Doctors",
+    "ctaHeading": "Ready to Start Your Treatment Journey?",
+    "ctaDescription": "Get a personalized treatment plan and cost estimate from our medical experts.",
+    "getFreeConsultation": "Get Free Consultation"
+  },
+  "ConciergePage": {
+    "languages": {
+      "english": "English",
+      "arabic": "Arabic",
+      "french": "French",
+      "german": "German",
+      "spanish": "Spanish",
+      "italian": "Italian",
+      "russian": "Russian",
+      "portuguese": "Portuguese"
+    },
+    "hero": {
+      "badge": "Concierge Services",
+      "titleLead": "Premium Concierge Services for",
+      "titleAccent": "Medical Tourists",
+      "description": "Dedicated personal assistance ensuring your comfort, convenience, and peace of mind throughout your entire medical tourism journey in Egypt."
+    },
+    "overview": {
+      "heading": "Your Personal Support Team in Egypt",
+      "description": "Our professional concierge team understands the unique needs of medical tourists. We provide comprehensive support services that go beyond medical care, ensuring your stay in Egypt is comfortable, stress-free, and memorable.",
+      "contactTeam": "Contact Concierge Team",
+      "imageAlt": "Professional concierge services for medical tourists in Egypt",
+      "stats": {
+        "supportAvailable": "Support Available",
+        "languagesSpoken": "Languages Spoken",
+        "satisfiedFamilies": "Satisfied Families",
+        "satisfactionRate": "Satisfaction Rate"
+      }
+    },
+    "servicesSection": {
+      "heading": "Comprehensive Concierge Services",
+      "description": "From medical coordination to cultural experiences, we handle every detail of your journey",
+      "includedServices": "Included Services:",
+      "languagesAvailable": "Languages Available:"
+    },
+    "services": {
+      "medicalCoordination": {
+        "category": "Medical Coordination",
+        "description": "Complete medical journey management from consultation to recovery",
+        "availability": "24/7 during treatment period",
+        "items": {
+          "1": "Pre-arrival medical consultation scheduling",
+          "2": "Medical records translation and transfer",
+          "3": "Appointment coordination with specialists",
+          "4": "Real-time updates to family members",
+          "5": "Post-treatment follow-up arrangements",
+          "6": "Medical insurance claim assistance"
+        }
+      },
+      "travelTransportation": {
+        "category": "Travel & Transportation",
+        "description": "Seamless transportation services throughout your medical journey",
+        "availability": "24/7 on-call service",
+        "items": {
+          "1": "Airport pickup and drop-off service",
+          "2": "Daily transportation to medical appointments",
+          "3": "Private driver for sightseeing tours",
+          "4": "Emergency transportation availability",
+          "5": "Family member transport coordination",
+          "6": "Wheelchair accessible vehicles when needed"
+        }
+      },
+      "accommodationServices": {
+        "category": "Accommodation Services",
+        "description": "Comfortable lodging arrangements tailored to medical tourists",
+        "availability": "Business hours with emergency support",
+        "items": {
+          "1": "Hotel booking and confirmation",
+          "2": "Room upgrades and special requests",
+          "3": "Extended stay arrangements",
+          "4": "Family accommodation coordination",
+          "5": "Recovery-friendly room setups",
+          "6": "Housekeeping and meal arrangements"
+        }
+      },
+      "personalAssistant": {
+        "category": "Personal Assistant",
+        "description": "Dedicated personal support for all your non-medical needs",
+        "availability": "9 AM - 6 PM daily",
+        "items": {
+          "1": "Shopping assistance for personal items",
+          "2": "Pharmacy visits and medication pickup",
+          "3": "Banking and currency exchange help",
+          "4": "Local SIM card and communication setup",
+          "5": "Cultural orientation and etiquette guidance",
+          "6": "Emergency contact coordination"
+        }
+      },
+      "familySupport": {
+        "category": "Family Support",
+        "description": "Comprehensive support services for accompanying family members",
+        "availability": "9 AM - 8 PM daily",
+        "items": {
+          "1": "Separate accommodation arrangements",
+          "2": "Tourist activities and sightseeing tours",
+          "3": "Childcare services coordination",
+          "4": "Restaurant reservations and dining recommendations",
+          "5": "Shopping and entertainment guidance",
+          "6": "Regular updates about patient progress"
+        }
+      },
+      "culturalTourism": {
+        "category": "Cultural & Tourism",
+        "description": "Explore Egypt's rich heritage during your recovery period",
+        "availability": "Daily tours based on recovery schedule",
+        "items": {
+          "1": "Guided tours to pyramids and historical sites",
+          "2": "Nile River cruise arrangements",
+          "3": "Cultural experience planning",
+          "4": "Photography services at landmarks",
+          "5": "Souvenir shopping assistance",
+          "6": "Traditional Egyptian cuisine experiences"
+        }
+      }
+    },
+    "packages": {
+      "heading": "Concierge Service Packages",
+      "description": "Choose the package that best fits your needs and budget",
+      "duration": "Per week",
+      "mostPopular": "Most Popular",
+      "getQuotation": "Get Quotation",
+      "getStarted": "Get Started",
+      "choosePackage": "Choose Package",
+      "essential": {
+        "name": "Essential Care Package",
+        "description": "Basic concierge services for independent travelers",
+        "features": {
+          "1": "Airport transfers",
+          "2": "Medical appointment coordination",
+          "3": "Basic translation services",
+          "4": "Emergency contact support",
+          "5": "Local orientation session"
+        }
+      },
+      "complete": {
+        "name": "Complete Care Package",
+        "description": "Comprehensive support for the full medical tourism experience",
+        "features": {
+          "1": "All Essential Care services",
+          "2": "Daily transportation service",
+          "3": "Personal shopping assistance",
+          "4": "Family coordination services",
+          "5": "Cultural tour arrangements",
+          "6": "24/7 emergency support",
+          "7": "Medication management help"
+        }
+      },
+      "vip": {
+        "name": "VIP Premium Package",
+        "description": "Luxury concierge services with dedicated personal assistant",
+        "features": {
+          "1": "All Complete Care services",
+          "2": "Dedicated personal assistant",
+          "3": "Private driver and luxury vehicle",
+          "4": "Fine dining reservations",
+          "5": "Private guided tours",
+          "6": "Luxury spa and wellness services",
+          "7": "Premium accommodation upgrades",
+          "8": "Express medical services"
+        }
+      }
+    },
+    "testimonials": {
+      "heading": "What Our Clients Say",
+      "description": "Real experiences from families who used our concierge services",
+      "internationalPatient": "International Patient",
+      "empty": "Add patient testimonials to showcase concierge outcomes."
+    },
+    "cta": {
+      "heading": "Ready for Premium Support?",
+      "description": "Let our experienced concierge team take care of every detail while you focus on your health and recovery",
+      "getFreeConsultation": "Get Free Consultation",
+      "downloadServiceGuide": "Download Service Guide"
+    }
+  }
+}
