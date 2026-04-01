@@ -186,7 +186,7 @@ export default async function ConciergePage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlockRenderer blocks={blocks} />
+      <BlockRenderer blocks={blocks} locale={locale} />
     </>
   );
 }
