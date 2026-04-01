@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
+import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import {
+  getPublicNumberLocale,
+  localizeOptionalDigits,
+} from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
@@ -9,21 +15,26 @@ import { resolveIcon } from "./utils";
 const cleanList = (values?: (string | null)[] | null) =>
   (values ?? []).map((value) => (value ?? "").trim()).filter(Boolean);
 
-const formatRating = (rating?: number, reviews?: number) => {
+const formatRating = (
+  locale: PublicLocale,
+  rating?: number,
+  reviews?: number,
+) => {
   if (typeof rating !== "number" || Number.isNaN(rating)) return null;
   const ratingLabel = `${rating.toFixed(1)}/5`;
   if (typeof reviews === "number" && reviews > 0) {
     const plural = reviews === 1 ? "review" : "reviews";
-    return `${ratingLabel} · ${reviews.toLocaleString()} ${plural}`;
+    return `${ratingLabel} · ${reviews.toLocaleString(getPublicNumberLocale(locale))} ${plural}`;
   }
   return ratingLabel;
 };
 
-export function HotelShowcaseBlock({
+export async function HotelShowcaseBlock({
   block,
 }: {
   block: BlockInstance<"hotelShowcase">;
 }) {
+  const locale = (await getLocale()) as PublicLocale;
   const isComparisonLayout =
     block.layout === "grid" && block.items.length === 3;
   const layoutClass =
@@ -46,17 +57,17 @@ export function HotelShowcaseBlock({
             <div className="mx-auto max-w-3xl space-y-4 text-center">
               {block.eyebrow ? (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-primary">
-                  {block.eyebrow}
+                  {localizeOptionalDigits(block.eyebrow, locale)}
                 </span>
               ) : null}
               {block.heading ? (
                 <h2 className="text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-5xl">
-                  {block.heading}
+                  {localizeOptionalDigits(block.heading, locale)}
                 </h2>
               ) : null}
               {block.description ? (
                 <p className="text-base leading-8 text-muted-foreground md:text-lg">
-                  {block.description}
+                  {localizeOptionalDigits(block.description, locale)}
                 </p>
               ) : null}
             </div>
@@ -75,6 +86,7 @@ export function HotelShowcaseBlock({
                 const amenities = cleanList(item.amenities);
                 const medicalServices = cleanList(item.medicalServices);
                 const ratingSummary = formatRating(
+                  locale,
                   item.rating,
                   item.reviewCount,
                 );
@@ -137,11 +149,14 @@ export function HotelShowcaseBlock({
                         ) : null}
                         <div className="space-y-1">
                           <h3 className="text-xl font-semibold text-foreground">
-                            {item.title}
+                            {localizeOptionalDigits(item.title, locale)}
                           </h3>
                           {item.starRating ? (
                             <p className="text-xs text-muted-foreground">
-                              Rated {item.starRating}-star accommodation
+                              {localizeOptionalDigits(
+                                `Rated ${item.starRating}-star accommodation`,
+                                locale,
+                              )}
                             </p>
                           ) : null}
                         </div>
@@ -154,7 +169,7 @@ export function HotelShowcaseBlock({
                             isComparisonLayout && "min-h-[5.5rem]",
                           )}
                         >
-                          {item.description}
+                          {localizeOptionalDigits(item.description, locale)}
                         </p>
                       ) : (
                         <div
@@ -226,7 +241,7 @@ export function HotelShowcaseBlock({
                               >
                                 <span>{row.label}</span>
                                 <span className="max-w-[15rem] text-right font-medium text-foreground">
-                                  {row.value}
+                                  {localizeOptionalDigits(row.value, locale)}
                                 </span>
                               </div>
                             ))}
@@ -240,7 +255,12 @@ export function HotelShowcaseBlock({
                             </h4>
                             <div className="mt-2 space-y-1 text-foreground">
                               {item.contactPhone ? (
-                                <p>Phone: {item.contactPhone}</p>
+                                <p>
+                                  {localizeOptionalDigits(
+                                    `Phone: ${item.contactPhone}`,
+                                    locale,
+                                  )}
+                                </p>
                               ) : null}
                               {item.contactEmail ? (
                                 <p>Email: {item.contactEmail}</p>
