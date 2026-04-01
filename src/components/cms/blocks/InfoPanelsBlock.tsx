@@ -1,4 +1,3 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance } from "@/lib/cms/blocks";
@@ -6,12 +5,13 @@ import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 
-export async function InfoPanelsBlock({
+export function InfoPanelsBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"infoPanels">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   return (
     <BlockSurface
       block={block}
