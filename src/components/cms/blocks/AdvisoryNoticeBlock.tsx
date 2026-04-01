@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getLocale } from "next-intl/server";
 import { AlertCircle, AlertTriangle, Info, ShieldCheck } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
@@ -25,12 +24,13 @@ const toneStyles = {
   },
 } as const;
 
-export async function AdvisoryNoticeBlock({
+export function AdvisoryNoticeBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"advisoryNotice">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   const tone = toneStyles[block.tone];
   const ToneIcon = tone.icon;
   const facts = [
