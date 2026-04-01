@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -7,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 
@@ -14,10 +17,12 @@ function Header({
   eyebrow,
   heading,
   description,
+  locale,
 }: {
   eyebrow?: string;
   heading?: string;
   description?: string;
+  locale: PublicLocale;
 }) {
   if (!eyebrow && !heading && !description) return null;
 
@@ -25,24 +30,29 @@ function Header({
     <div className="mx-auto max-w-3xl space-y-4 text-center">
       {eyebrow ? (
         <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-primary">
-          {eyebrow}
+          {localizeOptionalDigits(eyebrow, locale)}
         </span>
       ) : null}
       {heading ? (
         <h2 className="text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-5xl">
-          {heading}
+          {localizeOptionalDigits(heading, locale)}
         </h2>
       ) : null}
       {description ? (
         <p className="text-base leading-8 text-muted-foreground md:text-lg">
-          {description}
+          {localizeOptionalDigits(description, locale)}
         </p>
       ) : null}
     </div>
   );
 }
 
-export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
+export async function DataGridBlock({
+  block,
+}: {
+  block: BlockInstance<"dataGrid">;
+}) {
+  const locale = (await getLocale()) as PublicLocale;
   const layout = block.layout ?? "cards";
   const pillKey = block.pillColumnKey;
 
@@ -59,6 +69,7 @@ export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
             eyebrow={block.eyebrow}
             heading={block.heading}
             description={block.description}
+            locale={locale}
           />
 
           {layout === "stacked" ? (
@@ -81,14 +92,16 @@ export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <h3 className="text-xl font-semibold text-foreground">
-                          {row.title}
+                          {localizeOptionalDigits(row.title, locale)}
                         </h3>
                         {pillValue ? (
                           <Badge className="rounded-full bg-muted px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground">
-                            {pillValue}
+                            {localizeOptionalDigits(pillValue, locale)}
                           </Badge>
                         ) : row.badge ? (
-                          <Badge variant="outline">{row.badge}</Badge>
+                          <Badge variant="outline">
+                            {localizeOptionalDigits(row.badge, locale)}
+                          </Badge>
                         ) : null}
                       </div>
 
@@ -99,10 +112,13 @@ export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
                             className="space-y-1"
                           >
                             <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground/70">
-                              {column.label}
+                              {localizeOptionalDigits(column.label, locale)}
                             </span>
                             <p className="text-base text-foreground">
-                              {row.values[column.key] ?? "—"}
+                              {localizeOptionalDigits(
+                                row.values[column.key] ?? "—",
+                                locale,
+                              )}
                             </p>
                           </div>
                         ))}
@@ -122,10 +138,12 @@ export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
                   <CardHeader className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <CardTitle className="text-xl text-foreground">
-                        {row.title}
+                        {localizeOptionalDigits(row.title, locale)}
                       </CardTitle>
                       {row.badge ? (
-                        <Badge variant="outline">{row.badge}</Badge>
+                        <Badge variant="outline">
+                          {localizeOptionalDigits(row.badge, locale)}
+                        </Badge>
                       ) : null}
                     </div>
                     {block.description ? (
@@ -140,9 +158,14 @@ export function DataGridBlock({ block }: { block: BlockInstance<"dataGrid"> }) {
                         key={`${row.title}-${column.key}`}
                         className="flex items-center justify-between gap-3"
                       >
-                        <span>{column.label}</span>
+                        <span>
+                          {localizeOptionalDigits(column.label, locale)}
+                        </span>
                         <span className="text-right font-medium text-foreground">
-                          {row.values[column.key] ?? "—"}
+                          {localizeOptionalDigits(
+                            row.values[column.key] ?? "—",
+                            locale,
+                          )}
                         </span>
                       </div>
                     ))}
