@@ -1,13 +1,15 @@
 "use client";
 
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { blockRegistry, normalizeBlocks } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { AnimationController } from "./AnimationController";
 import { CallToActionBlock } from "./blocks/CallToActionBlock";
+import { ContactFormEmbedBlockPreview } from "./blocks/ContactFormEmbedBlockContent";
 import { DifferentiatorsBlock } from "./blocks/DifferentiatorsBlock";
 import { FeaturedTreatmentsHomePreview } from "./blocks/FeaturedTreatmentsHomePreview";
-import { FeatureGridBlock } from "./blocks/FeatureGridBlock";
+import { FeatureGridBlockPreview } from "./blocks/FeatureGridBlockContent";
 import { DataGridBlock } from "./blocks/DataGridBlock";
 import { FaqBlock } from "./blocks/FaqBlock";
 import { FaqDirectoryPreview } from "./blocks/FaqDirectoryPreview";
@@ -34,7 +36,6 @@ import { TabbedGuidePreview } from "./blocks/TabbedGuidePreview";
 import { TreatmentSpecialtiesPreview } from "./blocks/TreatmentSpecialtiesPreview";
 import { TrustSignalsBlock } from "./blocks/TrustSignalsBlock";
 import { StartJourneyEmbedBlock } from "./blocks/StartJourneyEmbedBlock";
-import { ContactFormEmbedBlock } from "./blocks/ContactFormEmbedBlock";
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -91,10 +92,12 @@ export function BlockPreviewRenderer({
   blocks,
   className,
   disableAnimations,
+  locale = "en",
 }: {
   blocks: unknown;
   className?: string;
   disableAnimations?: boolean;
+  locale?: PublicLocale;
 }) {
   const parsedBlocks = ensureBlockInstances(blocks);
 
@@ -139,7 +142,13 @@ export function BlockPreviewRenderer({
             case "imageFeature":
               return <ImageFeatureBlock key={blockKey} block={block} />;
             case "featureGrid":
-              return <FeatureGridBlock key={blockKey} block={block} />;
+              return (
+                <FeatureGridBlockPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "dataGrid":
               return <DataGridBlock key={blockKey} block={block} />;
             case "infoPanels":
@@ -155,7 +164,13 @@ export function BlockPreviewRenderer({
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={blockKey} block={block} />;
             case "contactFormEmbed":
-              return <ContactFormEmbedBlock key={blockKey} block={block} />;
+              return (
+                <ContactFormEmbedBlockPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "faq":
               return <FaqBlock key={blockKey} block={block} />;
             case "faqDirectory":
