@@ -1,14 +1,13 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { FeatureGridBlockContent } from "./FeatureGridBlockContent";
 
-export async function FeatureGridBlock({
+export function FeatureGridBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"featureGrid">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
-
   return <FeatureGridBlockContent block={block} locale={locale} />;
 }
