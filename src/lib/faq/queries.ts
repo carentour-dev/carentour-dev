@@ -18,7 +18,7 @@ const FAQ_COLUMNS =
 const CATEGORY_COLUMNS =
   "slug, title, description, icon, color, fragment, position, created_at, updated_at";
 
-export type FaqSource = "cms" | "fallback";
+export type FaqSource = "cms" | "fallback" | "unavailable";
 
 function mapFaqRow(row: FaqRow): FaqEntry {
   return {
