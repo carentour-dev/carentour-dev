@@ -1,13 +1,17 @@
+import { getLocale } from "next-intl/server";
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 import { resolveIcon } from "./utils";
 
-export function TrustSignalsBlock({
+export async function TrustSignalsBlock({
   block,
 }: {
   block: BlockInstance<"trustSignals">;
 }) {
+  const locale = (await getLocale()) as PublicLocale;
   const gridClass =
     block.items.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2";
   const blockWithStyle = withBlockStyleDefaults(block, {
@@ -31,15 +35,15 @@ export function TrustSignalsBlock({
           <div className="mx-auto max-w-3xl space-y-4 text-center">
             {block.eyebrow ? (
               <span className="inline-flex items-center rounded-full border border-[hsl(var(--editorial-ink-foreground)/0.12)] bg-[hsl(var(--editorial-ink-foreground)/0.05)] px-4 py-2 text-xs font-medium uppercase tracking-[0.22em] text-[hsl(var(--editorial-accent))]">
-                {block.eyebrow}
+                {localizeOptionalDigits(block.eyebrow, locale)}
               </span>
             ) : null}
             <h2 className="text-3xl font-semibold text-[hsl(var(--editorial-ink-foreground))] md:text-5xl">
-              {block.heading}
+              {localizeOptionalDigits(block.heading, locale)}
             </h2>
             {block.description ? (
               <p className="text-lg leading-8 text-[hsl(var(--editorial-ink-muted))]">
-                {block.description}
+                {localizeOptionalDigits(block.description, locale)}
               </p>
             ) : null}
           </div>
@@ -60,11 +64,14 @@ export function TrustSignalsBlock({
                   <div className="flex items-center justify-between gap-4">
                     {item.eyebrow ? (
                       <p className="text-xs font-medium uppercase tracking-[0.22em] text-[hsl(var(--editorial-accent))]">
-                        {item.eyebrow}
+                        {localizeOptionalDigits(item.eyebrow, locale)}
                       </p>
                     ) : (
                       <span className="text-sm text-[hsl(var(--editorial-ink-muted))]">
-                        0{index + 1}
+                        {localizeDigits(
+                          String(index + 1).padStart(2, "0"),
+                          locale,
+                        )}
                       </span>
                     )}
                     {Icon ? (
@@ -74,10 +81,10 @@ export function TrustSignalsBlock({
                     ) : null}
                   </div>
                   <h3 className="text-xl font-semibold text-[hsl(var(--editorial-ink-foreground))]">
-                    {item.title}
+                    {localizeOptionalDigits(item.title, locale)}
                   </h3>
                   <p className="text-base leading-7 text-[hsl(var(--editorial-ink-muted))]">
-                    {item.description}
+                    {localizeOptionalDigits(item.description, locale)}
                   </p>
                 </article>
               );
