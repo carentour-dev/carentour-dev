@@ -27,6 +27,7 @@ import { useInitialNavigationLinks } from "@/components/navigation/NavigationPro
 import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
 import {
   formatPhoneNumberForDisplay,
+  getPhoneNumberDisplayDirection,
   PUBLIC_CONTACT_EMAIL,
   PUBLIC_CONTACT_EMAIL_HREF,
   PUBLIC_CONTACT_PHONE_DISPLAY,
@@ -56,6 +57,7 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
     PUBLIC_CONTACT_PHONE_DISPLAY,
     locale,
   );
+  const phoneNumberDirection = getPhoneNumberDisplayDirection(locale);
 
   const initialNavigationLinks = useInitialNavigationLinks();
   const visibleInitialNavigationLinks =
@@ -123,9 +125,12 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-primary" />
-              <bdi dir="ltr" className="text-muted-foreground">
+              <span
+                dir={phoneNumberDirection}
+                className="text-muted-foreground [unicode-bidi:plaintext]"
+              >
                 {phoneNumber}
-              </bdi>
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
@@ -312,7 +317,12 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
                         className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
                       >
                         <Phone className="h-5 w-5 text-primary" />
-                        <bdi dir="ltr">{phoneNumber}</bdi>
+                        <span
+                          dir={phoneNumberDirection}
+                          className="[unicode-bidi:plaintext]"
+                        >
+                          {phoneNumber}
+                        </span>
                       </a>
                       <a
                         href={PUBLIC_CONTACT_EMAIL_HREF}
