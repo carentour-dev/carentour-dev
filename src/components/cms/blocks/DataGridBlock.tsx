@@ -1,4 +1,3 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,12 +46,13 @@ function Header({
   );
 }
 
-export async function DataGridBlock({
+export function DataGridBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"dataGrid">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   const layout = block.layout ?? "cards";
   const pillKey = block.pillColumnKey;
 
