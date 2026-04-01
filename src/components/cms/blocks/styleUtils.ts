@@ -123,6 +123,44 @@ export function getFirstDefinedResponsiveValue<T>(
   return undefined;
 }
 
+export type LogicalHorizontalAlign = "start" | "center" | "end";
+
+export function resolveLogicalTextAlign(
+  align: LogicalHorizontalAlign = "start",
+): CSSProperties["textAlign"] {
+  if (align === "center") {
+    return "center";
+  }
+
+  return align === "end" ? "end" : "start";
+}
+
+export function resolveLogicalAlignmentStyle(
+  align: LogicalHorizontalAlign = "start",
+): CSSProperties {
+  if (align === "center") {
+    return {
+      marginInlineStart: "auto",
+      marginInlineEnd: "auto",
+      textAlign: "center",
+    };
+  }
+
+  if (align === "end") {
+    return {
+      marginInlineStart: "auto",
+      marginInlineEnd: 0,
+      textAlign: "end",
+    };
+  }
+
+  return {
+    marginInlineStart: 0,
+    marginInlineEnd: "auto",
+    textAlign: "start",
+  };
+}
+
 export function buildSpacingCss(
   domId: string,
   padding: BlockStyle["layout"] extends { padding?: infer P } ? P : never,
@@ -190,16 +228,28 @@ export function buildInnerLayoutCss(
   if (align) {
     const alignmentStyles: Record<
       string,
-      { margin: string; textAlign: string }
+      { marginInlineStart: string; marginInlineEnd: string; textAlign: string }
     > = {
-      start: { margin: "0 auto 0 0", textAlign: "left" },
-      center: { margin: "0 auto", textAlign: "center" },
-      end: { margin: "0 0 0 auto", textAlign: "right" },
+      start: {
+        marginInlineStart: "0",
+        marginInlineEnd: "auto",
+        textAlign: "start",
+      },
+      center: {
+        marginInlineStart: "auto",
+        marginInlineEnd: "auto",
+        textAlign: "center",
+      },
+      end: {
+        marginInlineStart: "auto",
+        marginInlineEnd: "0",
+        textAlign: "end",
+      },
     };
     const baseAlign = align.base ? alignmentStyles[align.base] : undefined;
     if (baseAlign) {
       css.push(
-        `#${domId} ${selector}{margin:${baseAlign.margin};text-align:${baseAlign.textAlign};}`,
+        `#${domId} ${selector}{margin-inline-start:${baseAlign.marginInlineStart};margin-inline-end:${baseAlign.marginInlineEnd};text-align:${baseAlign.textAlign};}`,
       );
     }
     responsiveBreakpoints.forEach((bp) => {
@@ -207,7 +257,7 @@ export function buildInnerLayoutCss(
       if (!value) return;
       const config = alignmentStyles[value];
       css.push(
-        `${breakpointMediaQuery[bp]}{#${domId} ${selector}{margin:${config.margin};text-align:${config.textAlign};}}`,
+        `${breakpointMediaQuery[bp]}{#${domId} ${selector}{margin-inline-start:${config.marginInlineStart};margin-inline-end:${config.marginInlineEnd};text-align:${config.textAlign};}}`,
       );
     });
   }
