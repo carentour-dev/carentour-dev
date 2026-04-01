@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
 import { type FaqEntry, type FaqStatus } from "@/lib/faq/data";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
 
@@ -89,7 +91,7 @@ async function resolveNextPosition(
 }
 
 function revalidateFaqCaches() {
-  revalidatePath("/faq");
+  revalidateSeoPaths(["/faq", "/ar/faq"]);
   revalidatePath("/api/faq");
 }
 
@@ -99,6 +101,7 @@ export async function GET(
 ) {
   await requirePermission("cms.read");
   const { id } = await params;
+  const locale = resolveAdminLocale(_);
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -114,6 +117,32 @@ export async function GET(
     return NextResponse.json({ error: "FAQ not found" }, { status: 404 });
   }
 
+  if (locale === "ar") {
+    const translationResult = await (supabase as any)
+      .from("faq_translations")
+      .select("question, answer, status, updated_at")
+      .eq("faq_id", id)
+      .eq("locale", "ar")
+      .maybeSingle();
+
+    if (translationResult.error) {
+      return NextResponse.json(
+        { error: translationResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      data: {
+        ...mapRow(data),
+        question: translationResult.data?.question ?? data.question,
+        answer: translationResult.data?.answer ?? data.answer,
+        status: (translationResult.data?.status ?? "draft") as FaqStatus,
+        updated_at: translationResult.data?.updated_at ?? data.updated_at,
+      },
+    });
+  }
+
   return NextResponse.json({ data: mapRow(data) });
 }
 
@@ -123,6 +152,7 @@ export async function PUT(
 ) {
   await requirePermission("cms.write");
   const { id } = await params;
+  const locale = resolveAdminLocale(request);
   const payload = await request.json();
   const parsed = faqSchema.safeParse(payload);
 
@@ -146,6 +176,38 @@ export async function PUT(
 
   if (!existing) {
     return NextResponse.json({ error: "FAQ not found" }, { status: 404 });
+  }
+
+  if (locale === "ar") {
+    const { data, error } = await (supabase as any)
+      .from("faq_translations")
+      .upsert(
+        {
+          faq_id: id,
+          locale: "ar",
+          question: parsed.data.question.trim(),
+          answer: parsed.data.answer.trim(),
+          status: parsed.data.status,
+        },
+        { onConflict: "faq_id,locale" },
+      )
+      .select("question, answer, status, updated_at")
+      .single();
+
+    if (error) {
+      return handleFaqWriteError(error);
+    }
+
+    revalidateFaqCaches();
+    return NextResponse.json({
+      data: {
+        ...mapRow(existing),
+        question: data?.question ?? existing.question,
+        answer: data?.answer ?? existing.answer,
+        status: (data?.status ?? "draft") as FaqStatus,
+        updated_at: data?.updated_at ?? existing.updated_at,
+      },
+    });
   }
 
   const category = parsed.data.category.trim();
@@ -185,7 +247,23 @@ export async function DELETE(
 ) {
   await requirePermission("cms.write");
   const { id } = await params;
+  const locale = resolveAdminLocale(_);
   const supabase = getSupabaseAdmin();
+
+  if (locale === "ar") {
+    const { error } = await (supabase as any)
+      .from("faq_translations")
+      .delete()
+      .eq("faq_id", id)
+      .eq("locale", "ar");
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateFaqCaches();
+    return NextResponse.json({ data: true });
+  }
 
   const { error } = await supabase.from("faqs").delete().eq("id", id);
 
