@@ -4,10 +4,19 @@ import {
   DEFAULT_SEO_LOCALE,
   DEFAULT_OG_IMAGE,
 } from "@/lib/seo/constants";
+import { getPublicLocaleAvailability } from "@/lib/public/localization";
+import {
+  localizePublicPathname,
+  stripPublicLocalePrefix,
+} from "@/lib/public/routing";
+import {
+  getLocalizedCompanyName,
+  localizeCompanyName,
+  localizeCompanyNameDeep,
+} from "@/lib/public/brand";
 import { fetchSeoOverrideForRoute } from "@/lib/seo/data";
 import {
   asJsonLdArray,
-  buildLocaleAlternates,
   buildOgFallbackImageUrl,
   isInternalNoindexPath,
   parseKeywords,
@@ -61,6 +70,21 @@ const resolveSchemaPayload = (input: {
   return merged.length > 0 ? merged : [];
 };
 
+const resolveLocaleAlternates = async (pathname: string) => {
+  const englishPath = stripPublicLocalePrefix(pathname);
+  const englishUrl = `${CANONICAL_ORIGIN}${englishPath}`;
+  const languages: Record<string, string> = {
+    en: englishUrl,
+    "x-default": englishUrl,
+  };
+
+  if (await getPublicLocaleAvailability(englishPath, "ar")) {
+    languages.ar = `${CANONICAL_ORIGIN}${localizePublicPathname(englishPath, "ar")}`;
+  }
+
+  return languages;
+};
+
 export async function resolveSeo(input: SeoResolveInput): Promise<ResolvedSeo> {
   const locale = input.locale ?? DEFAULT_SEO_LOCALE;
   const override = await fetchSeoOverrideForRoute({
@@ -79,17 +103,21 @@ export async function resolveSeo(input: SeoResolveInput): Promise<ResolvedSeo> {
       ? false
       : (override?.robots_follow ?? true);
 
-  const title =
+  const title = localizeCompanyName(
     cleanText(override?.title) ??
-    cleanText(input.source?.title) ??
-    cleanText(input.defaults.title) ??
-    "Care N Tour";
+      cleanText(input.source?.title) ??
+      cleanText(input.defaults.title) ??
+      "Care N Tour",
+    locale,
+  );
 
-  const description =
+  const description = localizeCompanyName(
     cleanText(override?.description) ??
-    cleanText(input.source?.description) ??
-    cleanText(input.defaults.description) ??
-    undefined;
+      cleanText(input.source?.description) ??
+      cleanText(input.defaults.description) ??
+      undefined,
+    locale,
+  );
 
   const keywords =
     parseKeywords(override?.keywords) ?? parseKeywords(input.source?.keywords);
@@ -121,34 +149,47 @@ export async function resolveSeo(input: SeoResolveInput): Promise<ResolvedSeo> {
     cleanText(input.source?.twitterImageUrl) ??
     ogImage;
 
-  const openGraphTitle =
-    cleanText(override?.og_title) ?? cleanText(input.source?.ogTitle) ?? title;
+  const openGraphTitle = localizeCompanyName(
+    cleanText(override?.og_title) ?? cleanText(input.source?.ogTitle) ?? title,
+    locale,
+  );
 
-  const openGraphDescription =
+  const openGraphDescription = localizeCompanyName(
     cleanText(override?.og_description) ??
-    cleanText(input.source?.ogDescription) ??
-    description;
+      cleanText(input.source?.ogDescription) ??
+      description,
+    locale,
+  );
 
-  const twitterTitle =
+  const twitterTitle = localizeCompanyName(
     cleanText(override?.twitter_title) ??
-    cleanText(input.source?.twitterTitle) ??
-    openGraphTitle;
+      cleanText(input.source?.twitterTitle) ??
+      openGraphTitle,
+    locale,
+  );
 
-  const twitterDescription =
+  const twitterDescription = localizeCompanyName(
     cleanText(override?.twitter_description) ??
-    cleanText(input.source?.twitterDescription) ??
-    openGraphDescription;
+      cleanText(input.source?.twitterDescription) ??
+      openGraphDescription,
+    locale,
+  );
 
-  const jsonLd = resolveSchemaPayload({
-    generated: input.schema,
-    source: input.source,
-    override: override?.schema_override,
-  });
+  const jsonLd = localizeCompanyNameDeep(
+    resolveSchemaPayload({
+      generated: input.schema,
+      source: input.source,
+      override: override?.schema_override,
+    }),
+    locale,
+  );
 
-  const aiSummary =
+  const aiSummary = localizeCompanyName(
     trimOrNull(override?.ai_summary) ??
-    trimOrNull(input.source?.aiSummary) ??
-    trimOrNull(description);
+      trimOrNull(input.source?.aiSummary) ??
+      trimOrNull(description),
+    locale,
+  );
 
   const metadata: Metadata = {
     metadataBase: new URL(CANONICAL_ORIGIN),
@@ -157,7 +198,7 @@ export async function resolveSeo(input: SeoResolveInput): Promise<ResolvedSeo> {
     keywords,
     alternates: {
       canonical: canonicalUrl,
-      languages: buildLocaleAlternates(canonicalPathname, locale),
+      languages: await resolveLocaleAlternates(canonicalPathname),
     },
     robots: {
       index: robotsIndex,
@@ -171,7 +212,7 @@ export async function resolveSeo(input: SeoResolveInput): Promise<ResolvedSeo> {
       type: input.openGraphType ?? "website",
       title: openGraphTitle,
       description: openGraphDescription,
-      siteName: "Care N Tour",
+      siteName: getLocalizedCompanyName(locale),
       url: canonicalUrl,
       locale: locale === "ar" ? "ar_EG" : "en_US",
       images: ogImage
