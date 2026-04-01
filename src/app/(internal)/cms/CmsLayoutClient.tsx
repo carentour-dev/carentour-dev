@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
-import { supabase } from "@/integrations/supabase/client";
+import { metadataIndicatesStaffAccount, useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   createEntitlementContext,
   hasOperationsEntry,
@@ -40,92 +41,160 @@ const NAV_ITEMS = [
   { href: "/cms/seo", label: "SEO", icon: Search },
 ];
 
+const CMS_FALLBACK_ROLE_SLUGS = new Set([
+  "admin",
+  "editor",
+  "cms",
+  "content",
+  "content_manager",
+  "content-editor",
+]);
+
+const collectRoleCandidates = (value: unknown, bucket: Set<string>) => {
+  if (value === null || value === undefined) {
+    return;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (trimmed.includes(",")) {
+      trimmed
+        .split(",")
+        .map((segment) => segment.trim().toLowerCase())
+        .filter((segment) => segment.length > 0)
+        .forEach((segment) => bucket.add(segment));
+      return;
+    }
+
+    bucket.add(trimmed.toLowerCase());
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectRoleCandidates(entry, bucket));
+    return;
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    for (const key of ["value", "role", "slug", "name", "label", "primary"]) {
+      if (record[key] !== undefined) {
+        collectRoleCandidates(record[key], bucket);
+      }
+    }
+
+    if (Array.isArray(record.values)) {
+      collectRoleCandidates(record.values, bucket);
+    }
+  }
+};
+
+const hasCmsMetadataAccess = (
+  user: {
+    user_metadata?: Record<string, unknown> | null;
+    app_metadata?: Record<string, unknown> | null;
+  } | null,
+): boolean => {
+  if (!user) {
+    return false;
+  }
+
+  const metadataRecords = [user.user_metadata, user.app_metadata].filter(
+    (value): value is Record<string, unknown> =>
+      Boolean(value) && typeof value === "object",
+  );
+
+  for (const metadata of metadataRecords) {
+    const candidates = new Set<string>();
+
+    for (const key of [
+      "staff_roles",
+      "roles",
+      "role",
+      "primary_role",
+      "primaryRole",
+      "primary_role_slug",
+    ]) {
+      if (metadata[key] !== undefined) {
+        collectRoleCandidates(metadata[key], candidates);
+      }
+    }
+
+    if (
+      Array.from(candidates).some((role) => CMS_FALLBACK_ROLE_SLUGS.has(role))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [sessionMissing, setSessionMissing] = useState(false);
-  const [resolvedPermissions, setResolvedPermissions] = useState<string[]>([]);
-  const [resolvedRoles, setResolvedRoles] = useState<string[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const [resolvingGuardExpired, setResolvingGuardExpired] = useState(false);
 
   useEffect(() => {
-    let isActive = true;
+    if (!authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, router, user]);
 
-    const check = async () => {
-      try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+  const resolvedPermissions = useMemo(
+    () => profile?.permissions ?? [],
+    [profile?.permissions],
+  );
+  const resolvedRoles = useMemo(() => profile?.roles ?? [], [profile?.roles]);
+  const hasMetadataCmsAccess = useMemo(
+    () => hasCmsMetadataAccess(user),
+    [user],
+  );
+  const hasMetadataStaffAccess = useMemo(
+    () =>
+      metadataIndicatesStaffAccount(
+        ((user?.user_metadata ?? {}) as Record<string, unknown>) ?? {},
+      ) ||
+      metadataIndicatesStaffAccount(
+        ((user?.app_metadata ?? {}) as Record<string, unknown>) ?? {},
+      ),
+    [user],
+  );
+  const authorized =
+    hasCmsWorkspaceAccess(resolvedPermissions, resolvedRoles) ||
+    hasMetadataCmsAccess ||
+    hasMetadataStaffAccess;
+  const isAwaitingInitialProfileHydration =
+    Boolean(user) &&
+    !authorized &&
+    !profile &&
+    resolvedPermissions.length === 0 &&
+    resolvedRoles.length === 0;
+  const shouldResolveProfileGate =
+    !resolvingGuardExpired &&
+    !authorized &&
+    (profileLoading || isAwaitingInitialProfileHydration);
+  const isResolvingAccess = authLoading || shouldResolveProfileGate;
 
-        if (sessionError) {
-          throw sessionError;
-        }
+  useEffect(() => {
+    if (authLoading || !profileLoading || authorized) {
+      setResolvingGuardExpired(false);
+      return;
+    }
 
-        if (!session) {
-          if (!isActive) {
-            return;
-          }
+    const guardTimer = window.setTimeout(() => {
+      setResolvingGuardExpired(true);
+    }, 2000);
 
-          setSessionMissing(true);
-          setAuthorized(false);
-          router.replace("/auth");
-          return;
-        }
-
-        const [permissionsResult, rolesResult] = await Promise.all([
-          supabase.rpc("current_user_permissions"),
-          supabase.rpc("current_user_roles"),
-        ]);
-
-        if (!isActive) {
-          return;
-        }
-
-        if (permissionsResult.error) {
-          console.error(
-            "Failed to resolve CMS permissions",
-            permissionsResult.error,
-          );
-        }
-
-        if (rolesResult.error) {
-          console.error("Failed to resolve CMS roles", rolesResult.error);
-        }
-
-        const normalizedPermissions = Array.isArray(permissionsResult.data)
-          ? permissionsResult.data
-          : [];
-        const normalizedRoles = Array.isArray(rolesResult.data)
-          ? rolesResult.data
-          : [];
-
-        setSessionMissing(false);
-        setResolvedPermissions(normalizedPermissions);
-        setResolvedRoles(normalizedRoles);
-        setAuthorized(
-          hasCmsWorkspaceAccess(normalizedPermissions, normalizedRoles),
-        );
-      } catch (error) {
-        console.error("Failed to initialize CMS access", error);
-
-        if (!isActive) {
-          return;
-        }
-
-        setSessionMissing(false);
-        setResolvedPermissions([]);
-        setResolvedRoles([]);
-        setAuthorized(false);
-      }
-    };
-
-    check();
-
-    return () => {
-      isActive = false;
-    };
-  }, [router]);
+    return () => window.clearTimeout(guardTimer);
+  }, [authLoading, authorized, pathname, profileLoading, user]);
 
   const operationsEntitlements = useMemo(
     () =>
@@ -185,7 +254,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     ],
   );
 
-  if (authorized === null) {
+  if (isResolvingAccess) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -194,7 +263,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (sessionMissing) {
+  if (!authLoading && !user) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
