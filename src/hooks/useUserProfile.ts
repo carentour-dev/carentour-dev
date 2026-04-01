@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,31 +34,50 @@ export type UserProfile = ProfileState & {
 
 export const useUserProfile = () => {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
+  const inFlightUserIdRef = useRef<string | null>(null);
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (!user?.id) {
+    if (userId && inFlightUserIdRef.current === userId) {
+      return;
+    }
+
+    if (!userId) {
+      inFlightUserIdRef.current = null;
+      hydratedUserIdRef.current = null;
       setProfileState(null);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    inFlightUserIdRef.current = userId;
+    const isFirstHydrationForUser = hydratedUserIdRef.current !== userId;
+    if (isFirstHydrationForUser) {
+      setLoading(true);
+    }
     try {
-      const [profileResult, rolesResult, permissionsResult] = await Promise.all(
-        [
-          supabase
-            .from("profiles")
-            .select(
-              "username, avatar_url, date_of_birth, sex, nationality, phone, job_title, language",
-            )
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase.rpc("current_user_roles"),
-          supabase.rpc("current_user_permissions"),
-        ],
-      );
+      const profilePromise = Promise.all([
+        supabase
+          .from("profiles")
+          .select(
+            "username, avatar_url, date_of_birth, sex, nationality, phone, job_title, language",
+          )
+          .eq("user_id", userId)
+          .maybeSingle(),
+        supabase.rpc("current_user_roles"),
+        supabase.rpc("current_user_permissions"),
+      ]);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(
+          () => reject(new Error("PROFILE_FETCH_TIMEOUT")),
+          3000,
+        );
+      });
+      const [profileResult, rolesResult, permissionsResult] =
+        await Promise.race([profilePromise, timeoutPromise]);
 
       if (profileResult.error && profileResult.error.code !== "PGRST116") {
         console.error("Error fetching profile:", profileResult.error);
@@ -106,7 +125,7 @@ export const useUserProfile = () => {
           const { error: updateError } = await supabase
             .from("profiles")
             .update(updatePayload)
-            .eq("user_id", user.id);
+            .eq("user_id", userId);
 
           if (updateError) {
             console.error("Error syncing metadata to profile:", updateError);
@@ -153,13 +172,28 @@ export const useUserProfile = () => {
         displayName,
         initials,
       });
+      hydratedUserIdRef.current = userId;
     } catch (error) {
-      console.error("Error in useUserProfile:", error);
+      if (
+        !(error instanceof Error && error.message === "PROFILE_FETCH_TIMEOUT")
+      ) {
+        console.error("Error in useUserProfile:", error);
+      }
       setProfileState(null);
     } finally {
+      if (inFlightUserIdRef.current === userId) {
+        inFlightUserIdRef.current = null;
+      }
       setLoading(false);
     }
-  }, [user?.id, user?.user_metadata]);
+  }, [user, userId]);
+
+  useEffect(() => {
+    // Keep authenticated users in loading state until their first profile fetch settles.
+    if (userId && hydratedUserIdRef.current !== userId) {
+      setLoading(true);
+    }
+  }, [userId]);
 
   useEffect(() => {
     fetchProfile();
