@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import {
   ArrowLeft,
   Building2,
@@ -11,6 +12,7 @@ import {
   Phone,
   Star,
 } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,10 @@ import {
   pickFacilityImage,
   type MedicalFacilityDetail,
 } from "@/lib/medical-facilities";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { formatInfrastructureEntries } from "@/lib/infrastructure";
 
 type Props = {
@@ -72,6 +78,7 @@ export function MedicalFacilityProfileContent({
   isFetching = false,
   errorStatus,
 }: Props) {
+  const locale = useLocale() as PublicLocale;
   const provider = detail?.provider;
   const proceduresMap = buildProcedureMap(detail?.procedures ?? []);
   const procedures = provider
@@ -99,6 +106,15 @@ export function MedicalFacilityProfileContent({
   const whatsapp = extractField(["whatsapp", "whatsapp_number"], contactInfo);
   const normalizedWebsite =
     website && (website.startsWith("http") ? website : `https://${website}`);
+  const medicalFacilitiesHref = localizePublicPathname(
+    "/medical-facilities",
+    locale,
+  );
+  const contactHref = localizePublicPathname("/contact", locale);
+  const startJourneyHref = localizePublicPathnameWithFallback(
+    "/start-journey",
+    locale,
+  );
   const addressLine1 = toText(address["line1"]);
   const addressLine2 = toText(address["line2"]);
   const addressState = toText(address["state"] ?? address["region"]);
@@ -128,7 +144,7 @@ export function MedicalFacilityProfileContent({
             {block.fallbacks.notFoundDescription}
           </p>
           <Button asChild>
-            <Link href="/medical-facilities">
+            <Link href={medicalFacilitiesHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {block.labels.backLink}
             </Link>
@@ -161,7 +177,7 @@ export function MedicalFacilityProfileContent({
             <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
               <ArrowLeft className="h-4 w-4" />
               <Link
-                href="/medical-facilities"
+                href={medicalFacilitiesHref}
                 className="inline-flex items-center gap-2 text-foreground underline-offset-4 hover:underline"
               >
                 {block.labels.backLink}
@@ -224,10 +240,10 @@ export function MedicalFacilityProfileContent({
 
                 <div className="flex flex-wrap gap-3">
                   <Button asChild size="lg" variant="outline">
-                    <Link href="/contact">{block.ctas.secondary}</Link>
+                    <Link href={contactHref}>{block.ctas.secondary}</Link>
                   </Button>
                   <Button asChild size="lg">
-                    <Link href="/start-journey">{block.ctas.primary}</Link>
+                    <Link href={startJourneyHref}>{block.ctas.primary}</Link>
                   </Button>
                 </div>
 
@@ -558,10 +574,10 @@ export function MedicalFacilityProfileContent({
 
                   <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline">
-                      <Link href="/contact">{block.ctas.secondary}</Link>
+                      <Link href={contactHref}>{block.ctas.secondary}</Link>
                     </Button>
                     <Button asChild>
-                      <Link href="/start-journey">{block.ctas.primary}</Link>
+                      <Link href={startJourneyHref}>{block.ctas.primary}</Link>
                     </Button>
                   </div>
                 </CardContent>
