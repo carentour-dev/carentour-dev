@@ -1,4 +1,3 @@
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
@@ -6,12 +5,13 @@ import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 import { resolveIcon } from "./utils";
 
-export async function TrustSignalsBlock({
+export function TrustSignalsBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"trustSignals">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   const gridClass =
     block.items.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2";
   const blockWithStyle = withBlockStyleDefaults(block, {
