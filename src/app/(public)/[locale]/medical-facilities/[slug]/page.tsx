@@ -211,6 +211,7 @@ export default async function MedicalFacilityDetailPage({ params }: PageProps) {
       <StructuredDataScripts payload={seo.jsonLd} />
       <BlockRenderer
         blocks={blocks}
+        locale={locale}
         context={{
           medicalFacility: detail,
           medicalFacilitySlug: slug,
