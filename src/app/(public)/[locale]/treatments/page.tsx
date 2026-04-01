@@ -141,7 +141,7 @@ export default async function TreatmentsPage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlockRenderer blocks={blocks} />
+      <BlockRenderer blocks={blocks} locale={locale} />
     </>
   );
 }
