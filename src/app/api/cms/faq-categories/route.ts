@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
 
@@ -44,8 +46,13 @@ function formatValidationError(error: z.ZodError) {
   return path ? `${issue.message} (field: ${path})` : issue.message;
 }
 
-export async function GET() {
+function revalidateFaqCategoryPaths() {
+  revalidateSeoPaths(["/faq", "/ar/faq"]);
+}
+
+export async function GET(request: NextRequest) {
   await requirePermission("cms.read");
+  const locale = resolveAdminLocale(request);
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -58,12 +65,58 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (locale === "ar") {
+    const translationsResult = await (supabase as any)
+      .from("faq_category_translations")
+      .select("faq_category_slug, title, description, status, updated_at")
+      .eq("locale", "ar");
+
+    if (translationsResult.error) {
+      return NextResponse.json(
+        { error: translationsResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    const translationsBySlug = new Map<string, any>(
+      (translationsResult.data ?? []).map((row: any) => [
+        row.faq_category_slug,
+        row,
+      ]),
+    );
+
+    return NextResponse.json({
+      data: (data ?? []).map((row) => {
+        const translation = translationsBySlug.get(row.slug);
+        return {
+          ...mapRow(row),
+          title: translation?.title ?? row.title,
+          description: translation?.description ?? row.description,
+          status: translation?.status ?? "draft",
+          updated_at: translation?.updated_at ?? row.updated_at,
+        };
+      }),
+    });
+  }
+
   return NextResponse.json({ data: (data ?? []).map(mapRow) });
 }
 
 export async function POST(request: NextRequest) {
   await requirePermission("cms.write");
+  const locale = resolveAdminLocale(request);
   const payload = await request.json();
+
+  if (locale === "ar") {
+    return NextResponse.json(
+      {
+        error:
+          "Create the English FAQ category first, then add the Arabic translation from the existing category.",
+      },
+      { status: 400 },
+    );
+  }
+
   const parsed = categorySchema.safeParse(payload);
 
   if (!parsed.success) {
@@ -95,5 +148,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateFaqCategoryPaths();
   return NextResponse.json({ data: mapRow(data!) }, { status: 201 });
 }
