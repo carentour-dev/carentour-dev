@@ -9,6 +9,7 @@ import {
   Link2,
   PanelsTopLeft,
   FileText,
+  Loader2,
   Search,
 } from "lucide-react";
 
@@ -16,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   createEntitlementContext,
   hasOperationsEntry,
@@ -42,56 +44,32 @@ const NAV_ITEMS = [
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [resolvedPermissions, setResolvedPermissions] = useState<string[]>([]);
-  const [resolvedRoles, setResolvedRoles] = useState<string[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
 
   useEffect(() => {
-    const check = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/auth");
-        return;
-      }
-      const [permissionsResult, rolesResult] = await Promise.all([
-        supabase.rpc("current_user_permissions"),
-        supabase.rpc("current_user_roles"),
-      ]);
+    if (!authLoading && !profileLoading) {
+      setInitialAccessResolved(true);
+    }
+  }, [authLoading, profileLoading]);
 
-      if (permissionsResult.error) {
-        console.error(
-          "Failed to resolve CMS permissions",
-          permissionsResult.error,
-        );
-      }
+  useEffect(() => {
+    if (initialAccessResolved && !authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, initialAccessResolved, router, user]);
 
-      if (rolesResult.error) {
-        console.error("Failed to resolve CMS roles", rolesResult.error);
-      }
-
-      if (permissionsResult.error && rolesResult.error) {
-        setResolvedPermissions([]);
-        setResolvedRoles([]);
-        setAuthorized(false);
-        return;
-      }
-
-      const normalizedPermissions = Array.isArray(permissionsResult.data)
-        ? permissionsResult.data
-        : [];
-      const normalizedRoles = Array.isArray(rolesResult.data)
-        ? rolesResult.data
-        : [];
-      setResolvedPermissions(normalizedPermissions);
-      setResolvedRoles(normalizedRoles);
-      setAuthorized(
-        hasCmsWorkspaceAccess(normalizedPermissions, normalizedRoles),
-      );
-    };
-    check();
-  }, [router]);
+  const resolvedPermissions = useMemo(
+    () => profile?.permissions ?? [],
+    [profile?.permissions],
+  );
+  const resolvedRoles = useMemo(() => profile?.roles ?? [], [profile?.roles]);
+  const isAuthorized = hasCmsWorkspaceAccess(
+    resolvedPermissions,
+    resolvedRoles,
+  );
+  const isLoading = authLoading || profileLoading;
 
   const operationsEntitlements = useMemo(
     () =>
@@ -108,6 +86,10 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     permissions: resolvedPermissions,
     roles: resolvedRoles,
   });
+  const hasFinanceAccess = hasFinanceWorkspaceAccess(
+    resolvedPermissions,
+    resolvedRoles,
+  );
   const canViewSeoWorkspace = useMemo(() => {
     const normalizedPermissions = new Set(
       resolvedPermissions.map((permission) => permission.trim().toLowerCase()),
@@ -133,15 +115,13 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
         access: {
           admin: hasAdminAccess,
           operations: hasOperationsAccess,
-          finance: hasFinanceWorkspaceAccess(
-            resolvedPermissions,
-            resolvedRoles,
-          ),
+          finance: hasFinanceAccess,
           cms: hasCmsWorkspaceAccess(resolvedPermissions, resolvedRoles),
         },
       }),
     [
       hasAdminAccess,
+      hasFinanceAccess,
       hasOperationsAccess,
       pathname,
       resolvedPermissions,
@@ -149,31 +129,50 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     ],
   );
 
-  if (authorized === null) {
+  if (!initialAccessResolved) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading CMS workspace…</p>
+      </div>
+    );
+  }
+
+  if (!authLoading && !user) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
           <CardHeader>
-            <CardTitle>Loading CMS…</CardTitle>
+            <CardTitle>Session required</CardTitle>
           </CardHeader>
-          <CardContent>Checking your permissions.</CardContent>
+          <CardContent className="space-y-4">
+            <p>Your session has ended. Please sign in again to continue.</p>
+            <Button asChild>
+              <Link href="/auth">Go to sign in</Link>
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!authorized) {
+  if (!isAuthorized && !isLoading) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
           <CardHeader>
             <CardTitle>Access denied</CardTitle>
           </CardHeader>
-          <CardContent>
-            You need CMS permissions to access this workspace.
-            <div className="mt-4">
+          <CardContent className="space-y-4">
+            <p>You need CMS permissions to access this workspace.</p>
+            <div className="flex flex-wrap gap-3">
+              {hasFinanceAccess ? (
+                <Button asChild variant="outline">
+                  <Link href="/finance">Open finance workspace</Link>
+                </Button>
+              ) : null}
               <Button asChild>
-                <Link href="/">Go home</Link>
+                <Link href="/dashboard">Go to dashboard</Link>
               </Button>
             </div>
           </CardContent>
