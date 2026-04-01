@@ -1,13 +1,17 @@
+import { getLocale } from "next-intl/server";
+import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 
-export function InfoPanelsBlock({
+export async function InfoPanelsBlock({
   block,
 }: {
   block: BlockInstance<"infoPanels">;
 }) {
+  const locale = (await getLocale()) as PublicLocale;
   return (
     <BlockSurface
       block={block}
@@ -21,17 +25,17 @@ export function InfoPanelsBlock({
             <div className="mx-auto max-w-3xl space-y-4 text-center">
               {block.eyebrow ? (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-primary">
-                  {block.eyebrow}
+                  {localizeOptionalDigits(block.eyebrow, locale)}
                 </span>
               ) : null}
               {block.heading ? (
                 <h2 className="text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-5xl">
-                  {block.heading}
+                  {localizeOptionalDigits(block.heading, locale)}
                 </h2>
               ) : null}
               {block.description ? (
                 <p className="text-base leading-8 text-muted-foreground md:text-lg">
-                  {block.description}
+                  {localizeOptionalDigits(block.description, locale)}
                 </p>
               ) : null}
             </div>
@@ -48,18 +52,18 @@ export function InfoPanelsBlock({
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-xl font-semibold text-foreground">
-                    {panel.title}
+                    {localizeOptionalDigits(panel.title, locale)}
                   </h3>
                   {panel.badge ? (
                     <Badge variant="outline" className="text-xs">
-                      {panel.badge}
+                      {localizeOptionalDigits(panel.badge, locale)}
                     </Badge>
                   ) : null}
                 </div>
 
                 {panel.description ? (
                   <p className="max-w-xl text-sm leading-7 text-muted-foreground">
-                    {panel.description}
+                    {localizeOptionalDigits(panel.description, locale)}
                   </p>
                 ) : null}
 
@@ -74,7 +78,7 @@ export function InfoPanelsBlock({
                           aria-hidden
                           className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
                         />
-                        <span>{item}</span>
+                        <span>{localizeOptionalDigits(item, locale)}</span>
                       </li>
                     ))}
                   </ul>
