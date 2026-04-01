@@ -1,0 +1,418 @@
+- generic [active] [ref=e1]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]:
+            - generic [ref=e7]:
+              - img [ref=e8]
+              - generic [ref=e10]: +20 122 9503333
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - generic [ref=e15]: info@carentour.com
+          - generic [ref=e16]:
+            - generic "اللغة" [ref=e17]:
+              - img [ref=e18]
+              - link "English" [ref=e22] [cursor=pointer]:
+                - /url: /
+              - link "العربية" [ref=e23] [cursor=pointer]:
+                - /url: /ar
+            - button "Toggle theme" [ref=e24] [cursor=pointer]:
+              - img
+              - img
+              - generic [ref=e25]: Toggle theme
+            - link "تسجيل الدخول" [ref=e26] [cursor=pointer]:
+              - /url: /auth
+              - button "تسجيل الدخول" [ref=e27]:
+                - img
+                - text: تسجيل الدخول
+            - link "احصل على استشارة مجانية" [ref=e28] [cursor=pointer]:
+              - /url: /ar/consultation
+        - generic [ref=e29]:
+          - link "Care N Tour" [ref=e31] [cursor=pointer]:
+            - /url: /ar
+            - img "Care N Tour" [ref=e32]
+          - navigation [ref=e33]:
+            - link "Home" [ref=e34] [cursor=pointer]:
+              - /url: /ar
+            - link "About Us" [ref=e35] [cursor=pointer]:
+              - /url: /ar/about
+            - link "Treatments" [ref=e36] [cursor=pointer]:
+              - /url: /treatments
+            - link "Medical Facilities" [ref=e37] [cursor=pointer]:
+              - /url: /medical-facilities
+            - link "Plan Your Trip" [ref=e38] [cursor=pointer]:
+              - /url: /plan
+            - link "Concierge" [ref=e39] [cursor=pointer]:
+              - /url: /concierge
+            - link "Travel Information" [ref=e40] [cursor=pointer]:
+              - /url: /travel-info
+            - link "Blog" [ref=e41] [cursor=pointer]:
+              - /url: /blog
+            - link "FAQ" [ref=e42] [cursor=pointer]:
+              - /url: /faq
+            - link "Contact" [ref=e43] [cursor=pointer]:
+              - /url: /contact
+    - generic [ref=e45]:
+      - generic [ref=e52]:
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - img [ref=e57]
+            - generic [ref=e59]: اختبر معياراً جديداً في السفر العلاجي
+          - heading "رعاية طبية متميزة في مصر" [level=1] [ref=e60]:
+            - text: رعاية
+            - generic [ref=e61]: طبية متميزة
+            - text: في مصر
+          - paragraph [ref=e62]: احصل على وصول إلى أطباء موثوقين ومستشفيات معتمدة مع تنسيق كامل للسفر وإرشاد شخصي في كل خطوة. نجعل رحلتك العلاجية آمنة وواضحة ومريحة من أول استفسار حتى التعافي. أطباء معتمدون. باقات شفافة. دعم بمستوى الكونسيرج.
+          - generic [ref=e63]:
+            - link "ابدأ رحلتك" [ref=e64] [cursor=pointer]:
+              - /url: /start-journey
+              - text: ابدأ رحلتك
+              - img
+            - link "عرض العلاجات" [ref=e65] [cursor=pointer]:
+              - /url: /treatments
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - paragraph [ref=e69]: الجهات الطبية
+            - paragraph [ref=e70]: مستشفيات معتمدة من JCI وأطباء متخصصون حاصلون على البورد
+          - generic [ref=e71]:
+            - paragraph [ref=e72]: الدعم
+            - paragraph [ref=e73]: باقات شفافة، وتنسيق متعدد اللغات، وإرشاد بمستوى الكونسيرج
+          - generic [ref=e74]:
+            - paragraph [ref=e75]: الوصول
+            - paragraph [ref=e76]: تخطيط سريع للعلاج مع دعم متكامل للسفر
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - generic [ref=e81]: لمحة سريعة
+          - heading "نموذج رعاية مصمم للمرضى الدوليين وتوقعاتهم العالمية" [level=2] [ref=e82]
+          - paragraph [ref=e83]: اختبر المزيج المثالي من الرعاية الطبية العالمية، وتوفير التكاليف، والضيافة المصرية من خلال نموذج خدمة منسق واحد.
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - img [ref=e87]
+            - paragraph [ref=e90]: 100% معتمدة
+            - paragraph [ref=e91]: المستشفيات الشريكة
+            - paragraph [ref=e92]: منشآت معتمدة من JCI
+          - generic [ref=e93]:
+            - img [ref=e95]
+            - paragraph [ref=e97]: أكثر من 200 اختصاصي
+            - paragraph [ref=e98]: الجراحون المعتمدون
+            - paragraph [ref=e99]: خبراء تلقوا تدريباً دولياً
+          - generic [ref=e100]:
+            - img [ref=e102]
+            - paragraph [ref=e105]: أكثر من 15 لغة
+            - paragraph [ref=e106]: دعم المنسقين
+            - paragraph [ref=e107]: تواصل سلس طوال الرحلة
+          - generic [ref=e108]:
+            - img [ref=e110]
+            - paragraph [ref=e112]: حتى 70%
+            - paragraph [ref=e113]: التوفير المحتمل
+            - paragraph [ref=e114]: باقات شفافة من دون تكاليف خفية
+      - generic [ref=e117]:
+        - generic [ref=e118]:
+          - generic [ref=e119]: لماذا Care N Tour
+          - generic [ref=e120]:
+            - heading "طريقة أوضح لتخطيط العلاج في الخارج دون إدارة كل التفاصيل بمفردك." [level=2] [ref=e121]
+            - paragraph [ref=e122]: لا ينبغي للمريض أن يتحقق من مزودي الخدمة، ويقارن الخيارات، وينسق الخدمات اللوجستية، ويرتب المتابعة بمفرده وهو يتخذ قراراً صحياً مهماً.
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - paragraph [ref=e125]: تجمع Care N Tour بين تخطيط العلاج، والوصول إلى مقدمي الرعاية، وتنسيق السفر، ودعم المرضى ضمن تجربة مُدارة واحدة للمرضى الدوليين الباحثين عن الرعاية في مصر.
+            - paragraph [ref=e126]: وبدلاً من التنقل بين المستشفيات والأطباء والإقامة والتنقلات والمواعيد عبر جهات اتصال متفرقة، يحصل المرضى على مسار أكثر تنظيماً مع إرشاد شخصي من أول استفسار حتى التعافي.
+            - paragraph [ref=e127]: والنتيجة هي رحلة علاجية أكثر شفافية وتنظيماً ودعماً في كل مرحلة.
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - paragraph [ref=e130]: ما الذي يكسبه المرضى من رحلة مُدارة
+              - paragraph [ref=e131]: وبالنسبة للمرضى والعائلات الذين يقيّمون العلاج في الخارج، فإن هذا المزيج من الوصول الطبي والوضوح التشغيلي يصنع تجربة أكثر موثوقية.
+            - generic [ref=e132]:
+              - generic [ref=e133]:
+                - generic [ref=e134]: "01"
+                - generic [ref=e135]:
+                  - heading "أطباء معتمدون ومستشفيات معتمدة" [level=3] [ref=e136]
+                  - paragraph [ref=e137]: يُطابق المرضى مع مقدمي رعاية موثوقين بما يتوافق مع احتياجاتهم الطبية وتوقعاتهم.
+              - generic [ref=e138]:
+                - generic [ref=e139]: "02"
+                - generic [ref=e140]:
+                  - heading "تخطيط شفاف قبل أي التزام" [level=3] [ref=e141]
+                  - paragraph [ref=e142]: تتضح خيارات العلاج والخدمات اللوجستية والجداول الزمنية المتوقعة وتفاصيل الباقات مبكراً لتقليل عدم اليقين.
+              - generic [ref=e143]:
+                - generic [ref=e144]: "03"
+                - generic [ref=e145]:
+                  - heading "تنسيق على مستوى الكونسيرج من الوصول حتى المتابعة" [level=3] [ref=e146]
+                  - paragraph [ref=e147]: ندعم السفر والإقامة والتنقلات والتواصل الخاص بالرعاية اللاحقة كرحلة واحدة مترابطة.
+      - generic [ref=e150]:
+        - generic [ref=e151]:
+          - generic [ref=e153]: العلاجات
+          - heading "العلاجات المميزة" [level=2] [ref=e154]
+          - paragraph [ref=e155]: اكتشف أشهر الإجراءات الطبية لدينا، والتي ينفذها اختصاصيون معتمدون دولياً
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - generic [ref=e162]: Featured
+              - img "Cosmetic & Plastic Surgery" [ref=e163]
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - heading "Cosmetic & Plastic Surgery" [level=3] [ref=e166]
+                - paragraph [ref=e167]: Transform your look with world-class cosmetic surgery in Egypt-expert surgeons, modern clinics, and luxury recovery care.
+              - generic [ref=e168]:
+                - paragraph [ref=e169]: From $7,500
+                - paragraph [ref=e170]: 4 days • 21 days
+                - generic [ref=e171]:
+                  - link "Start Your Journey" [ref=e172] [cursor=pointer]:
+                    - /url: /start-journey?treatment=cosmetic-plastic-surgery
+                    - text: Start Your Journey
+                    - img
+                  - link "Learn More" [ref=e173] [cursor=pointer]:
+                    - /url: /treatments/cosmetic-plastic-surgery
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - generic [ref=e177]: Featured
+              - img "Dental Treatment" [ref=e178]
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - heading "Dental Treatment" [level=3] [ref=e181]
+                - paragraph [ref=e182]: Achieve your perfect smile with premium dental treatments in Egypt-high quality care at up to 70% lower cost.
+              - generic [ref=e183]:
+                - paragraph [ref=e184]: From $100
+                - paragraph [ref=e185]: 10 days • 2 days
+                - generic [ref=e186]:
+                  - link "Start Your Journey" [ref=e187] [cursor=pointer]:
+                    - /url: /start-journey?treatment=dental-treatment
+                    - text: Start Your Journey
+                    - img
+                  - link "Learn More" [ref=e188] [cursor=pointer]:
+                    - /url: /treatments/dental-treatment
+          - generic [ref=e189]:
+            - generic [ref=e190]:
+              - generic [ref=e192]: Featured
+              - img "IVF & Fertility Treatments" [ref=e193]
+            - generic [ref=e194]:
+              - generic [ref=e195]:
+                - heading "IVF & Fertility Treatments" [level=3] [ref=e196]
+                - paragraph [ref=e197]: Trusted fertility treatments helping couples start their families with expert doctors and advanced reproductive technology.
+              - generic [ref=e198]:
+                - paragraph [ref=e199]: From $2,500
+                - paragraph [ref=e200]: 18 days • 7 days
+                - generic [ref=e201]:
+                  - link "Start Your Journey" [ref=e202] [cursor=pointer]:
+                    - /url: /start-journey?treatment=ivf-fertility-treatments
+                    - text: Start Your Journey
+                    - img
+                  - link "Learn More" [ref=e203] [cursor=pointer]:
+                    - /url: /treatments/ivf-fertility-treatments
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - generic [ref=e207]: Featured
+              - img "Ophthalmology" [ref=e208]
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - heading "Ophthalmology" [level=3] [ref=e211]
+                - paragraph [ref=e212]: Restore clear vision with advanced eye treatments like LASIK in internationally accredited Egyptian clinics.
+              - generic [ref=e213]:
+                - paragraph [ref=e214]: From $6,100
+                - paragraph [ref=e215]: 5 days • 21 days
+                - generic [ref=e216]:
+                  - link "Start Your Journey" [ref=e217] [cursor=pointer]:
+                    - /url: /start-journey?treatment=ophthalmology-surgery
+                    - text: Start Your Journey
+                    - img
+                  - link "Learn More" [ref=e218] [cursor=pointer]:
+                    - /url: /treatments/ophthalmology-surgery
+      - generic [ref=e221]:
+        - generic [ref=e222]:
+          - generic [ref=e223]: رحلة المريض
+          - heading "رحلتك نحو صحة أفضل" [level=2] [ref=e224]
+          - paragraph [ref=e225]: عملية سلسة خطوة بخطوة صُممت لجعل تجربة السياحة العلاجية خالية من التوتر
+        - generic [ref=e226]:
+          - generic [ref=e229]:
+            - generic [ref=e230]:
+              - generic [ref=e232]:
+                - generic [ref=e233]: Step
+                - generic [ref=e234]: "1"
+              - img [ref=e236]
+            - heading "استكشف خياراتك" [level=3] [ref=e238]
+            - paragraph [ref=e239]: راجع العلاجات عبر منصتنا وتحدث مباشرة مع مدير رعاية. ستحصل على توصيات مصممة بحسب احتياجاتك الطبية وأهدافك وتفضيلاتك.
+          - generic [ref=e242]:
+            - generic [ref=e243]:
+              - generic [ref=e245]:
+                - generic [ref=e246]: Step
+                - generic [ref=e247]: "2"
+              - img [ref=e249]
+            - heading "احصل على خطة علاج شخصية" [level=3] [ref=e251]
+            - paragraph [ref=e252]: بعد مراجعة معلوماتك الطبية، نُعد لك خطة واضحة توضح الإجراءات والجداول الزمنية والنتائج المتوقعة والتكاليف المرتبطة بها. وهذا يمنحك وضوحاً كاملاً قبل اتخاذ أي قرار.
+          - generic [ref=e255]:
+            - generic [ref=e256]:
+              - generic [ref=e258]:
+                - generic [ref=e259]: Step
+                - generic [ref=e260]: "3"
+              - img [ref=e262]
+            - heading "استعد لرحلتك" [level=3] [ref=e264]
+            - paragraph [ref=e265]: نساعدك في متطلبات التأشيرة والوثائق وترتيبات السفر. كما تتلقى إرشادات حول ما يجب إحضاره، وكيف تستعد، وما يمكن توقعه عند الوصول.
+          - generic [ref=e268]:
+            - generic [ref=e269]:
+              - generic [ref=e271]:
+                - generic [ref=e272]: Step
+                - generic [ref=e273]: "4"
+              - img [ref=e275]
+            - heading "الوصول بثقة" [level=3] [ref=e277]
+            - paragraph [ref=e278]: يرتب فريقنا الاستقبال من المطار والتنقلات والإقامة. ونتأكد من أنك تشعر بالاستقرار والراحة قبل بدء الاستشارات والعلاج.
+          - generic [ref=e281]:
+            - generic [ref=e282]:
+              - generic [ref=e284]:
+                - generic [ref=e285]: Step
+                - generic [ref=e286]: "5"
+              - img [ref=e288]
+            - heading "تلقي العلاج مع دعم كامل" [level=3] [ref=e291]
+            - paragraph [ref=e292]: يرافقك الاختصاصي والمنشأة الطبية اللذان اخترتهما خلال الإجراء وزيارات المتابعة. ويظل مدير الرعاية متاحاً لدعم التواصل والخدمات اللوجستية.
+          - generic [ref=e295]:
+            - generic [ref=e296]:
+              - generic [ref=e298]:
+                - generic [ref=e299]: Step
+                - generic [ref=e300]: "6"
+              - img [ref=e302]
+            - heading "التعافي بأمان وراحة" [level=3] [ref=e305]
+            - paragraph [ref=e306]: نوفّر تعليمات رعاية لاحقة مخصصة، ومواعيد متابعة، وعمليات تواصل دورية. وحتى بعد عودتك إلى بلدك، يساعدك فريقنا على البقاء على اتصال بطبيبك للحصول على دعم مستمر.
+      - generic [ref=e309]:
+        - generic [ref=e310]:
+          - generic [ref=e311]: ما الذي يميزنا
+          - heading "المعايير التي تقف وراء كل رحلة علاج" [level=2] [ref=e312]
+          - paragraph [ref=e313]: اختبر المزيج المثالي من الرعاية الطبية العالمية، وتوفير التكاليف، والضيافة المصرية من خلال خدماتنا الشاملة في السياحة العلاجية
+        - generic [ref=e314]:
+          - article [ref=e315]:
+            - generic [ref=e316]:
+              - paragraph [ref=e317]: 100% معتمدة
+              - img [ref=e319]
+            - heading "مستشفيات معتمدة من JCI" [level=3] [ref=e322]
+            - paragraph [ref=e323]: جميع مستشفياتنا الشريكة معتمدة دولياً من اللجنة الدولية المشتركة، بما يضمن معايير عالمية المستوى.
+          - article [ref=e324]:
+            - generic [ref=e325]:
+              - paragraph [ref=e326]: أكثر من 200 اختصاصي
+              - img [ref=e328]
+            - heading "جراحون معتمدون" [level=3] [ref=e330]
+            - paragraph [ref=e331]: اختصاصيونا تلقوا تدريباً دولياً ويتمتعون بعقود من الخبرة وشهادات بورد من مؤسسات طبية رائدة.
+          - article [ref=e332]:
+            - generic [ref=e333]:
+              - paragraph [ref=e334]: حتى 70% توفير
+              - img [ref=e336]
+            - heading "باقات شاملة" [level=3] [ref=e338]
+            - paragraph [ref=e339]: أسعار شفافة من دون تكاليف مخفية. تشمل الرعاية الطبية والإقامة والتنقلات والدعم على مدار الساعة.
+          - article [ref=e340]:
+            - generic [ref=e341]:
+              - paragraph [ref=e342]: 2-3 أسابيع
+              - img [ref=e344]
+            - heading "علاج سريع المسار" [level=3] [ref=e347]
+            - paragraph [ref=e348]: لا قوائم انتظار. حدّد موعد علاجك خلال 2-3 أسابيع من التأكيد مع أولوية في الحجز.
+          - article [ref=e349]:
+            - generic [ref=e350]:
+              - paragraph [ref=e351]: أكثر من 15 لغة
+              - img [ref=e353]
+            - heading "دعم متعدد اللغات" [level=3] [ref=e356]
+            - paragraph [ref=e357]: منسقون متخصصون يتحدثون أكثر من 15 لغة يضمنون تواصلاً سلساً طوال رحلتك.
+          - article [ref=e358]:
+            - generic [ref=e359]:
+              - paragraph [ref=e360]: رعاية متكاملة
+              - img [ref=e362]
+            - heading "دعم سفر متكامل" [level=3] [ref=e364]
+            - paragraph [ref=e365]: من المساعدة في التأشيرة إلى الإقامة الفاخرة والجولات الثقافية، نتولى كل تفاصيل إقامتك.
+      - generic [ref=e368]:
+        - generic [ref=e369]:
+          - generic [ref=e370]: الأسئلة الشائعة
+          - heading "أسئلة نجيب عنها قبل أن يختار المرضى الدوليون العلاج في مصر" [level=2] [ref=e371]
+          - paragraph [ref=e372]: في Care N Tour، نوضح كيفية عمل مراجعة الاختصاصيين، والمستشفيات المعتمدة في مصر، والجداول الزمنية للعلاج، وتخطيط السفر، والإقامة، ودعم المرافقين، وإرشادات التسعير، والمتابعة، حتى يتمكن المرضى وعائلاتهم من المضي قدماً بثقة.
+        - generic [ref=e373]:
+          - generic [ref=e374]:
+            - heading "كيف تخطط Care N Tour للعلاج في مصر؟" [level=3] [ref=e376]:
+              - button "كيف تخطط Care N Tour للعلاج في مصر؟" [ref=e377] [cursor=pointer]:
+                - text: كيف تخطط Care N Tour للعلاج في مصر؟
+                - img [ref=e378]
+            - heading "كيف تختارون الأطباء والمستشفيات في مصر؟" [level=3] [ref=e381]:
+              - button "كيف تختارون الأطباء والمستشفيات في مصر؟" [ref=e382] [cursor=pointer]:
+                - text: كيف تختارون الأطباء والمستشفيات في مصر؟
+                - img [ref=e383]
+            - heading "هل سأفهم التكلفة المتوقعة قبل أن أقرر السفر؟" [level=3] [ref=e386]:
+              - button "هل سأفهم التكلفة المتوقعة قبل أن أقرر السفر؟" [ref=e387] [cursor=pointer]:
+                - text: هل سأفهم التكلفة المتوقعة قبل أن أقرر السفر؟
+                - img [ref=e388]
+          - generic [ref=e390]:
+            - heading "ما الذي تحتاجونه لبناء خطتي العلاجية؟" [level=3] [ref=e392]:
+              - button "ما الذي تحتاجونه لبناء خطتي العلاجية؟" [ref=e393] [cursor=pointer]:
+                - text: ما الذي تحتاجونه لبناء خطتي العلاجية؟
+                - img [ref=e394]
+            - heading "هل يمكن لـ Care N Tour ترتيب السفر ودعم العائلة؟" [level=3] [ref=e397]:
+              - button "هل يمكن لـ Care N Tour ترتيب السفر ودعم العائلة؟" [ref=e398] [cursor=pointer]:
+                - text: هل يمكن لـ Care N Tour ترتيب السفر ودعم العائلة؟
+                - img [ref=e399]
+            - heading "ماذا يحدث بعد اكتمال العلاج في مصر؟" [level=3] [ref=e402]:
+              - button "ماذا يحدث بعد اكتمال العلاج في مصر؟" [ref=e403] [cursor=pointer]:
+                - text: ماذا يحدث بعد اكتمال العلاج في مصر؟
+                - img [ref=e404]
+      - generic [ref=e408]:
+        - generic [ref=e409]:
+          - text: ابدأ التخطيط
+          - heading "هل أنت مستعد لبدء رحلتك الصحية بوضوح وثقة؟" [level=2] [ref=e410]
+          - paragraph [ref=e411]: منسقونا الطبيون متاحون على مدار الساعة للإجابة عن أسئلتك ومساعدتك في تخطيط علاجك. احصل على رعاية ودعم شخصيين في كل خطوة.
+        - generic [ref=e412]:
+          - link "احصل على استشارة مجانية" [ref=e413] [cursor=pointer]:
+            - /url: /consultation
+          - link "ابدأ رحلتك" [ref=e414] [cursor=pointer]:
+            - /url: /start-journey
+    - contentinfo [ref=e415]:
+      - generic [ref=e416]:
+        - generic [ref=e417]:
+          - generic [ref=e418]:
+            - img "Care N Tour" [ref=e419]
+            - paragraph [ref=e420]: شريكك الموثوق للحصول على رعاية طبية متميزة في مصر، مع الجمع بين التميز الطبي والضيافة الرفيعة.
+            - generic [ref=e421]:
+              - link "زر صفحتنا على Facebook" [ref=e422] [cursor=pointer]:
+                - /url: https://www.facebook.com/carentour
+                - img [ref=e423]
+              - link "زر صفحتنا على X (Twitter)" [ref=e425] [cursor=pointer]:
+                - /url: https://x.com/carentour
+                - img [ref=e426]
+              - link "زر صفحتنا على Instagram" [ref=e428] [cursor=pointer]:
+                - /url: https://www.instagram.com/carentoureg
+                - img [ref=e429]
+              - link "زر صفحتنا على LinkedIn" [ref=e432] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/carentour
+                - img [ref=e433]
+          - generic [ref=e437]:
+            - heading "روابط سريعة" [level=4] [ref=e438]
+            - list [ref=e439]:
+              - listitem [ref=e440]:
+                - link "About Us" [ref=e441] [cursor=pointer]:
+                  - /url: /ar/about
+              - listitem [ref=e442]:
+                - link "Treatments" [ref=e443] [cursor=pointer]:
+                  - /url: /treatments
+              - listitem [ref=e444]:
+                - link "Plan Your Trip" [ref=e445] [cursor=pointer]:
+                  - /url: /plan
+              - listitem [ref=e446]:
+                - link "Blog" [ref=e447] [cursor=pointer]:
+                  - /url: /blog
+          - generic [ref=e448]:
+            - heading "معلومات التواصل" [level=4] [ref=e449]
+            - generic [ref=e450]:
+              - generic [ref=e451]:
+                - img [ref=e452]
+                - generic [ref=e454]: +20 122 9503333
+              - generic [ref=e455]:
+                - img [ref=e456]
+                - generic [ref=e459]: info@carentour.com
+              - generic [ref=e460]:
+                - img [ref=e461]
+                - generic [ref=e464]: Cairo, Egypt
+          - generic [ref=e465]:
+            - heading "ابقَ على اطلاع" [level=4] [ref=e466]
+            - paragraph [ref=e467]: اشترك في نشرتنا البريدية للحصول على آخر تحديثات السياحة العلاجية.
+            - generic [ref=e468]:
+              - textbox "بريدك الإلكتروني" [ref=e469]
+              - button "اشترك" [ref=e470] [cursor=pointer]
+        - paragraph [ref=e472]: © 2026 كير إن تور. جميع الحقوق محفوظة.
+  - button "Chat on WhatsApp" [ref=e474] [cursor=pointer]:
+    - img [ref=e476]
+    - generic [ref=e478]: Chat on WhatsApp
+  - button "Open Next.js Dev Tools" [ref=e484] [cursor=pointer]:
+    - img [ref=e485]
+  - alert [ref=e488]
