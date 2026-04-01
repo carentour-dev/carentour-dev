@@ -27,6 +27,8 @@ import { useInitialNavigationLinks } from "@/components/navigation/NavigationPro
 import { type PublicLocale } from "@/i18n/routing";
 import {
   formatPhoneNumberForDisplay,
+  getPhoneNumberDisplayDirection,
+  getPublicContactAddressDisplay,
   PUBLIC_CONTACT_EMAIL,
   PUBLIC_CONTACT_PHONE_DISPLAY,
 } from "@/lib/public/contact";
@@ -68,6 +70,8 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
     PUBLIC_CONTACT_PHONE_DISPLAY,
     locale,
   );
+  const phoneNumberDirection = getPhoneNumberDisplayDirection(locale);
+  const address = getPublicContactAddressDisplay(locale);
 
   useEffect(() => {
     setMounted(true);
@@ -173,9 +177,12 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-muted-foreground" />
-                <bdi dir="ltr" className="text-muted-foreground">
+                <span
+                  dir={phoneNumberDirection}
+                  className="text-muted-foreground [unicode-bidi:plaintext]"
+                >
                   {phoneNumber}
-                </bdi>
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-muted-foreground" />
@@ -184,8 +191,8 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
                 </bdi>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("location")}</span>
+                <MapPin className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <span className="text-muted-foreground">{address}</span>
               </div>
             </div>
           </div>
