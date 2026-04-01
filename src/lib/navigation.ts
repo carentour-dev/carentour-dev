@@ -1,6 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
+import type { PublicLocale } from "@/i18n/routing";
 
-export type NavigationLinkStatus = "published" | "hidden";
+export type NavigationLinkStatus = "published" | "hidden" | "draft";
 
 export type NavigationLinkKind = "system" | "cms" | "manual";
 
@@ -192,11 +193,12 @@ export function selectQuickLinks(links: NavigationLink[]): NavigationLink[] {
 }
 
 export async function fetchNavigationLinks(
+  locale: PublicLocale,
   _client?: unknown,
   _options: NavigationQueryOptions = {},
 ): Promise<NavigationQueryResult> {
   try {
-    const response = await fetch("/api/navigation/public", {
+    const response = await fetch(`/api/navigation/public?locale=${locale}`, {
       cache: "no-store",
     });
     if (!response.ok) {
