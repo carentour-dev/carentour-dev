@@ -112,19 +112,37 @@ export function BlockPreviewRenderer({
             case "hero":
               return <HeroBlock key={blockKey} block={block} />;
             case "homeHero":
-              return <HomeHeroBlock key={blockKey} block={block} />;
+              return (
+                <HomeHeroBlock key={blockKey} block={block} locale={locale} />
+              );
             case "aboutHero":
-              return <AboutHeroBlock key={blockKey} block={block} />;
+              return (
+                <AboutHeroBlock key={blockKey} block={block} locale={locale} />
+              );
             case "featuredTreatmentsHome":
               return (
                 <FeaturedTreatmentsHomePreview key={blockKey} block={block} />
               );
             case "journeySteps":
-              return <JourneyStepsBlock key={blockKey} block={block} />;
+              return (
+                <JourneyStepsBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "differentiators":
-              return <DifferentiatorsBlock key={blockKey} block={block} />;
+              return (
+                <DifferentiatorsBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "homeCta":
-              return <HomeCtaBlock key={blockKey} block={block} />;
+              return (
+                <HomeCtaBlock key={blockKey} block={block} locale={locale} />
+              );
             case "storyNarrative":
               return (
                 <StoryNarrativeBlock
@@ -144,7 +162,13 @@ export function BlockPreviewRenderer({
                 />
               );
             case "leadershipGrid":
-              return <LeadershipGridBlock key={blockKey} block={block} />;
+              return (
+                <LeadershipGridBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "statGrid":
               return (
                 <StatGridBlock key={blockKey} block={block} locale={locale} />
