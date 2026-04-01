@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { buildHeroOverlayGradient } from "@/lib/heroOverlay";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
@@ -10,8 +12,10 @@ const HERO_MIN_HEIGHT_CLASS = "min-h-[calc(100svh-4.5rem)]";
 
 export function AboutHeroBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"aboutHero">;
+  locale?: PublicLocale;
 }) {
   const blockWithStyle = withBlockStyleDefaults(block, {
     background: {
@@ -62,17 +66,17 @@ export function AboutHeroBlock({
                 <div className="space-y-6">
                   {block.eyebrow ? (
                     <span className="inline-flex items-center rounded-full border border-[hsl(var(--editorial-ink-foreground)/0.2)] bg-[hsl(var(--editorial-ink-foreground)/0.08)] px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-[hsl(var(--editorial-accent))]">
-                      {block.eyebrow}
+                      {localizeOptionalDigits(block.eyebrow, locale)}
                     </span>
                   ) : null}
 
                   <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-white md:text-6xl md:leading-[1.02]">
-                    {block.heading}
+                    {localizeOptionalDigits(block.heading, locale)}
                   </h1>
 
                   {block.description ? (
                     <p className="max-w-2xl text-base leading-7 text-[hsl(var(--editorial-ink-muted))] md:text-lg">
-                      {block.description}
+                      {localizeOptionalDigits(block.description, locale)}
                     </p>
                   ) : null}
 
@@ -109,7 +113,7 @@ export function AboutHeroBlock({
                                   : undefined
                               }
                             >
-                              {action?.label}
+                              {localizeOptionalDigits(action?.label, locale)}
                             </Link>
                           </Button>
                         );
@@ -128,10 +132,10 @@ export function AboutHeroBlock({
                     className="space-y-2 border-l border-[hsl(var(--editorial-accent)/0.28)] pl-4"
                   >
                     <p className="text-xs font-medium uppercase tracking-[0.22em] text-[hsl(var(--editorial-accent))]">
-                      {highlight.kicker}
+                      {localizeOptionalDigits(highlight.kicker, locale)}
                     </p>
                     <p className="text-sm leading-6 text-[hsl(var(--editorial-ink-foreground))] md:text-base">
-                      {highlight.label}
+                      {localizeOptionalDigits(highlight.label, locale)}
                     </p>
                   </div>
                 ))}
