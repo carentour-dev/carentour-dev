@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getLocale } from "next-intl/server";
 import type { PublicLocale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance } from "@/lib/cms/blocks";
@@ -29,12 +28,13 @@ const formatRating = (
   return ratingLabel;
 };
 
-export async function HotelShowcaseBlock({
+export function HotelShowcaseBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"hotelShowcase">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   const isComparisonLayout =
     block.layout === "grid" && block.items.length === 3;
   const layoutClass =
