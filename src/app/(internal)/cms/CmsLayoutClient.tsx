@@ -17,8 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { supabase } from "@/integrations/supabase/client";
 import {
   createEntitlementContext,
   hasOperationsEntry,
@@ -44,32 +43,89 @@ const NAV_ITEMS = [
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [sessionMissing, setSessionMissing] = useState(false);
+  const [resolvedPermissions, setResolvedPermissions] = useState<string[]>([]);
+  const [resolvedRoles, setResolvedRoles] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !profileLoading) {
-      setInitialAccessResolved(true);
-    }
-  }, [authLoading, profileLoading]);
+    let isActive = true;
 
-  useEffect(() => {
-    if (initialAccessResolved && !authLoading && !user) {
-      router.replace("/auth");
-    }
-  }, [authLoading, initialAccessResolved, router, user]);
+    const check = async () => {
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-  const resolvedPermissions = useMemo(
-    () => profile?.permissions ?? [],
-    [profile?.permissions],
-  );
-  const resolvedRoles = useMemo(() => profile?.roles ?? [], [profile?.roles]);
-  const isAuthorized = hasCmsWorkspaceAccess(
-    resolvedPermissions,
-    resolvedRoles,
-  );
-  const isLoading = authLoading || profileLoading;
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        if (!session) {
+          if (!isActive) {
+            return;
+          }
+
+          setSessionMissing(true);
+          setAuthorized(false);
+          router.replace("/auth");
+          return;
+        }
+
+        const [permissionsResult, rolesResult] = await Promise.all([
+          supabase.rpc("current_user_permissions"),
+          supabase.rpc("current_user_roles"),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        if (permissionsResult.error) {
+          console.error(
+            "Failed to resolve CMS permissions",
+            permissionsResult.error,
+          );
+        }
+
+        if (rolesResult.error) {
+          console.error("Failed to resolve CMS roles", rolesResult.error);
+        }
+
+        const normalizedPermissions = Array.isArray(permissionsResult.data)
+          ? permissionsResult.data
+          : [];
+        const normalizedRoles = Array.isArray(rolesResult.data)
+          ? rolesResult.data
+          : [];
+
+        setSessionMissing(false);
+        setResolvedPermissions(normalizedPermissions);
+        setResolvedRoles(normalizedRoles);
+        setAuthorized(
+          hasCmsWorkspaceAccess(normalizedPermissions, normalizedRoles),
+        );
+      } catch (error) {
+        console.error("Failed to initialize CMS access", error);
+
+        if (!isActive) {
+          return;
+        }
+
+        setSessionMissing(false);
+        setResolvedPermissions([]);
+        setResolvedRoles([]);
+        setAuthorized(false);
+      }
+    };
+
+    check();
+
+    return () => {
+      isActive = false;
+    };
+  }, [router]);
 
   const operationsEntitlements = useMemo(
     () =>
@@ -129,7 +185,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     ],
   );
 
-  if (!initialAccessResolved) {
+  if (authorized === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -138,7 +194,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!authLoading && !user) {
+  if (sessionMissing) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
@@ -156,7 +212,7 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!isAuthorized && !isLoading) {
+  if (!authorized) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
