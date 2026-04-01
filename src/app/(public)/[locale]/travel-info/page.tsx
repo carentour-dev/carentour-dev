@@ -210,7 +210,7 @@ export default async function TravelInfoPage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlockRenderer blocks={blocks} />
+      <BlockRenderer blocks={blocks} locale={locale} />
     </>
   );
 }
