@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -23,8 +24,25 @@ import {
   type NavigationLink,
 } from "@/lib/navigation";
 import { useInitialNavigationLinks } from "@/components/navigation/NavigationProvider";
+import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
+import {
+  formatPhoneNumberForDisplay,
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_EMAIL_HREF,
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+  PUBLIC_CONTACT_PHONE_HREF,
+} from "@/lib/public/contact";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
+import LanguageSwitcher from "@/components/public/LanguageSwitcher";
+import { usePublicShellOwner } from "@/components/public/PublicShellContext";
 
-const Header = () => {
+const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
+  const shellOwned = usePublicShellOwner();
+  const t = useTranslations("Header");
+  const locale = useLocale() as PublicLocale;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { user, signOut } = useAuth();
@@ -34,29 +52,45 @@ const Header = () => {
     mounted && resolvedTheme === "dark"
       ? "/carentour-logo-light.png"
       : "/carentour-logo-dark.png";
+  const phoneNumber = formatPhoneNumberForDisplay(
+    PUBLIC_CONTACT_PHONE_DISPLAY,
+    locale,
+  );
 
   const initialNavigationLinks = useInitialNavigationLinks();
-  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>(() =>
-    initialNavigationLinks.filter(isNavigationVisible),
+  const visibleInitialNavigationLinks =
+    initialNavigationLinks.filter(isNavigationVisible);
+  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>(
+    () => visibleInitialNavigationLinks,
   );
   const [loadingNavigation, setLoadingNavigation] = useState(
-    () => initialNavigationLinks.filter(isNavigationVisible).length === 0,
+    () => visibleInitialNavigationLinks.length === 0,
   );
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useLayoutEffect(() => {
+    const nextNavigationLinks =
+      initialNavigationLinks.filter(isNavigationVisible);
+    setNavigationLinks(nextNavigationLinks);
+    setLoadingNavigation(nextNavigationLinks.length === 0);
+  }, [initialNavigationLinks]);
+
   useEffect(() => {
     let isSubscribed = true;
-    const hasInitialNavigation = initialNavigationLinks.length > 0;
+    const hasInitialNavigation = visibleInitialNavigationLinks.length > 0;
     const loadNavigation = async () => {
       if (!hasInitialNavigation) {
         setLoadingNavigation(true);
       }
-      const result = await fetchNavigationLinks();
+      const result = await fetchNavigationLinks(locale);
       if (!isSubscribed) return;
-      const merged = mergeWithFallback(result.links);
+      const merged =
+        locale === defaultPublicLocale
+          ? mergeWithFallback(result.links)
+          : result.links;
       setNavigationLinks(merged.filter(isNavigationVisible));
       setLoadingNavigation(false);
     };
@@ -66,31 +100,42 @@ const Header = () => {
     return () => {
       isSubscribed = false;
     };
-  }, [initialNavigationLinks.length]);
+  }, [locale, visibleInitialNavigationLinks.length]);
 
   const displayedNavigationLinks =
     navigationLinks.length > 0
       ? navigationLinks
       : loadingNavigation
         ? []
-        : getFallbackNavigationLinks();
+        : locale === defaultPublicLocale
+          ? getFallbackNavigationLinks()
+          : [];
+
+  if (shellOwned && !forceRender) {
+    return null;
+  }
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
         {/* Top bar with contact info */}
         <div className="hidden md:flex items-center justify-between py-2 text-sm border-b border-border/50">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-primary" />
-              <span className="text-muted-foreground">+20 122 9503333</span>
+              <bdi dir="ltr" className="text-muted-foreground">
+                {phoneNumber}
+              </bdi>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              <span className="text-muted-foreground">info@carentour.com</span>
+              <bdi dir="ltr" className="text-muted-foreground">
+                {PUBLIC_CONTACT_EMAIL}
+              </bdi>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
             {user ? (
               <>
@@ -98,23 +143,32 @@ const Header = () => {
                   href="/dashboard"
                   className="text-sm text-muted-foreground hidden lg:inline hover:text-primary transition-smooth"
                 >
-                  Welcome, {profile?.displayName || "User"}
+                  {t("dashboardGreeting", {
+                    name: profile?.displayName || t("userFallback"),
+                  })}
                 </Link>
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" />
-                  Sign Out
+                  {t("signOut")}
                 </Button>
               </>
             ) : (
               <Link href="/auth">
                 <Button variant="ghost" size="sm">
                   <User className="h-4 w-4 mr-1" />
-                  Sign In
+                  {t("signIn")}
                 </Button>
               </Link>
             )}
             <Button variant="premium" size="sm" asChild>
-              <Link href="/consultation">Get Free Consultation</Link>
+              <Link
+                href={localizePublicPathnameWithFallback(
+                  "/consultation",
+                  locale,
+                )}
+              >
+                {t("consultationCta")}
+              </Link>
             </Button>
           </div>
         </div>
@@ -122,7 +176,10 @@ const Header = () => {
         {/* Main navigation */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
+            <Link
+              href={localizePublicPathname("/", locale)}
+              className="flex items-center"
+            >
               <Image
                 src={logoSrc}
                 alt="Care N Tour"
@@ -135,7 +192,7 @@ const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex flex-1 flex-nowrap items-center justify-center gap-3 md:gap-4 lg:gap-6 xl:gap-8 ml-10">
+          <nav className="hidden flex-1 flex-nowrap items-center justify-center gap-3 md:flex md:gap-4 lg:gap-6 xl:gap-8 md:[margin-inline-start:2.5rem]">
             {displayedNavigationLinks.map((item) => (
               <Link
                 key={item.id}
@@ -158,7 +215,7 @@ const Header = () => {
               shouldScaleBackground={false}
             >
               <DrawerTrigger asChild>
-                <button className="md:hidden" aria-label="Toggle menu">
+                <button className="md:hidden" aria-label={t("toggleMenu")}>
                   {isMenuOpen ? (
                     <X className="h-6 w-6 text-foreground" />
                   ) : (
@@ -175,7 +232,7 @@ const Header = () => {
                 >
                   <div className="flex items-center justify-between px-5 pb-3 pt-5">
                     <DrawerClose asChild>
-                      <Link href="/">
+                      <Link href={localizePublicPathname("/", locale)}>
                         <Image
                           src={logoSrc}
                           alt="Care N Tour"
@@ -187,7 +244,7 @@ const Header = () => {
                     </DrawerClose>
                     <DrawerClose asChild>
                       <button
-                        aria-label="Close menu"
+                        aria-label={t("closeMenu")}
                         className="rounded-md p-2 hover:bg-muted transition-smooth"
                       >
                         <X className="h-6 w-6 text-foreground" />
@@ -207,6 +264,9 @@ const Header = () => {
                         </DrawerClose>
                       ))}
                     </div>
+                    <div className="mt-6 border-t border-border/50 pt-4">
+                      <LanguageSwitcher />
+                    </div>
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6">
                       {user ? (
                         <DrawerClose asChild>
@@ -216,7 +276,7 @@ const Header = () => {
                             onClick={signOut}
                           >
                             <LogOut className="h-4 w-4 mr-2" />
-                            Sign Out
+                            {t("signOut")}
                           </Button>
                         </DrawerClose>
                       ) : (
@@ -228,33 +288,38 @@ const Header = () => {
                           >
                             <Link href="/auth">
                               <User className="h-4 w-4 mr-2" />
-                              Sign In
+                              {t("signIn")}
                             </Link>
                           </Button>
                         </DrawerClose>
                       )}
                       <DrawerClose asChild>
                         <Button variant="premium" className="w-full" asChild>
-                          <Link href="/consultation">
-                            Get Free Consultation
+                          <Link
+                            href={localizePublicPathnameWithFallback(
+                              "/consultation",
+                              locale,
+                            )}
+                          >
+                            {t("consultationCta")}
                           </Link>
                         </Button>
                       </DrawerClose>
                     </div>
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6 text-sm text-muted-foreground">
                       <a
-                        href="tel:+201229503333"
+                        href={PUBLIC_CONTACT_PHONE_HREF}
                         className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
                       >
                         <Phone className="h-5 w-5 text-primary" />
-                        +20 122 9503333
+                        <bdi dir="ltr">{phoneNumber}</bdi>
                       </a>
                       <a
-                        href="mailto:info@carentour.com"
+                        href={PUBLIC_CONTACT_EMAIL_HREF}
                         className="flex items-center gap-3 text-foreground hover:text-primary transition-smooth"
                       >
                         <Mail className="h-5 w-5 text-primary" />
-                        info@carentour.com
+                        <bdi dir="ltr">{PUBLIC_CONTACT_EMAIL}</bdi>
                       </a>
                     </div>
                   </div>
