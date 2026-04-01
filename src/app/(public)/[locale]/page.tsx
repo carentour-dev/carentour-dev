@@ -131,7 +131,7 @@ export default async function HomePage({ params }: PageProps) {
     return (
       <>
         <StructuredDataScripts payload={seo.jsonLd} />
-        <BlockRenderer blocks={cmsPage.content} />
+        <BlockRenderer blocks={cmsPage.content} locale={locale} />
       </>
     );
   }
