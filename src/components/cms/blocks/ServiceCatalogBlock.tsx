@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getLocale } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
@@ -7,12 +6,13 @@ import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
 
-export async function ServiceCatalogBlock({
+export function ServiceCatalogBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"serviceCatalog">;
+  locale?: PublicLocale;
 }) {
-  const locale = (await getLocale()) as PublicLocale;
   return (
     <BlockSurface
       block={block}
