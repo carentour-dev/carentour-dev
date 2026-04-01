@@ -1,11 +1,19 @@
-import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
+import { getLocale } from "next-intl/server";
+import type { PublicLocale } from "@/i18n/routing";
+import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
 import { resolveIcon } from "./utils";
 
-export function StatGridBlock({ block }: { block: BlockInstance<"statGrid"> }) {
+export async function StatGridBlock({
+  block,
+}: {
+  block: BlockInstance<"statGrid">;
+}) {
+  const locale = (await getLocale()) as PublicLocale;
   const IconSize = 28;
   const blockWithStyle = withBlockStyleDefaults(block, {
     background: {
@@ -49,12 +57,12 @@ export function StatGridBlock({ block }: { block: BlockInstance<"statGrid"> }) {
             <div className={cn("mb-4 max-w-3xl space-y-3", headingAlignClass)}>
               {blockWithStyle.eyebrow ? (
                 <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  {blockWithStyle.eyebrow}
+                  {localizeOptionalDigits(blockWithStyle.eyebrow, locale)}
                 </span>
               ) : null}
               {blockWithStyle.heading ? (
                 <h2 className="text-3xl font-semibold text-foreground">
-                  {blockWithStyle.heading}
+                  {localizeOptionalDigits(blockWithStyle.heading, locale)}
                 </h2>
               ) : null}
               {blockWithStyle.description ? (
@@ -64,7 +72,7 @@ export function StatGridBlock({ block }: { block: BlockInstance<"statGrid"> }) {
                     descriptionAlignClass,
                   )}
                 >
-                  {blockWithStyle.description}
+                  {localizeOptionalDigits(blockWithStyle.description, locale)}
                 </p>
               ) : null}
             </div>
@@ -99,14 +107,14 @@ export function StatGridBlock({ block }: { block: BlockInstance<"statGrid"> }) {
                         : "text-muted-foreground",
                     )}
                   >
-                    {item.value}
+                    {localizeOptionalDigits(item.value, locale)}
                   </p>
                   <p className="text-muted-foreground transition-colors duration-300 group-hover/stat:text-foreground">
-                    {item.label}
+                    {localizeOptionalDigits(item.label, locale)}
                   </p>
                   {item.helper ? (
                     <p className="mt-2 text-sm text-muted-foreground/80">
-                      {item.helper}
+                      {localizeOptionalDigits(item.helper, locale)}
                     </p>
                   ) : null}
                 </div>
