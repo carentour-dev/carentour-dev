@@ -10,9 +10,12 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { useLocale } from "next-intl";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getPublicNumberLocale } from "@/lib/public/numbers";
 import { isRemoteImageUrl } from "@/lib/treatments";
 
 type TreatmentSpecialtyCard = {
@@ -41,18 +44,6 @@ type TreatmentSpecialtiesCatalogProps = {
   cards: TreatmentSpecialtyCard[];
 };
 
-const formatCurrency = (value: number, currency?: string) => {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "USD",
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch (error) {
-    return `$${value.toLocaleString()}`;
-  }
-};
-
 export function TreatmentSpecialtiesCatalog({
   eyebrow,
   heading,
@@ -66,11 +57,17 @@ export function TreatmentSpecialtiesCatalog({
   secondaryActionLabel,
   cards,
 }: TreatmentSpecialtiesCatalogProps) {
+  const locale = useLocale() as PublicLocale;
   const [searchTerm, setSearchTerm] = useState("");
   const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
     Record<string, true>
   >({});
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const isArabicLocale = locale === "ar";
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(getPublicNumberLocale(locale)),
+    [locale],
+  );
 
   const filteredCards = useMemo(() => {
     const query = deferredSearchTerm.trim().toLowerCase();
@@ -147,8 +144,12 @@ export function TreatmentSpecialtiesCatalog({
           </div>
           <p className="mt-3 text-center text-sm text-muted-foreground dark:text-slate-600">
             {searchTerm
-              ? `Showing ${visibleCards.length} of ${cards.length} specialties`
-              : `Showing ${visibleCards.length} specialties`}
+              ? isArabicLocale
+                ? `يتم عرض ${numberFormatter.format(visibleCards.length)} من ${numberFormatter.format(cards.length)} تخصصات`
+                : `Showing ${visibleCards.length} of ${cards.length} specialties`
+              : isArabicLocale
+                ? `يتم عرض ${numberFormatter.format(visibleCards.length)} تخصصات`
+                : `Showing ${visibleCards.length} specialties`}
           </p>
         </div>
       ) : null}
@@ -167,7 +168,7 @@ export function TreatmentSpecialtiesCatalog({
               className="mt-6"
               onClick={() => setSearchTerm("")}
             >
-              Clear search
+              {isArabicLocale ? "مسح البحث" : "Clear search"}
             </Button>
           ) : null}
         </div>
@@ -176,8 +177,14 @@ export function TreatmentSpecialtiesCatalog({
           {visibleCards.map((card) => {
             const basePriceLabel =
               card.basePrice !== null
-                ? formatCurrency(card.basePrice, card.currency)
-                : "Contact us for pricing";
+                ? new Intl.NumberFormat(isArabicLocale ? "ar-EG" : "en-US", {
+                    style: "currency",
+                    currency: card.currency || "USD",
+                    maximumFractionDigits: 0,
+                  }).format(card.basePrice)
+                : isArabicLocale
+                  ? "تواصل معنا لمعرفة السعر"
+                  : "Contact us for pricing";
             const imageSrc = imageFallbackByTreatmentId[card.id]
               ? card.fallbackImage
               : card.image;
