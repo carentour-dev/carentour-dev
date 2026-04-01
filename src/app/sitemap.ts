@@ -4,6 +4,8 @@ import {
   getPublicRouteInventory,
   isInternalNoindexPath,
 } from "@/lib/seo";
+import { getPublicLocaleAvailability } from "@/lib/public/localization";
+import { localizePublicPathname } from "@/lib/public/routing";
 
 export const dynamic = "force-dynamic";
 
@@ -39,10 +41,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     unique.set(entry.pathname, entry);
   }
 
-  return [...unique.values()].map((entry) => ({
-    url: `${CANONICAL_ORIGIN}${entry.pathname}`,
-    lastModified: entry.updatedAt ? new Date(entry.updatedAt) : new Date(),
-    changeFrequency: resolveFrequency(entry.pathname),
-    priority: resolvePriority(entry.pathname),
-  }));
+  const sitemapEntries: MetadataRoute.Sitemap = [];
+
+  for (const entry of unique.values()) {
+    sitemapEntries.push({
+      url: `${CANONICAL_ORIGIN}${entry.pathname}`,
+      lastModified: entry.updatedAt ? new Date(entry.updatedAt) : new Date(),
+      changeFrequency: resolveFrequency(entry.pathname),
+      priority: resolvePriority(entry.pathname),
+    });
+
+    if (await getPublicLocaleAvailability(entry.pathname, "ar")) {
+      sitemapEntries.push({
+        url: `${CANONICAL_ORIGIN}${localizePublicPathname(entry.pathname, "ar")}`,
+        lastModified: entry.updatedAt ? new Date(entry.updatedAt) : new Date(),
+        changeFrequency: resolveFrequency(entry.pathname),
+        priority: resolvePriority(entry.pathname),
+      });
+    }
+  }
+
+  return sitemapEntries;
 }
