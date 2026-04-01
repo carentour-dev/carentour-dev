@@ -1,5 +1,7 @@
+import { getLocale } from "next-intl/server";
 import type { BlockInstance } from "@/lib/cms/blocks";
-import { getFaqsWithFallbackCached } from "@/lib/faq/queries";
+import { type PublicLocale } from "@/i18n/routing";
+import { getLocalizedFaqs } from "@/lib/public/localization";
 import { BlockSurface } from "./BlockSurface";
 import { FaqDirectoryContent } from "./FaqDirectoryContent";
 
@@ -8,7 +10,8 @@ export async function FaqDirectoryBlock({
 }: {
   block: BlockInstance<"faqDirectory">;
 }) {
-  const faqResult = await getFaqsWithFallbackCached();
+  const locale = (await getLocale()) as PublicLocale;
+  const faqResult = await getLocalizedFaqs(locale);
 
   if (!faqResult.faqs.length) {
     return null;
@@ -27,6 +30,7 @@ export async function FaqDirectoryBlock({
           heading={block.heading}
           description={block.description}
           layout={block.layout}
+          locale={locale}
           navigationHeading={block.navigationHeading}
           showSearch={block.showSearch}
           showCategoryDescriptions={block.showCategoryDescriptions}
