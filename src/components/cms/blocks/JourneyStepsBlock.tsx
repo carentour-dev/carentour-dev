@@ -1,10 +1,13 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { JourneyStepsSection } from "@/components/home";
 
 export function JourneyStepsBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"journeySteps">;
+  locale?: PublicLocale;
 }) {
   const steps = block.steps.map((step) => ({
     title: step.title ?? "",
@@ -18,6 +21,7 @@ export function JourneyStepsBlock({
       highlight={block.highlight}
       description={block.description}
       steps={steps}
+      locale={locale}
     />
   );
 }
