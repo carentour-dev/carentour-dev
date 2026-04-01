@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
 
@@ -21,6 +23,7 @@ const categorySchema = z.object({
   color: z.string().nullish(),
   fragment: z.string().nullish(),
   position: z.coerce.number().int().min(0).optional(),
+  status: z.enum(["draft", "published"]).optional(),
 });
 
 function mapRow(row: CategoryRow) {
@@ -42,6 +45,10 @@ function formatValidationError(error: z.ZodError) {
   if (!issue) return "Invalid payload";
   const path = issue.path?.length ? issue.path.join(".") : null;
   return path ? `${issue.message} (field: ${path})` : issue.message;
+}
+
+function revalidateFaqCategoryPaths() {
+  revalidateSeoPaths(["/faq", "/ar/faq"]);
 }
 
 async function categoryHasFaqs(
@@ -67,6 +74,7 @@ export async function PUT(
 ) {
   await requirePermission("cms.write");
   const { slug } = await params;
+  const locale = resolveAdminLocale(request);
   const payload = await request.json();
   const parsed = categorySchema.safeParse(payload);
 
@@ -78,6 +86,43 @@ export async function PUT(
   }
 
   const supabase = getSupabaseAdmin();
+
+  if (locale === "ar") {
+    const { data, error } = await (supabase as any)
+      .from("faq_category_translations")
+      .upsert(
+        {
+          faq_category_slug: slug,
+          locale: "ar",
+          title: parsed.data.title,
+          description: parsed.data.description ?? null,
+          status: parsed.data.status ?? "draft",
+        },
+        { onConflict: "faq_category_slug,locale" },
+      )
+      .select("title, description, status, updated_at")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateFaqCategoryPaths();
+    return NextResponse.json({
+      data: {
+        slug,
+        title: data?.title ?? parsed.data.title,
+        description: data?.description ?? parsed.data.description ?? null,
+        icon: parsed.data.icon ?? null,
+        color: parsed.data.color ?? null,
+        fragment: parsed.data.fragment ?? null,
+        position: parsed.data.position ?? 0,
+        updated_at: data?.updated_at ?? null,
+        status: data?.status ?? "published",
+      },
+    });
+  }
+
   const { data, error } = await supabase
     .from("faq_categories")
     .update({
@@ -98,6 +143,7 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateFaqCategoryPaths();
   return NextResponse.json({ data: mapRow(data!) });
 }
 
@@ -107,7 +153,23 @@ export async function DELETE(
 ) {
   await requirePermission("cms.write");
   const { slug } = await params;
+  const locale = resolveAdminLocale(_);
   const supabase = getSupabaseAdmin();
+
+  if (locale === "ar") {
+    const { error } = await (supabase as any)
+      .from("faq_category_translations")
+      .delete()
+      .eq("faq_category_slug", slug)
+      .eq("locale", "ar");
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateFaqCategoryPaths();
+    return NextResponse.json({ data: true });
+  }
 
   if (await categoryHasFaqs(supabase, slug)) {
     return NextResponse.json(
@@ -128,5 +190,6 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateFaqCategoryPaths();
   return NextResponse.json({ data: true });
 }
