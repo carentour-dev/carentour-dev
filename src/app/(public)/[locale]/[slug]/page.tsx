@@ -111,7 +111,7 @@ export default async function GenericCmsPage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlockRenderer blocks={cmsPage.content} />
+      <BlockRenderer blocks={cmsPage.content} locale={locale} />
     </>
   );
 }
