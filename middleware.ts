@@ -1,5 +1,11 @@
 import type { NextRequest } from "next/server";
+import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
+import { routing } from "@/i18n/routing";
+import {
+  localizePublicPathname,
+  stripPublicLocalePrefix,
+} from "@/lib/public/routing";
 import { isInternalNoindexPath, normalizePath } from "@/lib/seo/utils";
 
 type RedirectLookupRow = {
@@ -14,6 +20,8 @@ const supabasePublicKey =
 
 const isRedirectCode = (value: number): value is 301 | 302 | 307 | 308 =>
   value === 301 || value === 302 || value === 307 || value === 308;
+
+const intlMiddleware = createMiddleware(routing);
 
 function continueRequest(request: NextRequest) {
   const nextHeaders = new Headers(request.headers);
@@ -74,22 +82,46 @@ export async function middleware(request: NextRequest) {
   }
 
   const pathname = normalizePath(request.nextUrl.pathname);
-  if (isInternalNoindexPath(pathname)) {
+  const isFrameworkAsset =
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/api/") ||
+    pathname === "/favicon.ico" ||
+    /\.[^/]+$/.test(pathname);
+  if (isFrameworkAsset) {
     return continueRequest(request);
   }
 
-  const redirectMatch = await lookupRouteRedirect(pathname);
-  if (!redirectMatch) {
+  const basePathname = stripPublicLocalePrefix(pathname);
+  const locale =
+    pathname === "/ar" || pathname.startsWith("/ar/") ? "ar" : "en";
+
+  if (isInternalNoindexPath(basePathname)) {
     return continueRequest(request);
+  }
+
+  const redirectMatch = await lookupRouteRedirect(basePathname);
+  if (!redirectMatch) {
+    if (pathname === "/en" || pathname.startsWith("/en/")) {
+      const targetUrl = request.nextUrl.clone();
+      targetUrl.pathname = stripPublicLocalePrefix(pathname);
+      return NextResponse.redirect(targetUrl, 308);
+    }
+
+    return intlMiddleware(request);
   }
 
   const targetPath = normalizePath(redirectMatch.toPath);
-  if (targetPath === pathname) {
+  const localizedTargetPath =
+    locale === "ar" && !isInternalNoindexPath(targetPath)
+      ? localizePublicPathname(targetPath, "ar")
+      : targetPath;
+
+  if (localizedTargetPath === pathname) {
     return continueRequest(request);
   }
 
   const targetUrl = request.nextUrl.clone();
-  targetUrl.pathname = targetPath;
+  targetUrl.pathname = localizedTargetPath;
 
   return NextResponse.redirect(targetUrl, redirectMatch.code);
 }
