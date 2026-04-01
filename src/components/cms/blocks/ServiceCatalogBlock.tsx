@@ -13,6 +13,8 @@ export function ServiceCatalogBlock({
   block: BlockInstance<"serviceCatalog">;
   locale?: PublicLocale;
 }) {
+  const languagesLabel = locale === "ar" ? "اللغات" : "Languages";
+
   return (
     <BlockSurface
       block={block}
@@ -113,7 +115,7 @@ export function ServiceCatalogBlock({
                         {item.languages?.length ? (
                           <div className="space-y-2">
                             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                              Languages
+                              {languagesLabel}
                             </p>
                             <div className="flex flex-wrap gap-2">
                               {item.languages.map((language, languageIndex) => (
