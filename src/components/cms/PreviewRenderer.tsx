@@ -126,17 +126,37 @@ export function BlockPreviewRenderer({
             case "homeCta":
               return <HomeCtaBlock key={blockKey} block={block} />;
             case "storyNarrative":
-              return <StoryNarrativeBlock key={blockKey} block={block} />;
+              return (
+                <StoryNarrativeBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "missionVisionValues":
               return <MissionVisionValuesBlock key={blockKey} block={block} />;
             case "trustSignals":
-              return <TrustSignalsBlock key={blockKey} block={block} />;
+              return (
+                <TrustSignalsBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "leadershipGrid":
               return <LeadershipGridBlock key={blockKey} block={block} />;
             case "statGrid":
-              return <StatGridBlock key={blockKey} block={block} />;
+              return (
+                <StatGridBlock key={blockKey} block={block} locale={locale} />
+              );
             case "advisoryNotice":
-              return <AdvisoryNoticeBlock key={blockKey} block={block} />;
+              return (
+                <AdvisoryNoticeBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "richText":
               return <RichTextBlock key={blockKey} block={block} />;
             case "imageFeature":
@@ -150,13 +170,29 @@ export function BlockPreviewRenderer({
                 />
               );
             case "dataGrid":
-              return <DataGridBlock key={blockKey} block={block} />;
+              return (
+                <DataGridBlock key={blockKey} block={block} locale={locale} />
+              );
             case "infoPanels":
-              return <InfoPanelsBlock key={blockKey} block={block} />;
+              return (
+                <InfoPanelsBlock key={blockKey} block={block} locale={locale} />
+              );
             case "hotelShowcase":
-              return <HotelShowcaseBlock key={blockKey} block={block} />;
+              return (
+                <HotelShowcaseBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "serviceCatalog":
-              return <ServiceCatalogBlock key={blockKey} block={block} />;
+              return (
+                <ServiceCatalogBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "logoGrid":
               return <LogoGridBlock key={blockKey} block={block} />;
             case "callToAction":
