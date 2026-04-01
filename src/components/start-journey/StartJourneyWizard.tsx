@@ -1150,7 +1150,7 @@ function StartJourneyWizardContent({
           </div>
         </div>
       ) : (
-        <div className="border-b">
+        <div lang="en" dir="ltr" className="border-b">
           <div className="container mx-auto flex items-center justify-between px-4 py-4">
             <Button
               variant="ghost"
@@ -1169,6 +1169,8 @@ function StartJourneyWizardContent({
       )}
 
       <div
+        lang="en"
+        dir="ltr"
         className={cn(
           "mx-auto px-4 py-8 lg:max-w-5xl",
           isEmbedded ? "px-0 py-0" : "container",
@@ -2089,6 +2091,8 @@ function StartJourneyWizardContent({
 function StartJourneyFallback({ embedded = false }: { embedded?: boolean }) {
   return (
     <div
+      lang="en"
+      dir="ltr"
       className={cn(
         "flex items-center justify-center bg-background",
         embedded
