@@ -1,3 +1,4 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { normalizeBlocks } from "@/lib/cms/blocks";
 import type {
@@ -52,12 +53,14 @@ interface BlockRendererProps {
   blocks: unknown;
   className?: string;
   context?: CmsBlockRenderContext;
+  locale?: PublicLocale;
 }
 
 export function BlockRenderer({
   blocks,
   className,
   context,
+  locale = "en",
 }: BlockRendererProps) {
   const parsedBlocks = normalizeBlocks(blocks);
 
@@ -72,43 +75,63 @@ export function BlockRenderer({
             case "hero":
               return <HeroBlock key={key} block={block} />;
             case "homeHero":
-              return <HomeHeroBlock key={key} block={block} />;
+              return <HomeHeroBlock key={key} block={block} locale={locale} />;
             case "aboutHero":
-              return <AboutHeroBlock key={key} block={block} />;
+              return <AboutHeroBlock key={key} block={block} locale={locale} />;
             case "featuredTreatmentsHome":
               return <FeaturedTreatmentsHomeBlock key={key} block={block} />;
             case "journeySteps":
-              return <JourneyStepsBlock key={key} block={block} />;
+              return (
+                <JourneyStepsBlock key={key} block={block} locale={locale} />
+              );
             case "differentiators":
-              return <DifferentiatorsBlock key={key} block={block} />;
+              return (
+                <DifferentiatorsBlock key={key} block={block} locale={locale} />
+              );
             case "homeCta":
-              return <HomeCtaBlock key={key} block={block} />;
+              return <HomeCtaBlock key={key} block={block} locale={locale} />;
             case "storyNarrative":
-              return <StoryNarrativeBlock key={key} block={block} />;
+              return (
+                <StoryNarrativeBlock key={key} block={block} locale={locale} />
+              );
             case "missionVisionValues":
               return <MissionVisionValuesBlock key={key} block={block} />;
             case "trustSignals":
-              return <TrustSignalsBlock key={key} block={block} />;
+              return (
+                <TrustSignalsBlock key={key} block={block} locale={locale} />
+              );
             case "leadershipGrid":
-              return <LeadershipGridBlock key={key} block={block} />;
+              return (
+                <LeadershipGridBlock key={key} block={block} locale={locale} />
+              );
             case "statGrid":
-              return <StatGridBlock key={key} block={block} />;
+              return <StatGridBlock key={key} block={block} locale={locale} />;
             case "advisoryNotice":
-              return <AdvisoryNoticeBlock key={key} block={block} />;
+              return (
+                <AdvisoryNoticeBlock key={key} block={block} locale={locale} />
+              );
             case "richText":
               return <RichTextBlock key={key} block={block} />;
             case "imageFeature":
               return <ImageFeatureBlock key={key} block={block} />;
             case "featureGrid":
-              return <FeatureGridBlock key={key} block={block} />;
+              return (
+                <FeatureGridBlock key={key} block={block} locale={locale} />
+              );
             case "dataGrid":
-              return <DataGridBlock key={key} block={block} />;
+              return <DataGridBlock key={key} block={block} locale={locale} />;
             case "infoPanels":
-              return <InfoPanelsBlock key={key} block={block} />;
+              return (
+                <InfoPanelsBlock key={key} block={block} locale={locale} />
+              );
             case "hotelShowcase":
-              return <HotelShowcaseBlock key={key} block={block} />;
+              return (
+                <HotelShowcaseBlock key={key} block={block} locale={locale} />
+              );
             case "serviceCatalog":
-              return <ServiceCatalogBlock key={key} block={block} />;
+              return (
+                <ServiceCatalogBlock key={key} block={block} locale={locale} />
+              );
             case "logoGrid":
               return <LogoGridBlock key={key} block={block} />;
             case "callToAction":
@@ -116,7 +139,13 @@ export function BlockRenderer({
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={key} block={block} />;
             case "contactFormEmbed":
-              return <ContactFormEmbedBlock key={key} block={block} />;
+              return (
+                <ContactFormEmbedBlock
+                  key={key}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "faq":
               return <FaqBlock key={key} block={block} />;
             case "faqDirectory":
