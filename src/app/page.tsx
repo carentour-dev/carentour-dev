@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import Hero from "@/components/Hero";
 import FeaturedTreatments from "@/components/FeaturedTreatments";
 import ProcessSection from "@/components/ProcessSection";
@@ -8,13 +8,24 @@ import USPSection from "@/components/USPSection";
 import Testimonials from "@/components/Testimonials";
 import DoctorsSection from "@/components/DoctorsSection";
 import CTASection from "@/components/CTASection";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import AppProviders from "@/components/AppProviders";
+import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
+import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
+import { NavigationProvider } from "@/components/navigation/NavigationProvider";
+import { PublicShellProvider } from "@/components/public/PublicShellContext";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
+import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
 import {
   resolveHomeHeroImageUrl,
   shouldUseLegacyHomepageLayout,
 } from "@/lib/cms/pageSettings";
-import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
+import { type CmsPage } from "@/lib/cms/server";
+import { isNavigationVisible } from "@/lib/navigation";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
+import { getPublicDirection } from "@/lib/public/routing";
 import {
   faqPageSchema,
   maybeRedirectFromLegacyPath,
@@ -23,10 +34,12 @@ import {
   webPageSchema,
   websiteSchema,
 } from "@/lib/seo";
+import { loadPublicNavigationLinks } from "@/server/navigation";
 
 export const revalidate = 300;
 
 const PATHNAME = "/";
+const locale = defaultPublicLocale;
 
 function extractHomepageFaqs(cmsPage: CmsPage | null) {
   if (!cmsPage?.content?.length) {
@@ -43,7 +56,7 @@ function extractHomepageFaqs(cmsPage: CmsPage | null) {
   );
 }
 
-async function getSeo(cmsPage: CmsPage | null) {
+async function getSeo(cmsPage: CmsPage | null, locale: PublicLocale) {
   const title =
     typeof cmsPage?.seo?.title === "string" &&
     cmsPage.seo.title.trim().length > 0
@@ -66,6 +79,7 @@ async function getSeo(cmsPage: CmsPage | null) {
   return resolveSeo({
     routeKey: PATHNAME,
     pathname: PATHNAME,
+    locale,
     defaults: {
       title,
       description,
@@ -92,53 +106,67 @@ async function getSeo(cmsPage: CmsPage | null) {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const cmsPage = await getPublishedPageBySlug("home");
-  const seo = await getSeo(cmsPage);
+  const cmsPage = await getLocalizedCmsPageBySlug("home", locale);
+  const seo = await getSeo(cmsPage, locale);
   return seo.metadata;
 }
 
-export default async function HomePage() {
+export default async function RootHomePage() {
+  setRequestLocale(locale);
+
   await maybeRedirectFromLegacyPath(PATHNAME);
-  const cmsPage = await getPublishedPageBySlug("home");
-  const seo = await getSeo(cmsPage);
+
+  const [messages, navigationResult, cmsPage] = await Promise.all([
+    getMessages(),
+    loadPublicNavigationLinks(locale),
+    getLocalizedCmsPageBySlug("home", locale),
+  ]);
+  const seo = await getSeo(cmsPage, locale);
   const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
   const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
     cmsPage?.settings,
     cmsPage?.status,
     cmsPage?.content?.length ?? 0,
   );
-
-  if (cmsPage?.content?.length && !useLegacyHomepageLayout) {
-    return (
-      <>
-        <StructuredDataScripts payload={seo.jsonLd} />
-        <div className="min-h-screen">
-          <Header />
-          <main>
-            <BlockRenderer blocks={cmsPage.content} />
-          </main>
-          <Footer />
-        </div>
-      </>
-    );
-  }
+  const initialNavigationLinks =
+    navigationResult.links.filter(isNavigationVisible);
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <div className="min-h-screen">
-        <Header />
-        <main>
-          <Hero backgroundImageUrl={heroImageUrl} />
-          <FeaturedTreatments />
-          <ProcessSection />
-          <USPSection />
-          <DoctorsSection />
-          <Testimonials />
-          <CTASection />
-        </main>
-        <Footer />
-      </div>
+      <AppProviders>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <PublicShellProvider>
+            <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
+              <MicrosoftClarity />
+              <div
+                lang={locale}
+                dir={getPublicDirection(locale)}
+                className="flex min-h-screen flex-col"
+              >
+                <Header forceRender />
+                <main className="flex-1">
+                  {cmsPage?.content?.length && !useLegacyHomepageLayout ? (
+                    <BlockRenderer blocks={cmsPage.content} />
+                  ) : (
+                    <>
+                      <Hero backgroundImageUrl={heroImageUrl} />
+                      <FeaturedTreatments />
+                      <ProcessSection />
+                      <USPSection />
+                      <DoctorsSection />
+                      <Testimonials />
+                      <CTASection />
+                    </>
+                  )}
+                </main>
+                <Footer forceRender />
+              </div>
+              <WhatsAppCtaGate />
+            </NavigationProvider>
+          </PublicShellProvider>
+        </NextIntlClientProvider>
+      </AppProviders>
     </>
   );
 }
