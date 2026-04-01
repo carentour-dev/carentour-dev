@@ -1,10 +1,17 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { HomeHeroSection } from "@/components/home";
 import { BlockSurface } from "./BlockSurface";
 
 const HERO_MIN_HEIGHT_CLASS = "min-h-[calc(100svh-4.5rem)]";
 
-export function HomeHeroBlock({ block }: { block: BlockInstance<"homeHero"> }) {
+export function HomeHeroBlock({
+  block,
+  locale = "en",
+}: {
+  block: BlockInstance<"homeHero">;
+  locale?: PublicLocale;
+}) {
   const highlights = (block.highlights ?? []).map((highlight) => ({
     kicker: highlight.kicker ?? "",
     label: highlight.label ?? "",
@@ -35,6 +42,7 @@ export function HomeHeroBlock({ block }: { block: BlockInstance<"homeHero"> }) {
           }}
           className={HERO_MIN_HEIGHT_CLASS}
           contentColumnClassName="home-hero__content max-w-5xl"
+          locale={locale}
         />
       )}
     </BlockSurface>
