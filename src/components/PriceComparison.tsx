@@ -1,6 +1,9 @@
+import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingDown, DollarSign } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
+import { getPublicNumberLocale } from "@/lib/public/numbers";
 
 interface CountryPrice {
   country: string;
@@ -22,9 +25,14 @@ const PriceComparison = ({
   internationalPrices,
   className,
 }: PriceComparisonProps) => {
+  const t = useTranslations("PriceComparison");
+  const locale = useLocale() as PublicLocale;
+
   if (internationalPrices.length === 0) {
     return null;
   }
+
+  const numberFormatter = new Intl.NumberFormat(getPublicNumberLocale(locale));
 
   const calculateSavings = (internationalPrice: number) => {
     const savings = internationalPrice - egyptPrice;
@@ -47,7 +55,7 @@ const PriceComparison = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <DollarSign className="h-5 w-5 text-primary" />
-          Price Comparison - {treatment}
+          {t("title", { treatment })}
         </CardTitle>
         <div className="flex items-center gap-2">
           <Badge
@@ -55,7 +63,7 @@ const PriceComparison = ({
             className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
           >
             <TrendingDown className="h-3 w-3 mr-1" />
-            Save up to {Math.round(averageSavings)}%
+            {t("saveUpTo", { percentage: Math.round(averageSavings) })}
           </Badge>
         </div>
       </CardHeader>
@@ -67,15 +75,19 @@ const PriceComparison = ({
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🇪🇬</span>
                 <div>
-                  <h4 className="font-semibold text-foreground">Egypt</h4>
-                  <p className="text-sm text-muted-foreground">Our Price</p>
+                  <h4 className="font-semibold text-foreground">
+                    {t("egypt")}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {t("ourPrice")}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-primary">
-                  ${egyptPrice.toLocaleString()}
+                  ${numberFormatter.format(egyptPrice)}
                 </p>
-                <p className="text-sm text-primary">Best Value</p>
+                <p className="text-sm text-primary">{t("bestValue")}</p>
               </div>
             </div>
           </div>
@@ -97,20 +109,22 @@ const PriceComparison = ({
                           {country.country}
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                          Typical Cost
+                          {t("typicalCost")}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-foreground">
                         {country.currency}
-                        {country.price.toLocaleString()}
+                        {numberFormatter.format(country.price)}
                       </p>
                       <div className="flex items-center gap-1">
                         <TrendingDown className="h-3 w-3 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
-                          Save ${savings.amount.toLocaleString()} (
-                          {savings.percentage}%)
+                          {t("saveAmount", {
+                            amount: `$${numberFormatter.format(savings.amount)}`,
+                            percentage: savings.percentage,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -124,14 +138,15 @@ const PriceComparison = ({
           <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <div className="text-center">
               <p className="text-sm text-green-700 dark:text-green-300 mb-1">
-                Average Savings
+                {t("averageSavings")}
               </p>
               <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                ${Math.round(totalAverageSavings).toLocaleString()}
+                ${numberFormatter.format(Math.round(totalAverageSavings))}
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                Up to {Math.round(averageSavings)}% less than international
-                prices
+                {t("averageSavingsDescription", {
+                  percentage: Math.round(averageSavings),
+                })}
               </p>
             </div>
           </div>
