@@ -24,6 +24,53 @@ const toneStyles = {
   },
 } as const;
 
+function getAdvisoryLabel(
+  key:
+    | "lastReviewed"
+    | "appliesTo"
+    | "planningScope"
+    | "importantToKeepInMind"
+    | "tone",
+  locale: PublicLocale,
+  tone: BlockInstance<"advisoryNotice">["tone"],
+) {
+  if (locale === "ar") {
+    switch (key) {
+      case "lastReviewed":
+        return "آخر مراجعة";
+      case "appliesTo":
+        return "ينطبق على";
+      case "planningScope":
+        return "نطاق التخطيط";
+      case "importantToKeepInMind":
+        return "أمور مهمة يجب الانتباه لها";
+      case "tone":
+        return tone === "warning"
+          ? "مهم"
+          : tone === "neutral"
+            ? "مُراجع"
+            : "إرشادات محدثة";
+    }
+  }
+
+  switch (key) {
+    case "lastReviewed":
+      return "Last reviewed";
+    case "appliesTo":
+      return "Applies to";
+    case "planningScope":
+      return "Planning scope";
+    case "importantToKeepInMind":
+      return "Important To Keep In Mind";
+    case "tone":
+      return tone === "warning"
+        ? "Important"
+        : tone === "neutral"
+          ? "Verified"
+          : "Updated guidance";
+  }
+}
+
 export function AdvisoryNoticeBlock({
   block,
   locale = "en",
@@ -34,9 +81,18 @@ export function AdvisoryNoticeBlock({
   const tone = toneStyles[block.tone];
   const ToneIcon = tone.icon;
   const facts = [
-    { label: "Last reviewed", value: block.lastReviewed },
-    { label: "Applies to", value: block.appliesTo },
-    { label: "Planning scope", value: block.planningScope },
+    {
+      label: getAdvisoryLabel("lastReviewed", locale, block.tone),
+      value: block.lastReviewed,
+    },
+    {
+      label: getAdvisoryLabel("appliesTo", locale, block.tone),
+      value: block.appliesTo,
+    },
+    {
+      label: getAdvisoryLabel("planningScope", locale, block.tone),
+      value: block.planningScope,
+    },
   ].filter(
     (item): item is { label: string; value: string } =>
       typeof item.value === "string" && item.value.trim().length > 0,
@@ -64,11 +120,7 @@ export function AdvisoryNoticeBlock({
                   tone.accentClass,
                 ].join(" ")}
               >
-                {block.tone === "warning"
-                  ? "Important"
-                  : block.tone === "neutral"
-                    ? "Verified"
-                    : "Updated guidance"}
+                {getAdvisoryLabel("tone", locale, block.tone)}
               </span>
             </div>
 
@@ -121,7 +173,11 @@ export function AdvisoryNoticeBlock({
               <div className="grid gap-8 border-t border-border pt-8 dark:border-slate-200 lg:grid-cols-[0.75fr_1.25fr]">
                 <div className="space-y-3">
                   <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground dark:text-slate-500">
-                    Important To Keep In Mind
+                    {getAdvisoryLabel(
+                      "importantToKeepInMind",
+                      locale,
+                      block.tone,
+                    )}
                   </p>
                   {block.disclaimer ? (
                     <p className="text-base leading-7 text-muted-foreground dark:text-slate-600">
@@ -168,7 +224,7 @@ export function AdvisoryNoticeBlock({
                                 : undefined
                             }
                           >
-                            {action.label}
+                            {localizeOptionalDigits(action.label, locale)}
                           </Link>
                         </Button>
                       ))}
