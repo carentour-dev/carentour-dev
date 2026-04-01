@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { AlertCircle, AlertTriangle, Info, ShieldCheck } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 
 const toneStyles = {
@@ -22,11 +25,12 @@ const toneStyles = {
   },
 } as const;
 
-export function AdvisoryNoticeBlock({
+export async function AdvisoryNoticeBlock({
   block,
 }: {
   block: BlockInstance<"advisoryNotice">;
 }) {
+  const locale = (await getLocale()) as PublicLocale;
   const tone = toneStyles[block.tone];
   const ToneIcon = tone.icon;
   const facts = [
@@ -51,7 +55,7 @@ export function AdvisoryNoticeBlock({
             <div className="flex flex-wrap items-center gap-3">
               {block.eyebrow ? (
                 <span className="inline-flex items-center rounded-full border border-border/70 bg-card/90 px-4 py-2 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground dark:border-slate-200 dark:bg-white dark:text-slate-500">
-                  {block.eyebrow}
+                  {localizeOptionalDigits(block.eyebrow, locale)}
                 </span>
               ) : null}
               <span
@@ -70,11 +74,11 @@ export function AdvisoryNoticeBlock({
 
             <div className="space-y-4">
               <h2 className="text-3xl font-semibold leading-tight text-foreground dark:text-slate-950 md:text-5xl">
-                {block.heading}
+                {localizeOptionalDigits(block.heading, locale)}
               </h2>
               {block.description ? (
                 <p className="max-w-xl text-lg leading-8 text-muted-foreground dark:text-slate-600 md:text-xl">
-                  {block.description}
+                  {localizeOptionalDigits(block.description, locale)}
                 </p>
               ) : null}
             </div>
@@ -93,14 +97,17 @@ export function AdvisoryNoticeBlock({
                         " ",
                       )}
                     >
-                      {String(index + 1).padStart(2, "0")}
+                      {localizeDigits(
+                        String(index + 1).padStart(2, "0"),
+                        locale,
+                      )}
                     </span>
                     <div className="space-y-2">
                       <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground dark:text-slate-500">
                         {fact.label}
                       </p>
                       <p className="text-base leading-7 text-muted-foreground dark:text-slate-600">
-                        {fact.value}
+                        {localizeOptionalDigits(fact.value, locale)}
                       </p>
                     </div>
                   </div>
@@ -118,7 +125,7 @@ export function AdvisoryNoticeBlock({
                   </p>
                   {block.disclaimer ? (
                     <p className="text-base leading-7 text-muted-foreground dark:text-slate-600">
-                      {block.disclaimer}
+                      {localizeOptionalDigits(block.disclaimer, locale)}
                     </p>
                   ) : null}
                 </div>
@@ -136,7 +143,7 @@ export function AdvisoryNoticeBlock({
                         ].join(" ")}
                       />
                       <p className="text-base leading-7 text-muted-foreground dark:text-slate-600">
-                        {item}
+                        {localizeOptionalDigits(item, locale)}
                       </p>
                     </div>
                   ))}
