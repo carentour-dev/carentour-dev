@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,13 @@ import {
   type NavigationLink,
 } from "@/lib/navigation";
 import { useInitialNavigationLinks } from "@/components/navigation/NavigationProvider";
+import { type PublicLocale } from "@/i18n/routing";
+import {
+  formatPhoneNumberForDisplay,
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+} from "@/lib/public/contact";
+import { usePublicShellOwner } from "@/components/public/PublicShellContext";
 
 const socialLinks = [
   {
@@ -43,7 +51,10 @@ const socialLinks = [
   },
 ];
 
-const Footer = () => {
+const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
+  const shellOwned = usePublicShellOwner();
+  const t = useTranslations("Footer");
+  const locale = useLocale() as PublicLocale;
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
@@ -53,21 +64,28 @@ const Footer = () => {
     selectQuickLinks(initialNavigationLinks),
   );
   const currentYear = new Date().getFullYear();
+  const phoneNumber = formatPhoneNumberForDisplay(
+    PUBLIC_CONTACT_PHONE_DISPLAY,
+    locale,
+  );
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useLayoutEffect(() => {
+    setQuickLinks(selectQuickLinks(initialNavigationLinks));
+  }, [initialNavigationLinks]);
+
   useEffect(() => {
     let isSubscribed = true;
     if (initialNavigationLinks.length > 0) {
-      setQuickLinks(selectQuickLinks(initialNavigationLinks));
       return () => {
         isSubscribed = false;
       };
     }
     const loadNavigation = async () => {
-      const result = await fetchNavigationLinks();
+      const result = await fetchNavigationLinks(locale);
       if (!isSubscribed) return;
       const merged = mergeWithFallback(result.links);
       setQuickLinks(selectQuickLinks(merged));
@@ -78,7 +96,11 @@ const Footer = () => {
     return () => {
       isSubscribed = false;
     };
-  }, [initialNavigationLinks]);
+  }, [initialNavigationLinks, locale]);
+
+  if (shellOwned && !forceRender) {
+    return null;
+  }
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,18 +129,15 @@ const Footer = () => {
               height={94}
               className="mb-4 h-[72px] w-auto max-w-[280px] object-contain"
             />
-            <p className="mb-6 text-muted-foreground">
-              Your trusted partner for premium medical care in Egypt. Combining
-              excellence in healthcare with exceptional hospitality.
-            </p>
-            <div className="flex space-x-4">
+            <p className="mb-6 text-muted-foreground">{t("description")}</p>
+            <div className="flex gap-4">
               {socialLinks.map(({ label, href, Icon }) => (
                 <Link
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noreferrer noopener"
-                  aria-label={`Visit our ${label}`}
+                  aria-label={t("visitSocial", { label })}
                   className="text-muted-foreground transition-smooth hover:text-foreground"
                 >
                   <Icon className="h-5 w-5" />
@@ -130,7 +149,7 @@ const Footer = () => {
           {/* Quick Links */}
           <div>
             <h4 className="mb-4 text-lg font-semibold text-foreground">
-              Quick Links
+              {t("quickLinks")}
             </h4>
             <ul className="space-y-2">
               {quickLinks.map((link) => (
@@ -149,22 +168,24 @@ const Footer = () => {
           {/* Contact Info */}
           <div>
             <h4 className="mb-4 text-lg font-semibold text-foreground">
-              Contact Info
+              {t("contactInfo")}
             </h4>
             <div className="space-y-3">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">+20 122 9503333</span>
+                <bdi dir="ltr" className="text-muted-foreground">
+                  {phoneNumber}
+                </bdi>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  info@carentour.com
-                </span>
+                <bdi dir="ltr" className="text-muted-foreground">
+                  {PUBLIC_CONTACT_EMAIL}
+                </bdi>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">Cairo, Egypt</span>
+                <span className="text-muted-foreground">{t("location")}</span>
               </div>
             </div>
           </div>
@@ -172,23 +193,22 @@ const Footer = () => {
           {/* Newsletter */}
           <div>
             <h4 className="mb-4 text-lg font-semibold text-foreground">
-              Stay Updated
+              {t("newsletterTitle")}
             </h4>
             <p className="mb-4 text-muted-foreground">
-              Subscribe to our newsletter for the latest medical tourism
-              updates.
+              {t("newsletterDescription")}
             </p>
-            <form onSubmit={handleNewsletterSubmit} className="flex space-x-2">
+            <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
               <Input
                 type="email"
-                placeholder="Your email"
+                placeholder={t("newsletterPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-background text-foreground"
                 required
               />
               <Button type="submit" variant="premium" disabled={loading}>
-                {loading ? "Subscribing..." : "Subscribe"}
+                {loading ? t("newsletterSubmitting") : t("newsletterSubscribe")}
               </Button>
             </form>
           </div>
@@ -196,7 +216,7 @@ const Footer = () => {
 
         <div className="mt-12 border-t border-border pt-8 text-center">
           <p className="text-muted-foreground">
-            © {currentYear} Care N Tour. All rights reserved.
+            {t("copyright", { year: currentYear })}
           </p>
         </div>
       </div>
