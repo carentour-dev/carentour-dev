@@ -224,6 +224,7 @@ export function BlockRenderer({
                   key={key}
                   block={block}
                   context={context}
+                  locale={locale}
                 />
               );
             default:
