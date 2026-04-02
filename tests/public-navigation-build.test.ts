@@ -86,3 +86,22 @@ test("auto-adds published CMS pages that have no navigation row yet", () => {
     },
   ]);
 });
+
+test("does not auto-add internal blog template CMS pages", () => {
+  const cmsPages = [
+    createCmsPage({
+      id: "page-blog-category-template",
+      slug: "blog-category-template",
+      title: "Blog Category Template",
+      status: "published",
+    }),
+    createCmsPage({
+      id: "page-blog-post-template",
+      slug: "blog-post-template",
+      title: "Blog Post Template",
+      status: "published",
+    }),
+  ];
+
+  assert.deepEqual(buildPublicNavigationLinks([], cmsPages), []);
+});
