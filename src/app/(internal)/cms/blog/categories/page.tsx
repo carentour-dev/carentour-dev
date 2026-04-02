@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,6 +38,8 @@ import {
 import { Plus, Edit3, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 
 const PRESET_COLORS = [
   "#3B82F6", // Blue
@@ -43,20 +53,25 @@ const PRESET_COLORS = [
 ];
 
 export default function CategoriesPage() {
+  const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
 
   const { data: categories, isLoading } = useQuery({
-    queryKey: ["blog-categories-cms"],
+    queryKey: ["blog-categories-cms", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/categories", {
+      const res = await fetch(`/api/cms/blog/categories?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -76,24 +91,38 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic mode edits translated category names, slugs, descriptions, and publish state for the existing English taxonomy."
+            : "English owns the base blog category structure and shared styling fields."
+        }
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Categories</h1>
           <p className="text-muted-foreground mt-1">
-            Organize your blog posts into categories
+            {isArabicLocale
+              ? "Translate and publish Arabic blog category archives"
+              : "Organize your blog posts into categories"}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button
+              onClick={() => handleOpenDialog()}
+              disabled={isArabicLocale}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              New Category
+              {isArabicLocale ? "English Category Required" : "New Category"}
             </Button>
           </DialogTrigger>
           <CategoryDialog
             category={editingCategory}
             onClose={handleCloseDialog}
+            locale={locale}
           />
         </Dialog>
       </div>
@@ -112,6 +141,7 @@ export default function CategoriesPage() {
               key={category.id}
               category={category}
               onEdit={() => handleOpenDialog(category)}
+              locale={locale}
             />
           ))}
         </div>
@@ -119,9 +149,14 @@ export default function CategoriesPage() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-muted-foreground mb-4">
-              No categories yet. Create your first category!
+              {isArabicLocale
+                ? "No categories found. Create categories in English, then switch back to Arabic to translate them."
+                : "No categories yet. Create your first category!"}
             </p>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button
+              onClick={() => handleOpenDialog()}
+              disabled={isArabicLocale}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Category
             </Button>
@@ -135,9 +170,11 @@ export default function CategoriesPage() {
 function CategoryCard({
   category,
   onEdit,
+  locale,
 }: {
   category: any;
   onEdit: () => void;
+  locale: "en" | "ar";
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -151,21 +188,30 @@ function CategoryCard({
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/cms/blog/categories?id=${category.id}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/cms/blog/categories?id=${category.id}&locale=${locale}`,
+        {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Failed to delete category");
       }
 
       toast({
-        title: "Category deleted",
-        description: `"${category.name}" has been deleted.`,
+        title:
+          locale === "ar" ? "Arabic translation deleted" : "Category deleted",
+        description:
+          locale === "ar"
+            ? `"${category.name}" Arabic content has been deleted.`
+            : `"${category.name}" has been deleted.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-categories-cms"] });
+      queryClient.invalidateQueries({
+        queryKey: ["blog-categories-cms", locale],
+      });
     } catch (error) {
       toast({
         title: "Delete failed",
@@ -193,6 +239,13 @@ function CategoryCard({
             </span>
           </div>
           <Badge variant="secondary">{category.post_count || 0} posts</Badge>
+          {locale === "ar" && (
+            <Badge
+              variant={category.status === "published" ? "default" : "outline"}
+            >
+              {category.status === "published" ? "Published" : "Draft"}
+            </Badge>
+          )}
         </div>
 
         <div>
@@ -249,24 +302,45 @@ function CategoryCard({
 function CategoryDialog({
   category,
   onClose,
+  locale,
 }: {
   category?: any;
   onClose: () => void;
+  locale: "en" | "ar";
 }) {
+  const isArabicLocale = locale === "ar";
   const initialName = category?.name || "";
   const initialSlug = category?.slug || "";
   const initialDescription = category?.description || "";
   const initialColor = category?.color || PRESET_COLORS[0];
+  const initialStatus = category?.status || "draft";
 
   const [name, setName] = useState(initialName);
   const [slug, setSlug] = useState(initialSlug);
   const [description, setDescription] = useState(initialDescription);
   const [color, setColor] = useState(initialColor);
+  const [status, setStatus] = useState(initialStatus);
   const [autoSlug, setAutoSlug] = useState(!category);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setName(initialName);
+    setSlug(initialSlug);
+    setDescription(initialDescription);
+    setColor(initialColor);
+    setStatus(initialStatus);
+    setAutoSlug(!category?.id);
+  }, [
+    category?.id,
+    initialColor,
+    initialDescription,
+    initialName,
+    initialSlug,
+    initialStatus,
+  ]);
 
   const generateSlug = (text: string) => {
     return text
@@ -298,6 +372,7 @@ function CategoryDialog({
         slug: slug.trim(),
         description: description.trim(),
         color,
+        status,
       };
 
       const url = category
@@ -305,7 +380,7 @@ function CategoryDialog({
         : "/api/cms/blog/categories";
       const method = category ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await fetch(`${url}?locale=${locale}`, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -320,11 +395,17 @@ function CategoryDialog({
       }
 
       toast({
-        title: category ? "Category updated" : "Category created",
+        title: category
+          ? isArabicLocale
+            ? "Arabic category updated"
+            : "Category updated"
+          : "Category created",
         description: `"${name}" has been saved successfully.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-categories-cms"] });
+      queryClient.invalidateQueries({
+        queryKey: ["blog-categories-cms", locale],
+      });
       onClose();
     } catch (error: any) {
       toast({
@@ -341,7 +422,8 @@ function CategoryDialog({
     name.trim() !== initialName.trim() ||
     slug.trim() !== initialSlug.trim() ||
     description.trim() !== initialDescription.trim() ||
-    color !== initialColor;
+    color !== initialColor ||
+    status !== initialStatus;
 
   const handleClose = () => {
     if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
@@ -353,7 +435,11 @@ function CategoryDialog({
     <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
         <DialogTitle>
-          {category ? "Edit Category" : "Create Category"}
+          {category
+            ? isArabicLocale
+              ? "Edit Arabic Category"
+              : "Edit Category"
+            : "Create Category"}
         </DialogTitle>
       </DialogHeader>
 
@@ -382,7 +468,9 @@ function CategoryDialog({
             placeholder="e.g., medical-tourism"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            URL-friendly identifier. Auto-generated from name.
+            {isArabicLocale
+              ? "Arabic public URL segment for this category."
+              : "URL-friendly identifier. Auto-generated from name."}
           </p>
         </div>
 
@@ -405,6 +493,7 @@ function CategoryDialog({
                 key={presetColor}
                 type="button"
                 onClick={() => setColor(presetColor)}
+                disabled={isArabicLocale}
                 className="w-8 h-8 rounded border-2 transition-all hover:scale-110"
                 style={{
                   backgroundColor: presetColor,
@@ -414,7 +503,27 @@ function CategoryDialog({
               />
             ))}
           </div>
+          {isArabicLocale && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Color stays attached to the English base category.
+            </p>
+          )}
         </div>
+
+        {isArabicLocale && (
+          <div>
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-4">
           <Button type="submit" disabled={submitting} className="flex-1">
