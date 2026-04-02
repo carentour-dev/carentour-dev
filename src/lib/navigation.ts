@@ -47,6 +47,21 @@ export type PublicNavigationCmsPage = Pick<
   "id" | "slug" | "title" | "status"
 >;
 
+const INTERNAL_NAVIGATION_CMS_SLUGS = new Set([
+  "blog-category-template",
+  "blog-tag-template",
+  "blog-author-template",
+  "blog-post-template",
+]);
+
+function isInternalNavigationCmsSlug(slug: string | null | undefined): boolean {
+  if (!slug) {
+    return false;
+  }
+
+  return INTERNAL_NAVIGATION_CMS_SLUGS.has(slug);
+}
+
 // Documented snapshot of the hardcoded routes that previously lived in Header.tsx.
 export const DEFAULT_NAVIGATION_ENTRIES: Array<{
   slug: string;
@@ -124,6 +139,10 @@ export function filterOrphanedNavigationRows<
   const cmsPageSlugs = new Set(cmsPages.map((page) => page.slug));
 
   return rows.filter((row) => {
+    if (isInternalNavigationCmsSlug(row.slug)) {
+      return false;
+    }
+
     if (row.cms_page_id) {
       return cmsPageIds.has(row.cms_page_id);
     }
@@ -159,6 +178,7 @@ export function buildPublicNavigationLinks(
       (page) =>
         page?.slug &&
         page.status === "published" &&
+        !isInternalNavigationCmsSlug(page.slug) &&
         !reservedSlugs.has(page.slug),
     )
     .map((page, index) => ({
