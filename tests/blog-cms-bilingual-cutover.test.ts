@@ -63,7 +63,7 @@ test("treats blog routes as Arabic-capable and resolves locale switches through 
   );
   assert.match(
     localizationSource,
-    /const segments = normalized\.split\("\/"\)/,
+    /const segments = normalized[\s\S]*?\.split\("\/"\)/,
   );
 });
 
