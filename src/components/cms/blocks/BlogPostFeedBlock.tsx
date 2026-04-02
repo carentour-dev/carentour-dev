@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BlogPostCard } from "@/components/blog/BlogPostCard";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import { listLocalizedBlogPosts } from "@/lib/blog/server";
 import { BlockSurface } from "./BlockSurface";
@@ -93,6 +94,31 @@ export async function BlogPostFeedBlock({
   });
   const posts = result.posts;
   const blog = context?.blog;
+  const relatedHeading = resolveBlogUiText(
+    "relatedHeading",
+    locale,
+    block.relatedHeading,
+  );
+  const featuredBadge = resolveBlogUiText(
+    "featuredBadge",
+    locale,
+    block.featuredBadge,
+  );
+  const listCtaLabel = resolveBlogUiText(
+    "listCtaLabel",
+    locale,
+    block.listCtaLabel,
+  );
+  const emptyStateHeading = resolveBlogUiText(
+    "feedEmptyStateHeading",
+    locale,
+    block.emptyStateHeading,
+  );
+  const emptyStateDescription = resolveBlogUiText(
+    "feedEmptyStateDescription",
+    locale,
+    block.emptyStateDescription,
+  );
   const dynamicHeading =
     block.source === "category" && blog?.type === "category"
       ? blog.category.name
@@ -101,7 +127,7 @@ export async function BlogPostFeedBlock({
         : block.source === "author" && blog?.type === "author"
           ? blog.author.name
           : block.source === "related"
-            ? block.relatedHeading
+            ? relatedHeading
             : null;
   const dynamicDescription =
     block.source === "category" && blog?.type === "category"
@@ -145,10 +171,10 @@ export async function BlogPostFeedBlock({
           {posts.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-8 text-center">
               <h3 className="text-lg font-semibold text-foreground">
-                {block.emptyStateHeading}
+                {emptyStateHeading}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {block.emptyStateDescription}
+                {emptyStateDescription}
               </p>
             </div>
           ) : block.layout === "heroFeatured" ? (
@@ -168,7 +194,7 @@ export async function BlogPostFeedBlock({
                   </div>
                   <div className="flex flex-col justify-center p-8 md:p-10">
                     <Badge variant="secondary" className="w-fit">
-                      {block.featuredBadge}
+                      {featuredBadge}
                     </Badge>
                     <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
                       {posts[0].title}
@@ -180,9 +206,7 @@ export async function BlogPostFeedBlock({
                     ) : null}
                     <div className="mt-6">
                       <Button asChild>
-                        <Link href={posts[0].path ?? "#"}>
-                          {block.listCtaLabel}
-                        </Link>
+                        <Link href={posts[0].path ?? "#"}>{listCtaLabel}</Link>
                       </Button>
                     </div>
                   </div>
@@ -192,7 +216,7 @@ export async function BlogPostFeedBlock({
               {posts.slice(1).length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {posts.slice(1).map((post) => (
-                    <BlogPostCard key={post.id} post={post} />
+                    <BlogPostCard key={post.id} post={post} locale={locale} />
                   ))}
                 </div>
               ) : null}
@@ -241,9 +265,7 @@ export async function BlogPostFeedBlock({
                         ) : null}
                       </div>
                       <Button asChild variant="outline">
-                        <Link href={post.path ?? "#"}>
-                          {block.listCtaLabel}
-                        </Link>
+                        <Link href={post.path ?? "#"}>{listCtaLabel}</Link>
                       </Button>
                     </div>
                   </article>
@@ -254,7 +276,7 @@ export async function BlogPostFeedBlock({
                       block.layout === "carousel" && "w-[320px] flex-none",
                     )}
                   >
-                    <BlogPostCard post={post} />
+                    <BlogPostCard post={post} locale={locale} />
                   </div>
                 ),
               )}
