@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { format } from "date-fns";
 import { ArrowLeft, Clock } from "lucide-react";
 import { CategoryBadge } from "@/components/blog/CategoryBadge";
 import { SocialShare } from "@/components/blog/SocialShare";
@@ -8,6 +7,11 @@ import { TagList } from "@/components/blog/TagList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import {
+  formatBlogMetadataDate,
+  formatBlogReadingTime,
+  resolveBlogUiText,
+} from "@/lib/blog/localization";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import { buildLocalizedBlogLandingPath } from "@/lib/blog/server";
 import { BlockSurface } from "./BlockSurface";
@@ -31,18 +35,21 @@ export function BlogArticleHeroBlock({
     return null;
   }
 
-  const publishDate = post.publish_date
-    ? format(
-        new Date(post.publish_date),
-        locale === "ar" ? "dd/MM/yyyy" : "MMMM d, yyyy",
-      )
-    : null;
-  const updatedDate = post.updated_at
-    ? format(
-        new Date(post.updated_at),
-        locale === "ar" ? "dd/MM/yyyy" : "MMMM d, yyyy",
-      )
-    : null;
+  const backLabel = resolveBlogUiText("backLabel", locale, block.backLabel);
+  const publishDateLabel = resolveBlogUiText(
+    "publishDateLabel",
+    locale,
+    block.publishDateLabel,
+  );
+  const updatedLabel = resolveBlogUiText(
+    "updatedLabel",
+    locale,
+    block.updatedLabel,
+  );
+  const shareLabel = resolveBlogUiText("shareLabel", locale, block.shareLabel);
+  const publishDate = formatBlogMetadataDate(post.publish_date, locale);
+  const updatedDate = formatBlogMetadataDate(post.updated_at, locale);
+  const readingTime = formatBlogReadingTime(post.reading_time, locale);
 
   return (
     <BlockSurface
@@ -56,7 +63,7 @@ export function BlogArticleHeroBlock({
             <Button variant="ghost" className="-ml-4" asChild>
               <Link href={buildLocalizedBlogLandingPath(locale)}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {block.backLabel}
+                {backLabel}
               </Link>
             </Button>
           </div>
@@ -85,20 +92,18 @@ export function BlogArticleHeroBlock({
               ) : null}
               {block.showPublishDate && publishDate ? (
                 <Badge variant="outline">
-                  {block.publishDateLabel}: {publishDate}
+                  {publishDateLabel}: {publishDate}
                 </Badge>
               ) : null}
               {block.showUpdatedDate && updatedDate ? (
                 <Badge variant="outline">
-                  {block.updatedLabel}: {updatedDate}
+                  {updatedLabel}: {updatedDate}
                 </Badge>
               ) : null}
-              {block.showReadingTime && post.reading_time ? (
+              {block.showReadingTime && readingTime ? (
                 <div className="inline-flex items-center gap-2 rounded-full border border-border/60 px-3 py-1.5">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {post.reading_time} {block.readingTimeSuffix}
-                  </span>
+                  <span>{readingTime}</span>
                 </div>
               ) : null}
             </div>
@@ -115,6 +120,8 @@ export function BlogArticleHeroBlock({
                   url={post.path}
                   title={post.title}
                   description={post.excerpt ?? undefined}
+                  label={shareLabel}
+                  locale={locale}
                 />
               </div>
             ) : null}
