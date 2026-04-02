@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -41,14 +49,7 @@ import {
   type HomePageLayoutMode,
 } from "@/lib/cms/pageSettings";
 import { cmsTemplates } from "@/lib/cms/templates";
-import { BlockPreviewRenderer } from "@/components/cms/PreviewRenderer";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { TemplateBrowser } from "@/components/cms/TemplateBrowser";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -376,14 +377,8 @@ export default function CmsIndexPage() {
                 accelerators
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {templates.map((template) => (
-                <TemplateCard
-                  key={template.slug}
-                  template={template}
-                  locale={locale}
-                />
-              ))}
+            <CardContent>
+              <TemplateSidebarLauncher locale={locale} />
             </CardContent>
           </Card>
 
@@ -725,195 +720,79 @@ function Tip({ title, description }: TipProps) {
 
 const templates = cmsTemplates;
 
-function TemplateCard({
-  template,
-  locale,
-}: {
-  template: (typeof cmsTemplates)[number];
-  locale: PublicLocale;
-}) {
-  const blockTypes = useMemo(
-    () =>
-      Array.from(new Set(template.blocks.map((block) => block.type))).slice(
-        0,
-        6,
-      ),
-    [template.blocks],
-  );
+function TemplateSidebarLauncher({ locale }: { locale: PublicLocale }) {
+  const featuredTemplates = templates.slice(0, 4);
 
   return (
-    <Card className="border-border/70">
-      <CardHeader className="border-none bg-transparent pb-0">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <CardTitle className="text-base font-semibold">
-              {template.name}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {template.description}
-            </p>
-          </div>
-          <div className="flex gap-2 whitespace-nowrap">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                  Preview
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                  <DialogTitle>{template.name}</DialogTitle>
-                </DialogHeader>
-                <div className="max-h-[75vh] overflow-y-auto rounded-lg border border-border/60 bg-background p-4">
-                  <BlockPreviewRenderer
-                    blocks={template.blocks}
-                    locale={locale}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button size="sm" variant="secondary" asChild>
-              <Link
-                href={
-                  locale === "ar"
-                    ? `/cms/new?template=${encodeURIComponent(template.slug)}`
-                    : buildAdminLocaleHref(
-                        `/cms/new?template=${encodeURIComponent(template.slug)}`,
-                        locale,
-                      )
-                }
-              >
-                Use template
-              </Link>
-            </Button>
-          </div>
+    <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">
+            Browse page starters
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Keep this sidebar compact. Open the full gallery only when you need
+            to compare layouts.
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 text-xs text-muted-foreground">
-        <TemplatePreview blocks={template.blocks} locale={locale} />
-        <div className="flex flex-wrap gap-2">
-          {blockTypes.map((type) => (
-            <Badge
-              key={type}
-              variant="outline"
-              className="text-[11px] uppercase tracking-wide"
-            >
-              {type.replace(/([a-z])([A-Z])/g, "$1 $2")}
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TemplatePreview({
-  blocks,
-  locale,
-}: {
-  blocks: BlockValue[];
-  locale: PublicLocale;
-}) {
-  const sampleBlocks = useMemo(
-    () => blocks.slice(0, Math.min(2, blocks.length)),
-    [blocks],
-  );
-
-  const previewWrapperRef = useRef<HTMLDivElement | null>(null);
-  const previewContentRef = useRef<HTMLDivElement | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
-  const [contentHeight, setContentHeight] = useState<number>(0);
-  const hasBlocks = sampleBlocks.length > 0;
-
-  useEffect(() => {
-    if (!hasBlocks) {
-      setContainerWidth(0);
-      return;
-    }
-    const wrapper = previewWrapperRef.current;
-    if (!wrapper || typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      const width = entry.contentRect.width;
-      setContainerWidth((previous) =>
-        Math.abs(previous - width) < 0.5 ? previous : width,
-      );
-    });
-    observer.observe(wrapper);
-    return () => observer.disconnect();
-  }, [hasBlocks]);
-
-  useEffect(() => {
-    if (!hasBlocks) {
-      setContentHeight(0);
-      return;
-    }
-    const content = previewContentRef.current;
-    if (!content || typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      const height = entry.contentRect.height;
-      setContentHeight((previous) =>
-        Math.abs(previous - height) < 0.5 ? previous : height,
-      );
-    });
-    observer.observe(content);
-    return () => observer.disconnect();
-  }, [hasBlocks, sampleBlocks]);
-
-  const desktopWidth = 1280;
-  const maxPreviewHeight = 170;
-  const scale = useMemo(() => {
-    if (!containerWidth) return 0.3;
-    return Math.min(containerWidth / desktopWidth, 0.6);
-  }, [containerWidth]);
-  const scaledHeight =
-    contentHeight && scale
-      ? Math.min(contentHeight * scale, maxPreviewHeight)
-      : maxPreviewHeight;
-
-  if (!hasBlocks) {
-    return null;
-  }
-
-  return (
-    <div
-      ref={previewWrapperRef}
-      className="cms-template-thumbnail relative overflow-hidden rounded-lg border border-border/50 bg-muted/20"
-      style={{ height: scaledHeight }}
-    >
-      <style>
-        {`
-          .cms-template-thumbnail .container {
-            max-width: none !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-          }
-        `}
-      </style>
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="flex h-full w-full items-start justify-center">
-          <div
-            className="origin-top"
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "top center",
-            }}
-          >
-            <div ref={previewContentRef} className="w-[1280px]">
-              <BlockPreviewRenderer
-                className="space-y-0"
-                blocks={sampleBlocks}
-                disableAnimations
-                locale={locale}
-              />
-            </div>
-          </div>
-        </div>
+        <Badge variant="secondary" className="shrink-0">
+          {templates.length} ready
+        </Badge>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/40 to-transparent" />
+
+      <div className="mt-4 space-y-2">
+        {featuredTemplates.map((template) => {
+          const href =
+            locale === "ar"
+              ? `/cms/new?template=${encodeURIComponent(template.slug)}`
+              : buildAdminLocaleHref(
+                  `/cms/new?template=${encodeURIComponent(template.slug)}`,
+                  locale,
+                );
+
+          return (
+            <div
+              key={template.slug}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {template.name}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  /{template.defaultSlug} • {template.blocks.length} blocks
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={href}>Use</Link>
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {templates.length - featuredTemplates.length > 0
+            ? `${templates.length - featuredTemplates.length} more in the gallery`
+            : "All templates shown"}
+        </p>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">Browse gallery</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-6xl">
+            <DialogHeader>
+              <DialogTitle>Template gallery</DialogTitle>
+              <DialogDescription>
+                Compare templates in a wider workspace, then jump straight into
+                page creation.
+              </DialogDescription>
+            </DialogHeader>
+            <TemplateBrowser locale={locale} />
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }
