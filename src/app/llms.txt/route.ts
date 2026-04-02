@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import { publicLocales, type PublicLocale } from "@/i18n/routing";
+import {
+  getPublicLocaleAvailability,
+  resolvePublicLocaleSwitchHref,
+} from "@/lib/public/localization";
 import {
   CANONICAL_ORIGIN,
   getPublicRouteInventory,
@@ -10,51 +15,98 @@ import {
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function buildLocaleRoutes(locale: PublicLocale) {
   const [inventory, overrides] = await Promise.all([
-    getPublicRouteInventory("en"),
-    listSeoOverrides({ locale: "en" }),
+    getPublicRouteInventory(locale),
+    listSeoOverrides({ locale }),
   ]);
 
   const overrideLookup = new Map(
     overrides.map((row) => [normalizePath(row.route_key), row]),
   );
 
-  const routes = inventory
+  const localizedEntries = await Promise.all(
+    inventory
+      .filter(
+        (entry) => entry.indexable && !isInternalNoindexPath(entry.pathname),
+      )
+      .map(async (entry) => {
+        const override = overrideLookup.get(normalizePath(entry.routeKey));
+        const include = override?.llms_include ?? true;
+
+        if (!include) {
+          return null;
+        }
+
+        if (locale !== "en") {
+          const isAvailable = await getPublicLocaleAvailability(
+            entry.pathname,
+            locale,
+          );
+          if (!isAvailable) {
+            return null;
+          }
+        }
+
+        const pathname =
+          locale === "en"
+            ? entry.pathname
+            : await resolvePublicLocaleSwitchHref(entry.pathname, locale);
+
+        return {
+          pathname,
+          title: override?.title ?? entry.sourceTitle ?? entry.label,
+          summary:
+            override?.ai_summary ??
+            override?.description ??
+            entry.sourceDescription ??
+            null,
+          priority: override?.llms_priority ?? 0,
+        };
+      }),
+  );
+
+  return localizedEntries
     .filter(
-      (entry) => entry.indexable && !isInternalNoindexPath(entry.pathname),
+      (
+        entry,
+      ): entry is {
+        pathname: string;
+        title: string;
+        summary: string | null;
+        priority: number;
+      } => Boolean(entry),
     )
-    .map((entry) => {
-      const override = overrideLookup.get(normalizePath(entry.routeKey));
-      return {
-        pathname: entry.pathname,
-        title: override?.title ?? entry.sourceTitle ?? entry.label,
-        summary:
-          override?.ai_summary ??
-          override?.description ??
-          entry.sourceDescription ??
-          null,
-        include: override?.llms_include ?? true,
-        priority: override?.llms_priority ?? 0,
-      };
-    })
-    .filter((entry) => entry.include)
     .sort((a, b) => {
       if (b.priority !== a.priority) return b.priority - a.priority;
       return a.pathname.localeCompare(b.pathname);
     });
+}
+
+export async function GET() {
+  const routeSections = await Promise.all(
+    publicLocales.map(async (locale) => ({
+      locale,
+      routes: await buildLocaleRoutes(locale),
+    })),
+  );
 
   const lines = [
     "# llms.txt",
     "project: Care N Tour",
     `origin: ${CANONICAL_ORIGIN}`,
-    "language: en",
+    `languages: ${publicLocales.join(", ")}`,
     "",
-    "## Indexable Routes",
-    ...routes.map((entry) => {
-      const summary = entry.summary ? ` | ${entry.summary}` : "";
-      return `- ${entry.pathname} | ${entry.title}${summary}`;
-    }),
+    ...routeSections.flatMap(({ locale, routes }) => [
+      `## ${locale === "ar" ? "Arabic" : "English"} Routes`,
+      ...(routes.length > 0
+        ? routes.map((entry) => {
+            const summary = entry.summary ? ` | ${entry.summary}` : "";
+            return `- ${entry.pathname} | ${entry.title}${summary}`;
+          })
+        : ["- No indexable routes available."]),
+      "",
+    ]),
   ];
 
   return new NextResponse(lines.join("\n"), {
