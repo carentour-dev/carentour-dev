@@ -1,0 +1,284 @@
+- generic [active] [ref=e1]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]:
+            - generic [ref=e7]:
+              - img [ref=e8]
+              - generic [ref=e10]: +٢٠ ١٢٢ ٩٥٠٣٣٣٣
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - generic [ref=e15]: info@carentour.com
+          - generic [ref=e16]:
+            - generic "اللغة" [ref=e17]:
+              - img [ref=e18]
+              - link "English" [ref=e22] [cursor=pointer]:
+                - /url: /blog/%D8%A7%D9%84%D8%B3%D9%8A%D8%A7%D8%AD%D8%A9-%D8%A7%D9%84%D8%B9%D9%84%D8%A7%D8%AC%D9%8A%D8%A9
+              - link "العربية" [ref=e23] [cursor=pointer]:
+                - /url: /ar
+            - button "Toggle theme" [ref=e24] [cursor=pointer]:
+              - img
+              - img
+              - generic [ref=e25]: Toggle theme
+            - link "تسجيل الدخول" [ref=e26] [cursor=pointer]:
+              - /url: /auth
+              - button "تسجيل الدخول" [ref=e27]:
+                - img
+                - text: تسجيل الدخول
+            - link "احصل على استشارة مجانية" [ref=e28] [cursor=pointer]:
+              - /url: /consultation
+        - generic [ref=e29]:
+          - link "Care N Tour" [ref=e31] [cursor=pointer]:
+            - /url: /ar
+            - img "Care N Tour" [ref=e32]
+          - navigation [ref=e33]:
+            - link "الرئيسية" [ref=e34] [cursor=pointer]:
+              - /url: /ar
+            - link "من نحن" [ref=e35] [cursor=pointer]:
+              - /url: /ar/about
+            - link "العلاجات" [ref=e36] [cursor=pointer]:
+              - /url: /ar/treatments
+            - link "المنشآت الطبية" [ref=e37] [cursor=pointer]:
+              - /url: /ar/medical-facilities
+            - link "خطط لرحلتك" [ref=e38] [cursor=pointer]:
+              - /url: /ar/plan
+            - link "الكونسيرج" [ref=e39] [cursor=pointer]:
+              - /url: /ar/concierge
+            - link "معلومات السفر" [ref=e40] [cursor=pointer]:
+              - /url: /ar/travel-info
+            - link "المدونة" [ref=e41] [cursor=pointer]:
+              - /url: /ar/blog
+            - link "الأسئلة الشائعة" [ref=e42] [cursor=pointer]:
+              - /url: /ar/faq
+            - link "اتصل بنا" [ref=e43] [cursor=pointer]:
+              - /url: /ar/contact
+    - generic [ref=e45]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: أرشيف التصنيف
+          - heading "السياحة العلاجية" [level=2] [ref=e51]
+          - paragraph [ref=e52]: دليلك الشامل للسياحة العلاجية في مصر، مقدم من كير آند تور، لتجربة سفر وعلاج ميسرة.
+        - generic [ref=e53]:
+          - link "شرح باقات السياحة العلاجية في مصر السياحة العلاجية شرح باقات السياحة العلاجية في مصر تقدم باقات السياحة العلاجية في مصر أكثر من مجرد توفير في التكاليف. اكتشف كيف توفر الرعاية الصحية المعتمدة، والأسعار الشفافة، والخدمات اللوجستية المنسقة بالكامل للمرضى الدوليين رحلة علاجية آمنة وسلسة. 15 days ago 7 min 41" [ref=e55] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/باقات-السياحة-العلاجية-في-مصر
+            - generic [ref=e56]:
+              - img "شرح باقات السياحة العلاجية في مصر" [ref=e58]
+              - generic [ref=e59]:
+                - generic [ref=e60]: السياحة العلاجية
+                - heading "شرح باقات السياحة العلاجية في مصر" [level=3] [ref=e61]
+              - generic [ref=e62]:
+                - paragraph [ref=e63]: تقدم باقات السياحة العلاجية في مصر أكثر من مجرد توفير في التكاليف. اكتشف كيف توفر الرعاية الصحية المعتمدة، والأسعار الشفافة، والخدمات اللوجستية المنسقة بالكامل للمرضى الدوليين رحلة علاجية آمنة وسلسة.
+                - generic [ref=e64]:
+                  - generic [ref=e65]:
+                    - img [ref=e66]
+                    - generic [ref=e68]: 15 days ago
+                  - generic [ref=e69]:
+                    - img [ref=e70]
+                    - generic [ref=e73]: 7 min
+                  - generic [ref=e74]:
+                    - img [ref=e75]
+                    - generic [ref=e78]: "41"
+          - link "ما هي باقات السفر العلاجي الشاملة؟ السياحة العلاجية ما هي باقات السفر العلاجي الشاملة؟ هل تفكر في العلاج الطبي بالخارج ولكنك تشعر بالإرهاق من الجوانب اللوجستية؟ اكتشف كيف تزيل باقات السفر العلاجي الشاملة التعقيدات المتعلقة بالرعاية الصحية الدولية. نغطي ما يجب البحث عنه، والأسئلة الصحيحة التي يجب طرحها على مقدمي الخدمة، وكيف تضمن الرعاية المتكاملة السلامة والدعم الهيكلي والأسعار الشفافة. 7 days ago 7 min 12" [ref=e80] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/ما-هي-باقات-السفر-العلاجي-الشاملة
+            - generic [ref=e81]:
+              - img "ما هي باقات السفر العلاجي الشاملة؟" [ref=e83]
+              - generic [ref=e84]:
+                - generic [ref=e85]: السياحة العلاجية
+                - heading "ما هي باقات السفر العلاجي الشاملة؟" [level=3] [ref=e86]
+              - generic [ref=e87]:
+                - paragraph [ref=e88]: هل تفكر في العلاج الطبي بالخارج ولكنك تشعر بالإرهاق من الجوانب اللوجستية؟ اكتشف كيف تزيل باقات السفر العلاجي الشاملة التعقيدات المتعلقة بالرعاية الصحية الدولية. نغطي ما يجب البحث عنه، والأسئلة الصحيحة التي يجب طرحها على مقدمي الخدمة، وكيف تضمن الرعاية المتكاملة السلامة والدعم الهيكلي والأسعار الشفافة.
+                - generic [ref=e89]:
+                  - generic [ref=e90]:
+                    - img [ref=e91]
+                    - generic [ref=e93]: 7 days ago
+                  - generic [ref=e94]:
+                    - img [ref=e95]
+                    - generic [ref=e98]: 7 min
+                  - generic [ref=e99]:
+                    - img [ref=e100]
+                    - generic [ref=e103]: "12"
+          - link "شرح خدمة الكونسيرج الطبي للسفر العلاجي في مصر السياحة العلاجية شرح خدمة الكونسيرج الطبي للسفر العلاجي في مصر هل تفكر في العلاج الطبي بمصر؟ اكتشف كيف يضمن لك منسق السفر العلاجي أخصائيين معتمدين، أسعارًا شفافة، ورحلة خالية من التوتر. 9 days ago 7 min 8" [ref=e105] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/خدمة-الكونسيرج-الطبي-في-مصر
+            - generic [ref=e106]:
+              - img "شرح خدمة الكونسيرج الطبي للسفر العلاجي في مصر" [ref=e108]
+              - generic [ref=e109]:
+                - generic [ref=e110]: السياحة العلاجية
+                - heading "شرح خدمة الكونسيرج الطبي للسفر العلاجي في مصر" [level=3] [ref=e111]
+              - generic [ref=e112]:
+                - paragraph [ref=e113]: هل تفكر في العلاج الطبي بمصر؟ اكتشف كيف يضمن لك منسق السفر العلاجي أخصائيين معتمدين، أسعارًا شفافة، ورحلة خالية من التوتر.
+                - generic [ref=e114]:
+                  - generic [ref=e115]:
+                    - img [ref=e116]
+                    - generic [ref=e118]: 9 days ago
+                  - generic [ref=e119]:
+                    - img [ref=e120]
+                    - generic [ref=e123]: 7 min
+                  - generic [ref=e124]:
+                    - img [ref=e125]
+                    - generic [ref=e128]: "8"
+          - link "كيف تجد جراحين معتمدين من البورد في مصر؟ السياحة العلاجية كيف تجد جراحين معتمدين من البورد في مصر؟ بينما يُعد العثور على جراح معتمد من البورد خطوة أولى حاسمة للمرضى الدوليين، تتطلب الرحلة العلاجية الناجحة إلى مصر نظرة أوسع. اكتشف لماذا يُعد تقييم معايير المستشفيات، وتحديد أولويات التواصل الشفاف، واختيار رحلة رعاية منسقة بالكامل، هي المفاتيح الحقيقية لتجربة علاج آمنة، خالية من التوتر، وعالية الجودة في الخارج. 10 days ago 7 min 2" [ref=e130] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/البحث-عن-جراحين-معتمدين-في-مصر
+            - generic [ref=e131]:
+              - img "كيف تجد جراحين معتمدين من البورد في مصر؟" [ref=e133]
+              - generic [ref=e134]:
+                - generic [ref=e135]: السياحة العلاجية
+                - heading "كيف تجد جراحين معتمدين من البورد في مصر؟" [level=3] [ref=e136]
+              - generic [ref=e137]:
+                - paragraph [ref=e138]: بينما يُعد العثور على جراح معتمد من البورد خطوة أولى حاسمة للمرضى الدوليين، تتطلب الرحلة العلاجية الناجحة إلى مصر نظرة أوسع. اكتشف لماذا يُعد تقييم معايير المستشفيات، وتحديد أولويات التواصل الشفاف، واختيار رحلة رعاية منسقة بالكامل، هي المفاتيح الحقيقية لتجربة علاج آمنة، خالية من التوتر، وعالية الجودة في الخارج.
+                - generic [ref=e139]:
+                  - generic [ref=e140]:
+                    - img [ref=e141]
+                    - generic [ref=e143]: 10 days ago
+                  - generic [ref=e144]:
+                    - img [ref=e145]
+                    - generic [ref=e148]: 7 min
+                  - generic [ref=e149]:
+                    - img [ref=e150]
+                    - generic [ref=e153]: "2"
+          - 'link "المستشفيات المعتمدة من JCI في مصر: دليل شامل السياحة العلاجية المستشفيات المعتمدة من JCI في مصر: دليل شامل اكتشف لماذا يختار المرضى الدوليون المستشفيات المعتمدة من JCI في مصر. تعرف على كيفية تقييم خيارات السفر العلاجي، وضمان السلامة، وتخطيط رعايتك. 11 days ago 7 min 1" [ref=e155] [cursor=pointer]':
+            - /url: /ar/blog/السياحة-العلاجية/المستشفيات-المعتمدة-من-جيه-سي-آي-في-مصر
+            - generic [ref=e156]:
+              - 'img "المستشفيات المعتمدة من JCI في مصر: دليل شامل" [ref=e158]'
+              - generic [ref=e159]:
+                - generic [ref=e160]: السياحة العلاجية
+                - 'heading "المستشفيات المعتمدة من JCI في مصر: دليل شامل" [level=3] [ref=e161]'
+              - generic [ref=e162]:
+                - paragraph [ref=e163]: اكتشف لماذا يختار المرضى الدوليون المستشفيات المعتمدة من JCI في مصر. تعرف على كيفية تقييم خيارات السفر العلاجي، وضمان السلامة، وتخطيط رعايتك.
+                - generic [ref=e164]:
+                  - generic [ref=e165]:
+                    - img [ref=e166]
+                    - generic [ref=e168]: 11 days ago
+                  - generic [ref=e169]:
+                    - img [ref=e170]
+                    - generic [ref=e173]: 7 min
+                  - generic [ref=e174]:
+                    - img [ref=e175]
+                    - generic [ref=e178]: "1"
+          - link "لماذا تحظى السياحة العلاجية بشعبية كبيرة اليوم؟ السياحة العلاجية لماذا تحظى السياحة العلاجية بشعبية كبيرة اليوم؟ تطورت السياحة العلاجية لتتجاوز مجرد السفر إلى الخارج لتوفير المال. اكتشف كيف يجعل المزيج المثالي من التوفير الكبير في التكاليف، وجدولة المواعيد الأسرع، وجودة المستشفيات العالمية، والخدمات اللوجستية السلسة للسفر، من السفر الطبي الخيار المفضل للمرضى الواعين اليوم. 11 days ago 8 min 7" [ref=e180] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/لماذا-السياحة-العلاجية-شعبية-اليوم
+            - generic [ref=e181]:
+              - img "لماذا تحظى السياحة العلاجية بشعبية كبيرة اليوم؟" [ref=e183]
+              - generic [ref=e184]:
+                - generic [ref=e185]: السياحة العلاجية
+                - heading "لماذا تحظى السياحة العلاجية بشعبية كبيرة اليوم؟" [level=3] [ref=e186]
+              - generic [ref=e187]:
+                - paragraph [ref=e188]: تطورت السياحة العلاجية لتتجاوز مجرد السفر إلى الخارج لتوفير المال. اكتشف كيف يجعل المزيج المثالي من التوفير الكبير في التكاليف، وجدولة المواعيد الأسرع، وجودة المستشفيات العالمية، والخدمات اللوجستية السلسة للسفر، من السفر الطبي الخيار المفضل للمرضى الواعين اليوم.
+                - generic [ref=e189]:
+                  - generic [ref=e190]:
+                    - img [ref=e191]
+                    - generic [ref=e193]: 11 days ago
+                  - generic [ref=e194]:
+                    - img [ref=e195]
+                    - generic [ref=e198]: 8 min
+                  - generic [ref=e199]:
+                    - img [ref=e200]
+                    - generic [ref=e203]: "7"
+          - link "كم تكلفة زيارة الطبيب في مصر؟ السياحة العلاجية كم تكلفة زيارة الطبيب في مصر؟ هل تتساءل عن تكلفة زيارة الطبيب في مصر؟ بينما الاستشارات الخاصة ميسورة التكلفة للغاية، تكمن الميزة الحقيقية للمرضى الدوليين في القيمة الإجمالية. اكتشف لماذا تقدم الرعاية الخاصة الممتازة في مصر أخصائيين عالميين، وراحة سلسة، وأسعارًا شفافة للمسافرين للعلاج. 11 days ago 7 min 4" [ref=e205] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/كم-تكلفة-زيارة-الطبيب-في-مصر
+            - generic [ref=e206]:
+              - img "كم تكلفة زيارة الطبيب في مصر؟" [ref=e208]
+              - generic [ref=e209]:
+                - generic [ref=e210]: السياحة العلاجية
+                - heading "كم تكلفة زيارة الطبيب في مصر؟" [level=3] [ref=e211]
+              - generic [ref=e212]:
+                - paragraph [ref=e213]: هل تتساءل عن تكلفة زيارة الطبيب في مصر؟ بينما الاستشارات الخاصة ميسورة التكلفة للغاية، تكمن الميزة الحقيقية للمرضى الدوليين في القيمة الإجمالية. اكتشف لماذا تقدم الرعاية الخاصة الممتازة في مصر أخصائيين عالميين، وراحة سلسة، وأسعارًا شفافة للمسافرين للعلاج.
+                - generic [ref=e214]:
+                  - generic [ref=e215]:
+                    - img [ref=e216]
+                    - generic [ref=e218]: 11 days ago
+                  - generic [ref=e219]:
+                    - img [ref=e220]
+                    - generic [ref=e223]: 7 min
+                  - generic [ref=e224]:
+                    - img [ref=e225]
+                    - generic [ref=e228]: "4"
+          - link "فهم تكلفة العلاج الطبي في مصر السياحة العلاجية فهم تكلفة العلاج الطبي في مصر قد يكون عرض سعر منخفض للجراحة في الخارج مضللاً إذا لم تكن تعرف ما هو مشمول بالفعل. اكتشف التكلفة الحقيقية للعلاج الطبي في مصر، وما هي العوامل التي تؤثر على فاتورتك النهائية، ولماذا الشفافية والرعاية المعتمدة أهم من البحث عن أقل سعر. 11 days ago 8 min 5" [ref=e230] [cursor=pointer]:
+            - /url: /ar/blog/السياحة-العلاجية/تكلفة-العلاج-الطبي-في-مصر
+            - generic [ref=e231]:
+              - img "فهم تكلفة العلاج الطبي في مصر" [ref=e233]
+              - generic [ref=e234]:
+                - generic [ref=e235]: السياحة العلاجية
+                - heading "فهم تكلفة العلاج الطبي في مصر" [level=3] [ref=e236]
+              - generic [ref=e237]:
+                - paragraph [ref=e238]: قد يكون عرض سعر منخفض للجراحة في الخارج مضللاً إذا لم تكن تعرف ما هو مشمول بالفعل. اكتشف التكلفة الحقيقية للعلاج الطبي في مصر، وما هي العوامل التي تؤثر على فاتورتك النهائية، ولماذا الشفافية والرعاية المعتمدة أهم من البحث عن أقل سعر.
+                - generic [ref=e239]:
+                  - generic [ref=e240]:
+                    - img [ref=e241]
+                    - generic [ref=e243]: 11 days ago
+                  - generic [ref=e244]:
+                    - img [ref=e245]
+                    - generic [ref=e248]: 8 min
+                  - generic [ref=e249]:
+                    - img [ref=e250]
+                    - generic [ref=e253]: "5"
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - text: خطط بثقة
+          - heading "هل تحتاج إلى مساعدة لتحويل بحثك إلى قرار علاجي؟" [level=2] [ref=e258]
+          - paragraph [ref=e259]: تحدث مع كير آند تور لمقارنة مقدمي الرعاية والجداول الزمنية واللوجستيات وتحديد الخطوة التالية المناسبة لحالتك.
+        - generic [ref=e260]:
+          - link "ابدأ رحلتك" [ref=e261] [cursor=pointer]:
+            - /url: /start-journey
+          - link "تواصل مع كير آند تور" [ref=e262] [cursor=pointer]:
+            - /url: /contact
+    - contentinfo [ref=e263]:
+      - generic [ref=e264]:
+        - generic [ref=e265]:
+          - generic [ref=e266]:
+            - img "Care N Tour" [ref=e267]
+            - paragraph [ref=e268]: شريكك الموثوق للحصول على رعاية طبية متميزة في مصر، مع الجمع بين التميز الطبي والضيافة الرفيعة.
+            - generic [ref=e269]:
+              - link "زر صفحتنا على Facebook" [ref=e270] [cursor=pointer]:
+                - /url: https://www.facebook.com/carentour
+                - img [ref=e271]
+              - link "زر صفحتنا على X (Twitter)" [ref=e273] [cursor=pointer]:
+                - /url: https://x.com/carentour
+                - img [ref=e274]
+              - link "زر صفحتنا على Instagram" [ref=e276] [cursor=pointer]:
+                - /url: https://www.instagram.com/carentoureg
+                - img [ref=e277]
+              - link "زر صفحتنا على LinkedIn" [ref=e280] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/carentour
+                - img [ref=e281]
+          - generic [ref=e285]:
+            - heading "روابط سريعة" [level=4] [ref=e286]
+            - list [ref=e287]:
+              - listitem [ref=e288]:
+                - link "من نحن" [ref=e289] [cursor=pointer]:
+                  - /url: /ar/about
+              - listitem [ref=e290]:
+                - link "العلاجات" [ref=e291] [cursor=pointer]:
+                  - /url: /ar/treatments
+              - listitem [ref=e292]:
+                - link "خطط لرحلتك" [ref=e293] [cursor=pointer]:
+                  - /url: /ar/plan
+              - listitem [ref=e294]:
+                - link "المدونة" [ref=e295] [cursor=pointer]:
+                  - /url: /ar/blog
+          - generic [ref=e296]:
+            - heading "معلومات التواصل" [level=4] [ref=e297]
+            - generic [ref=e298]:
+              - generic [ref=e299]:
+                - img [ref=e300]
+                - generic [ref=e302]: +٢٠ ١٢٢ ٩٥٠٣٣٣٣
+              - generic [ref=e303]:
+                - img [ref=e304]
+                - generic [ref=e307]: info@carentour.com
+              - generic [ref=e308]:
+                - img [ref=e309]
+                - generic [ref=e312]: مكتب ٢٣، المبنى D، أغورا مول، القاهرة الجديدة، مصر
+          - generic [ref=e313]:
+            - heading "ابقَ على اطلاع" [level=4] [ref=e314]
+            - paragraph [ref=e315]: اشترك في نشرتنا البريدية للحصول على آخر تحديثات السياحة العلاجية.
+            - generic [ref=e316]:
+              - textbox "بريدك الإلكتروني" [ref=e317]
+              - button "اشترك" [ref=e318] [cursor=pointer]
+        - paragraph [ref=e320]: © 2026 كير آند تور. جميع الحقوق محفوظة.
+  - button "Chat on WhatsApp" [ref=e322] [cursor=pointer]:
+    - img [ref=e324]
+    - generic [ref=e326]: Chat on WhatsApp
+  - alert [ref=e327]
