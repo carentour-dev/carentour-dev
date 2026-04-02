@@ -3288,34 +3288,35 @@ export const cmsTemplates: CmsTemplate[] = [
     defaultSlug: "blog",
     defaultTitle: "Blog",
     seo: {
-      title: "Health Insights & Travel Guides | Care N Tour Blog",
+      title:
+        "Medical Travel to Egypt: Treatment Guides, Recovery Advice & Planning | Care N Tour",
       description:
-        "Read Care N Tour guidance on medical travel planning, treatment preparation, recovery, and patient decision-making.",
+        "Explore Care N Tour guidance for international patients comparing treatment options in Egypt, planning medical travel, understanding recovery, and preparing for consultations with confidence.",
     },
     blocks: [
       {
         type: "aboutHero",
-        eyebrow: "Care N Tour Journal",
+        eyebrow: "Care N Tour Editorial",
         heading:
-          "Medical travel insights written for patients, families, and referring partners.",
+          "Clear medical travel guidance for international patients considering treatment in Egypt.",
         description:
-          "Explore clear guidance on treatment planning, travel logistics, provider evaluation, recovery expectations, and practical decisions that shape a confident medical journey to Egypt.",
+          "At Care N Tour, we publish practical guidance on provider evaluation, treatment planning, travel coordination, recovery, and next-step decisions so patients, families, and referring partners can assess care in Egypt with confidence.",
         backgroundImageUrl: "/blog-medical-tourism.jpg",
         highlights: [
           {
             kicker: "Perspective",
             label:
-              "Editorial guidance written in Care N Tour's voice for international patients",
+              "Written from Care N Tour's international patient coordination perspective for patients, families, and referring partners",
           },
           {
             kicker: "Topics",
             label:
-              "Treatments, facilities, travel preparation, recovery, and planning clarity",
+              "Medical travel to Egypt, treatment options, hospital and doctor evaluation, recovery, logistics, and case planning",
           },
           {
             kicker: "Use",
             label:
-              "A living knowledge base that supports better conversations before treatment begins",
+              "A searchable knowledge base that helps visitors compare options, prepare smarter questions, and move from research to action",
           },
         ],
         primaryAction: {
@@ -3332,20 +3333,21 @@ export const cmsTemplates: CmsTemplate[] = [
       },
       {
         type: "blogPostFeed",
-        eyebrow: "Featured articles",
-        heading: "Latest guidance from Care N Tour",
+        eyebrow: "Featured guidance",
+        heading:
+          "Start with the articles that answer the biggest treatment and travel questions",
         description:
-          "Start with the articles most useful for patients evaluating treatment, travel timing, and next steps.",
+          "Read the latest Care N Tour articles on medical travel to Egypt, treatment timelines, expected recovery, companion planning, and how to prepare for consultations with confidence.",
         source: "latest",
         layout: "heroFeatured",
         limit: 7,
       },
       {
         type: "blogTaxonomyGrid",
-        eyebrow: "Explore by topic",
-        heading: "Navigate the blog by category",
+        eyebrow: "Browse by topic",
+        heading: "Explore the blog by treatment area or planning need",
         description:
-          "Move directly into the archive that matches the question you are trying to answer.",
+          "Use the category archive to find focused guidance on cardiac care, dental treatment, eye surgery, insurance, wellness, and broader medical travel planning.",
         taxonomy: "categories",
         limit: 9,
         cardStyle: "editorial",
@@ -3353,10 +3355,10 @@ export const cmsTemplates: CmsTemplate[] = [
       },
       {
         type: "callToAction",
-        eyebrow: "Need direction",
-        heading: "Turn what you read into a personalized treatment plan.",
+        eyebrow: "Need a case review?",
+        heading: "Turn research into a treatment plan built around your case.",
         description:
-          "Our coordinators can translate editorial guidance into provider options, timelines, logistics, and a plan built around your case.",
+          "When you are ready, Care N Tour can translate what you have learned into provider shortlists, timeline guidance, travel coordination, and a personalized next-step plan for treatment in Egypt.",
         layout: "split",
         background: "dark",
         actions: [
