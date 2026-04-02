@@ -63,3 +63,30 @@ test("drops CMS navigation rows whose linked page was deleted", () => {
 
   assert.deepEqual(filterOrphanedNavigationRows(rows, cmsPages), [rows[1]]);
 });
+
+test("drops internal blog template navigation rows even when the CMS pages exist", () => {
+  const rows = [
+    createNavigationRow({
+      id: "nav-blog-template",
+      slug: "blog-post-template",
+      href: "/blog-post-template",
+      label: "Blog Post Template",
+      kind: "cms",
+      cms_page_id: "page-blog-template",
+    }),
+    createNavigationRow({
+      id: "nav-contact",
+      slug: "contact",
+      href: "/contact",
+      label: "Contact",
+      kind: "manual",
+      cms_page_id: null,
+    }),
+  ];
+  const cmsPages: CmsPageReference[] = [
+    { id: "page-blog-template", slug: "blog-post-template" },
+    { id: "page-contact", slug: "contact" },
+  ];
+
+  assert.deepEqual(filterOrphanedNavigationRows(rows, cmsPages), [rows[1]]);
+});
