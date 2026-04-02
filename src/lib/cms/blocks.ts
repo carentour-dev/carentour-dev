@@ -1355,6 +1355,108 @@ const tabbedGuideBlockSchema = z
   })
   .extend(blockMetaShape);
 
+const blogPostFeedBlockSchema = z
+  .object({
+    type: z.literal("blogPostFeed"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    source: z
+      .enum([
+        "latest",
+        "featured",
+        "manual",
+        "category",
+        "tag",
+        "author",
+        "related",
+      ])
+      .default("latest"),
+    layout: z
+      .enum(["heroFeatured", "grid", "list", "carousel"])
+      .default("grid"),
+    limit: z.number().min(1).max(24).default(6),
+    manualPostSlugs: z.array(z.string()).default([]),
+    showSearch: z.boolean().default(false),
+    searchPlaceholder: z.string().default("Search articles"),
+    emptyStateHeading: z.string().default("No articles available"),
+    emptyStateDescription: z
+      .string()
+      .default(
+        "Publish articles or adjust the feed settings to populate this section.",
+      ),
+    featuredBadge: z.string().default("Featured article"),
+    relatedHeading: z.string().default("Related articles"),
+    listCtaLabel: z.string().default("Read article"),
+  })
+  .extend(blockMetaShape);
+
+const blogTaxonomyGridBlockSchema = z
+  .object({
+    type: z.literal("blogTaxonomyGrid"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    taxonomy: z.enum(["categories", "tags", "authors"]).default("categories"),
+    limit: z.number().min(1).max(24).default(9),
+    cardStyle: z.enum(["editorial", "minimal"]).default("editorial"),
+    ctaLabel: z.string().default("Explore archive"),
+    emptyStateHeading: z.string().default("Nothing to show yet"),
+    emptyStateDescription: z
+      .string()
+      .default("Publish taxonomy content to populate this grid."),
+  })
+  .extend(blockMetaShape);
+
+const blogArticleHeroBlockSchema = z
+  .object({
+    type: z.literal("blogArticleHero"),
+    backLabel: z.string().default("Back to Blog"),
+    publishDateLabel: z.string().default("Published"),
+    updatedLabel: z.string().default("Updated"),
+    readingTimeSuffix: z.string().default("min read"),
+    shareLabel: z.string().default("Share"),
+    showCategory: z.boolean().default(true),
+    showAuthor: z.boolean().default(true),
+    showPublishDate: z.boolean().default(true),
+    showUpdatedDate: z.boolean().default(true),
+    showReadingTime: z.boolean().default(true),
+    showTags: z.boolean().default(true),
+    showShareActions: z.boolean().default(true),
+    showHeroImage: z.boolean().default(true),
+  })
+  .extend(blockMetaShape);
+
+const blogArticleBodyBlockSchema = z
+  .object({
+    type: z.literal("blogArticleBody"),
+    showTableOfContents: z.boolean().default(true),
+    tocHeading: z.string().default("On this page"),
+    emptyStateHeading: z.string().default("Article content unavailable"),
+    emptyStateDescription: z
+      .string()
+      .default(
+        "Add localized article content in the blog editor to publish this page.",
+      ),
+  })
+  .extend(blockMetaShape);
+
+const blogAuthorSummaryBlockSchema = z
+  .object({
+    type: z.literal("blogAuthorSummary"),
+    heading: z.string().default("About the author"),
+    description: z.string().optional(),
+    showArchiveLink: z.boolean().default(true),
+    archiveLinkLabel: z.string().default("View author archive"),
+    emptyStateHeading: z.string().default("Author profile unavailable"),
+    emptyStateDescription: z
+      .string()
+      .default(
+        "Assign an active author profile to show an editorial summary here.",
+      ),
+  })
+  .extend(blockMetaShape);
+
 const blockSchemas = [
   heroBlockSchema,
   homeHeroBlockSchema,
@@ -1389,6 +1491,11 @@ const blockSchemas = [
   treatmentsBlockSchema,
   doctorsBlockSchema,
   tabbedGuideBlockSchema,
+  blogPostFeedBlockSchema,
+  blogTaxonomyGridBlockSchema,
+  blogArticleHeroBlockSchema,
+  blogArticleBodyBlockSchema,
+  blogAuthorSummaryBlockSchema,
 ] as const;
 
 type BlockDefinition<TSchema extends z.ZodTypeAny> = {
@@ -2430,6 +2537,112 @@ export const blockRegistry = {
       featuredOnly: true,
     },
   } satisfies BlockDefinition<typeof doctorsBlockSchema>,
+  blogPostFeed: {
+    type: "blogPostFeed",
+    label: "Blog Post Feed",
+    description:
+      "Render a localized editorial feed of latest, featured, contextual, or manually selected articles.",
+    category: "content",
+    schema: blogPostFeedBlockSchema,
+    defaultItem: {
+      type: "blogPostFeed",
+      eyebrow: "Editorial",
+      heading: "Latest insights from Care N Tour",
+      description:
+        "Fresh guidance, patient education, and medical travel updates curated for international patients.",
+      source: "latest",
+      layout: "grid",
+      limit: 6,
+      manualPostSlugs: [],
+      showSearch: false,
+      searchPlaceholder: "Search articles",
+      emptyStateHeading: "No articles available",
+      emptyStateDescription:
+        "Publish articles or adjust the feed settings to populate this section.",
+      featuredBadge: "Featured article",
+      relatedHeading: "Related articles",
+      listCtaLabel: "Read article",
+    },
+  } satisfies BlockDefinition<typeof blogPostFeedBlockSchema>,
+  blogTaxonomyGrid: {
+    type: "blogTaxonomyGrid",
+    label: "Blog Taxonomy Grid",
+    description:
+      "Show localized categories, tags, or author archives as editorial archive cards.",
+    category: "content",
+    schema: blogTaxonomyGridBlockSchema,
+    defaultItem: {
+      type: "blogTaxonomyGrid",
+      eyebrow: "Browse",
+      heading: "Explore the blog by topic",
+      description:
+        "Guide readers into the right archive through categories, tags, or author profiles.",
+      taxonomy: "categories",
+      limit: 9,
+      cardStyle: "editorial",
+      ctaLabel: "Explore archive",
+      emptyStateHeading: "Nothing to show yet",
+      emptyStateDescription: "Publish taxonomy content to populate this grid.",
+    },
+  } satisfies BlockDefinition<typeof blogTaxonomyGridBlockSchema>,
+  blogArticleHero: {
+    type: "blogArticleHero",
+    label: "Blog Article Hero",
+    description:
+      "Article header for title, excerpt, metadata, hero image, tags, and share actions.",
+    category: "hero",
+    schema: blogArticleHeroBlockSchema,
+    defaultItem: {
+      type: "blogArticleHero",
+      backLabel: "Back to Blog",
+      publishDateLabel: "Published",
+      updatedLabel: "Updated",
+      readingTimeSuffix: "min read",
+      shareLabel: "Share",
+      showCategory: true,
+      showAuthor: true,
+      showPublishDate: true,
+      showUpdatedDate: true,
+      showReadingTime: true,
+      showTags: true,
+      showShareActions: true,
+      showHeroImage: true,
+    },
+  } satisfies BlockDefinition<typeof blogArticleHeroBlockSchema>,
+  blogArticleBody: {
+    type: "blogArticleBody",
+    label: "Blog Article Body",
+    description:
+      "Article body wrapper for localized rich content plus optional table of contents.",
+    category: "content",
+    schema: blogArticleBodyBlockSchema,
+    defaultItem: {
+      type: "blogArticleBody",
+      showTableOfContents: true,
+      tocHeading: "On this page",
+      emptyStateHeading: "Article content unavailable",
+      emptyStateDescription:
+        "Add localized article content in the blog editor to publish this page.",
+    },
+  } satisfies BlockDefinition<typeof blogArticleBodyBlockSchema>,
+  blogAuthorSummary: {
+    type: "blogAuthorSummary",
+    label: "Blog Author Summary",
+    description:
+      "Localized author profile card for post detail pages and author archives.",
+    category: "social",
+    schema: blogAuthorSummaryBlockSchema,
+    defaultItem: {
+      type: "blogAuthorSummary",
+      heading: "About the author",
+      description: "",
+      showArchiveLink: true,
+      archiveLinkLabel: "View author archive",
+      emptyStateHeading: "Author profile unavailable",
+      emptyStateDescription:
+        "Assign an active author profile to show an editorial summary here.",
+    },
+  } satisfies BlockDefinition<typeof blogAuthorSummaryBlockSchema>,
   tabbedGuide: {
     type: "tabbedGuide",
     label: "Tabbed Travel Guide",
