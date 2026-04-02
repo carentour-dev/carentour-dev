@@ -6,10 +6,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { type PublicLocale } from "@/i18n/routing";
-import {
-  localizePublicPathname,
-  stripPublicLocalePrefix,
-} from "@/lib/public/routing";
 
 type LocaleAvailabilityResponse = {
   href?: string;
@@ -19,38 +15,54 @@ export function LanguageSwitcher() {
   const t = useTranslations("LocaleSwitcher");
   const pathname = usePathname();
   const locale = useLocale() as PublicLocale;
-  const [arabicHref, setArabicHref] = useState("/ar");
+  const [hrefs, setHrefs] = useState({ english: "/", arabic: "/ar" });
 
   useEffect(() => {
     let isSubscribed = true;
 
-    const loadArabicHref = async () => {
-      const response = await fetch(
-        `/api/public/locale-availability?pathname=${encodeURIComponent(pathname)}&locale=ar`,
-        { cache: "no-store" },
-      );
+    const loadLocalizedHrefs = async () => {
+      const [englishResponse, arabicResponse] = await Promise.all([
+        fetch(
+          `/api/public/locale-availability?pathname=${encodeURIComponent(pathname)}&locale=en`,
+          { cache: "no-store" },
+        ),
+        fetch(
+          `/api/public/locale-availability?pathname=${encodeURIComponent(pathname)}&locale=ar`,
+          { cache: "no-store" },
+        ),
+      ]);
 
-      if (!response.ok || !isSubscribed) {
+      if (!isSubscribed) {
         return;
       }
 
-      const payload = (await response.json()) as LocaleAvailabilityResponse;
-      if (payload.href) {
-        setArabicHref(payload.href);
+      const nextHrefs = { english: "/", arabic: "/ar" };
+
+      if (englishResponse.ok) {
+        const payload =
+          (await englishResponse.json()) as LocaleAvailabilityResponse;
+        if (payload.href) {
+          nextHrefs.english = payload.href;
+        }
       }
+
+      if (arabicResponse.ok) {
+        const payload =
+          (await arabicResponse.json()) as LocaleAvailabilityResponse;
+        if (payload.href) {
+          nextHrefs.arabic = payload.href;
+        }
+      }
+
+      setHrefs(nextHrefs);
     };
 
-    loadArabicHref();
+    loadLocalizedHrefs();
 
     return () => {
       isSubscribed = false;
     };
   }, [pathname]);
-
-  const englishHref = localizePublicPathname(
-    stripPublicLocalePrefix(pathname),
-    "en",
-  );
 
   return (
     <div
@@ -64,7 +76,7 @@ export function LanguageSwitcher() {
         variant={locale === "en" ? "secondary" : "ghost"}
         className="h-8 rounded-full px-3 text-xs"
       >
-        <a href={englishHref}>{t("en")}</a>
+        <a href={hrefs.english}>{t("en")}</a>
       </Button>
       <Button
         asChild
@@ -72,7 +84,7 @@ export function LanguageSwitcher() {
         variant={locale === "ar" ? "secondary" : "ghost"}
         className="h-8 rounded-full px-3 text-xs"
       >
-        <a href={arabicHref}>{t("ar")}</a>
+        <a href={hrefs.arabic}>{t("ar")}</a>
       </Button>
     </div>
   );
