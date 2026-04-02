@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
-import type { PublicLocale } from "@/i18n/routing";
+import {
+  extractBlogAiSummary,
+  resolveBlogPageBlocks,
+} from "@/lib/blog/page-helpers";
+import { getLocalizedBlogCategoryBySlug } from "@/lib/blog/server";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
   assertPublicPageAvailable,
+  decodePublicRouteSegment,
   getLocalizedPublicPagePathname,
   getPublicLocaleFromParams,
 } from "@/lib/public/page";
@@ -11,8 +19,6 @@ import {
   maybeRedirectFromLegacyPath,
   resolveSeo,
 } from "@/lib/seo";
-import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import BlogCategoryPageClient from "./BlogCategoryPageClient";
 
 export const revalidate = 300;
 
@@ -20,85 +26,108 @@ type PageProps = {
   params: Promise<{ locale: string; category: string }>;
 };
 
-async function getCategory(categorySlug: string) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("blog_categories")
-    .select("slug, name, description, updated_at")
-    .eq("slug", categorySlug)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Failed to load blog category for SEO", {
-      categorySlug,
-      error,
-    });
-    return null;
-  }
-
-  return data;
-}
-
-async function getSeo(categorySlug: string, locale: PublicLocale) {
-  const pathname = `/blog/${categorySlug}`;
-  const localizedPathname = getLocalizedPublicPagePathname(pathname, locale);
-  const category = await getCategory(categorySlug);
-  const defaultTitle = category
-    ? `${category.name} Articles | Care N Tour Blog`
-    : "Blog Category | Care N Tour";
-  const defaultDescription =
-    category?.description ?? "Browse articles in this category.";
-
-  return resolveSeo({
-    routeKey: pathname,
-    pathname: localizedPathname,
+async function getSeo(categorySlug: string, locale: "en" | "ar") {
+  const category = await getLocalizedBlogCategoryBySlug({
+    slug: categorySlug,
     locale,
-    defaults: {
-      title: defaultTitle,
-      description: defaultDescription,
-    },
-    source: category
-      ? {
-          title: defaultTitle,
-          description: defaultDescription,
-        }
-      : undefined,
-    schema: collectionPageSchema({
-      urlPath: localizedPathname,
-      title: defaultTitle,
-      description: defaultDescription,
-      items: category
-        ? [{ name: `${category.name} Articles`, path: localizedPathname }]
-        : undefined,
-    }),
-    indexable: Boolean(category),
-    modifiedTime: category?.updated_at ?? undefined,
+    publishedOnly: true,
   });
+  const templatePage = await getLocalizedCmsPageBySlug(
+    "blog-category-template",
+    locale,
+  );
+  const blocks = resolveBlogPageBlocks(templatePage);
+  const pathname =
+    category?.path ??
+    getLocalizedPublicPagePathname(`/blog/${categorySlug}`, locale);
+  const title = category
+    ? locale === "ar"
+      ? `مقالات ${category.name} | مدونة كير آند تور`
+      : `${category.name} Articles | Care N Tour Blog`
+    : locale === "ar"
+      ? "تصنيف المدونة | كير آند تور"
+      : "Blog Category | Care N Tour";
+  const description =
+    category?.description ??
+    (locale === "ar"
+      ? "تصفح المقالات ضمن هذا التصنيف."
+      : "Browse articles in this category.");
+
+  return {
+    category,
+    blocks,
+    seo: await resolveSeo({
+      routeKey: "/blog/[category]",
+      pathname,
+      locale,
+      defaults: {
+        title,
+        description,
+      },
+      source: {
+        title,
+        description,
+        aiSummary: extractBlogAiSummary(blocks, [
+          category?.name,
+          category?.description,
+        ]),
+      },
+      schema: collectionPageSchema({
+        urlPath: pathname,
+        title,
+        description,
+        items: category ? [{ name: category.name, path: pathname }] : undefined,
+      }),
+      indexable: Boolean(category),
+      modifiedTime: category?.updated_at ?? undefined,
+    }),
+  };
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { category } = await params;
+  const { category: rawCategory } = await params;
+  const category = decodePublicRouteSegment(rawCategory);
   const locale = await getPublicLocaleFromParams(params);
   await assertPublicPageAvailable(`/blog/${category}`, locale);
-  const seo = await getSeo(category, locale);
+  const { seo } = await getSeo(category, locale);
   return seo.metadata;
 }
 
 export default async function BlogCategoryPage({ params }: PageProps) {
-  const { category } = await params;
+  const { category: rawCategory } = await params;
+  const category = decodePublicRouteSegment(rawCategory);
   const locale = await getPublicLocaleFromParams(params);
   const pathname = `/blog/${category}`;
 
   await assertPublicPageAvailable(pathname, locale);
   await maybeRedirectFromLegacyPath(pathname);
-  const seo = await getSeo(category, locale);
+
+  const {
+    category: categoryRecord,
+    blocks,
+    seo,
+  } = await getSeo(category, locale);
+
+  if (!categoryRecord || blocks.length === 0) {
+    notFound();
+  }
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlogCategoryPageClient />
+      <BlockRenderer
+        blocks={blocks}
+        locale={locale}
+        context={{
+          blog: {
+            type: "category",
+            pagePath: categoryRecord.path,
+            category: categoryRecord,
+          },
+        }}
+      />
     </>
   );
 }
