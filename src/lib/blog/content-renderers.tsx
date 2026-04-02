@@ -42,14 +42,21 @@ function containsHtmlMarkup(content: string): boolean {
 }
 
 function renderMarkdown(markdown: string) {
-  let headingCounter = 0;
+  const buildHeadingId = (
+    node: { position?: { start?: { line?: number } } } | undefined,
+    text: string,
+  ) => {
+    const lineNumber = node?.position?.start?.line ?? 0;
+    return `heading-${slugify(text)}-${lineNumber}`;
+  };
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        h1: ({ children, ...props }) => {
+        h1: ({ children, node, ...props }) => {
           const text = String(children);
-          const id = `heading-${slugify(text)}-${headingCounter++}`;
+          const id = buildHeadingId(node, text);
           return (
             <h1
               id={id}
@@ -86,9 +93,9 @@ function renderMarkdown(markdown: string) {
             {children}
           </li>
         ),
-        h2: ({ children, ...props }) => {
+        h2: ({ children, node, ...props }) => {
           const text = String(children);
-          const id = `heading-${slugify(text)}-${headingCounter++}`;
+          const id = buildHeadingId(node, text);
           return (
             <h2
               id={id}
@@ -99,9 +106,9 @@ function renderMarkdown(markdown: string) {
             </h2>
           );
         },
-        h3: ({ children, ...props }) => {
+        h3: ({ children, node, ...props }) => {
           const text = String(children);
-          const id = `heading-${slugify(text)}-${headingCounter++}`;
+          const id = buildHeadingId(node, text);
           return (
             <h3
               id={id}
@@ -112,9 +119,9 @@ function renderMarkdown(markdown: string) {
             </h3>
           );
         },
-        h4: ({ children, ...props }) => {
+        h4: ({ children, node, ...props }) => {
           const text = String(children);
-          const id = `heading-${slugify(text)}-${headingCounter++}`;
+          const id = buildHeadingId(node, text);
           return (
             <h4
               id={id}
