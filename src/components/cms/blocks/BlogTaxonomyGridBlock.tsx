@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import { listLocalizedBlogTaxonomy } from "@/lib/blog/server";
 import { BlockSurface } from "./BlockSurface";
 
@@ -19,6 +20,21 @@ export async function BlogTaxonomyGridBlock({
     publishedOnly: true,
   });
   const visibleItems = items.slice(0, block.limit);
+  const ctaLabel = resolveBlogUiText(
+    "taxonomyCtaLabel",
+    locale,
+    block.ctaLabel,
+  );
+  const emptyStateHeading = resolveBlogUiText(
+    "taxonomyEmptyStateHeading",
+    locale,
+    block.emptyStateHeading,
+  );
+  const emptyStateDescription = resolveBlogUiText(
+    "taxonomyEmptyStateDescription",
+    locale,
+    block.emptyStateDescription,
+  );
 
   return (
     <BlockSurface
@@ -51,10 +67,10 @@ export async function BlogTaxonomyGridBlock({
           {visibleItems.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-8 text-center">
               <h3 className="text-lg font-semibold text-foreground">
-                {block.emptyStateHeading}
+                {emptyStateHeading}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {block.emptyStateDescription}
+                {emptyStateDescription}
               </p>
             </div>
           ) : (
@@ -97,7 +113,7 @@ export async function BlogTaxonomyGridBlock({
                         ) : null}
                         <div className="mt-5">
                           <Button asChild variant="outline">
-                            <Link href={item.path}>{block.ctaLabel}</Link>
+                            <Link href={item.path}>{ctaLabel}</Link>
                           </Button>
                         </div>
                       </div>
