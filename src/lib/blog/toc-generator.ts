@@ -8,6 +8,10 @@ export interface TocItem {
   level: number;
 }
 
+function buildMarkdownHeadingId(text: string, lineNumber: number): string {
+  return `heading-${slugify(text)}-${lineNumber}`;
+}
+
 /**
  * Extract headings from content and generate TOC
  */
@@ -22,16 +26,14 @@ export function generateTableOfContents(content: any): TocItem[] {
 
   const addMarkdownHeadings = (markdown: string) => {
     const lines = markdown.split("\n");
-    let counter = 0;
 
-    lines.forEach((line: string) => {
+    lines.forEach((line: string, index) => {
       const match = line.match(/^(#{1,4})\s+(.+)$/);
       if (match) {
         const level = Math.max(2, match[1].length);
         const text = match[2].trim();
-        const id = `heading-${slugify(text)}-${counter}`;
+        const id = buildMarkdownHeadingId(text, index + 1);
         headings.push({ id, text, level });
-        counter++;
       }
     });
   };
