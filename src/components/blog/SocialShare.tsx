@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PublicLocale } from "@/i18n/routing";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import { Button } from "@/components/ui/button";
 import {
   Facebook,
@@ -15,12 +17,25 @@ interface SocialShareProps {
   url: string;
   title: string;
   description?: string;
+  label?: string;
+  locale?: PublicLocale;
 }
 
-export function SocialShare({ url, title, description }: SocialShareProps) {
+export function SocialShare({
+  url,
+  title,
+  description,
+  label,
+  locale = "en",
+}: SocialShareProps) {
   const [copied, setCopied] = useState(false);
   const [fullUrl, setFullUrl] = useState(url);
   const { toast } = useToast();
+  const shareLabel = resolveBlogUiText("shareLabel", locale, label);
+  const twitterLabel = resolveBlogUiText("shareOnTwitter", locale);
+  const facebookLabel = resolveBlogUiText("shareOnFacebook", locale);
+  const linkedinLabel = resolveBlogUiText("shareOnLinkedIn", locale);
+  const copyLinkLabel = resolveBlogUiText("copyLink", locale);
 
   useEffect(() => {
     if (url.startsWith("http")) {
@@ -48,14 +63,14 @@ export function SocialShare({ url, title, description }: SocialShareProps) {
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       toast({
-        title: "Link copied!",
-        description: "The link has been copied to your clipboard.",
+        title: resolveBlogUiText("copySuccessTitle", locale),
+        description: resolveBlogUiText("copySuccessDescription", locale),
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast({
-        title: "Failed to copy",
-        description: "Could not copy link to clipboard.",
+        title: resolveBlogUiText("copyErrorTitle", locale),
+        description: resolveBlogUiText("copyErrorDescription", locale),
         variant: "destructive",
       });
     }
@@ -71,13 +86,13 @@ export function SocialShare({ url, title, description }: SocialShareProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground mr-2">Share:</span>
+      <span className="mr-2 text-sm text-muted-foreground">{shareLabel}:</span>
 
       <Button
         variant="outline"
         size="icon"
         onClick={() => openShareWindow(shareLinks.twitter)}
-        aria-label="Share on Twitter"
+        aria-label={twitterLabel}
       >
         <Twitter className="h-4 w-4" />
       </Button>
@@ -86,7 +101,7 @@ export function SocialShare({ url, title, description }: SocialShareProps) {
         variant="outline"
         size="icon"
         onClick={() => openShareWindow(shareLinks.facebook)}
-        aria-label="Share on Facebook"
+        aria-label={facebookLabel}
       >
         <Facebook className="h-4 w-4" />
       </Button>
@@ -95,7 +110,7 @@ export function SocialShare({ url, title, description }: SocialShareProps) {
         variant="outline"
         size="icon"
         onClick={() => openShareWindow(shareLinks.linkedin)}
-        aria-label="Share on LinkedIn"
+        aria-label={linkedinLabel}
       >
         <Linkedin className="h-4 w-4" />
       </Button>
@@ -104,7 +119,7 @@ export function SocialShare({ url, title, description }: SocialShareProps) {
         variant="outline"
         size="icon"
         onClick={copyToClipboard}
-        aria-label="Copy link"
+        aria-label={copyLinkLabel}
       >
         {copied ? (
           <Check className="h-4 w-4 text-green-600" />
