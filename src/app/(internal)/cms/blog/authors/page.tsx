@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -51,22 +52,29 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 
 export default function AuthorsPage() {
+  const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAuthor, setEditingAuthor] = useState<any>(null);
   const [filterActive, setFilterActive] = useState<string>("all");
   const { toast } = useToast();
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
 
   const { data: authors, isLoading } = useQuery({
-    queryKey: ["blog-authors-cms"],
+    queryKey: ["blog-authors-cms", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/authors", {
+      const res = await fetch(`/api/cms/blog/authors?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -93,22 +101,39 @@ export default function AuthorsPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic mode edits translated author names, bios, slugs, and publish state while English keeps account links and profile metadata."
+            : "English owns the base author roster, linked users, and profile metadata."
+        }
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Authors</h1>
           <p className="text-muted-foreground mt-1">
-            Manage blog post authors and their profiles
+            {isArabicLocale
+              ? "Translate and publish Arabic author archive pages"
+              : "Manage blog post authors and their profiles"}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button
+              onClick={() => handleOpenDialog()}
+              disabled={isArabicLocale}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              New Author
+              {isArabicLocale ? "English Author Required" : "New Author"}
             </Button>
           </DialogTrigger>
-          <AuthorDialog author={editingAuthor} onClose={handleCloseDialog} />
+          <AuthorDialog
+            author={editingAuthor}
+            onClose={handleCloseDialog}
+            locale={locale}
+          />
         </Dialog>
       </div>
 
@@ -139,6 +164,7 @@ export default function AuthorsPage() {
               key={author.id}
               author={author}
               onEdit={() => handleOpenDialog(author)}
+              locale={locale}
             />
           ))}
         </div>
@@ -147,9 +173,14 @@ export default function AuthorsPage() {
           <CardContent className="text-center py-12">
             <User className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">
-              No authors found. Create your first author!
+              {isArabicLocale
+                ? "No authors found. Create authors in English, then switch back to Arabic to translate them."
+                : "No authors found. Create your first author!"}
             </p>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button
+              onClick={() => handleOpenDialog()}
+              disabled={isArabicLocale}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Author
             </Button>
@@ -160,7 +191,15 @@ export default function AuthorsPage() {
   );
 }
 
-function AuthorCard({ author, onEdit }: { author: any; onEdit: () => void }) {
+function AuthorCard({
+  author,
+  onEdit,
+  locale,
+}: {
+  author: any;
+  onEdit: () => void;
+  locale: "en" | "ar";
+}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -173,21 +212,28 @@ function AuthorCard({ author, onEdit }: { author: any; onEdit: () => void }) {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/cms/blog/authors?id=${author.id}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/cms/blog/authors?id=${author.id}&locale=${locale}`,
+        {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Failed to delete author");
       }
 
       toast({
-        title: "Author deleted",
-        description: `"${author.name}" has been deleted.`,
+        title:
+          locale === "ar" ? "Arabic translation deleted" : "Author deleted",
+        description:
+          locale === "ar"
+            ? `"${author.name}" Arabic content has been deleted.`
+            : `"${author.name}" has been deleted.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-authors-cms"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-authors-cms", locale] });
     } catch (error) {
       toast({
         title: "Delete failed",
@@ -231,6 +277,15 @@ function AuthorCard({ author, onEdit }: { author: any; onEdit: () => void }) {
                 {author.active ? "Active" : "Inactive"}
               </Badge>
               <Badge variant="outline">{author.post_count || 0} posts</Badge>
+              {locale === "ar" && (
+                <Badge
+                  variant={
+                    author.status === "published" ? "default" : "outline"
+                  }
+                >
+                  {author.status === "published" ? "Published" : "Draft"}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -343,15 +398,19 @@ type AuthorLinkableUser = {
 function AuthorDialog({
   author,
   onClose,
+  locale,
 }: {
   author?: any;
   onClose: () => void;
+  locale: "en" | "ar";
 }) {
+  const isArabicLocale = locale === "ar";
   const initialAuthorType: "standalone" | "linked" = author?.user_id
     ? "linked"
     : "standalone";
   const initialUserId = author?.user_id || "";
   const initialName = author?.name || "";
+  const initialSlug = author?.slug || "";
   const initialEmail = author?.email || "";
   const initialBio = author?.bio || "";
   const initialAvatar = author?.avatar || "";
@@ -360,12 +419,14 @@ function AuthorDialog({
   const initialLinkedin = author?.social_links?.linkedin || "";
   const initialGithub = author?.social_links?.github || "";
   const initialActive = author?.active ?? true;
+  const initialStatus = author?.status || "draft";
 
   const [authorType, setAuthorType] = useState<"standalone" | "linked">(
     initialAuthorType,
   );
   const [userId, setUserId] = useState(initialUserId);
   const [name, setName] = useState(initialName);
+  const [slug, setSlug] = useState(initialSlug);
   const [email, setEmail] = useState(initialEmail);
   const [bio, setBio] = useState(initialBio);
   const [avatar, setAvatar] = useState(initialAvatar);
@@ -374,6 +435,7 @@ function AuthorDialog({
   const [linkedin, setLinkedin] = useState(initialLinkedin);
   const [github, setGithub] = useState(initialGithub);
   const [active, setActive] = useState(initialActive);
+  const [status, setStatus] = useState(initialStatus);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -430,6 +492,7 @@ function AuthorDialog({
     authorType !== initialAuthorType ||
     userId !== initialUserId ||
     name.trim() !== initialName.trim() ||
+    slug.trim() !== initialSlug.trim() ||
     email.trim() !== initialEmail.trim() ||
     bio.trim() !== initialBio.trim() ||
     avatar !== initialAvatar ||
@@ -437,7 +500,8 @@ function AuthorDialog({
     twitter.trim() !== initialTwitter.trim() ||
     linkedin.trim() !== initialLinkedin.trim() ||
     github.trim() !== initialGithub.trim() ||
-    active !== initialActive;
+    active !== initialActive ||
+    status !== initialStatus;
 
   const handleClose = () => {
     if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
@@ -459,6 +523,7 @@ function AuthorDialog({
         id: author?.id,
         user_id: authorType === "linked" ? userId : null,
         name: name.trim(),
+        slug: slug.trim(),
         email: email.trim(),
         bio: bio.trim(),
         avatar: avatar.trim(),
@@ -469,12 +534,13 @@ function AuthorDialog({
           github: github.trim(),
         },
         active,
+        status,
       };
 
       const url = "/api/cms/blog/authors";
       const method = author ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await fetch(`${url}?locale=${locale}`, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -489,11 +555,16 @@ function AuthorDialog({
       }
 
       toast({
-        title: author ? "Author updated" : "Author created",
+        title:
+          author && isArabicLocale
+            ? "Arabic author updated"
+            : author
+              ? "Author updated"
+              : "Author created",
         description: `"${name}" has been saved successfully.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-authors-cms"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-authors-cms", locale] });
       onClose();
     } catch (error: any) {
       toast({
@@ -512,12 +583,18 @@ function AuthorDialog({
       unsaved={hasUnsavedChanges}
     >
       <DialogHeader>
-        <DialogTitle>{author ? "Edit Author" : "Create Author"}</DialogTitle>
+        <DialogTitle>
+          {author
+            ? isArabicLocale
+              ? "Edit Arabic Author"
+              : "Edit Author"
+            : "Create Author"}
+        </DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Author Type */}
-        {!author && (
+        {!author && !isArabicLocale && (
           <div>
             <Label>Author Type</Label>
             <Tabs
@@ -545,7 +622,7 @@ function AuthorDialog({
               value={userId || undefined}
               onValueChange={setUserId}
               required
-              disabled={usersLoading}
+              disabled={usersLoading || isArabicLocale}
             >
               <SelectTrigger>
                 <SelectValue
@@ -596,6 +673,17 @@ function AuthorDialog({
           />
         </div>
 
+        <div>
+          <Label htmlFor="slug">Slug *</Label>
+          <Input
+            id="slug"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            required
+            placeholder="author-url-slug"
+          />
+        </div>
+
         {/* Email */}
         <div>
           <Label htmlFor="email">Email</Label>
@@ -605,6 +693,7 @@ function AuthorDialog({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="author@example.com"
+            disabled={isArabicLocale}
           />
         </div>
 
@@ -629,6 +718,7 @@ function AuthorDialog({
             value={avatar}
             onChange={(e) => setAvatar(e.target.value)}
             placeholder="https://example.com/avatar.jpg"
+            disabled={isArabicLocale}
           />
         </div>
 
@@ -641,6 +731,7 @@ function AuthorDialog({
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
             placeholder="https://author-website.com"
+            disabled={isArabicLocale}
           />
         </div>
 
@@ -654,6 +745,7 @@ function AuthorDialog({
                 value={twitter}
                 onChange={(e) => setTwitter(e.target.value)}
                 placeholder="https://twitter.com/username"
+                disabled={isArabicLocale}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -662,6 +754,7 @@ function AuthorDialog({
                 value={linkedin}
                 onChange={(e) => setLinkedin(e.target.value)}
                 placeholder="https://linkedin.com/in/username"
+                disabled={isArabicLocale}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -670,6 +763,7 @@ function AuthorDialog({
                 value={github}
                 onChange={(e) => setGithub(e.target.value)}
                 placeholder="https://github.com/username"
+                disabled={isArabicLocale}
               />
             </div>
           </div>
@@ -680,11 +774,33 @@ function AuthorDialog({
           <div>
             <Label htmlFor="active">Active Status</Label>
             <p className="text-xs text-muted-foreground">
-              Inactive authors won&apos;t appear publicly
+              {isArabicLocale
+                ? "Active state is controlled by the English base author."
+                : "Inactive authors won&apos;t appear publicly"}
             </p>
           </div>
-          <Switch id="active" checked={active} onCheckedChange={setActive} />
+          <Switch
+            id="active"
+            checked={active}
+            onCheckedChange={setActive}
+            disabled={isArabicLocale}
+          />
         </div>
+
+        {isArabicLocale && (
+          <div>
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-4">
           <Button type="submit" disabled={submitting} className="flex-1">
