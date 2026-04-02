@@ -2,7 +2,9 @@ import {
   DEFAULT_SEO_LOCALE,
   STATIC_PUBLIC_ROUTE_DEFAULTS,
 } from "@/lib/seo/constants";
+import { BLOG_INTERNAL_TEMPLATE_SLUGS } from "@/lib/blog/server";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { localizePublicPathname } from "@/lib/public/routing";
 import { normalizePath } from "@/lib/seo/utils";
 import { ApiError } from "@/server/utils/errors";
 import type {
@@ -27,6 +29,41 @@ type InventoryOverrideRow = Pick<
   | "og_image_url"
   | "robots_index"
 >;
+
+type BlogCategoryInventoryTranslationRow = {
+  blog_category_id: string;
+  slug: string | null;
+  name: string | null;
+  description: string | null;
+  status: "draft" | "published";
+};
+
+type BlogPostInventoryTranslationRow = {
+  blog_post_id: string;
+  slug: string | null;
+  title: string | null;
+  excerpt: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image: string | null;
+  status: "draft" | "published";
+};
+
+type BlogTagInventoryTranslationRow = {
+  blog_tag_id: string;
+  slug: string | null;
+  name: string | null;
+  description: string | null;
+  status: "draft" | "published";
+};
+
+type BlogAuthorInventoryTranslationRow = {
+  blog_author_id: string;
+  slug: string | null;
+  name: string | null;
+  bio: string | null;
+  status: "draft" | "published";
+};
 
 function computeNeedsSeoScore(input: {
   hasTitle: boolean;
@@ -618,6 +655,10 @@ export async function getPublicRouteInventory(
     blogPostsRes,
     blogTagsRes,
     blogAuthorsRes,
+    blogCategoryTranslationsRes,
+    blogPostTranslationsRes,
+    blogTagTranslationsRes,
+    blogAuthorTranslationsRes,
     treatmentsRes,
     doctorsRes,
     providersRes,
@@ -630,16 +671,48 @@ export async function getPublicRouteInventory(
       .eq("status", "published"),
     supabase
       .from("blog_categories")
-      .select("slug, name, description, updated_at"),
+      .select("id, slug, name, description, updated_at"),
     supabase
       .from("blog_posts")
       .select(
-        "slug, title, excerpt, seo_title, seo_description, og_image, featured_image, updated_at, publish_date, category:blog_categories(slug, name)",
+        "id, slug, title, excerpt, seo_title, seo_description, og_image, featured_image, updated_at, publish_date, category:blog_categories(id, slug, name)",
       )
       .eq("status", "published")
       .or(`publish_date.is.null,publish_date.lte.${nowIso()}`),
-    supabase.from("blog_tags").select("slug, name"),
-    supabase.from("blog_authors").select("slug, name, bio, active, updated_at"),
+    supabase.from("blog_tags").select("id, slug, name"),
+    supabase
+      .from("blog_authors")
+      .select("id, slug, name, bio, active, updated_at"),
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("blog_category_translations")
+          .select("blog_category_id, slug, name, description, status")
+          .eq("locale", locale)
+          .eq("status", "published"),
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("blog_post_translations")
+          .select(
+            "blog_post_id, slug, title, excerpt, seo_title, seo_description, og_image, status",
+          )
+          .eq("locale", locale)
+          .eq("status", "published"),
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("blog_tag_translations")
+          .select("blog_tag_id, slug, name, description, status")
+          .eq("locale", locale)
+          .eq("status", "published"),
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("blog_author_translations")
+          .select("blog_author_id, slug, name, bio, status")
+          .eq("locale", locale)
+          .eq("status", "published"),
     supabase
       .from("treatments")
       .select("slug, name, summary, card_image_url, hero_image_url, updated_at")
@@ -678,6 +751,10 @@ export async function getPublicRouteInventory(
     ["blog_posts", blogPostsRes.error],
     ["blog_tags", blogTagsRes.error],
     ["blog_authors", blogAuthorsRes.error],
+    ["blog_category_translations", blogCategoryTranslationsRes.error],
+    ["blog_post_translations", blogPostTranslationsRes.error],
+    ["blog_tag_translations", blogTagTranslationsRes.error],
+    ["blog_author_translations", blogAuthorTranslationsRes.error],
     ["treatments", treatmentsRes.error],
     ["doctors", doctorsRes.error],
     ["service_providers", providersRes.error],
@@ -701,6 +778,40 @@ export async function getPublicRouteInventory(
     overrideRows,
     locale,
   );
+  const blogCategoryTranslationById = new Map<
+    string,
+    BlogCategoryInventoryTranslationRow
+  >(
+    (
+      (blogCategoryTranslationsRes.data ??
+        []) as BlogCategoryInventoryTranslationRow[]
+    ).map((row) => [row.blog_category_id, row]),
+  );
+  const blogPostTranslationById = new Map<
+    string,
+    BlogPostInventoryTranslationRow
+  >(
+    (
+      (blogPostTranslationsRes.data ?? []) as BlogPostInventoryTranslationRow[]
+    ).map((row) => [row.blog_post_id, row]),
+  );
+  const blogTagTranslationById = new Map<
+    string,
+    BlogTagInventoryTranslationRow
+  >(
+    (
+      (blogTagTranslationsRes.data ?? []) as BlogTagInventoryTranslationRow[]
+    ).map((row) => [row.blog_tag_id, row]),
+  );
+  const blogAuthorTranslationById = new Map<
+    string,
+    BlogAuthorInventoryTranslationRow
+  >(
+    (
+      (blogAuthorTranslationsRes.data ??
+        []) as BlogAuthorInventoryTranslationRow[]
+    ).map((row) => [row.blog_author_id, row]),
+  );
 
   const entries: PublicInventoryEntry[] = [];
   const cmsPages = (cmsPagesRes.data ?? []) as Array<{
@@ -719,6 +830,9 @@ export async function getPublicRouteInventory(
     }
   >();
   for (const page of cmsPages) {
+    if (BLOG_INTERNAL_TEMPLATE_SLUGS.has(page.slug)) {
+      continue;
+    }
     const pathname = normalizePath(
       page.slug === "home" ? "/" : `/${page.slug}`,
     );
@@ -819,6 +933,7 @@ export async function getPublicRouteInventory(
   }
 
   const blogCategories = (blogCategoriesRes.data ?? []) as Array<{
+    id: string;
     slug: string;
     name: string;
     description?: string | null;
@@ -826,9 +941,26 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const category of blogCategories) {
-    const pathname = normalizePath(`/blog/${category.slug}`);
-    const sourceTitle = `${category.name} Articles | Care N Tour Blog`;
-    const sourceDescription = category.description ?? null;
+    const translation = blogCategoryTranslationById.get(category.id);
+    const localizedSlug =
+      locale === DEFAULT_SEO_LOCALE
+        ? category.slug
+        : translation?.slug?.trim() || category.slug;
+    const pathname = normalizePath(
+      localizePublicPathname(`/blog/${localizedSlug}`, locale),
+    );
+    const sourceName =
+      locale === DEFAULT_SEO_LOCALE
+        ? category.name
+        : translation?.name?.trim() || category.name;
+    const sourceTitle =
+      locale === DEFAULT_SEO_LOCALE
+        ? `${sourceName} Articles | Care N Tour Blog`
+        : `مقالات ${sourceName} | مدونة كير آند تور`;
+    const sourceDescription =
+      locale === DEFAULT_SEO_LOCALE
+        ? (category.description ?? null)
+        : ((translation?.description?.trim() || category.description) ?? null);
     const effectiveOverride = overrideLookup.get(pathname);
     const scoringOverride =
       locale === DEFAULT_SEO_LOCALE
@@ -857,6 +989,7 @@ export async function getPublicRouteInventory(
   }
 
   const blogPosts = (blogPostsRes.data ?? []) as Array<{
+    id: string;
     slug: string;
     title: string;
     excerpt?: string | null;
@@ -865,19 +998,46 @@ export async function getPublicRouteInventory(
     og_image?: string | null;
     featured_image?: string | null;
     updated_at?: string | null;
-    category?: { slug?: string; name?: string } | null;
+    category?: { id?: string; slug?: string; name?: string } | null;
   }>;
 
   for (const post of blogPosts) {
-    const categorySlug = post.category?.slug;
+    const categoryTranslation = post.category?.id
+      ? blogCategoryTranslationById.get(post.category.id)
+      : null;
+    const categorySlug =
+      locale === DEFAULT_SEO_LOCALE
+        ? post.category?.slug
+        : categoryTranslation?.slug?.trim() || post.category?.slug;
     if (!categorySlug) {
       continue;
     }
 
-    const pathname = normalizePath(`/blog/${categorySlug}/${post.slug}`);
-    const sourceTitle = post.seo_title ?? post.title;
-    const sourceDescription = post.seo_description ?? post.excerpt ?? null;
-    const sourceImage = post.og_image ?? post.featured_image ?? null;
+    const translation = blogPostTranslationById.get(post.id);
+    const localizedSlug =
+      locale === DEFAULT_SEO_LOCALE
+        ? post.slug
+        : translation?.slug?.trim() || post.slug;
+    const pathname = normalizePath(
+      localizePublicPathname(`/blog/${categorySlug}/${localizedSlug}`, locale),
+    );
+    const sourceTitle =
+      locale === DEFAULT_SEO_LOCALE
+        ? (post.seo_title ?? post.title)
+        : translation?.seo_title?.trim() ||
+          translation?.title?.trim() ||
+          (post.seo_title ?? post.title);
+    const sourceDescription =
+      locale === DEFAULT_SEO_LOCALE
+        ? (post.seo_description ?? post.excerpt ?? null)
+        : translation?.seo_description?.trim() ||
+          translation?.excerpt?.trim() ||
+          (post.seo_description ?? post.excerpt ?? null);
+    const sourceImage =
+      locale === DEFAULT_SEO_LOCALE
+        ? (post.og_image ?? post.featured_image ?? null)
+        : translation?.og_image?.trim() ||
+          (post.og_image ?? post.featured_image ?? null);
     const effectiveOverride = overrideLookup.get(pathname);
     const scoringOverride =
       locale === DEFAULT_SEO_LOCALE
@@ -888,7 +1048,10 @@ export async function getPublicRouteInventory(
       routeKey: pathname,
       pathname,
       sourceType: "blog-post",
-      label: `Blog Post: ${post.title}`,
+      label:
+        locale === DEFAULT_SEO_LOCALE
+          ? `Blog Post: ${post.title}`
+          : `Blog Post: ${translation?.title?.trim() || post.title}`,
       indexable: effectiveOverride?.robots_index ?? true,
       locale,
       sourceTitle,
@@ -907,15 +1070,34 @@ export async function getPublicRouteInventory(
   }
 
   const blogTags = (blogTagsRes.data ?? []) as Array<{
+    id: string;
     slug: string;
     name: string;
     updated_at?: string | null;
   }>;
 
   for (const tag of blogTags) {
-    const pathname = normalizePath(`/blog/tag/${tag.slug}`);
-    const sourceTitle = `#${tag.name} Articles | Care N Tour Blog`;
-    const sourceDescription = `Explore blog posts tagged with ${tag.name}.`;
+    const translation = blogTagTranslationById.get(tag.id);
+    const localizedSlug =
+      locale === DEFAULT_SEO_LOCALE
+        ? tag.slug
+        : translation?.slug?.trim() || tag.slug;
+    const localizedName =
+      locale === DEFAULT_SEO_LOCALE
+        ? tag.name
+        : translation?.name?.trim() || tag.name;
+    const pathname = normalizePath(
+      localizePublicPathname(`/blog/tag/${localizedSlug}`, locale),
+    );
+    const sourceTitle =
+      locale === DEFAULT_SEO_LOCALE
+        ? `#${localizedName} Articles | Care N Tour Blog`
+        : `مقالات الوسم ${localizedName} | مدونة كير آند تور`;
+    const sourceDescription =
+      locale === DEFAULT_SEO_LOCALE
+        ? `Explore blog posts tagged with ${tag.name}.`
+        : translation?.description?.trim() ||
+          `استكشف المقالات المرتبطة بالوسم ${localizedName}.`;
     const effectiveOverride = overrideLookup.get(pathname);
     const scoringOverride =
       locale === DEFAULT_SEO_LOCALE
@@ -944,6 +1126,7 @@ export async function getPublicRouteInventory(
   }
 
   const blogAuthors = (blogAuthorsRes.data ?? []) as Array<{
+    id: string;
     slug: string;
     name: string;
     bio?: string | null;
@@ -952,10 +1135,28 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const author of blogAuthors.filter((row) => row.active !== false)) {
-    const pathname = normalizePath(`/blog/author/${author.slug}`);
-    const sourceTitle = `${author.name} | Care N Tour Blog`;
+    const translation = blogAuthorTranslationById.get(author.id);
+    const localizedSlug =
+      locale === DEFAULT_SEO_LOCALE
+        ? author.slug
+        : translation?.slug?.trim() || author.slug;
+    const localizedName =
+      locale === DEFAULT_SEO_LOCALE
+        ? author.name
+        : translation?.name?.trim() || author.name;
+    const pathname = normalizePath(
+      localizePublicPathname(`/blog/author/${localizedSlug}`, locale),
+    );
+    const sourceTitle =
+      locale === DEFAULT_SEO_LOCALE
+        ? `${localizedName} | Care N Tour Blog`
+        : `مقالات ${localizedName} | مدونة كير آند تور`;
     const sourceDescription =
-      author.bio ?? `Articles written by ${author.name}.`;
+      locale === DEFAULT_SEO_LOCALE
+        ? (author.bio ?? `Articles written by ${author.name}.`)
+        : translation?.bio?.trim() ||
+          author.bio ||
+          `مقالات كتبها ${localizedName}.`;
     const effectiveOverride = overrideLookup.get(pathname);
     const scoringOverride =
       locale === DEFAULT_SEO_LOCALE
