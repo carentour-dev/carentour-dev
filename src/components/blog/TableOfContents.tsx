@@ -3,20 +3,59 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { TocItem } from "@/lib/blog/toc-generator";
+import { resolveTocItems, type HeadingTarget } from "@/lib/blog/toc-resolver";
 
 interface TableOfContentsProps {
   items: TocItem[];
   className?: string;
+  title?: string;
 }
 
 export function TableOfContents({
   items = [],
   className,
+  title = "On This Page",
 }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>("");
+  const [resolvedItems, setResolvedItems] = useState<TocItem[]>(items);
 
   useEffect(() => {
-    if (!items || items.length === 0) return;
+    if (typeof document === "undefined") {
+      setResolvedItems(items);
+      return;
+    }
+
+    const root = document.querySelector("[data-toc-root]");
+    if (!root || items.length === 0) {
+      setResolvedItems(items);
+      return;
+    }
+
+    const headingTargets = Array.from(
+      root.querySelectorAll<HTMLHeadingElement>("h1, h2, h3, h4"),
+    )
+      .map((heading, index) => {
+        const text = (heading.textContent || "").trim();
+        if (!text) {
+          return null;
+        }
+
+        if (!heading.id || heading.id.trim().length === 0) {
+          heading.id = `toc-heading-${index}`;
+        }
+
+        return {
+          id: heading.id,
+          text,
+        } satisfies HeadingTarget;
+      })
+      .filter((heading): heading is HeadingTarget => Boolean(heading));
+
+    setResolvedItems(resolveTocItems(items, headingTargets));
+  }, [items]);
+
+  useEffect(() => {
+    if (!resolvedItems || resolvedItems.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -29,7 +68,7 @@ export function TableOfContents({
       { rootMargin: "-100px 0px -66%" },
     );
 
-    items.forEach((item) => {
+    resolvedItems.forEach((item) => {
       const element = document.getElementById(item.id);
       if (element) {
         observer.observe(element);
@@ -37,42 +76,42 @@ export function TableOfContents({
     });
 
     return () => {
-      items.forEach((item) => {
+      resolvedItems.forEach((item) => {
         const element = document.getElementById(item.id);
         if (element) {
           observer.unobserve(element);
         }
       });
     };
-  }, [items]);
+  }, [resolvedItems]);
 
-  if (!items || items.length === 0) {
+  if (!resolvedItems || resolvedItems.length === 0) {
     return null;
   }
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
     const element = document.getElementById(id);
-    if (element) {
-      const offset = 80; // Account for fixed header
-      const elementPosition =
-        element.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: elementPosition - offset,
-        behavior: "smooth",
-      });
-      setActiveId(id);
+    if (!element) {
+      return;
     }
+
+    e.preventDefault();
+    const offset = 80; // Account for fixed header
+    const elementPosition =
+      element.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({
+      top: elementPosition - offset,
+      behavior: "smooth",
+    });
+    setActiveId(id);
   };
 
   return (
     <div className={cn("space-y-2", className)}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">
-        On This Page
-      </h3>
+      <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
       <nav>
         <ul className="space-y-2">
-          {items.map((item) => (
+          {resolvedItems.map((item) => (
             <li
               key={item.id}
               style={{
