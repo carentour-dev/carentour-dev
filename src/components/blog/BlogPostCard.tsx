@@ -2,6 +2,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, Eye, Calendar } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
+import {
+  formatBlogCardDate,
+  formatBlogNumber,
+  formatBlogReadingTime,
+} from "@/lib/blog/localization";
 import { CategoryBadge } from "./CategoryBadge";
 import { formatDistanceToNow } from "date-fns";
 
@@ -28,14 +34,29 @@ interface BlogPostCardProps {
     reading_time?: number;
     view_count?: number;
   };
+  locale?: PublicLocale;
 }
 
-export function BlogPostCard({ post }: BlogPostCardProps) {
+export function BlogPostCard({ post, locale = "en" }: BlogPostCardProps) {
   const postUrl =
     post.path ??
     (post.category
       ? `/blog/${post.category.slug}/${post.slug}`
       : `/blog/${post.slug}`);
+  const publishDateLabel =
+    post.publish_date && locale === "ar"
+      ? formatBlogCardDate(post.publish_date, locale)
+      : post.publish_date
+        ? formatDistanceToNow(new Date(post.publish_date), {
+            addSuffix: true,
+          })
+        : null;
+  const readingTimeLabel = formatBlogReadingTime(
+    post.reading_time,
+    locale,
+    "compact",
+  );
+  const viewCountLabel = formatBlogNumber(post.view_count, locale);
 
   return (
     <Link href={postUrl}>
@@ -73,30 +94,28 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
           )}
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-            {post.publish_date && (
+            {publishDateLabel && (
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                <span>
-                  {formatDistanceToNow(new Date(post.publish_date), {
-                    addSuffix: true,
-                  })}
-                </span>
+                <span>{publishDateLabel}</span>
               </div>
             )}
 
-            {post.reading_time && (
+            {readingTimeLabel && (
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                <span>{post.reading_time} min</span>
+                <span>{readingTimeLabel}</span>
               </div>
             )}
 
-            {post.view_count !== undefined && post.view_count > 0 && (
-              <div className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                <span>{post.view_count}</span>
-              </div>
-            )}
+            {viewCountLabel &&
+              post.view_count !== undefined &&
+              post.view_count > 0 && (
+                <div className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  <span>{viewCountLabel}</span>
+                </div>
+              )}
           </div>
         </CardContent>
       </Card>
