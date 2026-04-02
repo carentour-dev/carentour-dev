@@ -8,13 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { cmsTemplates, getTemplate } from "@/lib/cms/templates";
+import { TemplateBrowser } from "@/components/cms/TemplateBrowser";
+import { getTemplate } from "@/lib/cms/templates";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { Sparkles } from "lucide-react";
 
 export default function CmsNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateParam = searchParams?.get("template") ?? null;
+  const locale = useMemo(
+    () =>
+      resolveAdminLocale(new URLSearchParams(searchParams?.toString() ?? "")),
+    [searchParams],
+  );
   const templateDefinition = useMemo(
     () => getTemplate(templateParam),
     [templateParam],
@@ -145,36 +152,11 @@ export default function CmsNewPage() {
         </Card>
       </form>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {cmsTemplates.map((template) => {
-          const isActive = templateDefinition?.slug === template.slug;
-          return (
-            <Card
-              key={template.slug}
-              className={isActive ? "border-primary" : "border-border/60"}
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{template.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-xs text-muted-foreground">
-                <p>{template.description}</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={isActive ? "default" : "secondary"}
-                  onClick={() => {
-                    router.push(
-                      `/cms/new?template=${encodeURIComponent(template.slug)}`,
-                    );
-                  }}
-                >
-                  {isActive ? "Selected" : "Use template"}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <TemplateBrowser
+        locale={locale}
+        selectedSlug={templateDefinition?.slug}
+        appliedSlug={templateDefinition?.slug}
+      />
     </div>
   );
 }
