@@ -8,6 +8,7 @@ interface AuthorCardProps {
   author: {
     id: string;
     slug: string;
+    path?: string | null;
     name: string;
     bio?: string;
     avatar?: string;
@@ -45,7 +46,7 @@ export function AuthorCard({ author, className }: AuthorCardProps) {
           <div className="flex-1">
             <h3 className="font-semibold text-lg text-foreground mb-1">
               <Link
-                href={`/blog/author/${author.slug}`}
+                href={author.path ?? `/blog/author/${author.slug}`}
                 className="hover:text-primary transition-colors"
               >
                 {author.name}
