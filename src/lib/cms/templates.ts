@@ -3280,6 +3280,229 @@ export const cmsTemplates: CmsTemplate[] = [
       },
     ],
   },
+  {
+    slug: "blog-global",
+    name: "Blog Landing Page",
+    description:
+      "CMS-native editorial landing page for the public blog with a featured feed and taxonomy exploration.",
+    defaultSlug: "blog",
+    defaultTitle: "Blog",
+    seo: {
+      title: "Health Insights & Travel Guides | Care N Tour Blog",
+      description:
+        "Read Care N Tour guidance on medical travel planning, treatment preparation, recovery, and patient decision-making.",
+    },
+    blocks: [
+      {
+        type: "aboutHero",
+        eyebrow: "Care N Tour Journal",
+        heading:
+          "Medical travel insights written for patients, families, and referring partners.",
+        description:
+          "Explore clear guidance on treatment planning, travel logistics, provider evaluation, recovery expectations, and practical decisions that shape a confident medical journey to Egypt.",
+        backgroundImageUrl: "/blog-medical-tourism.jpg",
+        highlights: [
+          {
+            kicker: "Perspective",
+            label:
+              "Editorial guidance written in Care N Tour's voice for international patients",
+          },
+          {
+            kicker: "Topics",
+            label:
+              "Treatments, facilities, travel preparation, recovery, and planning clarity",
+          },
+          {
+            kicker: "Use",
+            label:
+              "A living knowledge base that supports better conversations before treatment begins",
+          },
+        ],
+        primaryAction: {
+          label: "Start Your Journey",
+          href: "/start-journey",
+          variant: "default",
+        },
+        secondaryAction: {
+          label: "Contact Care N Tour",
+          href: "/contact",
+          variant: "secondary",
+        },
+        overlay: DEFAULT_HERO_OVERLAY,
+      },
+      {
+        type: "blogPostFeed",
+        eyebrow: "Featured articles",
+        heading: "Latest guidance from Care N Tour",
+        description:
+          "Start with the articles most useful for patients evaluating treatment, travel timing, and next steps.",
+        source: "latest",
+        layout: "heroFeatured",
+        limit: 7,
+      },
+      {
+        type: "blogTaxonomyGrid",
+        eyebrow: "Explore by topic",
+        heading: "Navigate the blog by category",
+        description:
+          "Move directly into the archive that matches the question you are trying to answer.",
+        taxonomy: "categories",
+        limit: 9,
+        cardStyle: "editorial",
+        ctaLabel: "Explore archive",
+      },
+      {
+        type: "callToAction",
+        eyebrow: "Need direction",
+        heading: "Turn what you read into a personalized treatment plan.",
+        description:
+          "Our coordinators can translate editorial guidance into provider options, timelines, logistics, and a plan built around your case.",
+        layout: "split",
+        background: "dark",
+        actions: [
+          {
+            label: "Request Consultation",
+            href: "/consultation",
+            variant: "default",
+          },
+          {
+            label: "Contact Care N Tour",
+            href: "/contact",
+            variant: "outline",
+          },
+        ],
+        style: buildCallToActionBaseStyle("dark"),
+      },
+    ],
+  },
+  {
+    slug: "blog-category-global",
+    name: "Blog Category Template",
+    description:
+      "Internal category archive template for dynamic blog category routes.",
+    defaultSlug: "blog-category-template",
+    defaultTitle: "Blog Category Template",
+    blocks: [
+      {
+        type: "blogPostFeed",
+        eyebrow: "Category archive",
+        source: "category",
+        layout: "grid",
+        limit: 12,
+      },
+      {
+        type: "callToAction",
+        eyebrow: "Plan with confidence",
+        heading: "Need help turning research into a treatment decision?",
+        description:
+          "Speak with Care N Tour to compare providers, timelines, logistics, and the right next step for your case.",
+        layout: "split",
+        background: "dark",
+        actions: [
+          {
+            label: "Start Your Journey",
+            href: "/start-journey",
+            variant: "default",
+          },
+          {
+            label: "Contact Care N Tour",
+            href: "/contact",
+            variant: "outline",
+          },
+        ],
+        style: buildCallToActionBaseStyle("dark"),
+      },
+    ],
+  },
+  {
+    slug: "blog-tag-global",
+    name: "Blog Tag Template",
+    description: "Internal tag archive template for dynamic blog tag routes.",
+    defaultSlug: "blog-tag-template",
+    defaultTitle: "Blog Tag Template",
+    blocks: [
+      {
+        type: "blogPostFeed",
+        eyebrow: "Tagged archive",
+        source: "tag",
+        layout: "grid",
+        limit: 12,
+      },
+    ],
+  },
+  {
+    slug: "blog-author-global",
+    name: "Blog Author Template",
+    description:
+      "Internal author archive template for dynamic blog author routes.",
+    defaultSlug: "blog-author-template",
+    defaultTitle: "Blog Author Template",
+    blocks: [
+      {
+        type: "blogAuthorSummary",
+        heading: "About the author",
+        showArchiveLink: false,
+      },
+      {
+        type: "blogPostFeed",
+        eyebrow: "Author archive",
+        source: "author",
+        layout: "grid",
+        limit: 12,
+      },
+    ],
+  },
+  {
+    slug: "blog-post-global",
+    name: "Blog Post Template",
+    description: "Internal article template for dynamic blog post routes.",
+    defaultSlug: "blog-post-template",
+    defaultTitle: "Blog Post Template",
+    blocks: [
+      {
+        type: "blogArticleHero",
+      },
+      {
+        type: "blogArticleBody",
+        showTableOfContents: true,
+      },
+      {
+        type: "blogAuthorSummary",
+        heading: "About the author",
+        showArchiveLink: true,
+      },
+      {
+        type: "blogPostFeed",
+        eyebrow: "Continue reading",
+        source: "related",
+        layout: "grid",
+        limit: 3,
+        relatedHeading: "Related articles",
+      },
+      {
+        type: "callToAction",
+        eyebrow: "Talk to Care N Tour",
+        heading: "Need a treatment plan built around your case?",
+        description:
+          "Move from editorial guidance into a coordinated next step with provider matching, travel planning, and operational clarity.",
+        layout: "split",
+        background: "dark",
+        actions: [
+          {
+            label: "Request Consultation",
+            href: "/consultation",
+            variant: "default",
+          },
+          {
+            label: "Start Your Journey",
+            href: "/start-journey",
+            variant: "outline",
+          },
+        ],
+        style: buildCallToActionBaseStyle("dark"),
+      },
+    ],
+  },
 ];
 
 export function getTemplate(slug: string | null): CmsTemplate | undefined {
