@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,21 +34,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import {
+  buildAdminLocaleHref,
+  resolveAdminLocale,
+} from "@/lib/public/adminLocale";
 
 export default function BlogPostsPage() {
+  const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
 
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["blog-posts-cms", statusFilter],
+    queryKey: ["blog-posts-cms", locale, statusFilter],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const params = new URLSearchParams({ limit: "1000" });
+      const params = new URLSearchParams({ limit: "1000", locale });
       if (statusFilter !== "all") {
         params.append("status", statusFilter);
       }
@@ -67,10 +78,13 @@ export default function BlogPostsPage() {
     const query = searchTerm.toLowerCase();
     return data.filter(
       (post: any) =>
-        post.title.toLowerCase().includes(query) ||
-        post.excerpt?.toLowerCase().includes(query),
+        (post.title || "").toLowerCase().includes(query) ||
+        (post.excerpt || "").toLowerCase().includes(query) ||
+        (locale === "ar"
+          ? (post.base_title || "").toLowerCase().includes(query)
+          : false),
     );
-  }, [data, searchTerm]);
+  }, [data, locale, searchTerm]);
 
   const handleDelete = async (postId: string, postTitle: string) => {
     try {
@@ -79,18 +93,23 @@ export default function BlogPostsPage() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/cms/blog/posts/${postId}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/cms/blog/posts/${postId}?locale=${locale}`,
+        {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Failed to delete post");
       }
 
       toast({
-        title: "Post deleted",
-        description: `"${postTitle}" has been deleted.`,
+        title: isArabicLocale ? "Arabic translation deleted" : "Post deleted",
+        description: isArabicLocale
+          ? `"${postTitle}" Arabic content has been removed.`
+          : `"${postTitle}" has been deleted.`,
       });
 
       refetch();
@@ -105,12 +124,22 @@ export default function BlogPostsPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic mode edits translated titles, body content, SEO, and adjacent block zones for existing posts."
+            : "English owns base posts, category assignments, tags, featured images, and publish defaults."
+        }
+      />
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground mt-1">
-            Manage all your blog posts
+            {isArabicLocale
+              ? "Translate and publish Arabic versions of existing blog posts"
+              : "Manage all your blog posts"}
           </p>
         </div>
         <div className="flex gap-3">
@@ -127,12 +156,19 @@ export default function BlogPostsPage() {
             )}
             Refresh
           </Button>
-          <Button asChild>
-            <Link href="/cms/blog/posts/new">
+          {isArabicLocale ? (
+            <Button disabled>
               <Plus className="mr-2 h-4 w-4" />
-              New Post
-            </Link>
-          </Button>
+              English Post Required
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href={buildAdminLocaleHref("/cms/blog/posts/new", locale)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Post
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -174,6 +210,7 @@ export default function BlogPostsPage() {
             <PostCard
               key={post.id}
               post={post}
+              locale={locale}
               onDelete={() => handleDelete(post.id, post.title)}
             />
           ))}
@@ -184,11 +221,15 @@ export default function BlogPostsPage() {
             <p className="text-muted-foreground">
               {searchTerm
                 ? "No posts found matching your search."
-                : "No posts found. Create your first post!"}
+                : isArabicLocale
+                  ? "No posts found. Create or open an English post, then switch to Arabic."
+                  : "No posts found. Create your first post!"}
             </p>
-            {!searchTerm && (
+            {!searchTerm && !isArabicLocale && (
               <Button className="mt-4" asChild>
-                <Link href="/cms/blog/posts/new">
+                <Link
+                  href={buildAdminLocaleHref("/cms/blog/posts/new", locale)}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Post
                 </Link>
@@ -201,7 +242,15 @@ export default function BlogPostsPage() {
   );
 }
 
-function PostCard({ post, onDelete }: { post: any; onDelete: () => void }) {
+function PostCard({
+  post,
+  onDelete,
+  locale,
+}: {
+  post: any;
+  onDelete: () => void;
+  locale: "en" | "ar";
+}) {
   const [deleting, setDeleting] = useState(false);
 
   const statusColors: Record<string, string> = {
@@ -216,7 +265,7 @@ function PostCard({ post, onDelete }: { post: any; onDelete: () => void }) {
         <div className="relative aspect-video bg-muted">
           <Image
             src={post.featured_image}
-            alt={post.title}
+            alt={post.title || post.base_title || "Blog post"}
             fill
             className="object-cover"
             sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
@@ -237,7 +286,10 @@ function PostCard({ post, onDelete }: { post: any; onDelete: () => void }) {
         </div>
 
         <h3 className="font-semibold text-lg leading-tight line-clamp-2">
-          {post.title}
+          {post.title ||
+            (locale === "ar"
+              ? "Arabic translation not started"
+              : "Untitled post")}
         </h3>
 
         {post.excerpt && (
@@ -265,9 +317,14 @@ function PostCard({ post, onDelete }: { post: any; onDelete: () => void }) {
 
         <div className="flex items-center gap-2 pt-2">
           <Button size="sm" variant="outline" className="flex-1" asChild>
-            <Link href={`/cms/blog/posts/${post.id}/edit`}>
+            <Link
+              href={buildAdminLocaleHref(
+                `/cms/blog/posts/${post.id}/edit`,
+                locale,
+              )}
+            >
               <Edit3 className="mr-2 h-3 w-3" />
-              Edit
+              {locale === "ar" ? "Translate" : "Edit"}
             </Link>
           </Button>
 
