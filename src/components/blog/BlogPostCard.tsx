@@ -9,6 +9,7 @@ interface BlogPostCardProps {
   post: {
     id: string;
     slug: string;
+    path?: string | null;
     title: string;
     excerpt?: string;
     featured_image?: string;
@@ -30,9 +31,11 @@ interface BlogPostCardProps {
 }
 
 export function BlogPostCard({ post }: BlogPostCardProps) {
-  const postUrl = post.category
-    ? `/blog/${post.category.slug}/${post.slug}`
-    : `/blog/${post.slug}`;
+  const postUrl =
+    post.path ??
+    (post.category
+      ? `/blog/${post.category.slug}/${post.slug}`
+      : `/blog/${post.slug}`);
 
   return (
     <Link href={postUrl}>
