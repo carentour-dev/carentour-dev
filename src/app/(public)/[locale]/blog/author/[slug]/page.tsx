@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
-import type { PublicLocale } from "@/i18n/routing";
+import {
+  extractBlogAiSummary,
+  resolveBlogPageBlocks,
+} from "@/lib/blog/page-helpers";
+import { getLocalizedBlogAuthorBySlug } from "@/lib/blog/server";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
   assertPublicPageAvailable,
+  decodePublicRouteSegment,
   getLocalizedPublicPagePathname,
   getPublicLocaleFromParams,
 } from "@/lib/public/page";
@@ -11,8 +19,6 @@ import {
   maybeRedirectFromLegacyPath,
   resolveSeo,
 } from "@/lib/seo";
-import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import BlogAuthorPageClient from "./BlogAuthorPageClient";
 
 export const revalidate = 300;
 
@@ -20,92 +26,106 @@ type PageProps = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-async function getAuthor(slug: string) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("blog_authors")
-    .select("slug, name, bio, avatar, active, updated_at")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Failed to load blog author for SEO", { slug, error });
-    return null;
-  }
-
-  if (data?.active === false) {
-    return null;
-  }
-
-  return data;
-}
-
-async function getSeo(slug: string, locale: PublicLocale) {
-  const pathname = `/blog/author/${slug}`;
-  const localizedPathname = getLocalizedPublicPagePathname(pathname, locale);
-  const author = await getAuthor(slug);
-
-  const defaultTitle = author
-    ? `${author.name} | Care N Tour Blog`
-    : "Blog Author | Care N Tour";
-  const defaultDescription =
+async function getSeo(slug: string, locale: "en" | "ar") {
+  const author = await getLocalizedBlogAuthorBySlug({
+    slug,
+    locale,
+    publishedOnly: true,
+  });
+  const templatePage = await getLocalizedCmsPageBySlug(
+    "blog-author-template",
+    locale,
+  );
+  const blocks = resolveBlogPageBlocks(templatePage);
+  const pathname =
+    author?.path ??
+    getLocalizedPublicPagePathname(`/blog/author/${slug}`, locale);
+  const title = author
+    ? locale === "ar"
+      ? `مقالات ${author.name} | مدونة كير آند تور`
+      : `${author.name} | Care N Tour Blog`
+    : locale === "ar"
+      ? "كاتب المدونة | كير آند تور"
+      : "Blog Author | Care N Tour";
+  const description =
     author?.bio ??
     (author
-      ? `Articles written by ${author.name}.`
-      : "Browse author articles.");
+      ? locale === "ar"
+        ? `مقالات كتبها ${author.name}.`
+        : `Articles written by ${author.name}.`
+      : locale === "ar"
+        ? "تصفح مقالات الكتّاب."
+        : "Browse author articles.");
 
-  return resolveSeo({
-    routeKey: pathname,
-    pathname: localizedPathname,
-    locale,
-    defaults: {
-      title: defaultTitle,
-      description: defaultDescription,
-    },
-    source: author
-      ? {
-          title: defaultTitle,
-          description: defaultDescription,
-          ogImageUrl: author.avatar,
-        }
-      : undefined,
-    schema: collectionPageSchema({
-      urlPath: localizedPathname,
-      title: defaultTitle,
-      description: defaultDescription,
-      items: author
-        ? [{ name: author.name, path: localizedPathname }]
-        : undefined,
+  return {
+    author,
+    blocks,
+    seo: await resolveSeo({
+      routeKey: "/blog/author/[slug]",
+      pathname,
+      locale,
+      defaults: {
+        title,
+        description,
+      },
+      source: {
+        title,
+        description,
+        ogImageUrl: author?.avatar ?? undefined,
+        aiSummary: extractBlogAiSummary(blocks, [author?.name, author?.bio]),
+      },
+      schema: collectionPageSchema({
+        urlPath: pathname,
+        title,
+        description,
+        items: author ? [{ name: author.name, path: pathname }] : undefined,
+      }),
+      indexable: Boolean(author),
+      imageUrl: author?.avatar ?? undefined,
+      modifiedTime: author?.updated_at ?? undefined,
     }),
-    indexable: Boolean(author),
-    imageUrl: author?.avatar ?? undefined,
-    modifiedTime: author?.updated_at ?? undefined,
-  });
+  };
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodePublicRouteSegment(rawSlug);
   const locale = await getPublicLocaleFromParams(params);
   await assertPublicPageAvailable(`/blog/author/${slug}`, locale);
-  const seo = await getSeo(slug, locale);
+  const { seo } = await getSeo(slug, locale);
   return seo.metadata;
 }
 
 export default async function BlogAuthorPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodePublicRouteSegment(rawSlug);
   const locale = await getPublicLocaleFromParams(params);
   const pathname = `/blog/author/${slug}`;
 
   await assertPublicPageAvailable(pathname, locale);
   await maybeRedirectFromLegacyPath(pathname);
-  const seo = await getSeo(slug, locale);
+
+  const { author, blocks, seo } = await getSeo(slug, locale);
+  if (!author || blocks.length === 0) {
+    notFound();
+  }
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlogAuthorPageClient />
+      <BlockRenderer
+        blocks={blocks}
+        locale={locale}
+        context={{
+          blog: {
+            type: "author",
+            pagePath: author.path,
+            author,
+          },
+        }}
+      />
     </>
   );
 }
