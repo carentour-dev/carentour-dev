@@ -31,3 +31,11 @@ export function getLocalizedPublicPagePathname(
 ) {
   return localizePublicPathname(pathname, locale);
 }
+
+export function decodePublicRouteSegment(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
