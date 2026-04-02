@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Facebook,
@@ -19,11 +19,17 @@ interface SocialShareProps {
 
 export function SocialShare({ url, title, description }: SocialShareProps) {
   const [copied, setCopied] = useState(false);
+  const [fullUrl, setFullUrl] = useState(url);
   const { toast } = useToast();
 
-  const fullUrl = url.startsWith("http")
-    ? url
-    : `${window.location.origin}${url}`;
+  useEffect(() => {
+    if (url.startsWith("http")) {
+      setFullUrl(url);
+      return;
+    }
+
+    setFullUrl(`${window.location.origin}${url}`);
+  }, [url]);
 
   const shareLinks = {
     twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(
