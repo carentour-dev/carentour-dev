@@ -13416,6 +13416,663 @@ function DoctorsBlockFields({
   );
 }
 
+function BlogPostFeedBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"blogPostFeed">>;
+}) {
+  const listToArray = (value: string) =>
+    value
+      .split(/[\n,]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Editorial"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Latest insights from Care N Tour"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea rows={3} {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="grid gap-4 md:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="source"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Feed source</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="latest">Latest posts</SelectItem>
+                  <SelectItem value="featured">Featured posts</SelectItem>
+                  <SelectItem value="manual">Manual selection</SelectItem>
+                  <SelectItem value="category">Current category</SelectItem>
+                  <SelectItem value="tag">Current tag</SelectItem>
+                  <SelectItem value="author">Current author</SelectItem>
+                  <SelectItem value="related">
+                    Related to current post
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="layout"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Layout</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select layout" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="heroFeatured">Hero featured</SelectItem>
+                  <SelectItem value="grid">Grid</SelectItem>
+                  <SelectItem value="list">List</SelectItem>
+                  <SelectItem value="carousel">Carousel</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="limit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Max posts</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={field.value ?? 6}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="manualPostSlugs"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Manual English post slugs</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={3}
+                placeholder="post-one, post-two"
+                value={(field.value ?? []).join(", ")}
+                onChange={(event) =>
+                  field.onChange(listToArray(event.target.value))
+                }
+              />
+            </FormControl>
+            <FormDescription>
+              Used only when the feed source is set to manual selection.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="featuredBadge"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Featured badge</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="listCtaLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>CTA label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="emptyStateHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emptyStateDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BlogTaxonomyGridBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"blogTaxonomyGrid">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea rows={3} {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="grid gap-4 md:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="taxonomy"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Taxonomy</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select taxonomy" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="categories">Categories</SelectItem>
+                  <SelectItem value="tags">Tags</SelectItem>
+                  <SelectItem value="authors">Authors</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="cardStyle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Card style</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select style" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="editorial">Editorial</SelectItem>
+                  <SelectItem value="minimal">Minimal</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="limit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Max cards</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={field.value ?? 9}
+                  onChange={(event) =>
+                    field.onChange(Number(event.target.value) || 1)
+                  }
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="ctaLabel"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>CTA label</FormLabel>
+            <FormControl>
+              <Input {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
+function BlogArticleHeroBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"blogArticleHero">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="backLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Back link label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="readingTimeSuffix"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Reading time suffix</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="publishDateLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Publish date label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="updatedLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Updated label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="shareLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Share label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="showCategory"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show category</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showAuthor"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show author</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showPublishDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show publish date</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showUpdatedDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show updated date</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showReadingTime"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show reading time</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showTags"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show tags</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showShareActions"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show share actions</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="showHeroImage"
+          render={({ field }) => (
+            <FormItem className="flex flex-col justify-end">
+              <FormLabel>Show hero image</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BlogArticleBodyBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"blogArticleBody">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <FormField
+        control={form.control}
+        name="showTableOfContents"
+        render={({ field }) => (
+          <FormItem className="flex flex-col justify-end">
+            <FormLabel>Show table of contents</FormLabel>
+            <FormControl>
+              <Switch
+                checked={field.value ?? true}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="tocHeading"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>TOC heading</FormLabel>
+            <FormControl>
+              <Input {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="emptyStateHeading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emptyStateDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empty state description</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BlogAuthorSummaryBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"blogAuthorSummary">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="archiveLinkLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Archive link label</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ""} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea rows={3} {...field} value={field.value ?? ""} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="showArchiveLink"
+        render={({ field }) => (
+          <FormItem className="flex flex-col justify-end">
+            <FormLabel>Show archive link</FormLabel>
+            <FormControl>
+              <Switch
+                checked={field.value ?? true}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
 const blockEditors: Record<
   BlockType,
   (form: UseFormReturn<any>) => React.ReactElement
@@ -13461,6 +14118,11 @@ const blockEditors: Record<
   treatments: (form) => <TreatmentsBlockFields form={form} />,
   doctors: (form) => <DoctorsBlockFields form={form} />,
   tabbedGuide: (form) => <TabbedGuideBlockFields form={form} />,
+  blogPostFeed: (form) => <BlogPostFeedBlockFields form={form} />,
+  blogTaxonomyGrid: (form) => <BlogTaxonomyGridBlockFields form={form} />,
+  blogArticleHero: (form) => <BlogArticleHeroBlockFields form={form} />,
+  blogArticleBody: (form) => <BlogArticleBodyBlockFields form={form} />,
+  blogAuthorSummary: (form) => <BlogAuthorSummaryBlockFields form={form} />,
 };
 
 export function BlockInspector({
@@ -13676,6 +14338,16 @@ export function blockSummary(block: BlockInstance): string {
       return block.title ?? `${block.limit} doctors`;
     case "tabbedGuide":
       return `${block.tabs.length} tab${block.tabs.length === 1 ? "" : "s"}`;
+    case "blogPostFeed":
+      return block.heading ?? `${block.limit} posts`;
+    case "blogTaxonomyGrid":
+      return `${block.taxonomy} grid`;
+    case "blogArticleHero":
+      return "Article hero";
+    case "blogArticleBody":
+      return block.showTableOfContents ? "Article body + TOC" : "Article body";
+    case "blogAuthorSummary":
+      return block.heading ?? "Author summary";
     default:
       return "";
   }
