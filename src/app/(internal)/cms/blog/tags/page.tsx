@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,21 +44,28 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 
 export default function TagsPage() {
+  const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
 
   const { data: tags, isLoading } = useQuery({
-    queryKey: ["blog-tags-cms"],
+    queryKey: ["blog-tags-cms", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/tags", {
+      const res = await fetch(`/api/cms/blog/tags?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -74,12 +89,22 @@ export default function TagsPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic mode edits translated tag labels, slugs, and publish state for the existing English tag inventory."
+            : "English owns the base tag inventory used by all blog posts."
+        }
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Tags</h1>
           <p className="text-muted-foreground mt-1">
-            Manage tags for your blog posts
+            {isArabicLocale
+              ? "Translate and publish Arabic tag archive pages"
+              : "Manage tags for your blog posts"}
           </p>
         </div>
         <Dialog
@@ -92,12 +117,19 @@ export default function TagsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button
+              onClick={() => handleOpenDialog()}
+              disabled={isArabicLocale}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              New Tag
+              {isArabicLocale ? "English Tag Required" : "New Tag"}
             </Button>
           </DialogTrigger>
-          <TagDialog tag={editingTag} onClose={handleCloseDialog} />
+          <TagDialog
+            tag={editingTag}
+            onClose={handleCloseDialog}
+            locale={locale}
+          />
         </Dialog>
       </div>
 
@@ -132,6 +164,7 @@ export default function TagsPage() {
                   key={tag.id}
                   tag={tag}
                   onEdit={() => handleOpenDialog(tag)}
+                  locale={locale}
                 />
               ))}
             </div>
@@ -144,10 +177,15 @@ export default function TagsPage() {
             <p className="text-muted-foreground mb-4">
               {searchTerm
                 ? "No tags found matching your search."
-                : "No tags yet. Create your first tag!"}
+                : isArabicLocale
+                  ? "No tags found. Create tags in English, then switch back to Arabic to translate them."
+                  : "No tags yet. Create your first tag!"}
             </p>
             {!searchTerm && (
-              <Button onClick={() => handleOpenDialog()}>
+              <Button
+                onClick={() => handleOpenDialog()}
+                disabled={isArabicLocale}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Tag
               </Button>
@@ -159,7 +197,15 @@ export default function TagsPage() {
   );
 }
 
-function TagRow({ tag, onEdit }: { tag: any; onEdit: () => void }) {
+function TagRow({
+  tag,
+  onEdit,
+  locale,
+}: {
+  tag: any;
+  onEdit: () => void;
+  locale: "en" | "ar";
+}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -172,22 +218,28 @@ function TagRow({ tag, onEdit }: { tag: any; onEdit: () => void }) {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/cms/blog/tags?id=${tag.id}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/cms/blog/tags?id=${tag.id}&locale=${locale}`,
+        {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Failed to delete tag");
       }
 
       toast({
-        title: "Tag deleted",
-        description: `"${tag.name}" has been deleted.`,
+        title: locale === "ar" ? "Arabic translation deleted" : "Tag deleted",
+        description:
+          locale === "ar"
+            ? `"${tag.name}" Arabic content has been deleted.`
+            : `"${tag.name}" has been deleted.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-tags-cms"] });
-      queryClient.invalidateQueries({ queryKey: ["blog-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags-cms", locale] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags", locale] });
     } catch (error) {
       toast({
         title: "Delete failed",
@@ -213,6 +265,11 @@ function TagRow({ tag, onEdit }: { tag: any; onEdit: () => void }) {
 
       <div className="flex items-center gap-2">
         <Badge variant="secondary">{tag.post_count} posts</Badge>
+        {locale === "ar" && (
+          <Badge variant={tag.status === "published" ? "default" : "outline"}>
+            {tag.status === "published" ? "Published" : "Draft"}
+          </Badge>
+        )}
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Edit3 className="mr-2 h-3.5 w-3.5" />
           Edit
@@ -249,12 +306,23 @@ function TagRow({ tag, onEdit }: { tag: any; onEdit: () => void }) {
   );
 }
 
-function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
+function TagDialog({
+  tag,
+  onClose,
+  locale,
+}: {
+  tag?: any;
+  onClose: () => void;
+  locale: "en" | "ar";
+}) {
+  const isArabicLocale = locale === "ar";
   const initialName = tag?.name || "";
   const initialSlug = tag?.slug || "";
+  const initialStatus = tag?.status || "draft";
 
   const [name, setName] = useState(initialName);
   const [slug, setSlug] = useState(initialSlug);
+  const [status, setStatus] = useState(initialStatus);
   const [autoSlug, setAutoSlug] = useState(!tag);
 
   const { toast } = useToast();
@@ -264,8 +332,9 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
   useEffect(() => {
     setName(tag?.name || "");
     setSlug(tag?.slug || "");
+    setStatus(tag?.status || "draft");
     setAutoSlug(!tag?.id);
-  }, [tag?.id, tag?.name, tag?.slug]);
+  }, [tag?.id, tag?.name, tag?.slug, tag?.status]);
 
   const generateSlug = (text: string) => {
     return text
@@ -295,9 +364,10 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
         id: tag?.id,
         name: name.trim(),
         slug: slug.trim(),
+        status,
       };
 
-      const res = await fetch("/api/cms/blog/tags", {
+      const res = await fetch(`/api/cms/blog/tags?locale=${locale}`, {
         method: tag ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
@@ -312,12 +382,17 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
       }
 
       toast({
-        title: tag ? "Tag updated" : "Tag created",
+        title:
+          tag && isArabicLocale
+            ? "Arabic tag updated"
+            : tag
+              ? "Tag updated"
+              : "Tag created",
         description: `"${name}" has been saved successfully.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["blog-tags-cms"] });
-      queryClient.invalidateQueries({ queryKey: ["blog-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags-cms", locale] });
+      queryClient.invalidateQueries({ queryKey: ["blog-tags", locale] });
       onClose();
     } catch (error: any) {
       toast({
@@ -331,7 +406,9 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
   };
 
   const hasUnsavedChanges =
-    name.trim() !== initialName || slug.trim() !== initialSlug;
+    name.trim() !== initialName ||
+    slug.trim() !== initialSlug ||
+    status !== initialStatus;
 
   const handleClose = () => {
     if (!hasUnsavedChanges || window.confirm("Discard unsaved changes?")) {
@@ -342,7 +419,13 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
   return (
     <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
-        <DialogTitle>{tag ? "Edit Tag" : "Create Tag"}</DialogTitle>
+        <DialogTitle>
+          {tag
+            ? isArabicLocale
+              ? "Edit Arabic Tag"
+              : "Edit Tag"
+            : "Create Tag"}
+        </DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -370,9 +453,26 @@ function TagDialog({ tag, onClose }: { tag?: any; onClose: () => void }) {
             placeholder="e.g., cardiology"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            URL-friendly identifier. Auto-generated from name.
+            {isArabicLocale
+              ? "Arabic public URL segment for this tag."
+              : "URL-friendly identifier. Auto-generated from name."}
           </p>
         </div>
+
+        {isArabicLocale && (
+          <div>
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-4">
           <Button type="submit" disabled={submitting} className="flex-1">
