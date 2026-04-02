@@ -1,7 +1,8 @@
 "use client";
 
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -10,6 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateReadingTime } from "@/lib/blog/reading-time";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import {
+  buildAdminLocaleHref,
+  resolveAdminLocale,
+} from "@/lib/public/adminLocale";
 
 interface EditBlogPostPageProps {
   params: Promise<{ id: string }>;
@@ -18,18 +24,24 @@ interface EditBlogPostPageProps {
 export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
+  const postsHref = buildAdminLocaleHref("/cms/blog/posts", locale);
 
   // Fetch post data
   const { data: post, isLoading } = useQuery({
-    queryKey: ["blog-post-edit", id],
+    queryKey: ["blog-post-edit", id, locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/cms/blog/posts/${id}`, {
+      const res = await fetch(`/api/cms/blog/posts/${id}?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
@@ -70,7 +82,7 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
             : post.publish_date,
       };
 
-      const res = await fetch(`/api/cms/blog/posts/${id}`, {
+      const res = await fetch(`/api/cms/blog/posts/${id}?locale=${locale}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -125,26 +137,39 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic mode edits the translation row for this post while English keeps the base taxonomy, image, and publish defaults."
+            : "English owns the base post record, route structure, and shared post configuration."
+        }
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/cms/blog/posts")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={postsHref}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Edit Post</h1>
-            <p className="text-muted-foreground mt-1">{post.title}</p>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isArabicLocale ? "Edit Arabic Translation" : "Edit Post"}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {post.title ||
+                (isArabicLocale && post.base_title
+                  ? `English base: ${post.base_title}`
+                  : "Untitled post")}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Editor */}
-      <BlogPostEditor initialData={post} onSave={handleSave} />
+      <BlogPostEditor initialData={post} onSave={handleSave} locale={locale} />
     </div>
   );
 }
