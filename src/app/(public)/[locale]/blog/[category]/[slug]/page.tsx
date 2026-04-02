@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
-import type { PublicLocale } from "@/i18n/routing";
+import {
+  extractBlogAiSummary,
+  resolveBlogPageBlocks,
+} from "@/lib/blog/page-helpers";
+import { getLocalizedBlogPostByPath } from "@/lib/blog/server";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
   assertPublicPageAvailable,
+  decodePublicRouteSegment,
   getLocalizedPublicPagePathname,
   getPublicLocaleFromParams,
 } from "@/lib/public/page";
@@ -12,8 +20,6 @@ import {
   resolveSeo,
   webPageSchema,
 } from "@/lib/seo";
-import { getSupabaseAdmin } from "@/server/supabase/adminClient";
-import BlogPostPageClient from "./BlogPostPageClient";
 
 export const revalidate = 300;
 
@@ -21,177 +27,154 @@ type PageProps = {
   params: Promise<{ locale: string; category: string; slug: string }>;
 };
 
-type BlogPostSeoRecord = {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  seo_keywords: string | null;
-  og_image: string | null;
-  featured_image: string | null;
-  publish_date: string | null;
-  updated_at: string | null;
-  category: { slug: string; name: string } | null;
-  author: { name: string } | null;
-};
-
-async function getBlogPost(categorySlug: string, slug: string) {
-  const supabase = getSupabaseAdmin();
-
-  const { data: category, error: categoryError } = await supabase
-    .from("blog_categories")
-    .select("id, slug")
-    .eq("slug", categorySlug)
-    .maybeSingle();
-
-  if (categoryError) {
-    console.error("Failed to load blog category for post SEO", {
-      categorySlug,
-      error: categoryError,
-    });
-    return null;
-  }
-
-  if (!category) {
-    return null;
-  }
-
-  const nowIso = new Date().toISOString();
-
-  const { data: post, error: postError } = await supabase
-    .from("blog_posts")
-    .select(
-      "id, slug, title, excerpt, seo_title, seo_description, seo_keywords, og_image, featured_image, publish_date, updated_at, category:blog_categories(slug, name), author:blog_authors(name)",
-    )
-    .eq("slug", slug)
-    .eq("category_id", category.id)
-    .eq("status", "published")
-    .or(`publish_date.is.null,publish_date.lte.${nowIso}`)
-    .maybeSingle();
-
-  if (postError) {
-    console.error("Failed to load blog post for SEO", {
-      categorySlug,
-      slug,
-      error: postError,
-    });
-    return null;
-  }
-
-  return post as BlogPostSeoRecord | null;
-}
-
-function parseSeoKeywords(keywords: string | null): string[] | undefined {
-  if (!keywords) return undefined;
-
-  const normalized = keywords
-    .split(",")
+function parseSeoKeywords(keywords: string | null | undefined) {
+  return keywords
+    ?.split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
-
-  return normalized.length > 0 ? normalized : undefined;
 }
 
-async function getSeo(
-  categorySlug: string,
-  slug: string,
-  locale: PublicLocale,
-) {
-  const pathname = `/blog/${categorySlug}/${slug}`;
-  const localizedPathname = getLocalizedPublicPagePathname(pathname, locale);
-  const post = await getBlogPost(categorySlug, slug);
-
-  const postTitle = post?.seo_title ?? post?.title;
-  const postDescription = post?.seo_description ?? post?.excerpt;
-  const defaultTitle = postTitle ?? "Blog Article | Care N Tour";
-  const defaultDescription = postDescription ?? "Read the latest blog article.";
-
-  return resolveSeo({
-    routeKey: pathname,
-    pathname: localizedPathname,
+async function getSeo(categorySlug: string, slug: string, locale: "en" | "ar") {
+  const post = await getLocalizedBlogPostByPath({
+    categorySlug,
+    postSlug: slug,
     locale,
-    defaults: {
-      title: defaultTitle,
-      description: defaultDescription,
-    },
-    source: post
-      ? {
-          title: postTitle,
-          description: postDescription,
-          keywords: parseSeoKeywords(post.seo_keywords),
-          ogImageUrl: post.og_image ?? post.featured_image,
-        }
-      : undefined,
-    schema: post
-      ? [
-          webPageSchema({
-            urlPath: localizedPathname,
-            title: defaultTitle,
-            description: defaultDescription,
-            breadcrumbs: [
-              {
-                name: "Blog",
-                path: getLocalizedPublicPagePathname("/blog", locale),
-              },
-              {
-                name: post.category?.name ?? "Category",
-                path: getLocalizedPublicPagePathname(
-                  `/blog/${post.category?.slug ?? categorySlug}`,
-                  locale,
-                ),
-              },
-              { name: post.title, path: localizedPathname },
-            ],
-          }),
-          blogPostingSchema({
-            title: post.title,
-            description: postDescription,
-            path: localizedPathname,
-            imageUrl: post.og_image ?? post.featured_image,
-            publishedTime: post.publish_date,
-            modifiedTime: post.updated_at,
-            authorName: post.author?.name,
-            keywords: parseSeoKeywords(post.seo_keywords),
-          }),
-        ]
-      : webPageSchema({
-          urlPath: localizedPathname,
-          title: defaultTitle,
-          description: defaultDescription,
-        }),
-    indexable: Boolean(post),
-    openGraphType: "article",
-    imageUrl: post?.og_image ?? post?.featured_image,
-    publishedTime: post?.publish_date ?? undefined,
-    modifiedTime: post?.updated_at ?? undefined,
+    publishedOnly: true,
   });
+  const templatePage = await getLocalizedCmsPageBySlug(
+    "blog-post-template",
+    locale,
+  );
+  const blocks = resolveBlogPageBlocks(templatePage);
+  const pathname =
+    post?.path ??
+    getLocalizedPublicPagePathname(`/blog/${categorySlug}/${slug}`, locale);
+  const title = post?.seo_title ?? post?.title ?? "Blog Article | Care N Tour";
+  const description =
+    post?.seo_description ?? post?.excerpt ?? "Read the latest blog article.";
+
+  return {
+    post,
+    blocks,
+    seo: await resolveSeo({
+      routeKey: "/blog/[category]/[slug]",
+      pathname,
+      locale,
+      defaults: {
+        title,
+        description,
+      },
+      source: post
+        ? {
+            title,
+            description,
+            keywords: parseSeoKeywords(post.seo_keywords) ?? null,
+            ogImageUrl: post.og_image ?? post.featured_image,
+            aiSummary: extractBlogAiSummary(blocks, [
+              post.excerpt,
+              post.author?.bio,
+            ]),
+          }
+        : undefined,
+      schema: post
+        ? [
+            webPageSchema({
+              urlPath: pathname,
+              title,
+              description,
+              breadcrumbs: [
+                {
+                  name: "Blog",
+                  path: getLocalizedPublicPagePathname("/blog", locale),
+                },
+                ...(post.category
+                  ? [{ name: post.category.name, path: post.category.path }]
+                  : []),
+                { name: post.title, path: pathname },
+              ],
+            }),
+            blogPostingSchema({
+              title: post.title,
+              description,
+              path: pathname,
+              imageUrl: post.og_image ?? post.featured_image,
+              publishedTime: post.publish_date,
+              modifiedTime: post.updated_at,
+              authorName: post.author?.name,
+              keywords: parseSeoKeywords(post.seo_keywords),
+            }),
+          ]
+        : webPageSchema({
+            urlPath: pathname,
+            title,
+            description,
+          }),
+      indexable: Boolean(post),
+      openGraphType: "article",
+      imageUrl: post?.og_image ?? post?.featured_image,
+      publishedTime: post?.publish_date ?? undefined,
+      modifiedTime: post?.updated_at ?? undefined,
+    }),
+  };
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { category, slug } = await params;
+  const { category: rawCategory, slug: rawSlug } = await params;
+  const category = decodePublicRouteSegment(rawCategory);
+  const slug = decodePublicRouteSegment(rawSlug);
   const locale = await getPublicLocaleFromParams(params);
   await assertPublicPageAvailable(`/blog/${category}/${slug}`, locale);
-  const seo = await getSeo(category, slug, locale);
+  const { seo } = await getSeo(category, slug, locale);
   return seo.metadata;
 }
 
 export default async function BlogPostPage({ params }: PageProps) {
-  const { category, slug } = await params;
+  const { category: rawCategory, slug: rawSlug } = await params;
+  const category = decodePublicRouteSegment(rawCategory);
+  const slug = decodePublicRouteSegment(rawSlug);
   const locale = await getPublicLocaleFromParams(params);
   const pathname = `/blog/${category}/${slug}`;
 
   await assertPublicPageAvailable(pathname, locale);
   await maybeRedirectFromLegacyPath(pathname);
-  const seo = await getSeo(category, slug, locale);
+
+  const post = await getLocalizedBlogPostByPath({
+    categorySlug: category,
+    postSlug: slug,
+    locale,
+    publishedOnly: true,
+    incrementViewCount: true,
+  });
+  if (!post) {
+    notFound();
+  }
+
+  const templatePage = await getLocalizedCmsPageBySlug(
+    "blog-post-template",
+    locale,
+  );
+  const blocks = resolveBlogPageBlocks(templatePage);
+  if (blocks.length === 0) {
+    notFound();
+  }
+  const { seo } = await getSeo(category, slug, locale);
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <BlogPostPageClient />
+      <BlockRenderer
+        blocks={blocks}
+        locale={locale}
+        context={{
+          blog: {
+            type: "post",
+            pagePath: post.path ?? pathname,
+            post,
+          },
+        }}
+      />
     </>
   );
 }
