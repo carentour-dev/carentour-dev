@@ -4,11 +4,8 @@ import {
   DEFAULT_SEO_LOCALE,
   DEFAULT_OG_IMAGE,
 } from "@/lib/seo/constants";
-import { getPublicLocaleAvailability } from "@/lib/public/localization";
-import {
-  localizePublicPathname,
-  stripPublicLocalePrefix,
-} from "@/lib/public/routing";
+import { resolvePublicLocaleSwitchHref } from "@/lib/public/localization";
+import { stripPublicLocalePrefix } from "@/lib/public/routing";
 import {
   getLocalizedCompanyName,
   localizeCompanyName,
@@ -71,15 +68,19 @@ const resolveSchemaPayload = (input: {
 };
 
 const resolveLocaleAlternates = async (pathname: string) => {
-  const englishPath = stripPublicLocalePrefix(pathname);
+  const englishPath = await resolvePublicLocaleSwitchHref(pathname, "en");
   const englishUrl = `${CANONICAL_ORIGIN}${englishPath}`;
   const languages: Record<string, string> = {
     en: englishUrl,
     "x-default": englishUrl,
   };
 
-  if (await getPublicLocaleAvailability(englishPath, "ar")) {
-    languages.ar = `${CANONICAL_ORIGIN}${localizePublicPathname(englishPath, "ar")}`;
+  const arabicPath = await resolvePublicLocaleSwitchHref(pathname, "ar");
+  if (
+    stripPublicLocalePrefix(pathname) === "/" ||
+    stripPublicLocalePrefix(arabicPath) !== "/"
+  ) {
+    languages.ar = `${CANONICAL_ORIGIN}${arabicPath}`;
   }
 
   return languages;
