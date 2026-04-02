@@ -1,4 +1,5 @@
 import type { PublicLocale } from "@/i18n/routing";
+import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { normalizeBlocks } from "@/lib/cms/blocks";
 import type {
@@ -41,12 +42,18 @@ import {
   TreatmentsBlock,
   DoctorsBlock,
   TabbedGuideBlock,
+  BlogPostFeedBlock,
+  BlogTaxonomyGridBlock,
+  BlogArticleHeroBlock,
+  BlogArticleBodyBlock,
+  BlogAuthorSummaryBlock,
 } from "./blocks";
 
 export type CmsBlockRenderContext = {
   medicalFacilitiesDirectoryData?: MedicalFacilitiesDirectoryResponse | null;
   medicalFacility?: MedicalFacilityDetail | null;
   medicalFacilitySlug?: string;
+  blog?: BlogBlockContextEntity | null;
 };
 
 interface BlockRendererProps {
@@ -176,6 +183,49 @@ export function BlockRenderer({
               return <DoctorsBlock key={key} block={block} />;
             case "tabbedGuide":
               return <TabbedGuideBlock key={key} block={block} />;
+            case "blogPostFeed":
+              return (
+                <BlogPostFeedBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                  locale={locale}
+                />
+              );
+            case "blogTaxonomyGrid":
+              return (
+                <BlogTaxonomyGridBlock
+                  key={key}
+                  block={block}
+                  locale={locale}
+                />
+              );
+            case "blogArticleHero":
+              return (
+                <BlogArticleHeroBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                  locale={locale}
+                />
+              );
+            case "blogArticleBody":
+              return (
+                <BlogArticleBodyBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                  locale={locale}
+                />
+              );
+            case "blogAuthorSummary":
+              return (
+                <BlogAuthorSummaryBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                />
+              );
             default:
               return (
                 <pre
