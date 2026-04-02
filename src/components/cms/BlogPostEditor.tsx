@@ -21,6 +21,7 @@ import { Save, Eye, Loader2, X, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import dynamic from "next/dynamic";
+import type { PublicLocale } from "@/i18n/routing";
 
 const RichTextEditor = dynamic(
   () =>
@@ -39,13 +40,16 @@ interface BlogPostEditorProps {
   initialData?: any;
   onSave: (data: any, status: "draft" | "published") => Promise<void>;
   saving?: boolean;
+  locale?: PublicLocale;
 }
 
 export function BlogPostEditor({
   initialData,
   onSave,
   saving = false,
+  locale = "en",
 }: BlogPostEditorProps) {
+  const isArabicLocale = locale === "ar";
   // Basic post data
   const [title, setTitle] = useState(initialData?.title || "");
   const [slug, setSlug] = useState(initialData?.slug || "");
@@ -118,14 +122,14 @@ export function BlogPostEditor({
 
   // Fetch categories
   const { data: categories } = useQuery({
-    queryKey: ["blog-categories"],
+    queryKey: ["blog-categories", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/categories", {
+      const res = await fetch(`/api/cms/blog/categories?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -135,14 +139,14 @@ export function BlogPostEditor({
 
   // Fetch authors
   const { data: authors } = useQuery({
-    queryKey: ["blog-authors"],
+    queryKey: ["blog-authors", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/authors", {
+      const res = await fetch(`/api/cms/blog/authors?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -152,14 +156,14 @@ export function BlogPostEditor({
 
   // Fetch tags
   const { data: tags, refetch: refetchTags } = useQuery({
-    queryKey: ["blog-tags"],
+    queryKey: ["blog-tags", locale],
     queryFn: async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch("/api/cms/blog/tags", {
+      const res = await fetch(`/api/cms/blog/tags?locale=${locale}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -168,7 +172,7 @@ export function BlogPostEditor({
   });
 
   const handleAddTag = async () => {
-    if (!newTagName.trim()) return;
+    if (isArabicLocale || !newTagName.trim()) return;
 
     try {
       const {
@@ -183,7 +187,7 @@ export function BlogPostEditor({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      const res = await fetch("/api/cms/blog/tags", {
+      const res = await fetch(`/api/cms/blog/tags?locale=${locale}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -238,6 +242,19 @@ export function BlogPostEditor({
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
       {/* Main Content Area */}
       <div className="space-y-6">
+        {isArabicLocale && (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">
+                Arabic mode translates the title, body, and SEO fields for this
+                post. The page template controls the post layout and shared
+                design. Category, author, tags, featured image, and featured
+                state stay owned by the English base post. These fields stay
+                blank until you add Arabic content.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         {/* Title */}
         <Card>
           <CardContent className="pt-6">
@@ -438,7 +455,11 @@ export function BlogPostEditor({
         <Card>
           <CardContent className="pt-6">
             <Label htmlFor="category">Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select
+              value={categoryId}
+              onValueChange={setCategoryId}
+              disabled={isArabicLocale}
+            >
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -457,7 +478,11 @@ export function BlogPostEditor({
         <Card>
           <CardContent className="pt-6">
             <Label htmlFor="author">Author</Label>
-            <Select value={authorId} onValueChange={setAuthorId}>
+            <Select
+              value={authorId}
+              onValueChange={setAuthorId}
+              disabled={isArabicLocale}
+            >
               <SelectTrigger id="author">
                 <SelectValue placeholder="Select author" />
               </SelectTrigger>
@@ -487,8 +512,13 @@ export function BlogPostEditor({
                     handleAddTag();
                   }
                 }}
+                disabled={isArabicLocale}
               />
-              <Button onClick={handleAddTag} size="sm">
+              <Button
+                onClick={handleAddTag}
+                size="sm"
+                disabled={isArabicLocale}
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -501,6 +531,7 @@ export function BlogPostEditor({
                     <button
                       onClick={() => handleRemoveTag(tag.id)}
                       className="ml-2"
+                      disabled={isArabicLocale}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -514,6 +545,7 @@ export function BlogPostEditor({
                   setSelectedTags([...selectedTags, value]);
                 }
               }}
+              disabled={isArabicLocale}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select existing tag" />
@@ -541,6 +573,7 @@ export function BlogPostEditor({
               value={featuredImage}
               onChange={(e) => setFeaturedImage(e.target.value)}
               placeholder="https://example.com/image.jpg"
+              disabled={isArabicLocale}
             />
             {featuredImage && (
               <div className="relative mt-2 w-full h-32">
@@ -569,6 +602,7 @@ export function BlogPostEditor({
                 id="featured"
                 checked={featured}
                 onCheckedChange={setFeatured}
+                disabled={isArabicLocale}
               />
             </div>
           </CardContent>
