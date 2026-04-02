@@ -2,6 +2,7 @@ import { AuthorCard } from "@/components/blog/AuthorCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import { BlockSurface } from "./BlockSurface";
 
@@ -12,9 +13,11 @@ type BlogAuthorSummaryContext = {
 export function BlogAuthorSummaryBlock({
   block,
   context,
+  locale,
 }: {
   block: BlockInstance<"blogAuthorSummary">;
   context?: BlogAuthorSummaryContext;
+  locale: "en" | "ar";
 }) {
   const author =
     context?.blog?.type === "author"
@@ -22,6 +25,26 @@ export function BlogAuthorSummaryBlock({
       : context?.blog?.type === "post"
         ? context.blog.post.author
         : null;
+  const heading = resolveBlogUiText(
+    "authorSummaryHeading",
+    locale,
+    block.heading,
+  );
+  const archiveLinkLabel = resolveBlogUiText(
+    "authorArchiveLinkLabel",
+    locale,
+    block.archiveLinkLabel,
+  );
+  const emptyStateHeading = resolveBlogUiText(
+    "authorSummaryEmptyStateHeading",
+    locale,
+    block.emptyStateHeading,
+  );
+  const emptyStateDescription = resolveBlogUiText(
+    "authorSummaryEmptyStateDescription",
+    locale,
+    block.emptyStateDescription,
+  );
 
   return (
     <BlockSurface
@@ -33,7 +56,7 @@ export function BlogAuthorSummaryBlock({
         author ? (
           <div className="mx-auto max-w-4xl space-y-4">
             <div className="space-y-2">
-              <Badge variant="outline">{block.heading}</Badge>
+              <Badge variant="outline">{heading}</Badge>
               {block.description ? (
                 <p className="text-sm text-muted-foreground">
                   {block.description}
@@ -44,7 +67,7 @@ export function BlogAuthorSummaryBlock({
             {block.showArchiveLink ? (
               <div>
                 <Button asChild variant="outline">
-                  <a href={author.path}>{block.archiveLinkLabel}</a>
+                  <a href={author.path}>{archiveLinkLabel}</a>
                 </Button>
               </div>
             ) : null}
@@ -52,10 +75,10 @@ export function BlogAuthorSummaryBlock({
         ) : (
           <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-8 text-center">
             <h3 className="text-lg font-semibold text-foreground">
-              {block.emptyStateHeading}
+              {emptyStateHeading}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {block.emptyStateDescription}
+              {emptyStateDescription}
             </p>
           </div>
         )
