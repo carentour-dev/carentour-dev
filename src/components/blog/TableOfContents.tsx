@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PublicLocale } from "@/i18n/routing";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import { cn } from "@/lib/utils";
 import { TocItem } from "@/lib/blog/toc-generator";
 import { resolveTocItems, type HeadingTarget } from "@/lib/blog/toc-resolver";
@@ -9,15 +11,18 @@ interface TableOfContentsProps {
   items: TocItem[];
   className?: string;
   title?: string;
+  locale?: PublicLocale;
 }
 
 export function TableOfContents({
   items = [],
   className,
   title = "On This Page",
+  locale = "en",
 }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>("");
   const [resolvedItems, setResolvedItems] = useState<TocItem[]>(items);
+  const resolvedTitle = resolveBlogUiText("tocHeading", locale, title);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -108,7 +113,9 @@ export function TableOfContents({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
+      <h3 className="mb-4 text-sm font-semibold text-foreground">
+        {resolvedTitle}
+      </h3>
       <nav>
         <ul className="space-y-2">
           {resolvedItems.map((item) => (
