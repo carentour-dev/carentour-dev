@@ -48,6 +48,7 @@ export type PublicNavigationCmsPage = Pick<
 >;
 
 const INTERNAL_NAVIGATION_CMS_SLUGS = new Set([
+  "medical-facilities-detail-template",
   "blog-category-template",
   "blog-tag-template",
   "blog-author-template",
