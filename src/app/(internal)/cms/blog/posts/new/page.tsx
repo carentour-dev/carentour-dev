@@ -1,18 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save, Eye, Loader2 } from "lucide-react";
 import { BlogPostEditor } from "@/components/cms/BlogPostEditor";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateReadingTime } from "@/lib/blog/reading-time";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
+import {
+  buildAdminLocaleHref,
+  resolveAdminLocale,
+} from "@/lib/public/adminLocale";
 
 export default function NewBlogPostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const locale = resolveAdminLocale(
+    new URLSearchParams(searchParams.toString()),
+  );
+  const isArabicLocale = locale === "ar";
+  const postsHref = buildAdminLocaleHref("/cms/blog/posts", locale);
 
   const handleSave = async (postData: any, status: "draft" | "published") => {
     setSaving(true);
@@ -40,7 +52,7 @@ export default function NewBlogPostPage() {
         publish_date: status === "published" ? new Date().toISOString() : null,
       };
 
-      const res = await fetch("/api/cms/blog/posts", {
+      const res = await fetch(`/api/cms/blog/posts?locale=${locale}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -62,7 +74,9 @@ export default function NewBlogPostPage() {
       });
 
       // Redirect to posts list or edit page
-      router.push(`/cms/blog/posts/${data.post.id}/edit`);
+      router.push(
+        buildAdminLocaleHref(`/cms/blog/posts/${data.post.id}/edit`, locale),
+      );
     } catch (error: any) {
       toast({
         title: "Save failed",
@@ -76,30 +90,45 @@ export default function NewBlogPostPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          isArabicLocale
+            ? "Arabic blog posts are created from existing English posts. Open an English post, switch to Arabic, then add the translation."
+            : "English owns base posts, taxonomy assignments, and publishing defaults."
+        }
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/cms/blog/posts")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={postsHref}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Create New Post
+              {isArabicLocale ? "Arabic Post Translation" : "Create New Post"}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Write and publish a new blog post
+              {isArabicLocale
+                ? "New Arabic posts start from an existing English base post."
+                : "Write and publish a new blog post"}
             </p>
           </div>
         </div>
       </div>
 
       {/* Editor */}
-      <BlogPostEditor onSave={handleSave} saving={saving} />
+      {isArabicLocale ? (
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
+          Create the English post first, then use the locale switcher on its
+          edit screen to add Arabic content.
+        </div>
+      ) : (
+        <BlogPostEditor onSave={handleSave} saving={saving} locale={locale} />
+      )}
     </div>
   );
 }
