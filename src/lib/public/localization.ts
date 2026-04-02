@@ -1,5 +1,17 @@
 import { notFound } from "next/navigation";
 import type { CmsPage } from "@/lib/cms/server";
+import {
+  BLOG_AUTHOR_TEMPLATE_SLUG,
+  BLOG_CATEGORY_TEMPLATE_SLUG,
+  BLOG_POST_TEMPLATE_SLUG,
+  BLOG_TAG_TEMPLATE_SLUG,
+  getLocalizedBlogAuthorBySlug,
+  getLocalizedBlogCategoryBySlug,
+  getLocalizedBlogPostByPath,
+  getLocalizedBlogTagBySlug,
+  getLocalizedBlogTemplatePage,
+  resolveLocalizedBlogSwitchPath,
+} from "@/lib/blog/server";
 import { normalizeBlocks } from "@/lib/cms/blocks";
 import {
   sanitizeCmsPageSettings,
@@ -113,6 +125,14 @@ function cleanText(value: string | null | undefined) {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function decodePathSegment(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export function validatePublicLocale(
@@ -414,6 +434,94 @@ export async function getPublicLocaleAvailability(
     return faqResult.source === "cms" && faqResult.faqs.length > 0;
   }
 
+  if (normalized === "/blog") {
+    return (await getLocalizedCmsPageBySlug("blog", locale)) !== null;
+  }
+
+  if (normalized.startsWith("/blog/tag/")) {
+    if (
+      (await getLocalizedBlogTemplatePage(BLOG_TAG_TEMPLATE_SLUG, locale)) ===
+      null
+    ) {
+      return false;
+    }
+
+    const slug = normalized.slice("/blog/tag/".length);
+    return (
+      (await getLocalizedBlogTagBySlug({
+        slug,
+        locale,
+        publishedOnly: true,
+      })) !== null
+    );
+  }
+
+  if (normalized.startsWith("/blog/author/")) {
+    if (
+      (await getLocalizedBlogTemplatePage(
+        BLOG_AUTHOR_TEMPLATE_SLUG,
+        locale,
+      )) === null
+    ) {
+      return false;
+    }
+
+    const slug = normalized.slice("/blog/author/".length);
+    return (
+      (await getLocalizedBlogAuthorBySlug({
+        slug,
+        locale,
+        publishedOnly: true,
+      })) !== null
+    );
+  }
+
+  if (normalized.startsWith("/blog/")) {
+    const segments = normalized
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => decodePathSegment(segment));
+
+    if (segments.length === 2) {
+      if (
+        (await getLocalizedBlogTemplatePage(
+          BLOG_CATEGORY_TEMPLATE_SLUG,
+          locale,
+        )) === null
+      ) {
+        return false;
+      }
+
+      return (
+        (await getLocalizedBlogCategoryBySlug({
+          slug: segments[1],
+          locale,
+          publishedOnly: true,
+        })) !== null
+      );
+    }
+
+    if (segments.length === 3) {
+      if (
+        (await getLocalizedBlogTemplatePage(
+          BLOG_POST_TEMPLATE_SLUG,
+          locale,
+        )) === null
+      ) {
+        return false;
+      }
+
+      return (
+        (await getLocalizedBlogPostByPath({
+          categorySlug: segments[1],
+          postSlug: segments[2],
+          locale,
+          publishedOnly: true,
+        })) !== null
+      );
+    }
+  }
+
   if (normalized.startsWith("/medical-facilities/")) {
     return (
       (await getLocalizedCmsPageBySlug(
@@ -458,6 +566,16 @@ export async function resolvePublicLocaleSwitchHref(
   targetLocale: PublicLocale,
 ) {
   const normalized = stripPublicLocalePrefix(pathname);
+
+  if (normalized === "/blog" || normalized.startsWith("/blog/")) {
+    const localizedBlogPath = await resolveLocalizedBlogSwitchPath(
+      pathname,
+      targetLocale,
+    );
+    if (localizedBlogPath) {
+      return localizedBlogPath;
+    }
+  }
 
   if (targetLocale === defaultPublicLocale) {
     return normalized;
