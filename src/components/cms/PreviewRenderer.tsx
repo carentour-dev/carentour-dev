@@ -263,6 +263,16 @@ export function BlockPreviewRenderer({
                   block={block as BlockInstance<"tabbedGuide">}
                 />
               );
+            case "blogPostFeed":
+              return <Placeholder key={blockKey} title="Blog Post Feed" />;
+            case "blogTaxonomyGrid":
+              return <Placeholder key={blockKey} title="Blog Taxonomy Grid" />;
+            case "blogArticleHero":
+              return <Placeholder key={blockKey} title="Blog Article Hero" />;
+            case "blogArticleBody":
+              return <Placeholder key={blockKey} title="Blog Article Body" />;
+            case "blogAuthorSummary":
+              return <Placeholder key={blockKey} title="Blog Author Summary" />;
             default:
               return (
                 <pre
