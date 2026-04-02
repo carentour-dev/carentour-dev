@@ -1,6 +1,7 @@
 import { BlogContent } from "@/components/blog/BlogContent";
 import { TableOfContents } from "@/components/blog/TableOfContents";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveBlogUiText } from "@/lib/blog/localization";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import { generateTableOfContents } from "@/lib/blog/toc-generator";
 import { BlockSurface } from "./BlockSurface";
@@ -11,9 +12,11 @@ type BlogArticleBodyContext = {
 
 function ArticleBodyContent({
   block,
+  locale,
   post,
 }: {
   block: BlockInstance<"blogArticleBody">;
+  locale: "en" | "ar";
   post: Extract<BlogBlockContextEntity, { type: "post" }>["post"];
 }) {
   const tocItems = generateTableOfContents(post.content as any);
@@ -26,7 +29,11 @@ function ArticleBodyContent({
       {block.showTableOfContents ? (
         <aside className="hidden lg:block">
           <div className="sticky top-24">
-            <TableOfContents items={tocItems} title={block.tocHeading} />
+            <TableOfContents
+              items={tocItems}
+              title={resolveBlogUiText("tocHeading", locale, block.tocHeading)}
+              locale={locale}
+            />
           </div>
         </aside>
       ) : null}
@@ -44,6 +51,16 @@ export function BlogArticleBodyBlock({
   locale: "en" | "ar";
 }) {
   const post = context?.blog?.type === "post" ? context.blog.post : null;
+  const emptyStateHeading = resolveBlogUiText(
+    "articleBodyEmptyStateHeading",
+    locale,
+    block.emptyStateHeading,
+  );
+  const emptyStateDescription = resolveBlogUiText(
+    "articleBodyEmptyStateDescription",
+    locale,
+    block.emptyStateDescription,
+  );
 
   return (
     <BlockSurface
@@ -53,14 +70,14 @@ export function BlogArticleBodyBlock({
     >
       {() =>
         post ? (
-          <ArticleBodyContent block={block} post={post} />
+          <ArticleBodyContent block={block} post={post} locale={locale} />
         ) : (
           <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-8 text-center">
             <h3 className="text-lg font-semibold text-foreground">
-              {block.emptyStateHeading}
+              {emptyStateHeading}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {block.emptyStateDescription}
+              {emptyStateDescription}
             </p>
           </div>
         )
