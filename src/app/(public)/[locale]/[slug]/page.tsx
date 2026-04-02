@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
+import { BLOG_INTERNAL_TEMPLATE_SLUGS } from "@/lib/blog/server";
 import type { PublicLocale } from "@/i18n/routing";
 import { type CmsPage } from "@/lib/cms/server";
 import { getLocalizedCompanyName } from "@/lib/public/brand";
@@ -20,6 +21,7 @@ export const revalidate = 300;
 
 const INTERNAL_CMS_TEMPLATE_SLUGS = new Set([
   "medical-facilities-detail-template",
+  ...BLOG_INTERNAL_TEMPLATE_SLUGS,
 ]);
 
 type PageProps = {
