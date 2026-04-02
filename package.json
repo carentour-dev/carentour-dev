@@ -11,6 +11,7 @@
     "prepare": "husky",
     "format": "prettier --check --cache .",
     "format:write": "prettier --write .",
+    "blog:publish-ar": "node ./scripts/publish-arabic-blog-translations.mjs",
     "price-list:template-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs",
     "price-list:example-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs --example"
   },
