@@ -7,6 +7,7 @@ interface TagListProps {
     id: string;
     name: string;
     slug: string;
+    path?: string | null;
   }>;
   className?: string;
 }
@@ -21,7 +22,7 @@ export function TagList({ tags, className }: TagListProps) {
       <div className="flex items-center gap-2 flex-wrap">
         <Tag className="h-4 w-4 text-muted-foreground" />
         {tags.map((tag) => (
-          <Link key={tag.id} href={`/blog/tag/${tag.slug}`}>
+          <Link key={tag.id} href={tag.path ?? `/blog/tag/${tag.slug}`}>
             <Badge
               variant="secondary"
               className="hover:bg-secondary/80 transition-colors"
