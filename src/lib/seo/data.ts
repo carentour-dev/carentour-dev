@@ -2,7 +2,15 @@ import {
   DEFAULT_SEO_LOCALE,
   STATIC_PUBLIC_ROUTE_DEFAULTS,
 } from "@/lib/seo/constants";
-import { BLOG_INTERNAL_TEMPLATE_SLUGS } from "@/lib/blog/server";
+import {
+  BLOG_AUTHOR_TEMPLATE_SLUG,
+  BLOG_CATEGORY_TEMPLATE_SLUG,
+  BLOG_INTERNAL_TEMPLATE_SLUGS,
+  BLOG_POST_TEMPLATE_SLUG,
+  BLOG_TAG_TEMPLATE_SLUG,
+  getLocalizedBlogTemplatePage,
+} from "@/lib/blog/server";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { localizePublicPathname } from "@/lib/public/routing";
 import { normalizePath } from "@/lib/seo/utils";
@@ -648,8 +656,39 @@ export async function getPublicRouteInventory(
   locale: SeoLocale = DEFAULT_SEO_LOCALE,
 ): Promise<PublicInventoryEntry[]> {
   const supabase = asSupabase();
+  const localizedBlogAvailabilityPromise =
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({
+          blogIndex: true,
+          blogCategoryTemplate: true,
+          blogPostTemplate: true,
+          blogTagTemplate: true,
+          blogAuthorTemplate: true,
+        })
+      : Promise.all([
+          getLocalizedCmsPageBySlug("blog", locale),
+          getLocalizedBlogTemplatePage(BLOG_CATEGORY_TEMPLATE_SLUG, locale),
+          getLocalizedBlogTemplatePage(BLOG_POST_TEMPLATE_SLUG, locale),
+          getLocalizedBlogTemplatePage(BLOG_TAG_TEMPLATE_SLUG, locale),
+          getLocalizedBlogTemplatePage(BLOG_AUTHOR_TEMPLATE_SLUG, locale),
+        ]).then(
+          ([
+            blogIndex,
+            blogCategoryTemplate,
+            blogPostTemplate,
+            blogTagTemplate,
+            blogAuthorTemplate,
+          ]) => ({
+            blogIndex: Boolean(blogIndex),
+            blogCategoryTemplate: Boolean(blogCategoryTemplate),
+            blogPostTemplate: Boolean(blogPostTemplate),
+            blogTagTemplate: Boolean(blogTagTemplate),
+            blogAuthorTemplate: Boolean(blogAuthorTemplate),
+          }),
+        );
 
   const [
+    localizedBlogAvailability,
     cmsPagesRes,
     blogCategoriesRes,
     blogPostsRes,
@@ -665,6 +704,7 @@ export async function getPublicRouteInventory(
     patientStoriesRes,
     overridesRes,
   ] = await Promise.all([
+    localizedBlogAvailabilityPromise,
     supabase
       .from("cms_pages")
       .select("slug, title, seo, updated_at")
@@ -841,6 +881,13 @@ export async function getPublicRouteInventory(
 
   for (const route of STATIC_PUBLIC_ROUTE_DEFAULTS) {
     const pathname = normalizePath(route.pathname);
+    if (
+      locale !== DEFAULT_SEO_LOCALE &&
+      pathname === "/blog" &&
+      !localizedBlogAvailability.blogIndex
+    ) {
+      continue;
+    }
     const effectiveOverride = overrideLookup.get(pathname);
     const scoringOverride =
       locale === DEFAULT_SEO_LOCALE
@@ -941,11 +988,21 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const category of blogCategories) {
+    if (
+      locale !== DEFAULT_SEO_LOCALE &&
+      !localizedBlogAvailability.blogCategoryTemplate
+    ) {
+      continue;
+    }
+
     const translation = blogCategoryTranslationById.get(category.id);
     const localizedSlug =
       locale === DEFAULT_SEO_LOCALE
         ? category.slug
-        : translation?.slug?.trim() || category.slug;
+        : (translation?.slug?.trim() ?? "");
+    if (!localizedSlug) {
+      continue;
+    }
     const pathname = normalizePath(
       localizePublicPathname(`/blog/${localizedSlug}`, locale),
     );
@@ -1002,13 +1059,20 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const post of blogPosts) {
+    if (
+      locale !== DEFAULT_SEO_LOCALE &&
+      !localizedBlogAvailability.blogPostTemplate
+    ) {
+      continue;
+    }
+
     const categoryTranslation = post.category?.id
       ? blogCategoryTranslationById.get(post.category.id)
       : null;
     const categorySlug =
       locale === DEFAULT_SEO_LOCALE
         ? post.category?.slug
-        : categoryTranslation?.slug?.trim() || post.category?.slug;
+        : categoryTranslation?.slug?.trim();
     if (!categorySlug) {
       continue;
     }
@@ -1017,7 +1081,10 @@ export async function getPublicRouteInventory(
     const localizedSlug =
       locale === DEFAULT_SEO_LOCALE
         ? post.slug
-        : translation?.slug?.trim() || post.slug;
+        : (translation?.slug?.trim() ?? "");
+    if (!localizedSlug) {
+      continue;
+    }
     const pathname = normalizePath(
       localizePublicPathname(`/blog/${categorySlug}/${localizedSlug}`, locale),
     );
@@ -1077,11 +1144,21 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const tag of blogTags) {
+    if (
+      locale !== DEFAULT_SEO_LOCALE &&
+      !localizedBlogAvailability.blogTagTemplate
+    ) {
+      continue;
+    }
+
     const translation = blogTagTranslationById.get(tag.id);
     const localizedSlug =
       locale === DEFAULT_SEO_LOCALE
         ? tag.slug
-        : translation?.slug?.trim() || tag.slug;
+        : (translation?.slug?.trim() ?? "");
+    if (!localizedSlug) {
+      continue;
+    }
     const localizedName =
       locale === DEFAULT_SEO_LOCALE
         ? tag.name
@@ -1135,11 +1212,21 @@ export async function getPublicRouteInventory(
   }>;
 
   for (const author of blogAuthors.filter((row) => row.active !== false)) {
+    if (
+      locale !== DEFAULT_SEO_LOCALE &&
+      !localizedBlogAvailability.blogAuthorTemplate
+    ) {
+      continue;
+    }
+
     const translation = blogAuthorTranslationById.get(author.id);
     const localizedSlug =
       locale === DEFAULT_SEO_LOCALE
         ? author.slug
-        : translation?.slug?.trim() || author.slug;
+        : (translation?.slug?.trim() ?? "");
+    if (!localizedSlug) {
+      continue;
+    }
     const localizedName =
       locale === DEFAULT_SEO_LOCALE
         ? author.name
