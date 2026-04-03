@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { sanitizeStyleTagBreakout } from "@/lib/cms/styleSanitization";
 import { cn } from "@/lib/utils";
 import {
   buildAdvancedClassNames,
@@ -72,6 +73,9 @@ export function BlockSurface<TBlock extends BlockInstance>({
   ]
     .filter(Boolean)
     .join("\n");
+  const safeCollectedCss = collectedCss
+    ? sanitizeStyleTagBreakout(collectedCss)
+    : "";
 
   const animation = block.style?.effects?.animation;
   const shouldAnimate = animation && (animation.type ?? "none") !== "none";
@@ -109,8 +113,8 @@ export function BlockSurface<TBlock extends BlockInstance>({
       style={mergedStyle}
       {...animationAttributes}
     >
-      {collectedCss ? (
-        <style dangerouslySetInnerHTML={{ __html: collectedCss }} />
+      {safeCollectedCss ? (
+        <style dangerouslySetInnerHTML={{ __html: safeCollectedCss }} />
       ) : null}
       {backgroundVideo?.src ? (
         <video
