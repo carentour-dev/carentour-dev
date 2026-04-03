@@ -19,22 +19,19 @@ export type AuthorizationContext = {
 
 const ADMIN_PERMISSION = "admin.access";
 
-async function resolveAuthorization(): Promise<AuthorizationContext> {
-  const authHeader = (await headers()).get("authorization");
+export async function resolveAuthorizationFromAccessToken(
+  accessToken: string,
+): Promise<AuthorizationContext> {
+  const normalizedAccessToken = accessToken.trim();
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new ApiError(401, "Missing or invalid Authorization header");
-  }
-
-  const accessToken = authHeader.slice(7).trim();
-
-  if (!accessToken) {
+  if (!normalizedAccessToken) {
     throw new ApiError(401, "Missing access token");
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data: userData, error: userError } =
-    await supabaseAdmin.auth.getUser(accessToken);
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(
+    normalizedAccessToken,
+  );
 
   if (userError || !userData.user) {
     throw new ApiError(401, "Invalid or expired token", userError?.message);
@@ -102,6 +99,16 @@ async function resolveAuthorization(): Promise<AuthorizationContext> {
       hasAdminAccess ||
       required.some((permission) => permissions.includes(permission)),
   };
+}
+
+async function resolveAuthorization(): Promise<AuthorizationContext> {
+  const authHeader = (await headers()).get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new ApiError(401, "Missing or invalid Authorization header");
+  }
+
+  return resolveAuthorizationFromAccessToken(authHeader.slice(7));
 }
 
 export async function requireAdmin(): Promise<AuthorizationContext> {
