@@ -1,5 +1,6 @@
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -61,7 +62,7 @@ export function RichTextBlock({ block }: { block: BlockInstance<"richText"> }) {
             >
               <Button asChild variant={cta.variant ?? "default"} size="lg">
                 <Link
-                  href={cta.href}
+                  href={getSafeManagedHref(cta.href)}
                   target={cta.target ?? "_self"}
                   rel={
                     cta.target === "_blank" ? "noopener noreferrer" : undefined
