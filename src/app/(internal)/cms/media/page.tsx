@@ -5,6 +5,12 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
+  buildCmsMediaStoragePath,
+  CMS_MEDIA_UPLOAD_ERROR_MESSAGES,
+  isAllowedCmsMediaMimeType,
+  isAllowedCmsMediaUploadSize,
+} from "@/lib/cms/mediaUpload";
+import {
   Card,
   CardContent,
   CardFooter,
@@ -112,27 +118,35 @@ export default function CmsMediaPage() {
     if (!file) return;
     setUploading(true);
     try {
-      const session = await ensureSession();
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/cms/upload", {
-        method: "POST",
-        body: form,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (res.ok) {
-        await load();
-      } else {
-        const payload = await res.json().catch(() => null);
-        const message =
-          payload?.error ??
-          `Upload failed (${res.status})${
-            payload?.details ? `: ${payload.details}` : ""
-          }`;
-        throw new Error(message);
+      await ensureSession();
+
+      if (!isAllowedCmsMediaMimeType(file.type)) {
+        throw new Error(CMS_MEDIA_UPLOAD_ERROR_MESSAGES.invalidType);
       }
+
+      if (!isAllowedCmsMediaUploadSize(file.size)) {
+        throw new Error(CMS_MEDIA_UPLOAD_ERROR_MESSAGES.tooLarge);
+      }
+
+      const originalFileName =
+        file.name.split("/").pop()?.split("\\").pop()?.trim() ?? "";
+      if (!originalFileName) {
+        throw new Error(CMS_MEDIA_UPLOAD_ERROR_MESSAGES.invalidName);
+      }
+
+      const storagePath = buildCmsMediaStoragePath(originalFileName);
+      const { error } = await supabase.storage
+        .from(MEDIA_BUCKET)
+        .upload(storagePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await load();
     } catch (error) {
       console.error("Failed to upload media asset", error);
       const message =
