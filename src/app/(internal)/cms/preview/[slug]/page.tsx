@@ -1,6 +1,7 @@
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { cookies, headers } from "next/headers";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { resolveAuthorizationFromAccessToken } from "@/server/auth/requireAdmin";
 import { getPublicDirection } from "@/lib/public/routing";
 import type { PublicLocale } from "@/i18n/routing";
 
@@ -37,25 +38,18 @@ export default async function CmsPreviewPage({
     return <main className="container mx-auto px-4 py-8">Unauthorized</main>;
   }
 
-  const admin = getSupabaseAdmin();
-  const { data: user } = await admin.auth.getUser(token);
-  if (!user?.user) {
+  let authorization;
+  try {
+    authorization = await resolveAuthorizationFromAccessToken(token);
+  } catch {
     return <main className="container mx-auto px-4 py-8">Unauthorized</main>;
   }
-  const { data: roles, error: rolesError } = await admin.rpc("user_roles", {
-    p_user_id: user.user.id,
-  });
 
-  if (rolesError) {
-    console.error("Failed to load preview roles", rolesError);
+  if (!authorization.hasPermission("cms.read")) {
     return <main className="container mx-auto px-4 py-8">Forbidden</main>;
   }
 
-  const normalizedRoles = Array.isArray(roles) ? roles : [];
-
-  if (!normalizedRoles.some((role) => role === "admin" || role === "editor")) {
-    return <main className="container mx-auto px-4 py-8">Forbidden</main>;
-  }
+  const admin = getSupabaseAdmin();
   const { data } = await admin
     .from("cms_pages")
     .select("id, content")
