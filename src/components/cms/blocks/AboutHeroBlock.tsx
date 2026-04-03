@@ -4,6 +4,7 @@ import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { buildHeroOverlayGradient } from "@/lib/heroOverlay";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
@@ -105,7 +106,10 @@ export function AboutHeroBlock({
                             }
                           >
                             <Link
-                              href={action?.href ?? "/contact"}
+                              href={getSafeManagedHref(
+                                action?.href,
+                                "/contact",
+                              )}
                               target={action?.target ?? "_self"}
                               rel={
                                 action?.target === "_blank"
