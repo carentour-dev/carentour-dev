@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
+import { getSafeManagedHref, isSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -13,8 +14,8 @@ export function ImageFeatureBlock({
   block: BlockInstance<"imageFeature">;
 }) {
   const isImageLeft = block.layout === "imageLeft";
-  const actions = (block.actions ?? []).filter(
-    (action) => typeof action.href === "string" && action.href.length > 0,
+  const actions = (block.actions ?? []).filter((action) =>
+    isSafeManagedHref(action.href),
   );
   const hasItems = (block.items?.length ?? 0) > 0;
   const styleAlignValue = getFirstDefinedResponsiveValue(
@@ -119,7 +120,7 @@ export function ImageFeatureBlock({
                     }
                   >
                     <Link
-                      href={action.href}
+                      href={getSafeManagedHref(action.href)}
                       target={action.target ?? "_self"}
                       rel={
                         action.target === "_blank"
