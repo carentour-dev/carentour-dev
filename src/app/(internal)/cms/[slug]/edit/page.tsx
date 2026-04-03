@@ -791,6 +791,8 @@ export default function CmsEditPage() {
           onChange={handleBlocksChange}
           previewKey={`${page.id}-${page.content.length}`}
           previewLocale={locale}
+          previewPageSlug={page.slug}
+          previewAuthToken={authToken ?? undefined}
         />
 
         <div className="flex justify-end gap-2">
