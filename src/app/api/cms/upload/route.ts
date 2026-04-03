@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
+const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/ogg",
+]);
+
 export async function POST(req: NextRequest) {
   await requirePermission("cms.media");
 
@@ -9,6 +22,23 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
+  }
+
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return NextResponse.json(
+      {
+        error:
+          "Unsupported file type. Upload a JPG, PNG, WEBP, GIF, AVIF, MP4, WEBM, MOV, or OGG file.",
+      },
+      { status: 415 },
+    );
+  }
+
+  if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+    return NextResponse.json(
+      { error: "File is too large. Maximum size is 25MB." },
+      { status: 413 },
+    );
   }
 
   const originalFileName =
@@ -23,10 +53,9 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  const arrayBuffer = await file.arrayBuffer();
   const { data, error } = await supabase.storage
     .from("media")
-    .upload(storagePath, Buffer.from(arrayBuffer), {
+    .upload(storagePath, file, {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
