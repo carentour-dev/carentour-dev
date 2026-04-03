@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { localizePublicPathname } from "@/lib/public/routing";
+import {
+  isSafeManagedHref,
+  normalizeManagedHref,
+  SAFE_MANAGED_HREF_MESSAGE,
+} from "@/lib/managedHrefs";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { revalidateSeoPaths } from "@/lib/seo";
@@ -12,6 +17,24 @@ type NavigationLinkRow =
 
 const SELECT_COLUMNS =
   "id,label,slug,href,status,position,kind,cms_page_id,created_at,updated_at";
+
+function validateNavigationHref(value: unknown) {
+  const normalizedHref = normalizeManagedHref(
+    typeof value === "string" ? value : null,
+  );
+
+  if (!isSafeManagedHref(normalizedHref)) {
+    return {
+      ok: false as const,
+      error: SAFE_MANAGED_HREF_MESSAGE,
+    };
+  }
+
+  return {
+    ok: true as const,
+    href: normalizedHref,
+  };
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -50,7 +73,7 @@ export async function PATCH(
           navigation_link_id: id,
           locale: "ar",
           label: payload.label ?? existing.label,
-          status: payload.status ?? "draft",
+          status: payload.status ?? existing.status,
         },
         { onConflict: "navigation_link_id,locale" },
       )
@@ -72,13 +95,23 @@ export async function PATCH(
       data: {
         ...existing,
         label: data?.label ?? existing.label,
-        status: data?.status ?? "draft",
+        status: data?.status ?? existing.status,
         updated_at: data?.updated_at ?? existing.updated_at,
       },
     });
   }
 
   const isAutoManaged = Boolean(existing.cms_page_id);
+  if (!isAutoManaged && payload.href !== undefined) {
+    const hrefValidation = validateNavigationHref(payload.href);
+    if (!hrefValidation.ok) {
+      return NextResponse.json(
+        { error: hrefValidation.error },
+        { status: 400 },
+      );
+    }
+    payload.href = hrefValidation.href;
+  }
 
   const updates = isAutoManaged
     ? {
