@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { DEFAULT_HERO_OVERLAY } from "@/lib/heroOverlay";
 import { buildCallToActionBaseStyle } from "@/lib/cms/callToActionStyle";
+import { sanitizeStyleTagBreakout } from "@/lib/cms/styleSanitization";
 
 const breakpointOrder = [
   "base",
@@ -61,6 +62,9 @@ const deviceTargets = ["mobile", "tablet", "desktop"] as const;
 
 type Breakpoint = (typeof breakpointOrder)[number];
 
+const styleSafeStringSchema = (schema: z.ZodString) =>
+  schema.transform((value) => sanitizeStyleTagBreakout(value));
+
 const responsiveSchema = <TSchema extends z.ZodTypeAny>(schema: TSchema) =>
   z
     .object({
@@ -73,7 +77,7 @@ const responsiveSchema = <TSchema extends z.ZodTypeAny>(schema: TSchema) =>
     .optional();
 
 const gradientStopSchema = z.object({
-  color: z.string().min(1),
+  color: styleSafeStringSchema(z.string().min(1)),
   position: z.number().min(0).max(100).default(50),
 });
 
@@ -82,7 +86,9 @@ const responsiveAlignmentSchema = responsiveSchema(
   z.enum(horizontalAlignments),
 );
 const responsiveMaxWidthSchema = responsiveSchema(z.enum(maxWidthScale));
-const responsiveColorSchema = responsiveSchema(z.string());
+const responsiveColorSchema = responsiveSchema(
+  styleSafeStringSchema(z.string()),
+);
 const responsiveNumberSchema = responsiveSchema(z.number());
 const responsiveFontScaleSchema = responsiveSchema(z.enum(fontScaleOptions));
 const responsiveFontWeightSchema = responsiveSchema(z.enum(fontWeightOptions));
@@ -91,7 +97,7 @@ const responsiveLetterSpacingSchema = responsiveSchema(
 );
 
 const mediaSchema = z.object({
-  src: z.string().min(1, "Media source is required"),
+  src: styleSafeStringSchema(z.string().min(1, "Media source is required")),
   alt: z.string().optional(),
   focalPoint: z
     .object({
@@ -105,11 +111,11 @@ const mediaSchema = z.object({
 const responsiveMediaSchema = responsiveSchema(mediaSchema);
 
 const videoSchema = z.object({
-  src: z.string().min(1, "Video source is required"),
+  src: styleSafeStringSchema(z.string().min(1, "Video source is required")),
   autoplay: z.boolean().default(true),
   loop: z.boolean().default(true),
   muted: z.boolean().default(true),
-  poster: z.string().optional(),
+  poster: styleSafeStringSchema(z.string()).optional(),
 });
 
 const responsiveVideoSchema = responsiveSchema(videoSchema);
@@ -134,12 +140,12 @@ const blockStyleObjectSchema = z.object({
       color: responsiveColorSchema,
       gradient: z
         .object({
-          from: z.string().optional(),
-          via: z.string().optional(),
-          to: z.string().optional(),
+          from: styleSafeStringSchema(z.string()).optional(),
+          via: styleSafeStringSchema(z.string()).optional(),
+          to: styleSafeStringSchema(z.string()).optional(),
           angle: z.number().min(0).max(360).optional(),
           stops: z.array(gradientStopSchema).min(2).optional(),
-          css: z.string().optional(),
+          css: styleSafeStringSchema(z.string()).optional(),
         })
         .optional(),
       image: responsiveMediaSchema,
@@ -150,7 +156,7 @@ const blockStyleObjectSchema = z.object({
   typography: z
     .object({
       textColor: responsiveColorSchema,
-      headingAccentColor: z.string().optional(),
+      headingAccentColor: styleSafeStringSchema(z.string()).optional(),
       scale: responsiveFontScaleSchema,
       weight: responsiveFontWeightSchema,
       letterSpacing: responsiveLetterSpacingSchema,
@@ -205,15 +211,21 @@ const actionSchema = z.object({
 });
 
 const heroOverlaySchema = z.object({
-  fromColor: z.string().default(DEFAULT_HERO_OVERLAY.fromColor),
+  fromColor: styleSafeStringSchema(z.string()).default(
+    DEFAULT_HERO_OVERLAY.fromColor,
+  ),
   fromOpacity: z
     .number()
     .min(0)
     .max(1)
     .default(DEFAULT_HERO_OVERLAY.fromOpacity),
-  viaColor: z.string().default(DEFAULT_HERO_OVERLAY.viaColor),
+  viaColor: styleSafeStringSchema(z.string()).default(
+    DEFAULT_HERO_OVERLAY.viaColor,
+  ),
   viaOpacity: z.number().min(0).max(1).default(DEFAULT_HERO_OVERLAY.viaOpacity),
-  toColor: z.string().default(DEFAULT_HERO_OVERLAY.toColor),
+  toColor: styleSafeStringSchema(z.string()).default(
+    DEFAULT_HERO_OVERLAY.toColor,
+  ),
   toOpacity: z.number().min(0).max(1).default(DEFAULT_HERO_OVERLAY.toOpacity),
 });
 
@@ -2982,13 +2994,27 @@ export function cloneBlockWithNewId<TType extends BlockType>(
 
 export function normalizeBlocks(raw: unknown): BlockInstance[] {
   if (!raw) return [];
-  try {
-    const parsed = blockArraySchema.parse(raw) as BlockValue[];
-    return parsed.map((block) => ensureBlockIdentity(block));
-  } catch (error) {
-    console.warn("Failed to parse CMS blocks", error);
+  if (!Array.isArray(raw)) {
+    console.warn("Failed to parse CMS blocks: expected an array of blocks");
     return [];
   }
+
+  const parsedBlocks: BlockInstance[] = [];
+
+  raw.forEach((candidate, index) => {
+    const parsed = blockUnionSchema.safeParse(candidate);
+    if (!parsed.success) {
+      console.warn("Failed to parse CMS block", {
+        index,
+        issues: parsed.error.issues,
+      });
+      return;
+    }
+
+    parsedBlocks.push(ensureBlockIdentity(parsed.data as BlockValue));
+  });
+
+  return parsedBlocks;
 }
 
 export function createDefaultBlock<TType extends BlockType>(
