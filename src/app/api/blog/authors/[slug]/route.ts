@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { createClient } from "@/integrations/supabase/server";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const { slug } = await params;
+    const supabase = await createClient();
 
     const { data: author, error } = await supabase
       .from("blog_authors")
-      .select("*")
+      .select("id, slug, name, bio, avatar, website, social_links")
       .eq("slug", slug)
       .eq("active", true)
-      .single();
+      .maybeSingle();
 
     if (error || !author) {
       return NextResponse.json({ error: "Author not found" }, { status: 404 });
