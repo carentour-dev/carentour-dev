@@ -12,8 +12,8 @@ import {
   formatBlogReadingTime,
   resolveBlogUiText,
 } from "@/lib/blog/localization";
+import { buildLocalizedBlogLandingPath } from "@/lib/blog/paths";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
-import { buildLocalizedBlogLandingPath } from "@/lib/blog/server";
 import { BlockSurface } from "./BlockSurface";
 
 type BlogArticleHeroContext = {
