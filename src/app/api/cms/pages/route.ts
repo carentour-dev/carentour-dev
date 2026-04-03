@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
+import {
+  CMS_PAGE_SLUG_ERROR,
+  isValidCmsPageSlug,
+  normalizeCmsPageSlug,
+} from "@/lib/cms/pageSlugs";
 import { cmsPageSettingsSchema } from "@/lib/cms/pageSettings";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 
@@ -59,19 +64,24 @@ export async function POST(req: NextRequest) {
   const locale = resolveAdminLocale(req);
   const body = await req.json();
   const {
-    slug,
+    slug: rawSlug,
     title,
     content = [],
     seo = {},
     settings = {},
     status = "draft",
   } = body ?? {};
+  const slug = normalizeCmsPageSlug(rawSlug);
 
   if (!slug || (!title && locale === "en")) {
     return NextResponse.json(
       { error: "slug and title are required" },
       { status: 400 },
     );
+  }
+
+  if (!isValidCmsPageSlug(slug)) {
+    return NextResponse.json({ error: CMS_PAGE_SLUG_ERROR }, { status: 400 });
   }
 
   const sanitizedContent = sanitizeCmsBlocks(content ?? []);
