@@ -1,5 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import type { PublicLocale } from "@/i18n/routing";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 
 export type NavigationLinkStatus = "published" | "hidden" | "draft";
 
@@ -123,7 +124,7 @@ export function mapNavigationRow(row: NavigationRowInput): NavigationLink {
   return {
     id,
     label,
-    href,
+    href: getSafeManagedHref(href),
     slug,
     status: status as NavigationLinkStatus,
     position: position ?? 0,
