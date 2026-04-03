@@ -183,6 +183,8 @@ export async function PUT(
 
   const oldPath = toCmsPath(existingPage.slug);
   const newPath = toCmsPath(data.slug);
+  const oldArabicPath = localizePublicPathname(oldPath, "ar");
+  const newArabicPath = localizePublicPathname(newPath, "ar");
 
   if (oldPath !== newPath) {
     try {
@@ -207,7 +209,7 @@ export async function PUT(
     }
   }
 
-  revalidateSeoPaths([oldPath, newPath]);
+  revalidateSeoPaths([oldPath, newPath, oldArabicPath, newArabicPath]);
 
   return NextResponse.json({ page: data });
 }
@@ -272,7 +274,10 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  revalidateSeoPaths([toCmsPath(existingPage.slug)]);
+  revalidateSeoPaths([
+    toCmsPath(existingPage.slug),
+    localizePublicPathname(toCmsPath(existingPage.slug), "ar"),
+  ]);
 
   return NextResponse.json({ ok: true });
 }
