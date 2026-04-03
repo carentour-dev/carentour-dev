@@ -15,6 +15,24 @@ const ALLOWED_MIME_TYPES = new Set([
   "video/ogg",
 ]);
 
+function buildSafeStorageName(originalFileName: string) {
+  const trimmed = originalFileName.trim();
+  const extensionIndex = trimmed.lastIndexOf(".");
+  const rawBaseName =
+    extensionIndex > 0 ? trimmed.slice(0, extensionIndex) : trimmed;
+  const rawExtension =
+    extensionIndex > 0 ? trimmed.slice(extensionIndex).toLowerCase() : "";
+  const safeBaseName = rawBaseName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  const safeExtension = rawExtension.replace(/[^.a-z0-9]/g, "").slice(0, 16);
+  const normalizedBaseName = safeBaseName.length > 0 ? safeBaseName : "upload";
+
+  return `${crypto.randomUUID()}-${normalizedBaseName}${safeExtension}`;
+}
+
 export async function POST(req: NextRequest) {
   await requirePermission("cms.media");
 
@@ -49,7 +67,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const storagePath = `cms/${originalFileName}`;
+  const storagePath = `cms/${buildSafeStorageName(originalFileName)}`;
 
   const supabase = getSupabaseAdmin();
 
