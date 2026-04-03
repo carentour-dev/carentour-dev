@@ -1,12 +1,14 @@
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { getPublicDirection } from "@/lib/public/routing";
 import type { PublicLocale } from "@/i18n/routing";
 
+const PREVIEW_COOKIE_NAME = "cms-preview-access-token";
+
 type PreviewProps = {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ token?: string; locale?: string }>;
+  searchParams?: Promise<{ locale?: string }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -20,13 +22,15 @@ export default async function CmsPreviewPage({
   const locale: PublicLocale =
     resolvedSearchParams?.locale === "ar" ? "ar" : "en";
   const headerStore = await headers();
+  const cookieStore = await cookies();
   const authHeader = headerStore.get("authorization");
+  const previewCookieToken = cookieStore.get(PREVIEW_COOKIE_NAME)?.value;
   let token: string | undefined;
 
   if (authHeader?.startsWith("Bearer ")) {
     token = authHeader.slice(7).trim();
-  } else if (resolvedSearchParams?.token) {
-    token = decodeURIComponent(resolvedSearchParams.token);
+  } else if (previewCookieToken) {
+    token = previewCookieToken;
   }
 
   if (!token) {
