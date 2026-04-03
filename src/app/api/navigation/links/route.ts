@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { filterOrphanedNavigationRows } from "@/lib/navigation";
+import {
+  isSafeManagedHref,
+  normalizeManagedHref,
+  SAFE_MANAGED_HREF_MESSAGE,
+} from "@/lib/managedHrefs";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { requirePermission } from "@/server/auth/requireAdmin";
@@ -11,6 +16,24 @@ type NavigationLinkRow =
 
 const SELECT_COLUMNS =
   "id,label,slug,href,status,position,kind,cms_page_id,created_at,updated_at";
+
+function validateNavigationHref(value: unknown) {
+  const normalizedHref = normalizeManagedHref(
+    typeof value === "string" ? value : null,
+  );
+
+  if (!isSafeManagedHref(normalizedHref)) {
+    return {
+      ok: false as const,
+      error: SAFE_MANAGED_HREF_MESSAGE,
+    };
+  }
+
+  return {
+    ok: true as const,
+    href: normalizedHref,
+  };
+}
 
 export async function GET(request: NextRequest) {
   await requirePermission("nav.manage");
@@ -62,7 +85,7 @@ export async function GET(request: NextRequest) {
           return {
             ...row,
             label: translation?.label ?? row.label,
-            status: translation?.status ?? "draft",
+            status: translation?.status ?? row.status,
             updated_at: translation?.updated_at ?? row.updated_at,
             locale,
           };
@@ -98,12 +121,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const hrefValidation = validateNavigationHref(payload.href);
+  if (!hrefValidation.ok) {
+    return NextResponse.json({ error: hrefValidation.error }, { status: 400 });
+  }
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("navigation_links")
     .insert({
       label: payload.label,
-      href: payload.href,
+      href: hrefValidation.href,
       slug: payload.slug,
       status: payload.status ?? "published",
       position: payload.position ?? 999,
