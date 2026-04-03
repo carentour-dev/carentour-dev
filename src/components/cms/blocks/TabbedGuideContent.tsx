@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { resolveSectionKey } from "./tabbedGuideUtils";
 
 const columnClassName: Record<number, string> = {
@@ -461,7 +462,7 @@ function SectionRenderer({
                               }
                             >
                               <Link
-                                href={action.href}
+                                href={getSafeManagedHref(action.href)}
                                 target={action.target ?? "_self"}
                                 rel={
                                   action.target === "_blank"
@@ -1082,7 +1083,7 @@ function SectionRenderer({
                   }
                 >
                   <Link
-                    href={action.href}
+                    href={getSafeManagedHref(action.href)}
                     target={action.target ?? "_self"}
                     rel={
                       action.target === "_blank"
