@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import {
@@ -76,7 +77,7 @@ function ActionLink({
       variant={resolvedVariant === "link" ? "link" : resolvedVariant}
     >
       <Link
-        href={action.href}
+        href={getSafeManagedHref(action.href)}
         target={target}
         rel={target === "_blank" ? "noopener noreferrer" : undefined}
       >
