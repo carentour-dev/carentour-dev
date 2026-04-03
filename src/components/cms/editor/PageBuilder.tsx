@@ -71,6 +71,8 @@ interface PageBuilderProps {
   onChange: (blocks: BlockInstance[]) => void;
   previewKey?: string;
   previewLocale?: PublicLocale;
+  previewPageSlug?: string;
+  previewAuthToken?: string;
 }
 
 export function PageBuilder({
@@ -78,6 +80,8 @@ export function PageBuilder({
   onChange,
   previewKey,
   previewLocale = "en",
+  previewPageSlug,
+  previewAuthToken,
 }: PageBuilderProps) {
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     blocks.length ? blocks[0].blockId : null,
@@ -342,6 +346,8 @@ export function PageBuilder({
             blocks={previewBlocks}
             key={`${previewInstanceKey}${keySuffix}`}
             locale={previewLocale}
+            pageSlug={previewPageSlug}
+            authToken={previewAuthToken}
           />
         </div>
       </div>
