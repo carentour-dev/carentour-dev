@@ -140,6 +140,15 @@ export async function PUT(
     .single();
 
   if (error) {
+    if (error.code === "23503") {
+      return NextResponse.json(
+        {
+          error:
+            "Unable to rename the category while related FAQ records still reference the old slug.",
+        },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
