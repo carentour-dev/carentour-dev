@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
@@ -140,7 +141,7 @@ export function ServiceCatalogBlock({
                       {item.action ? (
                         <div className="flex items-end lg:justify-end">
                           <Link
-                            href={item.action.href}
+                            href={getSafeManagedHref(item.action.href)}
                             target={item.action.target ?? "_self"}
                             rel={
                               item.action.target === "_blank"
