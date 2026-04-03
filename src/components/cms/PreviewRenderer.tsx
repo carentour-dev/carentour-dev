@@ -11,8 +11,15 @@ import { AnimationController } from "./AnimationController";
 import { BlogArticleBodyBlock } from "./blocks/BlogArticleBodyBlock";
 import { BlogArticleHeroBlock } from "./blocks/BlogArticleHeroBlock";
 import { BlogAuthorSummaryBlock } from "./blocks/BlogAuthorSummaryBlock";
-import { BlogPostFeedPreview } from "./blocks/BlogPostFeedPreview";
-import { BlogTaxonomyGridPreview } from "./blocks/BlogTaxonomyGridPreview";
+import {
+  BlogPostFeedContent,
+  selectPreviewBlogPostFeedItems,
+} from "./blocks/BlogPostFeedBlockContent";
+import {
+  BlogTaxonomyGridContent,
+  selectPreviewBlogTaxonomyItems,
+} from "./blocks/BlogTaxonomyGridBlockContent";
+import { BlockSurface } from "./blocks/BlockSurface";
 import { CallToActionBlock } from "./blocks/CallToActionBlock";
 import { ContactFormEmbedBlockPreview } from "./blocks/ContactFormEmbedBlockContent";
 import { DifferentiatorsBlock } from "./blocks/DifferentiatorsBlock";
@@ -21,8 +28,7 @@ import { FeaturedTreatmentsHomePreview } from "./blocks/FeaturedTreatmentsHomePr
 import { FeatureGridBlockPreview } from "./blocks/FeatureGridBlockContent";
 import { DataGridBlock } from "./blocks/DataGridBlock";
 import { FaqBlock } from "./blocks/FaqBlock";
-import { FaqDirectoryPreview } from "./blocks/FaqDirectoryPreview";
-import { MedicalFacilitiesDirectoryPreview } from "./blocks/MedicalFacilitiesDirectoryPreview";
+import { FaqDirectoryContent } from "./blocks/FaqDirectoryContent";
 import { LeadershipGridBlock } from "./blocks/LeadershipGridBlock";
 import { HeroBlock } from "./blocks/HeroBlock";
 import { HomeCtaBlock } from "./blocks/HomeCtaBlock";
@@ -31,9 +37,16 @@ import { ImageFeatureBlock } from "./blocks/ImageFeatureBlock";
 import { JourneyStepsBlock } from "./blocks/JourneyStepsBlock";
 import { LogoGridBlock } from "./blocks/LogoGridBlock";
 import { AboutHeroBlock } from "./blocks/AboutHeroBlock";
+import { MedicalFacilitiesDirectoryClient } from "./blocks/MedicalFacilitiesDirectoryClient";
+import { MedicalFacilityProfileClient } from "./blocks/MedicalFacilityProfileClient";
 import { MissionVisionValuesBlock } from "./blocks/MissionVisionValuesBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
-import { MedicalFacilityProfilePreview } from "./blocks/MedicalFacilityProfilePreview";
+import {
+  previewFaqCategories,
+  previewFaqs,
+  previewMedicalFacilitiesDirectoryData,
+  previewMedicalFacilityDetail,
+} from "./blocks/previewFixtures";
 import { RichTextBlock } from "./blocks/RichTextBlock";
 import { HotelShowcaseBlock } from "./blocks/HotelShowcaseBlock";
 import { InfoPanelsBlock } from "./blocks/InfoPanelsBlock";
@@ -113,6 +126,91 @@ function stableHash(input: string): string {
 function getBlockKey(block: BlockInstance): string {
   const contentSignature = stableHash(JSON.stringify(block));
   return `${block.blockId}-${contentSignature}`;
+}
+
+function FaqDirectoryEditorPreview({
+  block,
+  locale,
+}: {
+  block: BlockInstance<"faqDirectory">;
+  locale: PublicLocale;
+}) {
+  return (
+    <BlockSurface
+      block={block}
+      className="overflow-visible border-y border-border/60 bg-background dark:border-slate-200 dark:bg-slate-50"
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName="space-y-10"
+    >
+      {() => (
+        <FaqDirectoryContent
+          eyebrow={block.eyebrow}
+          heading={block.heading}
+          description={block.description}
+          layout={block.layout}
+          locale={locale}
+          navigationHeading={block.navigationHeading}
+          showSearch={block.showSearch}
+          showCategoryDescriptions={block.showCategoryDescriptions}
+          showSourceBadge={false}
+          searchPlaceholder={block.searchPlaceholder}
+          emptyStateHeading={block.emptyStateHeading}
+          emptyStateDescription={block.emptyStateDescription}
+          clearSearchLabel={block.clearSearchLabel}
+          faqs={previewFaqs}
+          categories={previewFaqCategories}
+          source="cms"
+        />
+      )}
+    </BlockSurface>
+  );
+}
+
+function MedicalFacilitiesDirectoryEditorPreview({
+  block,
+}: {
+  block: BlockInstance<"medicalFacilitiesDirectory">;
+}) {
+  return (
+    <BlockSurface
+      block={block}
+      className="overflow-visible border-y border-border/50 bg-background"
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName="space-y-10"
+    >
+      {() => (
+        <MedicalFacilitiesDirectoryClient
+          block={block}
+          initialData={previewMedicalFacilitiesDirectoryData}
+          disableLiveFetch
+        />
+      )}
+    </BlockSurface>
+  );
+}
+
+function MedicalFacilityProfileEditorPreview({
+  block,
+}: {
+  block: BlockInstance<"medicalFacilityProfile">;
+}) {
+  return (
+    <BlockSurface
+      block={block}
+      container={false}
+      className="overflow-visible bg-background"
+      defaultPadding={{ top: "0rem", bottom: "0rem" }}
+    >
+      {() => (
+        <MedicalFacilityProfileClient
+          block={block}
+          slug={previewMedicalFacilityDetail.provider.slug}
+          initialData={previewMedicalFacilityDetail}
+          disableLiveFetch
+        />
+      )}
+    </BlockSurface>
+  );
 }
 
 export function BlockPreviewRenderer({
@@ -280,10 +378,16 @@ export function BlockPreviewRenderer({
             case "faq":
               return <FaqBlock key={blockKey} block={block} />;
             case "faqDirectory":
-              return <FaqDirectoryPreview key={blockKey} block={block} />;
+              return (
+                <FaqDirectoryEditorPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "medicalFacilitiesDirectory":
               return (
-                <MedicalFacilitiesDirectoryPreview
+                <MedicalFacilitiesDirectoryEditorPreview
                   key={blockKey}
                   block={block}
                 />
@@ -292,7 +396,10 @@ export function BlockPreviewRenderer({
               return <QuoteBlock key={blockKey} block={block} />;
             case "medicalFacilityProfile":
               return (
-                <MedicalFacilityProfilePreview key={blockKey} block={block} />
+                <MedicalFacilityProfileEditorPreview
+                  key={blockKey}
+                  block={block}
+                />
               );
             case "treatmentSpecialties":
               return (
@@ -310,25 +417,75 @@ export function BlockPreviewRenderer({
                 />
               );
             case "blogPostFeed":
+              if (blogPreview.loading) {
+                return (
+                  <Placeholder
+                    key={blockKey}
+                    title="Loading blog preview"
+                    description="Fetching sample editorial content for this block."
+                  />
+                );
+              }
+
+              if (blogPreview.error || !blogPreview.data) {
+                return (
+                  <Placeholder
+                    key={blockKey}
+                    title="Blog preview unavailable"
+                    description={
+                      blogPreview.error ??
+                      "Open the page-level preview to render this block with live editorial data."
+                    }
+                  />
+                );
+              }
+
               return (
-                <BlogPostFeedPreview
+                <BlogPostFeedContent
                   key={blockKey}
                   block={block}
+                  posts={selectPreviewBlogPostFeedItems({
+                    block,
+                    context: blogContext,
+                    posts: blogPreview.data.posts,
+                  })}
+                  context={blogContext}
                   locale={locale}
-                  previewData={blogPreview.data}
-                  loading={blogPreview.loading}
-                  error={blogPreview.error}
                 />
               );
             case "blogTaxonomyGrid":
+              if (blogPreview.loading) {
+                return (
+                  <Placeholder
+                    key={blockKey}
+                    title="Loading taxonomy preview"
+                    description="Fetching sample archive data for this block."
+                  />
+                );
+              }
+
+              if (blogPreview.error || !blogPreview.data) {
+                return (
+                  <Placeholder
+                    key={blockKey}
+                    title="Taxonomy preview unavailable"
+                    description={
+                      blogPreview.error ??
+                      "Open the page-level preview to render this block with live editorial data."
+                    }
+                  />
+                );
+              }
+
               return (
-                <BlogTaxonomyGridPreview
+                <BlogTaxonomyGridContent
                   key={blockKey}
                   block={block}
+                  items={selectPreviewBlogTaxonomyItems({
+                    block,
+                    items: blogPreview.data.taxonomy,
+                  })}
                   locale={locale}
-                  previewData={blogPreview.data}
-                  loading={blogPreview.loading}
-                  error={blogPreview.error}
                 />
               );
             case "blogArticleHero":
