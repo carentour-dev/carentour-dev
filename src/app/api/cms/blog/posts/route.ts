@@ -37,8 +37,11 @@ export async function GET(request: NextRequest) {
       `,
         { count: "exact" },
       )
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order("created_at", { ascending: false });
+
+    if (locale === "en") {
+      query = query.range(offset, offset + limit - 1);
+    }
 
     if (status && status !== "all" && locale === "en") {
       query = query.eq("status", status);
@@ -305,18 +308,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const totalCount = locale === "ar" ? localizedPosts.length : count || 0;
+    const paginatedPosts =
+      locale === "ar"
+        ? localizedPosts.slice(offset, offset + limit)
+        : localizedPosts;
+
     return NextResponse.json({
-      posts: localizedPosts,
+      posts: paginatedPosts,
       pagination: {
         page,
         limit,
-        total: locale === "ar" ? localizedPosts.length : count || 0,
-        totalPages: Math.max(
-          1,
-          Math.ceil(
-            (locale === "ar" ? localizedPosts.length : count || 0) / limit,
-          ),
-        ),
+        total: totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
       },
     });
   } catch (error) {
