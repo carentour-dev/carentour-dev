@@ -442,12 +442,34 @@ export default function CmsEditPage() {
     }
     const success = await save();
     if (success) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const previewToken = session?.access_token ?? authToken;
+      const previewSessionRes = await fetch("/api/cms/preview/session", {
+        method: "POST",
+        headers: previewToken
+          ? { Authorization: `Bearer ${previewToken}` }
+          : {},
+      });
+
+      if (!previewSessionRes.ok) {
+        const payload = await previewSessionRes.json().catch(() => null);
+        toast({
+          title: "Preview unavailable",
+          description:
+            payload?.error ??
+            "Unable to prepare the preview session. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const previewHref = buildAdminLocaleHref(
         `/cms/preview/${page.slug}`,
         locale,
       );
-      const url = `${previewHref}${previewHref.includes("?") ? "&" : "?"}token=${encodeURIComponent(authToken)}`;
-      window.open(url, "_blank", "noopener,noreferrer");
+      window.open(previewHref, "_blank", "noopener,noreferrer");
     }
   };
 
