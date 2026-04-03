@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockStyle, BlockValue } from "@/lib/cms/blocks";
+import { getSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import {
@@ -152,7 +153,7 @@ export function CallToActionBlock({
                   )}
                 >
                   <Link
-                    href={action.href}
+                    href={getSafeManagedHref(action.href)}
                     target={action.target ?? "_self"}
                     rel={
                       action.target === "_blank"
