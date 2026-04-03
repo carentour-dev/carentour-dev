@@ -1,13 +1,22 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { blockRegistry, normalizeBlocks } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
+import { useCmsBlogPreviewData } from "@/hooks/useCmsBlogPreviewData";
 import { AnimationController } from "./AnimationController";
+import { BlogArticleBodyBlock } from "./blocks/BlogArticleBodyBlock";
+import { BlogArticleHeroBlock } from "./blocks/BlogArticleHeroBlock";
+import { BlogAuthorSummaryBlock } from "./blocks/BlogAuthorSummaryBlock";
+import { BlogPostFeedPreview } from "./blocks/BlogPostFeedPreview";
+import { BlogTaxonomyGridPreview } from "./blocks/BlogTaxonomyGridPreview";
 import { CallToActionBlock } from "./blocks/CallToActionBlock";
 import { ContactFormEmbedBlockPreview } from "./blocks/ContactFormEmbedBlockContent";
 import { DifferentiatorsBlock } from "./blocks/DifferentiatorsBlock";
+import { DoctorsBlockPreview } from "./blocks/DoctorsBlockPreview";
 import { FeaturedTreatmentsHomePreview } from "./blocks/FeaturedTreatmentsHomePreview";
 import { FeatureGridBlockPreview } from "./blocks/FeatureGridBlockContent";
 import { DataGridBlock } from "./blocks/DataGridBlock";
@@ -33,14 +42,32 @@ import { StatGridBlock } from "./blocks/StatGridBlock";
 import { AdvisoryNoticeBlock } from "./blocks/AdvisoryNoticeBlock";
 import { StoryNarrativeBlock } from "./blocks/StoryNarrativeBlock";
 import { TabbedGuidePreview } from "./blocks/TabbedGuidePreview";
+import { TreatmentsBlockPreview } from "./blocks/TreatmentsBlockPreview";
 import { TreatmentSpecialtiesPreview } from "./blocks/TreatmentSpecialtiesPreview";
 import { TrustSignalsBlock } from "./blocks/TrustSignalsBlock";
 import { StartJourneyEmbedBlock } from "./blocks/StartJourneyEmbedBlock";
 
-function Placeholder({ title }: { title: string }) {
+const BLOG_PREVIEW_BLOCK_TYPES = new Set([
+  "blogPostFeed",
+  "blogTaxonomyGrid",
+  "blogArticleHero",
+  "blogArticleBody",
+  "blogAuthorSummary",
+]);
+
+function Placeholder({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
   return (
     <div className="rounded-lg border border-dashed border-border/50 bg-muted/20 p-6 text-sm text-muted-foreground">
-      {title} preview available on published page.
+      <p className="font-medium text-foreground">{title}</p>
+      <p className="mt-2">
+        {description ?? `${title} preview available on published page.`}
+      </p>
     </div>
   );
 }
@@ -93,13 +120,32 @@ export function BlockPreviewRenderer({
   className,
   disableAnimations,
   locale = "en",
+  pageSlug,
+  authToken,
 }: {
   blocks: unknown;
   className?: string;
   disableAnimations?: boolean;
   locale?: PublicLocale;
+  pageSlug?: string;
+  authToken?: string;
 }) {
-  const parsedBlocks = ensureBlockInstances(blocks);
+  const parsedBlocks = useMemo(() => ensureBlockInstances(blocks), [blocks]);
+  const needsBlogPreviewData = parsedBlocks.some((block) =>
+    BLOG_PREVIEW_BLOCK_TYPES.has(block.type),
+  );
+  const blogPreview = useCmsBlogPreviewData({
+    pageSlug,
+    locale,
+    authToken,
+    enabled: needsBlogPreviewData,
+  });
+  const blogContext = blogPreview.data?.blogContext
+    ? { blog: blogPreview.data.blogContext }
+    : undefined;
+  const blogPreviewFallbackDescription = blogPreview.loading
+    ? "Fetching sample editorial content for this block."
+    : "Open the page-level preview to render this block with live editorial content.";
 
   if (!parsedBlocks.length) return null;
 
@@ -253,9 +299,9 @@ export function BlockPreviewRenderer({
                 <TreatmentSpecialtiesPreview key={blockKey} block={block} />
               );
             case "treatments":
-              return <Placeholder key={blockKey} title="Treatments" />;
+              return <TreatmentsBlockPreview key={blockKey} block={block} />;
             case "doctors":
-              return <Placeholder key={blockKey} title="Doctors" />;
+              return <DoctorsBlockPreview key={blockKey} block={block} />;
             case "tabbedGuide":
               return (
                 <TabbedGuidePreview
@@ -264,15 +310,72 @@ export function BlockPreviewRenderer({
                 />
               );
             case "blogPostFeed":
-              return <Placeholder key={blockKey} title="Blog Post Feed" />;
+              return (
+                <BlogPostFeedPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                  previewData={blogPreview.data}
+                  loading={blogPreview.loading}
+                  error={blogPreview.error}
+                />
+              );
             case "blogTaxonomyGrid":
-              return <Placeholder key={blockKey} title="Blog Taxonomy Grid" />;
+              return (
+                <BlogTaxonomyGridPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                  previewData={blogPreview.data}
+                  loading={blogPreview.loading}
+                  error={blogPreview.error}
+                />
+              );
             case "blogArticleHero":
-              return <Placeholder key={blockKey} title="Blog Article Hero" />;
+              return blogContext ? (
+                <BlogArticleHeroBlock
+                  key={blockKey}
+                  block={block}
+                  context={blogContext}
+                  locale={locale}
+                />
+              ) : (
+                <Placeholder
+                  key={blockKey}
+                  title="Blog Article Hero"
+                  description={blogPreviewFallbackDescription}
+                />
+              );
             case "blogArticleBody":
-              return <Placeholder key={blockKey} title="Blog Article Body" />;
+              return blogContext ? (
+                <BlogArticleBodyBlock
+                  key={blockKey}
+                  block={block}
+                  context={blogContext}
+                  locale={locale}
+                />
+              ) : (
+                <Placeholder
+                  key={blockKey}
+                  title="Blog Article Body"
+                  description={blogPreviewFallbackDescription}
+                />
+              );
             case "blogAuthorSummary":
-              return <Placeholder key={blockKey} title="Blog Author Summary" />;
+              return blogContext ? (
+                <BlogAuthorSummaryBlock
+                  key={blockKey}
+                  block={block}
+                  context={blogContext}
+                  locale={locale}
+                />
+              ) : (
+                <Placeholder
+                  key={blockKey}
+                  title="Blog Author Summary"
+                  description={blogPreviewFallbackDescription}
+                />
+              );
             default:
               return (
                 <pre
