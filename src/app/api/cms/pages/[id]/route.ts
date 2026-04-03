@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
+import {
+  CMS_PAGE_SLUG_ERROR,
+  isValidCmsPageSlug,
+  normalizeCmsPageSlug,
+} from "@/lib/cms/pageSlugs";
 import { cmsPageSettingsSchema } from "@/lib/cms/pageSettings";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
@@ -163,10 +168,15 @@ export async function PUT(
     });
   }
 
+  const normalizedSlug = normalizeCmsPageSlug(updates.slug);
+  if (!isValidCmsPageSlug(normalizedSlug)) {
+    return NextResponse.json({ error: CMS_PAGE_SLUG_ERROR }, { status: 400 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("cms_pages")
     .update({
-      slug: updates.slug,
+      slug: normalizedSlug,
       title: updates.title,
       seo: updates.seo,
       settings: parsedSettings?.success ? parsedSettings.data : {},
