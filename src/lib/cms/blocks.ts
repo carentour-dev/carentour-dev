@@ -3,6 +3,11 @@ import { z } from "zod";
 import { DEFAULT_HERO_OVERLAY } from "@/lib/heroOverlay";
 import { buildCallToActionBaseStyle } from "@/lib/cms/callToActionStyle";
 import { sanitizeStyleTagBreakout } from "@/lib/cms/styleSanitization";
+import {
+  isSafeManagedHref,
+  normalizeManagedHref,
+  SAFE_MANAGED_HREF_MESSAGE,
+} from "@/lib/managedHrefs";
 
 const breakpointOrder = [
   "base",
@@ -201,10 +206,15 @@ const actionVariants = [
 ] as const;
 
 const linkTargetSchema = z.enum(["_self", "_blank"]).default("_self");
+const actionHrefSchema = z
+  .string()
+  .transform(normalizeManagedHref)
+  .refine((value) => value.length > 0, "Action URL is required")
+  .refine(isSafeManagedHref, SAFE_MANAGED_HREF_MESSAGE);
 
 const actionSchema = z.object({
   label: z.string().min(1, "Action label is required"),
-  href: z.string().min(1, "Action URL is required"),
+  href: actionHrefSchema,
   variant: z.enum(actionVariants).default("default"),
   target: linkTargetSchema.optional(),
   icon: z.string().optional(),
