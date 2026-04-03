@@ -34,11 +34,12 @@ const fetchMedicalFacility = async (
 export const useMedicalFacility = (
   slug: string,
   initialData?: MedicalFacilityDetail,
+  options?: { enabled?: boolean },
 ) => {
   const query = useQuery({
     queryKey: ["medical-facility", slug],
     queryFn: () => fetchMedicalFacility(slug),
-    enabled: Boolean(slug),
+    enabled: options?.enabled ?? Boolean(slug),
     initialData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
