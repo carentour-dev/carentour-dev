@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { PublicLocale } from "@/i18n/routing";
 import { localizeOptionalDigits } from "@/lib/public/numbers";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import type { HomeCtaContent } from "./content";
 
 export function HomeCtaSection({
@@ -11,6 +15,16 @@ export function HomeCtaSection({
   content: HomeCtaContent;
   locale?: PublicLocale;
 }) {
+  const resolveActionHref = (href: string) => {
+    if (!href.startsWith("/")) {
+      return href;
+    }
+
+    return href === "/start-journey" || href.startsWith("/start-journey?")
+      ? localizePublicPathnameWithFallback(href, locale)
+      : localizePublicPathname(href, locale);
+  };
+
   return (
     <section className="bg-surface-subtle py-20">
       <div className="container mx-auto px-4 text-center">
@@ -26,12 +40,12 @@ export function HomeCtaSection({
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href={content.primaryAction.href}>
+              <Link href={resolveActionHref(content.primaryAction.href)}>
                 {localizeOptionalDigits(content.primaryAction.label, locale)}
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href={content.secondaryAction.href}>
+              <Link href={resolveActionHref(content.secondaryAction.href)}>
                 {localizeOptionalDigits(content.secondaryAction.label, locale)}
               </Link>
             </Button>
