@@ -118,6 +118,10 @@ export function TreatmentsBlockPreview({
   }
 
   return (
-    <TreatmentsBlockContent block={block} treatments={selectedTreatments} />
+    <TreatmentsBlockContent
+      block={block}
+      treatments={selectedTreatments}
+      locale="en"
+    />
   );
 }
