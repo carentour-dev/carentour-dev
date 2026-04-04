@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, type ComponentType } from "react";
+import { useCallback, useMemo, type ComponentType } from "react";
 import Image from "next/image";
-import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,11 +12,18 @@ import { DoctorProfile } from "@/components/DoctorProfile";
 import { DoctorReviews } from "@/components/DoctorReviews";
 import PriceComparison from "@/components/PriceComparison";
 import { useDoctors } from "@/hooks/useDoctors";
-import { useTreatments } from "@/hooks/useTreatments";
 import { usePatientReviews, usePatientStories } from "@/hooks/useTestimonials";
-import { selectPrimaryProcedure } from "@/lib/treatments";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
+import {
+  selectPrimaryProcedure,
+  type NormalizedTreatment,
+} from "@/lib/treatments";
 import {
   ArrowLeft,
+  ArrowRight,
   Clock,
   DollarSign,
   Star,
@@ -28,59 +34,156 @@ import {
   Loader2,
   FileDown,
 } from "lucide-react";
+import type { PublicLocale } from "@/i18n/routing";
+import { localizeCompanyNameDeep } from "@/lib/public/brand";
+import { getPublicNumberLocale } from "@/lib/public/numbers";
 
 const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
 
-export default function TreatmentDetails() {
-  const params = useParams();
-  const category = params?.category as string;
+export default function TreatmentDetails({
+  treatment: normalizedTreatment,
+  locale,
+  slug,
+}: {
+  treatment: NormalizedTreatment;
+  locale: PublicLocale;
+  slug: string;
+}) {
   const router = useRouter();
-  const { treatments, loading: treatmentsLoading } = useTreatments();
-
-  const slug = (category || "").toLowerCase();
-  const visibleTreatments = useMemo(
-    () =>
-      treatments.filter(
-        (treatment) =>
-          treatment.isListedPublic !== false && treatment.isActive !== false,
-      ),
-    [treatments],
+  const isArabicLocale = locale === "ar";
+  const numberLocale = getPublicNumberLocale(locale);
+  const treatmentsHref = localizePublicPathname("/treatments", locale);
+  const startJourneyHref = localizePublicPathnameWithFallback(
+    "/start-journey",
+    locale,
+  );
+  const consultationHref = localizePublicPathnameWithFallback(
+    "/consultation",
+    locale,
+  );
+  const localizedTreatment = useMemo(
+    () => localizeCompanyNameDeep(normalizedTreatment, locale),
+    [locale, normalizedTreatment],
   );
 
   const formatCurrency = (value: number, currency?: string | null) => {
     try {
-      return new Intl.NumberFormat("en-US", {
+      return new Intl.NumberFormat(numberLocale, {
         style: "currency",
         currency: currency || "USD",
         maximumFractionDigits: 0,
       }).format(value);
     } catch (error) {
-      return `$${value.toLocaleString()}`;
+      return `$${new Intl.NumberFormat(numberLocale).format(value)}`;
     }
   };
+  const formatDayCount = useCallback(
+    (value: number) => {
+      const formattedValue = new Intl.NumberFormat(numberLocale).format(value);
 
-  const dynamicTreatment = useMemo(() => {
-    if (!slug || visibleTreatments.length === 0) return null;
-    return (
-      visibleTreatments.find((treatment) => {
-        const treatmentSlug = (
-          treatment.slug ||
-          treatment.category ||
-          ""
-        ).toLowerCase();
-        return treatmentSlug === slug;
-      }) || null
-    );
-  }, [slug, visibleTreatments]);
+      return isArabicLocale
+        ? `${formattedValue} يوم`
+        : `${formattedValue} day${value === 1 ? "" : "s"}`;
+    },
+    [isArabicLocale, numberLocale],
+  );
+  const copy = {
+    backToAllTreatments: isArabicLocale
+      ? "العودة إلى جميع العلاجات"
+      : "Back to All Treatments",
+    heroImageAlt: isArabicLocale
+      ? (title: string) => `صورة الغلاف الخاصة بعلاج ${title}`
+      : (title: string) => `${title} cover image`,
+    fallbackDescription: isArabicLocale
+      ? "تعرّف على هذا العلاج المتاح عبر كير آند تور."
+      : "Learn more about this treatment option available through Care N Tour.",
+    fallbackOverview: isArabicLocale
+      ? "يضع خبراؤنا الطبيون خططاً علاجية فردية تجمع بين أفضل الأطباء والمنشآت الطبية."
+      : "Our medical experts craft individualized treatment plans combining top specialists and service providers.",
+    overviewHeading: isArabicLocale
+      ? "نظرة عامة على العلاج"
+      : "Treatment Overview",
+    idealCandidatesHeading: isArabicLocale
+      ? "المرشحون المناسبون"
+      : "Ideal Candidates",
+    candidateSuitability: isArabicLocale
+      ? "يتم تأكيد ملاءمة الحالة خلال الاستشارة لضمان توافق العلاج مع وضعك الصحي."
+      : "Candidate suitability is confirmed during your consultation to ensure the treatment matches your health profile.",
+    quickFactsHeading: isArabicLocale ? "معلومات سريعة" : "Quick Facts",
+    treatmentDuration: isArabicLocale ? "مدة العلاج" : "Treatment duration",
+    recoveryTimeline: isArabicLocale ? "فترة التعافي" : "Recovery timeline",
+    estimatedCost: isArabicLocale ? "التكلفة التقديرية" : "Estimated cost",
+    successRate: isArabicLocale ? "نسبة النجاح" : "Success rate",
+    treatmentPdf: isArabicLocale ? "ملف العلاج" : "Treatment PDF",
+    downloadOverview: isArabicLocale ? "تنزيل الملخص" : "Download overview",
+    personalizedConsultation: isArabicLocale
+      ? "استشارة مخصصة"
+      : "Personalized consultation",
+    personalizedConsultationDescription: isArabicLocale
+      ? "يحدد منسقونا الطبيون الأسعار والمدة وفترة التعافي بناءً على حالتك الفردية."
+      : "Our medical coordinators finalize pricing, duration, and recovery timelines based on your unique case.",
+    proceduresHeading: isArabicLocale
+      ? "الإجراءات المتاحة"
+      : "Available Procedures",
+    proceduresDescription: isArabicLocale
+      ? "معلومات شاملة عن كل إجراء، بما في ذلك التعافي ومتطلبات الترشح."
+      : "Comprehensive information about each procedure including recovery details and candidate requirements",
+    durationLabel: isArabicLocale ? "المدة" : "Duration",
+    recoveryLabel: isArabicLocale ? "التعافي" : "Recovery",
+    priceLabel: isArabicLocale ? "السعر" : "Price",
+    procedurePdf: isArabicLocale ? "ملف الإجراء" : "Procedure PDF",
+    procedurePdfDescription: isArabicLocale
+      ? "نزّل نظرة عامة مفصلة لهذا الإجراء."
+      : "Download a detailed overview for this procedure.",
+    download: isArabicLocale ? "تنزيل" : "Download",
+    candidateRequirements: isArabicLocale
+      ? "متطلبات الترشح"
+      : "Candidate Requirements",
+    additionalNotes: isArabicLocale ? "ملاحظات إضافية" : "Additional Notes",
+    recoveryTimelineHeading: isArabicLocale
+      ? "الجدول الزمني للتعافي"
+      : "Recovery Timeline",
+    startJourney: isArabicLocale ? "ابدأ رحلتك" : "Start Your Journey",
+    noProcedureInfo: isArabicLocale
+      ? "سيتم تزويدك بالتفاصيل الكاملة للإجراءات أثناء الاستشارة."
+      : "Detailed procedure information for this treatment will be provided during your consultation.",
+    specialistsHeading: isArabicLocale
+      ? "أطباؤنا المتخصصون"
+      : "Our Specialist Doctors",
+    specialistsDescription: isArabicLocale
+      ? "تعرّف على أطبائنا المدربين دولياً الذين يجمعون بين الخبرة الطويلة والتقنيات الحديثة لتحقيق أفضل النتائج."
+      : "Meet our internationally trained specialists who combine years of experience with cutting-edge techniques to deliver exceptional results.",
+    noSpecialists: isArabicLocale
+      ? "لم يتم العثور على متخصصين لهذا العلاج حالياً."
+      : "No specialists found for this treatment category.",
+    internationalLabel: isArabicLocale ? "دولي" : "International",
+    patientReviewsHeading: isArabicLocale ? "آراء المرضى" : "Patient Reviews",
+    patientReviewsEmpty: isArabicLocale
+      ? "ستظهر آراء المرضى لهذا العلاج هنا فور نشر قصصهم."
+      : "Testimonials for this treatment will appear here as soon as patients publish their stories.",
+    patientStoriesHeading: isArabicLocale ? "قصص المرضى" : "Patient Stories",
+    patientStoriesDescription: isArabicLocale
+      ? "تابع رحلات المرضى الذين سافروا مع كير آند تور لهذا العلاج."
+      : "Follow the journeys of patients who travelled with Care N Tour for this treatment.",
+    featuredSuccess: isArabicLocale ? "قصة نجاح مميزة" : "Featured success",
+    noPatientStories: isArabicLocale
+      ? "لا توجد قصص مرضى منشورة بعد. تحقق لاحقاً للاطلاع على التجارب الواقعية."
+      : "No patient stories published yet. Check back soon for real-case journeys.",
+    ctaHeading: isArabicLocale
+      ? (title: string) => `هل أنت جاهز لبدء رحلة ${title}؟`
+      : (title: string) => `Ready to Start Your ${title} Journey?`,
+    ctaDescription: isArabicLocale
+      ? "احصل على خطة علاج مخصصة وتقدير للتكلفة من خبرائنا الطبيين."
+      : "Get a personalized treatment plan and cost estimate from our medical experts",
+    scheduleConsultation: isArabicLocale
+      ? "احجز استشارة"
+      : "Schedule Consultation",
+  };
 
-  const normalizedTreatment = dynamicTreatment;
+  const treatmentId = localizedTreatment.id;
+  const treatmentSlugValue = localizedTreatment.slug;
 
-  const treatmentId =
-    normalizedTreatment?.id ?? dynamicTreatment?.id ?? undefined;
-  const treatmentSlugValue =
-    normalizedTreatment?.slug ?? dynamicTreatment?.slug ?? undefined;
-
-  const rawDoctorCategory = normalizedTreatment?.category ?? undefined;
+  const rawDoctorCategory = localizedTreatment?.category ?? undefined;
   const doctorCategorySlug = rawDoctorCategory
     ? rawDoctorCategory.trim().toLowerCase()
     : undefined;
@@ -97,60 +200,59 @@ export default function TreatmentDetails() {
       treatmentSlug: treatmentSlugValue,
     });
 
-  const treatment = useMemo(() => {
-    if (!normalizedTreatment) return null;
-
-    return {
-      title: normalizedTreatment.name,
+  const treatment = useMemo(
+    () => ({
+      title: localizedTreatment.name,
       description:
-        normalizedTreatment.summary ||
-        normalizedTreatment.description ||
-        "Learn more about this treatment option available through Care N Tour.",
+        localizedTreatment.summary ||
+        localizedTreatment.description ||
+        copy.fallbackDescription,
       heroImage:
-        normalizedTreatment.heroImageUrl ??
-        normalizedTreatment.cardImageUrl ??
+        localizedTreatment.heroImageUrl ??
+        localizedTreatment.cardImageUrl ??
         null,
       overview:
-        normalizedTreatment.overview ||
-        normalizedTreatment.description ||
-        "Our medical experts craft individualized treatment plans combining top specialists and service providers.",
-      idealCandidates: normalizedTreatment.idealCandidates,
-      procedures: normalizedTreatment.procedures,
-      downloadUrl: normalizedTreatment.downloadUrl ?? null,
+        localizedTreatment.overview ||
+        localizedTreatment.description ||
+        copy.fallbackOverview,
+      idealCandidates: localizedTreatment.idealCandidates,
+      procedures: localizedTreatment.procedures,
+      downloadUrl: localizedTreatment.downloadUrl ?? null,
       quickFacts: {
-        duration: normalizedTreatment.durationDays,
-        recovery: normalizedTreatment.recoveryTimeDays,
-        price: normalizedTreatment.basePrice,
-        currency: normalizedTreatment.currency,
-        successRate: normalizedTreatment.successRate,
+        duration: localizedTreatment.durationDays,
+        recovery: localizedTreatment.recoveryTimeDays,
+        price: localizedTreatment.basePrice,
+        currency: localizedTreatment.currency,
+        successRate: localizedTreatment.successRate,
       },
-    };
-  }, [normalizedTreatment]);
+    }),
+    [copy.fallbackDescription, copy.fallbackOverview, localizedTreatment],
+  );
 
   const quickFacts = useMemo(() => {
-    if (normalizedTreatment) {
+    if (localizedTreatment) {
       const primaryProcedure = selectPrimaryProcedure(
-        normalizedTreatment.procedures,
+        localizedTreatment.procedures,
       );
 
       const fallbackDuration =
         typeof primaryProcedure?.duration === "string"
           ? primaryProcedure.duration.trim()
           : "";
-      const durationLabel = normalizedTreatment.durationDays
-        ? `${normalizedTreatment.durationDays} day${normalizedTreatment.durationDays === 1 ? "" : "s"}`
+      const durationLabel = localizedTreatment.durationDays
+        ? formatDayCount(localizedTreatment.durationDays)
         : fallbackDuration || undefined;
 
       const fallbackRecovery =
         typeof primaryProcedure?.recovery === "string"
           ? primaryProcedure.recovery.trim()
           : "";
-      const recoveryLabel = normalizedTreatment.recoveryTimeDays
-        ? `${normalizedTreatment.recoveryTimeDays} day${normalizedTreatment.recoveryTimeDays === 1 ? "" : "s"}`
+      const recoveryLabel = localizedTreatment.recoveryTimeDays
+        ? formatDayCount(localizedTreatment.recoveryTimeDays)
         : fallbackRecovery || undefined;
 
       const priceValue =
-        normalizedTreatment.basePrice ??
+        localizedTreatment.basePrice ??
         primaryProcedure?.egyptPrice ??
         undefined;
 
@@ -159,22 +261,22 @@ export default function TreatmentDetails() {
           ? primaryProcedure.successRate.trim()
           : "";
       const successRateLabel =
-        normalizedTreatment.successRate !== undefined &&
-        normalizedTreatment.successRate !== null
-          ? `${normalizedTreatment.successRate}%`
+        localizedTreatment.successRate !== undefined &&
+        localizedTreatment.successRate !== null
+          ? `${localizedTreatment.successRate}%`
           : fallbackSuccess || undefined;
 
       return {
         durationLabel,
         recoveryLabel,
         priceValue,
-        currency: normalizedTreatment.currency ?? "USD",
+        currency: localizedTreatment.currency ?? "USD",
         successRateLabel,
       };
     }
 
     return null;
-  }, [normalizedTreatment]);
+  }, [formatDayCount, localizedTreatment]);
 
   const quickFactsHasContent =
     !!quickFacts &&
@@ -187,43 +289,6 @@ export default function TreatmentDetails() {
     );
   const hasQuickFacts = quickFactsHasContent || Boolean(treatment?.downloadUrl);
 
-  if (treatmentsLoading && !treatment) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="py-20">
-          <div className="container mx-auto px-4 text-center text-muted-foreground">
-            Loading treatment details...
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (!treatment) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="py-20">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-4">
-              Treatment Not Found
-            </h1>
-            <p className="text-muted-foreground mb-8">
-              The requested treatment category could not be found.
-            </p>
-            <Button onClick={() => router.push("/treatments")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Treatments
-            </Button>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen">
       <Header />
@@ -233,11 +298,15 @@ export default function TreatmentDetails() {
         <section className="py-8 bg-muted/30">
           <div className="container mx-auto px-4">
             <button
-              onClick={() => router.push("/treatments")}
+              onClick={() => router.push(treatmentsHref)}
               className="flex items-center text-primary hover:text-primary/80 transition-colors mb-6"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to All Treatments
+              {isArabicLocale ? (
+                <ArrowRight className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              )}
+              {copy.backToAllTreatments}
             </button>
 
             <div className="max-w-4xl">
@@ -261,7 +330,7 @@ export default function TreatmentDetails() {
               <div className="relative aspect-[4/3] sm:aspect-[16/8] lg:aspect-[16/5] overflow-hidden rounded-2xl border border-border/60">
                 <Image
                   src={treatment.heroImage}
-                  alt={`${treatment.title} cover image`}
+                  alt={copy.heroImageAlt(treatment.title)}
                   fill
                   className="object-cover"
                   sizes="(min-width: 1280px) 1200px, (min-width: 768px) 90vw, 100vw"
@@ -278,7 +347,7 @@ export default function TreatmentDetails() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               <div className="lg:col-span-2">
                 <h2 className="text-3xl font-bold text-foreground mb-6">
-                  Treatment Overview
+                  {copy.overviewHeading}
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                   {treatment.overview}
@@ -286,7 +355,7 @@ export default function TreatmentDetails() {
 
                 <div className="bg-surface-subtle rounded-lg border border-border/50 p-6">
                   <h3 className="text-xl font-semibold text-foreground mb-4">
-                    Ideal Candidates
+                    {copy.idealCandidatesHeading}
                   </h3>
                   {treatment.idealCandidates.length > 0 ? (
                     <ul className="space-y-3">
@@ -303,9 +372,7 @@ export default function TreatmentDetails() {
                     </ul>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Candidate suitability is confirmed during your
-                      consultation to ensure the treatment matches your health
-                      profile.
+                      {copy.candidateSuitability}
                     </p>
                   )}
                 </div>
@@ -315,7 +382,7 @@ export default function TreatmentDetails() {
                 <Card className="border-primary/20 bg-surface-subtle">
                   <CardHeader>
                     <CardTitle className="text-xl text-foreground">
-                      Quick Facts
+                      {copy.quickFactsHeading}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -324,7 +391,7 @@ export default function TreatmentDetails() {
                         <Clock className="h-5 w-5 text-primary" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Treatment duration
+                            {copy.treatmentDuration}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {quickFacts.durationLabel}
@@ -338,7 +405,7 @@ export default function TreatmentDetails() {
                         <Heart className="h-5 w-5 text-primary" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Recovery timeline
+                            {copy.recoveryTimeline}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {quickFacts.recoveryLabel}
@@ -352,7 +419,7 @@ export default function TreatmentDetails() {
                         <DollarSign className="h-5 w-5 text-primary" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Estimated cost
+                            {copy.estimatedCost}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {formatCurrency(
@@ -369,7 +436,7 @@ export default function TreatmentDetails() {
                         <Star className="h-5 w-5 text-primary" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Success rate
+                            {copy.successRate}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {quickFacts.successRateLabel}
@@ -383,7 +450,7 @@ export default function TreatmentDetails() {
                         <FileDown className="h-5 w-5 text-primary" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Treatment PDF
+                            {copy.treatmentPdf}
                           </div>
                           <a
                             href={treatment.downloadUrl}
@@ -391,7 +458,7 @@ export default function TreatmentDetails() {
                             rel="noreferrer"
                             className="text-sm text-primary underline-offset-4 hover:underline"
                           >
-                            Download overview
+                            {copy.downloadOverview}
                           </a>
                         </div>
                       </div>
@@ -402,11 +469,10 @@ export default function TreatmentDetails() {
                         <Users className="h-5 w-5 text-primary mt-0.5" />
                         <div>
                           <div className="font-medium text-foreground">
-                            Personalized consultation
+                            {copy.personalizedConsultation}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Our medical coordinators finalize pricing, duration,
-                            and recovery timelines based on your unique case.
+                            {copy.personalizedConsultationDescription}
                           </div>
                         </div>
                       </div>
@@ -423,11 +489,10 @@ export default function TreatmentDetails() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Available Procedures
+                {copy.proceduresHeading}
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Comprehensive information about each procedure including
-                recovery details and candidate requirements
+                {copy.proceduresDescription}
               </p>
             </div>
 
@@ -440,22 +505,22 @@ export default function TreatmentDetails() {
                     icon: ComponentType<{ className?: string }>;
                   }[] = [
                     {
-                      label: "Duration",
+                      label: copy.durationLabel,
                       value: procedure.duration?.trim(),
                       icon: Clock,
                     },
                     {
-                      label: "Recovery",
+                      label: copy.recoveryLabel,
                       value: procedure.recovery?.trim(),
                       icon: Heart,
                     },
                     {
-                      label: "Price",
+                      label: copy.priceLabel,
                       value: procedure.price?.trim(),
                       icon: DollarSign,
                     },
                     {
-                      label: "Success Rate",
+                      label: copy.successRate,
                       value: procedure.successRate?.trim(),
                       icon: Star,
                     },
@@ -520,11 +585,10 @@ export default function TreatmentDetails() {
                                   </div>
                                   <div>
                                     <div className="text-sm font-semibold text-foreground">
-                                      Procedure PDF
+                                      {copy.procedurePdf}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                      Download a detailed overview for this
-                                      procedure.
+                                      {copy.procedurePdfDescription}
                                     </p>
                                   </div>
                                 </div>
@@ -534,7 +598,7 @@ export default function TreatmentDetails() {
                                     target="_blank"
                                     rel="noreferrer"
                                   >
-                                    Download
+                                    {copy.download}
                                   </a>
                                 </Button>
                               </div>
@@ -546,7 +610,7 @@ export default function TreatmentDetails() {
                         <div className="mb-8">
                           <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                             <CheckCircle className="h-5 w-5 text-primary" />
-                            Candidate Requirements
+                            {copy.candidateRequirements}
                           </h4>
                           {hasCandidateRequirements ? (
                             <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -566,18 +630,16 @@ export default function TreatmentDetails() {
                             </ul>
                           ) : (
                             <p className="text-sm text-muted-foreground">
-                              Candidate suitability is confirmed during your
-                              consultation to ensure the treatment matches your
-                              health profile.
+                              {copy.candidateSuitability}
                             </p>
                           )}
                         </div>
 
                         {/* Additional Notes */}
                         {procedure.additionalNotes ? (
-                          <div className="mb-8 rounded-lg border border-border/60 bg-muted/40 p-4 text-left">
+                          <div className="mb-8 rounded-lg border border-border/60 bg-muted/40 p-4 text-start">
                             <h4 className="text-lg font-semibold text-foreground">
-                              Additional Notes
+                              {copy.additionalNotes}
                             </h4>
                             <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
                               {procedure.additionalNotes}
@@ -591,7 +653,7 @@ export default function TreatmentDetails() {
                           <div className="mb-8">
                             <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                               <Clock className="h-5 w-5 text-primary" />
-                              Recovery Timeline
+                              {copy.recoveryTimelineHeading}
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                               {procedure.recoveryStages.map(
@@ -621,6 +683,9 @@ export default function TreatmentDetails() {
                             <PriceComparison
                               treatment={procedure.name}
                               egyptPrice={procedure.egyptPrice}
+                              egyptCurrency={
+                                localizedTreatment.currency ?? "USD"
+                              }
                               internationalPrices={
                                 procedure.internationalPrices
                               }
@@ -634,15 +699,15 @@ export default function TreatmentDetails() {
                             className="w-full"
                             onClick={() => {
                               const params = new URLSearchParams({
-                                treatment: category,
+                                treatment: slug,
                                 procedure: procedure.id,
                               });
                               router.push(
-                                `/start-journey?${params.toString()}`,
+                                `${startJourneyHref}?${params.toString()}`,
                               );
                             }}
                           >
-                            Start Your Journey
+                            {copy.startJourney}
                           </Button>
                         </div>
                       </CardContent>
@@ -651,8 +716,7 @@ export default function TreatmentDetails() {
                 })
               ) : (
                 <div className="text-center text-muted-foreground">
-                  Detailed procedure information for this treatment will be
-                  provided during your consultation.
+                  {copy.noProcedureInfo}
                 </div>
               )}
             </div>
@@ -664,12 +728,10 @@ export default function TreatmentDetails() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-foreground mb-4">
-                Our Specialist Doctors
+                {copy.specialistsHeading}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Meet our internationally trained specialists who combine years
-                of experience with cutting-edge techniques to deliver
-                exceptional results.
+                {copy.specialistsDescription}
               </p>
             </div>
 
@@ -689,9 +751,7 @@ export default function TreatmentDetails() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  No specialists found for this treatment category.
-                </p>
+                <p className="text-muted-foreground">{copy.noSpecialists}</p>
               </div>
             )}
           </div>
@@ -708,7 +768,8 @@ export default function TreatmentDetails() {
               <DoctorReviews
                 reviews={patientReviews.map((review) => ({
                   ...review,
-                  patient_country: review.patient_country ?? "International",
+                  patient_country:
+                    review.patient_country ?? copy.internationalLabel,
                   procedure_name: review.procedure_name ?? undefined,
                   recovery_time: review.recovery_time ?? "",
                   is_verified: true,
@@ -717,11 +778,10 @@ export default function TreatmentDetails() {
             ) : (
               <div className="text-center py-16">
                 <h3 className="text-2xl font-semibold text-foreground mb-2">
-                  Patient Reviews
+                  {copy.patientReviewsHeading}
                 </h3>
                 <p className="text-muted-foreground">
-                  Testimonials for this treatment will appear here as soon as
-                  patients publish their stories.
+                  {copy.patientReviewsEmpty}
                 </p>
               </div>
             )}
@@ -733,11 +793,10 @@ export default function TreatmentDetails() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-foreground mb-4">
-                Patient Stories
+                {copy.patientStoriesHeading}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Follow the journeys of patients who travelled with Care N Tour
-                for this treatment.
+                {copy.patientStoriesDescription}
               </p>
             </div>
 
@@ -772,11 +831,13 @@ export default function TreatmentDetails() {
                       <div className="text-xs text-muted-foreground flex items-center justify-between">
                         {story.featured && (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
-                            Featured success
+                            {copy.featuredSuccess}
                           </span>
                         )}
                         <span>
-                          {new Date(story.created_at).toLocaleDateString()}
+                          {new Date(story.created_at).toLocaleDateString(
+                            isArabicLocale ? "ar-EG" : "en-US",
+                          )}
                         </span>
                       </div>
                     </CardContent>
@@ -785,8 +846,7 @@ export default function TreatmentDetails() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-16">
-                No patient stories published yet. Check back soon for real-case
-                journeys.
+                {copy.noPatientStories}
               </div>
             )}
           </div>
@@ -796,28 +856,27 @@ export default function TreatmentDetails() {
         <section className="bg-surface-brand py-20">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-background mb-4">
-              Ready to Start Your {treatment.title} Journey?
+              {copy.ctaHeading(treatment.title)}
             </h2>
             <p className="text-xl text-background/90 mb-8 max-w-2xl mx-auto">
-              Get a personalized treatment plan and cost estimate from our
-              medical experts
+              {copy.ctaDescription}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
                 variant="premium"
                 onClick={() =>
-                  router.push(`/start-journey?treatment=${category}`)
+                  router.push(`${startJourneyHref}?treatment=${slug}`)
                 }
               >
-                Start Your Journey
+                {copy.startJourney}
               </Button>
               <Button
                 size="lg"
                 variant="hero"
-                onClick={() => router.push("/consultation")}
+                onClick={() => router.push(consultationHref)}
               >
-                Schedule Consultation
+                {copy.scheduleConsultation}
               </Button>
             </div>
           </div>
