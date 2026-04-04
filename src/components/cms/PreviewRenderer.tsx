@@ -254,7 +254,7 @@ export function BlockPreviewRenderer({
           const blockKey = getBlockKey(block);
           switch (block.type) {
             case "hero":
-              return <HeroBlock key={blockKey} block={block} />;
+              return <HeroBlock key={blockKey} block={block} locale={locale} />;
             case "homeHero":
               return (
                 <HomeHeroBlock key={blockKey} block={block} locale={locale} />
@@ -326,9 +326,17 @@ export function BlockPreviewRenderer({
                 />
               );
             case "richText":
-              return <RichTextBlock key={blockKey} block={block} />;
+              return (
+                <RichTextBlock key={blockKey} block={block} locale={locale} />
+              );
             case "imageFeature":
-              return <ImageFeatureBlock key={blockKey} block={block} />;
+              return (
+                <ImageFeatureBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "featureGrid":
               return (
                 <FeatureGridBlockPreview
@@ -364,7 +372,13 @@ export function BlockPreviewRenderer({
             case "logoGrid":
               return <LogoGridBlock key={blockKey} block={block} />;
             case "callToAction":
-              return <CallToActionBlock key={blockKey} block={block} />;
+              return (
+                <CallToActionBlock
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={blockKey} block={block} />;
             case "contactFormEmbed":
@@ -414,6 +428,7 @@ export function BlockPreviewRenderer({
                 <TabbedGuidePreview
                   key={blockKey}
                   block={block as BlockInstance<"tabbedGuide">}
+                  locale={locale}
                 />
               );
             case "blogPostFeed":
