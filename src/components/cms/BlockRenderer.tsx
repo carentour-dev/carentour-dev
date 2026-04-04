@@ -80,13 +80,19 @@ export function BlockRenderer({
           const key = block.blockId;
           switch (block.type) {
             case "hero":
-              return <HeroBlock key={key} block={block} />;
+              return <HeroBlock key={key} block={block} locale={locale} />;
             case "homeHero":
               return <HomeHeroBlock key={key} block={block} locale={locale} />;
             case "aboutHero":
               return <AboutHeroBlock key={key} block={block} locale={locale} />;
             case "featuredTreatmentsHome":
-              return <FeaturedTreatmentsHomeBlock key={key} block={block} />;
+              return (
+                <FeaturedTreatmentsHomeBlock
+                  key={key}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "journeySteps":
               return (
                 <JourneyStepsBlock key={key} block={block} locale={locale} />
@@ -118,9 +124,11 @@ export function BlockRenderer({
                 <AdvisoryNoticeBlock key={key} block={block} locale={locale} />
               );
             case "richText":
-              return <RichTextBlock key={key} block={block} />;
+              return <RichTextBlock key={key} block={block} locale={locale} />;
             case "imageFeature":
-              return <ImageFeatureBlock key={key} block={block} />;
+              return (
+                <ImageFeatureBlock key={key} block={block} locale={locale} />
+              );
             case "featureGrid":
               return (
                 <FeatureGridBlock key={key} block={block} locale={locale} />
@@ -142,7 +150,9 @@ export function BlockRenderer({
             case "logoGrid":
               return <LogoGridBlock key={key} block={block} />;
             case "callToAction":
-              return <CallToActionBlock key={key} block={block} />;
+              return (
+                <CallToActionBlock key={key} block={block} locale={locale} />
+              );
             case "startJourneyEmbed":
               return <StartJourneyEmbedBlock key={key} block={block} />;
             case "contactFormEmbed":
@@ -176,13 +186,23 @@ export function BlockRenderer({
                 />
               );
             case "treatmentSpecialties":
-              return <TreatmentSpecialtiesBlock key={key} block={block} />;
+              return (
+                <TreatmentSpecialtiesBlock
+                  key={key}
+                  block={block}
+                  locale={locale}
+                />
+              );
             case "treatments":
-              return <TreatmentsBlock key={key} block={block} />;
+              return (
+                <TreatmentsBlock key={key} block={block} locale={locale} />
+              );
             case "doctors":
               return <DoctorsBlock key={key} block={block} />;
             case "tabbedGuide":
-              return <TabbedGuideBlock key={key} block={block} />;
+              return (
+                <TabbedGuideBlock key={key} block={block} locale={locale} />
+              );
             case "blogPostFeed":
               return (
                 <BlogPostFeedBlock
