@@ -4,6 +4,10 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import type { PublicLocale } from "@/i18n/routing";
 import { buildHeroOverlayGradient } from "@/lib/heroOverlay";
 import { localizeOptionalDigits } from "@/lib/public/numbers";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { cn } from "@/lib/utils";
 import type { HomeAction, HomeHeroContent } from "./content";
 
@@ -47,6 +51,15 @@ export function HomeHeroSection({
       : DEFAULT_HERO_IMAGE_URL;
   const overlayGradient = buildHeroOverlayGradient(content.overlay);
   const highlights = content.highlights ?? [];
+  const resolveActionHref = (href: string) => {
+    if (!href.startsWith("/")) {
+      return href;
+    }
+
+    return href === "/start-journey" || href.startsWith("/start-journey?")
+      ? localizePublicPathnameWithFallback(href, locale)
+      : localizePublicPathname(href, locale);
+  };
 
   return (
     <section
@@ -102,7 +115,7 @@ export function HomeHeroSection({
                   asChild
                 >
                   <Link
-                    href={content.primaryAction.href}
+                    href={resolveActionHref(content.primaryAction.href)}
                     target={content.primaryAction.target ?? "_self"}
                     rel={resolveLinkRel(content.primaryAction.target)}
                   >
@@ -120,7 +133,7 @@ export function HomeHeroSection({
                   asChild
                 >
                   <Link
-                    href={content.secondaryAction.href}
+                    href={resolveActionHref(content.secondaryAction.href)}
                     target={content.secondaryAction.target ?? "_self"}
                     rel={resolveLinkRel(content.secondaryAction.target)}
                   >
