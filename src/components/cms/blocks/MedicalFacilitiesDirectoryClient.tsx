@@ -17,7 +17,10 @@ import {
   type MedicalFacilitiesDirectoryResponse,
   type ProcedureOption,
 } from "@/lib/medical-facilities";
-import { localizePublicPathname } from "@/lib/public/routing";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -637,10 +640,17 @@ export function MedicalFacilitiesDirectoryClient({
                     </div>
                     <div className="flex gap-2">
                       <Button asChild variant="outline">
-                        <Link href="/contact">{block.cardLabels.contact}</Link>
+                        <Link href={localizePublicPathname("/contact", locale)}>
+                          {block.cardLabels.contact}
+                        </Link>
                       </Button>
                       <Button asChild>
-                        <Link href="/start-journey">
+                        <Link
+                          href={localizePublicPathnameWithFallback(
+                            "/start-journey",
+                            locale,
+                          )}
+                        >
                           {block.cardLabels.primaryCta}
                         </Link>
                       </Button>
