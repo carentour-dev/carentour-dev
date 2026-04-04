@@ -14,6 +14,7 @@ import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { localizePublicPathname } from "@/lib/public/routing";
 import { normalizePath } from "@/lib/seo/utils";
+import { getLocalizedTreatmentSeoInventory } from "@/server/modules/treatments/public";
 import { ApiError } from "@/server/utils/errors";
 import type {
   PublicInventoryEntry,
@@ -1271,19 +1272,19 @@ export async function getPublicRouteInventory(
     });
   }
 
-  const treatments = (treatmentsRes.data ?? []) as Array<{
-    slug: string;
-    name: string;
-    summary?: string | null;
-    hero_image_url?: string | null;
-    card_image_url?: string | null;
-    updated_at?: string | null;
-  }>;
+  const treatments = await getLocalizedTreatmentSeoInventory(
+    locale === DEFAULT_SEO_LOCALE ? "en" : "ar",
+  );
 
   for (const treatment of treatments) {
     const pathname = normalizePath(`/treatments/${treatment.slug}`);
-    const sourceTitle = `${treatment.name} | Treatments | Care N Tour`;
-    const sourceDescription = treatment.summary ?? null;
+    const sourceTitle =
+      treatment.seo.title ?? `${treatment.name} | Treatments | Care N Tour`;
+    const sourceDescription =
+      treatment.seo.description ??
+      treatment.summary ??
+      treatment.description ??
+      null;
     const sourceImage =
       treatment.hero_image_url ?? treatment.card_image_url ?? null;
     const effectiveOverride = overrideLookup.get(pathname);
