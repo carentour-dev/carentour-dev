@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { getSafeManagedHref } from "@/lib/managedHrefs";
+import type { PublicLocale } from "@/i18n/routing";
+import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { resolveSectionKey } from "./tabbedGuideUtils";
 
 const columnClassName: Record<number, string> = {
@@ -170,10 +171,12 @@ export function TabbedGuideContent({
   block,
   hotelMap,
   isPreview,
+  locale = "en",
 }: {
   block: BlockInstance<"tabbedGuide">;
   hotelMap: TabbedGuideHotelsMap;
   isPreview?: boolean;
+  locale?: PublicLocale;
 }) {
   const tabsAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -329,6 +332,7 @@ export function TabbedGuideContent({
                               sectionKey={sectionKey}
                               hotelMap={hotelMap}
                               isPreview={isPreview}
+                              locale={locale}
                             />
                           </div>
                         );
@@ -350,11 +354,13 @@ function SectionRenderer({
   sectionKey,
   hotelMap,
   isPreview,
+  locale,
 }: {
   section: TabbedGuideSection;
   sectionKey: string;
   hotelMap: TabbedGuideHotelsMap;
   isPreview?: boolean;
+  locale: PublicLocale;
 }) {
   const resolveAutoGridColumnsClass = (count: number) =>
     autoGridColumnsClassName[Math.min(Math.max(count, 1), 3)] ??
@@ -462,7 +468,10 @@ function SectionRenderer({
                               }
                             >
                               <Link
-                                href={getSafeManagedHref(action.href)}
+                                href={getLocalizedSafeManagedHref(
+                                  action.href,
+                                  locale,
+                                )}
                                 target={action.target ?? "_self"}
                                 rel={
                                   action.target === "_blank"
@@ -1083,7 +1092,7 @@ function SectionRenderer({
                   }
                 >
                   <Link
-                    href={getSafeManagedHref(action.href)}
+                    href={getLocalizedSafeManagedHref(action.href, locale)}
                     target={action.target ?? "_self"}
                     rel={
                       action.target === "_blank"
