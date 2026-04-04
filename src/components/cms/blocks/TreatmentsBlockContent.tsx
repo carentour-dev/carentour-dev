@@ -1,4 +1,9 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import {
   selectPrimaryProcedure,
   type NormalizedTreatment,
@@ -40,9 +45,11 @@ const formatDuration = (duration?: number | null) => {
 export function TreatmentsBlockContent({
   block,
   treatments,
+  locale = "en",
 }: {
   block: BlockInstance<"treatments">;
   treatments: NormalizedTreatment[];
+  locale?: PublicLocale;
 }) {
   const isCarousel = block.layout === "carousel";
   const shouldCenterStatic = isCarousel && treatments.length <= 3;
@@ -221,7 +228,12 @@ export function TreatmentsBlockContent({
                     </div>
                     <div className="mt-auto flex gap-2 pt-2">
                       <Button asChild size="sm" className="flex-1">
-                        <Link href={`/treatments/${treatment.slug}`}>
+                        <Link
+                          href={localizePublicPathname(
+                            `/treatments/${treatment.slug}`,
+                            locale,
+                          )}
+                        >
                           View treatment
                         </Link>
                       </Button>
@@ -232,7 +244,7 @@ export function TreatmentsBlockContent({
                         className="flex-1"
                       >
                         <Link
-                          href={`/start-journey?treatment=${treatment.slug}`}
+                          href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?treatment=${treatment.slug}`}
                         >
                           Plan journey
                         </Link>
