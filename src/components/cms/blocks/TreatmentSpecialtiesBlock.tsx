@@ -1,3 +1,4 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
 import {
@@ -9,15 +10,20 @@ import { TreatmentSpecialtiesCatalog } from "./TreatmentSpecialtiesCatalog";
 
 export async function TreatmentSpecialtiesBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"treatmentSpecialties">;
+  locale?: PublicLocale;
 }) {
-  const treatments = await getTreatmentsForBlock({
-    manualTreatments: block.manualTreatments,
-    limit: block.limit,
-    featuredOnly: block.featuredOnly,
-    categories: block.categories,
-  });
+  const treatments = await getTreatmentsForBlock(
+    {
+      manualTreatments: block.manualTreatments,
+      limit: block.limit,
+      featuredOnly: block.featuredOnly,
+      categories: block.categories,
+    },
+    locale,
+  );
 
   if (!treatments.length) {
     return null;
