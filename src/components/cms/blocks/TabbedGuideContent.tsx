@@ -53,31 +53,45 @@ const guideSubtlePanelClassName =
 
 const cardMarkdownComponents: Components = {
   h1: ({ node, ...props }) => (
-    <h4 className="text-lg font-semibold text-foreground" {...props} />
-  ),
-  h2: ({ node, ...props }) => (
-    <h5 className="text-base font-semibold text-foreground" {...props} />
-  ),
-  h3: ({ node, ...props }) => (
-    <h6 className="text-base font-semibold text-foreground" {...props} />
-  ),
-  p: ({ node, ...props }) => (
-    <p className="text-sm leading-relaxed text-muted-foreground" {...props} />
-  ),
-  ul: ({ node, ...props }) => (
-    <ul
-      className="list-disc space-y-1 pl-5 text-sm text-muted-foreground"
+    <h4
+      className="text-start text-lg font-semibold text-foreground"
       {...props}
     />
   ),
-  ol: ({ node, ...props }) => (
+  h2: ({ node, ...props }) => (
+    <h5
+      className="text-start text-base font-semibold text-foreground"
+      {...props}
+    />
+  ),
+  h3: ({ node, ...props }) => (
+    <h6
+      className="text-start text-base font-semibold text-foreground"
+      {...props}
+    />
+  ),
+  p: ({ node, ...props }) => (
+    <p
+      className="text-start text-sm leading-relaxed text-muted-foreground"
+      {...props}
+    />
+  ),
+  ul: ({ node, style, ...props }) => (
+    <ul
+      className="list-disc space-y-1 text-sm text-muted-foreground"
+      style={{ paddingInlineStart: "1.25rem", ...style }}
+      {...props}
+    />
+  ),
+  ol: ({ node, style, ...props }) => (
     <ol
-      className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground"
+      className="list-decimal space-y-1 text-sm text-muted-foreground"
+      style={{ paddingInlineStart: "1.25rem", ...style }}
       {...props}
     />
   ),
   li: ({ node, ...props }) => (
-    <li className="leading-snug text-muted-foreground" {...props} />
+    <li className="text-start leading-snug text-muted-foreground" {...props} />
   ),
   strong: ({ node, ...props }) => (
     <strong className="font-semibold text-foreground" {...props} />
@@ -178,6 +192,7 @@ export function TabbedGuideContent({
   isPreview?: boolean;
   locale?: PublicLocale;
 }) {
+  const direction = locale === "ar" ? "rtl" : "ltr";
   const tabsAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const tabValues = useMemo(
@@ -233,7 +248,11 @@ export function TabbedGuideContent({
       contentClassName="space-y-12"
     >
       {() => (
-        <div ref={tabsAnchorRef} className="space-y-12 scroll-mt-24">
+        <div
+          ref={tabsAnchorRef}
+          dir={direction}
+          className="space-y-12 scroll-mt-24"
+        >
           <div className="space-y-4 text-center">
             {block.badge ? (
               <Badge
@@ -261,6 +280,7 @@ export function TabbedGuideContent({
           </div>
 
           <Tabs
+            dir={direction}
             value={resolvedValue}
             onValueChange={handleTabChange}
             className="space-y-6"
@@ -362,6 +382,7 @@ function SectionRenderer({
   isPreview?: boolean;
   locale: PublicLocale;
 }) {
+  const isRtl = locale === "ar";
   const resolveAutoGridColumnsClass = (count: number) =>
     autoGridColumnsClassName[Math.min(Math.max(count, 1), 3)] ??
     autoGridColumnsClassName[3];
@@ -369,7 +390,7 @@ function SectionRenderer({
   switch (section.type) {
     case "cardGrid":
       return (
-        <div className="space-y-4">
+        <div className="space-y-4 text-start">
           {section.title ? (
             <h4 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
               {section.title}
@@ -426,7 +447,7 @@ function SectionRenderer({
                     ) : null}
                   </CardHeader>
                   {hasContent && (
-                    <CardContent className="space-y-4 text-sm text-muted-foreground">
+                    <CardContent className="space-y-4 text-start text-sm text-muted-foreground">
                       {hasMarkdown ? (
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
@@ -497,7 +518,7 @@ function SectionRenderer({
       const Icon = resolveIcon(section.icon);
       return (
         <Card className={guidePanelClassName}>
-          <CardContent className="space-y-5 p-5">
+          <CardContent className="space-y-5 p-5 text-start">
             <div className="flex items-center gap-3">
               {Icon ? (
                 <div className="rounded-full bg-primary/10 p-2 text-primary">
@@ -553,7 +574,7 @@ function SectionRenderer({
       if (layout === "stacked") {
         const pillKey = section.pillColumnKey;
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 text-start">
             {section.title ? (
               <h4 className="text-2xl font-semibold">{section.title}</h4>
             ) : null}
@@ -561,7 +582,7 @@ function SectionRenderer({
               <p className="text-muted-foreground">{section.description}</p>
             ) : null}
             <Card className={guidePanelClassName}>
-              <CardContent className="space-y-4 p-3 md:p-4">
+              <CardContent className="space-y-4 p-3 text-start md:p-4">
                 {section.rows.map((row, rowIndex) => {
                   const pillValue =
                     pillKey && row.values[pillKey] ? row.values[pillKey] : null;
@@ -592,7 +613,7 @@ function SectionRenderer({
                           {infoColumns.map((column) => (
                             <div
                               key={`${sectionKey}-${column.key}-${rowIndex}`}
-                              className="space-y-1"
+                              className="space-y-1 text-start"
                             >
                               <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/70">
                                 {column.label}
@@ -613,7 +634,7 @@ function SectionRenderer({
         );
       }
       return (
-        <div className="space-y-4">
+        <div className="space-y-4 text-start">
           {section.title ? (
             <h4 className="text-2xl font-semibold tracking-[-0.02em]">
               {section.title}
@@ -635,7 +656,7 @@ function SectionRenderer({
                 key={`${sectionKey}-row-${rowIndex}`}
                 className={guidePanelClassName}
               >
-                <CardContent className="space-y-3 p-5">
+                <CardContent className="space-y-3 p-5 text-start">
                   <div className="flex items-center justify-between">
                     <h5 className="text-lg font-semibold text-foreground">
                       {row.title}
@@ -674,7 +695,7 @@ function SectionRenderer({
             : "border-primary/20 bg-primary/5";
       return (
         <Card className={cn("rounded-[1.75rem] border", toneClasses)}>
-          <CardContent className="space-y-3 p-6">
+          <CardContent className="space-y-3 p-6 text-start">
             <h5 className="text-xl font-semibold text-foreground">
               {section.title}
             </h5>
@@ -684,9 +705,18 @@ function SectionRenderer({
               </p>
             ) : null}
             {calloutBullets.length ? (
-              <ul className="space-y-1 text-sm leading-7 text-muted-foreground">
+              <ul className="space-y-2 text-sm leading-7 text-muted-foreground">
                 {calloutBullets.map((bullet, index) => (
-                  <li key={`${sectionKey}-bullet-${index}`}>• {bullet}</li>
+                  <li
+                    key={`${sectionKey}-bullet-${index}`}
+                    className="flex items-start gap-3 text-start"
+                  >
+                    <span
+                      aria-hidden
+                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                    />
+                    <span>{bullet}</span>
+                  </li>
                 ))}
               </ul>
             ) : null}
@@ -697,7 +727,7 @@ function SectionRenderer({
     case "mediaSpotlight": {
       const spotlightBullets = cleanList(section.bullets);
       return (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="grid gap-8 text-start lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="relative h-72 overflow-hidden rounded-2xl shadow-elegant lg:h-full">
             <Image
               src={section.image.src}
@@ -708,7 +738,7 @@ function SectionRenderer({
             />
           </div>
           <Card className="self-center">
-            <CardContent className="space-y-4 p-6">
+            <CardContent className="space-y-4 p-6 text-start">
               {section.badge ? (
                 <Badge
                   variant="outline"
@@ -744,7 +774,7 @@ function SectionRenderer({
     case "infoPanels": {
       const useEditorialGrid = section.panels.length === 4;
       return (
-        <div className="space-y-4">
+        <div className="space-y-4 text-start">
           {section.title ? (
             <h4 className="text-2xl font-semibold tracking-[-0.02em]">
               {section.title}
@@ -768,7 +798,11 @@ function SectionRenderer({
                     className={cn(
                       "space-y-4",
                       isRightColumn &&
-                        "md:border-l md:border-border/40 md:pl-8 dark:md:border-[hsl(var(--editorial-ink-foreground)/0.08)]",
+                        (isRtl
+                          ? "md:border-r md:border-border/40 md:pr-8"
+                          : "md:border-l md:border-border/40 md:pl-8"),
+                      isRightColumn &&
+                        "dark:md:border-[hsl(var(--editorial-ink-foreground)/0.08)]",
                       isBottomRow &&
                         "md:border-t md:border-border/40 md:pt-8 dark:md:border-[hsl(var(--editorial-ink-foreground)/0.08)]",
                     )}
@@ -839,8 +873,15 @@ function SectionRenderer({
                       {panelItems.length ? (
                         <ul className="space-y-2 text-sm leading-7 text-muted-foreground">
                           {panelItems.map((item, itemIndex) => (
-                            <li key={`${sectionKey}-panel-item-${itemIndex}`}>
-                              • {item}
+                            <li
+                              key={`${sectionKey}-panel-item-${itemIndex}`}
+                              className="flex items-start gap-3 text-start"
+                            >
+                              <span
+                                aria-hidden
+                                className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                              />
+                              <span>{item}</span>
                             </li>
                           ))}
                         </ul>
@@ -885,7 +926,7 @@ function SectionRenderer({
       const safelyEmpty = hotels.length === 0;
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-4 text-start">
           {section.title ? (
             <h4 className="text-2xl font-semibold">{section.title}</h4>
           ) : null}
@@ -1026,7 +1067,7 @@ function SectionRenderer({
                         ) : null}
                       </div>
                       {hasContact ? (
-                        <div className="rounded-md border border-border/50 p-3 text-xs">
+                        <div className="rounded-md border border-border/50 p-3 text-start text-xs">
                           <h6 className="text-xs font-semibold uppercase tracking-wide text-foreground">
                             Concierge contact
                           </h6>
