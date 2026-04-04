@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import {
   Quote,
   MapPin,
@@ -15,8 +16,14 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { usePatientStories } from "@/hooks/useTestimonials";
+import type { PublicLocale } from "@/i18n/routing";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 
 const StoriesPage = () => {
+  const locale = useLocale() as PublicLocale;
   const { stories, loading, error } = usePatientStories({ limit: 12 });
 
   return (
@@ -255,7 +262,9 @@ const StoriesPage = () => {
 
             <div className="text-center mt-12">
               <Button size="lg" asChild>
-                <Link href="/contact">Share Your Story</Link>
+                <Link href={localizePublicPathname("/contact", locale)}>
+                  Share Your Story
+                </Link>
               </Button>
             </div>
           </div>
@@ -272,10 +281,24 @@ const StoriesPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="premium" asChild>
-                <Link href="/consultation">Get Free Consultation</Link>
+                <Link
+                  href={localizePublicPathnameWithFallback(
+                    "/consultation",
+                    locale,
+                  )}
+                >
+                  Get Free Consultation
+                </Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
-                <Link href="/start-journey">Start Your Journey</Link>
+                <Link
+                  href={localizePublicPathnameWithFallback(
+                    "/start-journey",
+                    locale,
+                  )}
+                >
+                  Start Your Journey
+                </Link>
               </Button>
             </div>
           </div>
