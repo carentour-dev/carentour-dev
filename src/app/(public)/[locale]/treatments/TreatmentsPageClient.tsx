@@ -22,6 +22,7 @@ import {
   selectPrimaryProcedure,
 } from "@/lib/treatments";
 import type { PublicLocale } from "@/i18n/routing";
+import { localizeCompanyNameDeep } from "@/lib/public/brand";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
 import {
   localizePublicPathname,
@@ -95,9 +96,16 @@ export default function Treatments() {
       ),
     [treatments],
   );
+  const localizedVisibleTreatments = useMemo(
+    () =>
+      visibleTreatments.map((treatment) =>
+        localizeCompanyNameDeep(treatment, locale),
+      ),
+    [locale, visibleTreatments],
+  );
 
   const cards = useMemo(() => {
-    return visibleTreatments.map((treatment) => {
+    return localizedVisibleTreatments.map((treatment) => {
       const iconKey = treatment.slug || treatment.category || "";
       const Icon = iconMap[iconKey.toLowerCase()] || Stethoscope;
       const cardImage = resolveTreatmentCardImage({
@@ -132,7 +140,7 @@ export default function Treatments() {
         comparison,
       };
     });
-  }, [t, visibleTreatments]);
+  }, [localizedVisibleTreatments, t]);
 
   const filteredCards = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -409,6 +417,7 @@ export default function Treatments() {
                                 <PriceComparison
                                   treatment={category.title}
                                   egyptPrice={category.comparison.egyptPrice}
+                                  egyptCurrency={category.currency}
                                   internationalPrices={
                                     category.comparison.internationalPrices
                                   }
@@ -443,6 +452,7 @@ export default function Treatments() {
                     key={entry.id}
                     treatment={entry.title}
                     egyptPrice={entry.comparison!.egyptPrice}
+                    egyptCurrency={entry.currency}
                     internationalPrices={entry.comparison!.internationalPrices}
                   />
                 ))}
