@@ -114,5 +114,7 @@ export function DoctorsBlockPreview({
     );
   }
 
-  return <DoctorsBlockContent block={block} doctors={selectedDoctors} />;
+  return (
+    <DoctorsBlockContent block={block} doctors={selectedDoctors} locale="en" />
+  );
 }
