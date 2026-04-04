@@ -56,12 +56,10 @@ export function getLocalizedSafeManagedHref(
     return safeHref;
   }
 
-  const match = safeHref.match(
-    /^(?<pathname>[^?#]*)(?<search>\?[^#]*)?(?<hash>#.*)?$/,
-  );
-  const pathname = match?.groups?.pathname ?? safeHref;
-  const search = match?.groups?.search ?? "";
-  const hash = match?.groups?.hash ?? "";
+  const match = safeHref.match(/^([^?#]*)(\?[^#]*)?(#.*)?$/);
+  const pathname = match?.[1] ?? safeHref;
+  const search = match?.[2] ?? "";
+  const hash = match?.[3] ?? "";
 
   return `${localizePublicPathnameWithFallback(pathname || "/", locale)}${search}${hash}`;
 }
