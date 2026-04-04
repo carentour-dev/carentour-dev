@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingDown, DollarSign } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
+import { localizeCompanyName } from "@/lib/public/brand";
+import { localizeCountryName } from "@/lib/public/countries";
 
 interface CountryPrice {
   country: string;
@@ -15,13 +17,28 @@ interface CountryPrice {
 interface PriceComparisonProps {
   treatment: string;
   egyptPrice: number;
+  egyptCurrency?: string;
   internationalPrices: CountryPrice[];
   className?: string;
 }
 
+const CURRENCY_CODE_BY_VALUE: Record<string, string> = {
+  USD: "USD",
+  $: "USD",
+  US$: "USD",
+  GBP: "GBP",
+  "£": "GBP",
+  BRL: "BRL",
+  R$: "BRL",
+  EGP: "EGP",
+  "E£": "EGP",
+  "ج.م": "EGP",
+};
+
 const PriceComparison = ({
   treatment,
   egyptPrice,
+  egyptCurrency = "USD",
   internationalPrices,
   className,
 }: PriceComparisonProps) => {
@@ -32,7 +49,32 @@ const PriceComparison = ({
     return null;
   }
 
-  const numberFormatter = new Intl.NumberFormat(getPublicNumberLocale(locale));
+  const numberLocale = getPublicNumberLocale(locale);
+  const numberFormatter = new Intl.NumberFormat(numberLocale);
+
+  const formatMoney = (value: number, currency: string) => {
+    const normalizedCurrency = currency.trim();
+    const currencyCode =
+      CURRENCY_CODE_BY_VALUE[normalizedCurrency.toUpperCase()] ??
+      CURRENCY_CODE_BY_VALUE[normalizedCurrency];
+
+    if (currencyCode) {
+      try {
+        return new Intl.NumberFormat(numberLocale, {
+          style: "currency",
+          currency: currencyCode,
+          maximumFractionDigits: 0,
+        }).format(value);
+      } catch {
+        // Fall through to symbol-based formatting.
+      }
+    }
+
+    const formattedValue = numberFormatter.format(value);
+    return locale === "ar"
+      ? `${formattedValue}${normalizedCurrency}`
+      : `${normalizedCurrency}${formattedValue}`;
+  };
 
   const calculateSavings = (internationalPrice: number) => {
     const savings = internationalPrice - egyptPrice;
@@ -55,7 +97,7 @@ const PriceComparison = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <DollarSign className="h-5 w-5 text-primary" />
-          {t("title", { treatment })}
+          {t("title", { treatment: localizeCompanyName(treatment, locale) })}
         </CardTitle>
         <div className="flex items-center gap-2">
           <Badge
@@ -85,7 +127,7 @@ const PriceComparison = ({
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-primary">
-                  ${numberFormatter.format(egyptPrice)}
+                  {formatMoney(egyptPrice, egyptCurrency)}
                 </p>
                 <p className="text-sm text-primary">{t("bestValue")}</p>
               </div>
@@ -106,7 +148,7 @@ const PriceComparison = ({
                       <span className="text-xl">{country.flag ?? "🌍"}</span>
                       <div>
                         <h4 className="font-medium text-foreground">
-                          {country.country}
+                          {localizeCountryName(country.country, locale)}
                         </h4>
                         <p className="text-xs text-muted-foreground">
                           {t("typicalCost")}
@@ -115,14 +157,16 @@ const PriceComparison = ({
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-foreground">
-                        {country.currency}
-                        {numberFormatter.format(country.price)}
+                        {formatMoney(country.price, country.currency)}
                       </p>
                       <div className="flex items-center gap-1">
                         <TrendingDown className="h-3 w-3 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
                           {t("saveAmount", {
-                            amount: `$${numberFormatter.format(savings.amount)}`,
+                            amount: formatMoney(
+                              savings.amount,
+                              country.currency,
+                            ),
                             percentage: savings.percentage,
                           })}
                         </span>
@@ -141,7 +185,7 @@ const PriceComparison = ({
                 {t("averageSavings")}
               </p>
               <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                ${numberFormatter.format(Math.round(totalAverageSavings))}
+                {formatMoney(Math.round(totalAverageSavings), egyptCurrency)}
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
                 {t("averageSavingsDescription", {
