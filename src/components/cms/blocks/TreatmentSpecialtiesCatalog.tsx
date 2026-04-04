@@ -16,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { isRemoteImageUrl } from "@/lib/treatments";
 
 type TreatmentSpecialtyCard = {
@@ -64,6 +68,10 @@ export function TreatmentSpecialtiesCatalog({
   >({});
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const isArabicLocale = locale === "ar";
+  const startJourneyHref = localizePublicPathnameWithFallback(
+    "/start-journey",
+    locale,
+  );
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(getPublicNumberLocale(locale)),
     [locale],
@@ -248,12 +256,19 @@ export function TreatmentSpecialtiesCatalog({
                         variant="outline"
                         className="w-full border-[#1b2432] bg-[#1b2432] text-white hover:bg-[#111827] hover:text-white"
                       >
-                        <Link href={`/treatments/${card.slug}`}>
+                        <Link
+                          href={localizePublicPathname(
+                            `/treatments/${card.slug}`,
+                            locale,
+                          )}
+                        >
                           {primaryActionLabel}
                         </Link>
                       </Button>
                       <Button asChild className="w-full">
-                        <Link href={`/start-journey?treatment=${card.slug}`}>
+                        <Link
+                          href={`${startJourneyHref}?treatment=${card.slug}`}
+                        >
                           {secondaryActionLabel}
                         </Link>
                       </Button>
