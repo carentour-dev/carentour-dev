@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GoogleTag from "@/components/analytics/GoogleTag";
 import DocumentRootAttributes from "@/components/public/DocumentRootAttributes";
 import "../index.css";
 
@@ -31,6 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
+      <head>
+        <GoogleTag />
+      </head>
       <body className="font-sans antialiased">
         <DocumentRootAttributes />
         {children}
