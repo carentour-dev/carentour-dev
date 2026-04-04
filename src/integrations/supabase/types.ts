@@ -2221,6 +2221,127 @@ export type Database = {
           },
         ];
       };
+      treatment_procedure_translations: {
+        Row: {
+          additional_notes: string | null;
+          candidate_requirements: string[] | null;
+          created_at: string;
+          description: string | null;
+          duration: string | null;
+          id: string;
+          locale: string;
+          name: string | null;
+          price: string | null;
+          recovery: string | null;
+          recovery_stages: Json | null;
+          success_rate: string | null;
+          treatment_procedure_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          additional_notes?: string | null;
+          candidate_requirements?: string[] | null;
+          created_at?: string;
+          description?: string | null;
+          duration?: string | null;
+          id?: string;
+          locale: string;
+          name?: string | null;
+          price?: string | null;
+          recovery?: string | null;
+          recovery_stages?: Json | null;
+          success_rate?: string | null;
+          treatment_procedure_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          additional_notes?: string | null;
+          candidate_requirements?: string[] | null;
+          created_at?: string;
+          description?: string | null;
+          duration?: string | null;
+          id?: string;
+          locale?: string;
+          name?: string | null;
+          price?: string | null;
+          recovery?: string | null;
+          recovery_stages?: Json | null;
+          success_rate?: string | null;
+          treatment_procedure_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "treatment_procedure_translations_treatment_procedure_id_fkey";
+            columns: ["treatment_procedure_id"];
+            isOneToOne: false;
+            referencedRelation: "treatment_procedures";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      treatment_translations: {
+        Row: {
+          category_label: string | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          ideal_candidates: string[] | null;
+          is_stale: boolean;
+          locale: string;
+          name: string | null;
+          overview: string | null;
+          seo: Json | null;
+          source_updated_at: string | null;
+          status: string;
+          summary: string | null;
+          treatment_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          category_label?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          ideal_candidates?: string[] | null;
+          is_stale?: boolean;
+          locale: string;
+          name?: string | null;
+          overview?: string | null;
+          seo?: Json | null;
+          source_updated_at?: string | null;
+          status?: string;
+          summary?: string | null;
+          treatment_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          category_label?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          ideal_candidates?: string[] | null;
+          is_stale?: boolean;
+          locale?: string;
+          name?: string | null;
+          overview?: string | null;
+          seo?: Json | null;
+          source_updated_at?: string | null;
+          status?: string;
+          summary?: string | null;
+          treatment_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "treatment_translations_treatment_id_fkey";
+            columns: ["treatment_id"];
+            isOneToOne: false;
+            referencedRelation: "treatments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       treatments: {
         Row: {
           base_price: number | null;
