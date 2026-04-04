@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 const googleTagId = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID ?? "G-RYJ3Q9HMVQ";
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -10,14 +8,11 @@ export default function GoogleTag() {
 
   return (
     <>
-      <Script
-        id="google-tag-script"
+      <script
+        async
         src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
-        strategy="afterInteractive"
       />
-      <Script
-        id="google-tag-init"
-        strategy="afterInteractive"
+      <script
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
