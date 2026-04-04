@@ -3,7 +3,7 @@ import { AlertCircle, AlertTriangle, Info, ShieldCheck } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance } from "@/lib/cms/blocks";
-import { getSafeManagedHref } from "@/lib/managedHrefs";
+import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { localizeDigits, localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 
@@ -217,7 +217,10 @@ export function AdvisoryNoticeBlock({
                           }
                         >
                           <Link
-                            href={getSafeManagedHref(action.href)}
+                            href={getLocalizedSafeManagedHref(
+                              action.href,
+                              locale,
+                            )}
                             target={action.target ?? "_self"}
                             rel={
                               action.target === "_blank"
