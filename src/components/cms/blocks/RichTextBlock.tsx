@@ -1,6 +1,7 @@
+import type { PublicLocale } from "@/i18n/routing";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
-import { getSafeManagedHref } from "@/lib/managedHrefs";
+import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -21,7 +22,13 @@ const alignMap: Record<BlockValue<"richText">["align"], string> = {
   center: "text-center mx-auto",
 };
 
-export function RichTextBlock({ block }: { block: BlockInstance<"richText"> }) {
+export function RichTextBlock({
+  block,
+  locale = "en",
+}: {
+  block: BlockInstance<"richText">;
+  locale?: PublicLocale;
+}) {
   const cta = block.advanced?.cta;
   const layout = block.style?.layout;
   const hasCustomMaxWidth = hasResponsiveValue(layout?.maxWidth);
@@ -62,7 +69,7 @@ export function RichTextBlock({ block }: { block: BlockInstance<"richText"> }) {
             >
               <Button asChild variant={cta.variant ?? "default"} size="lg">
                 <Link
-                  href={getSafeManagedHref(cta.href)}
+                  href={getLocalizedSafeManagedHref(cta.href, locale)}
                   target={cta.target ?? "_self"}
                   rel={
                     cta.target === "_blank" ? "noopener noreferrer" : undefined
