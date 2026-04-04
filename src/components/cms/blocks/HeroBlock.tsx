@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
-import { getSafeManagedHref } from "@/lib/managedHrefs";
+import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import {
@@ -64,9 +65,11 @@ const alignmentMap: Record<BlockValue<"hero">["alignment"], string> = {
 function ActionLink({
   action,
   variant,
+  locale,
 }: {
   action: NonNullable<BlockValue<"hero">["primaryAction"]>;
   variant?: BlockValue<"hero">["primaryAction"]["variant"];
+  locale: PublicLocale;
 }) {
   const resolvedVariant = variant ?? action.variant ?? "default";
   const target = action.target ?? "_self";
@@ -77,7 +80,7 @@ function ActionLink({
       variant={resolvedVariant === "link" ? "link" : resolvedVariant}
     >
       <Link
-        href={getSafeManagedHref(action.href)}
+        href={getLocalizedSafeManagedHref(action.href, locale)}
         target={target}
         rel={target === "_blank" ? "noopener noreferrer" : undefined}
       >
@@ -87,7 +90,13 @@ function ActionLink({
   );
 }
 
-export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
+export function HeroBlock({
+  block,
+  locale = "en",
+}: {
+  block: BlockInstance<"hero">;
+  locale?: PublicLocale;
+}) {
   const hasActions = block.primaryAction || block.secondaryAction;
   const hasMedia = Boolean(block.media?.src);
   const layout = block.style?.layout;
@@ -180,12 +189,13 @@ export function HeroBlock({ block }: { block: BlockInstance<"hero"> }) {
                 )}
               >
                 {block.primaryAction ? (
-                  <ActionLink action={block.primaryAction} />
+                  <ActionLink action={block.primaryAction} locale={locale} />
                 ) : null}
                 {block.secondaryAction ? (
                   <ActionLink
                     action={block.secondaryAction}
                     variant={block.secondaryAction.variant ?? "secondary"}
+                    locale={locale}
                   />
                 ) : null}
               </div>
