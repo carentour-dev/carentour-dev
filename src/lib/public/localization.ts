@@ -41,6 +41,7 @@ import {
   localizeCompanyNameDeep,
 } from "@/lib/public/brand";
 import { isInternalNoindexPath, normalizePath } from "@/lib/seo/utils";
+import { hasPublishedArabicTreatmentTranslation } from "@/server/modules/treatments/public";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import {
   defaultPublicLocale,
@@ -110,6 +111,7 @@ const CMS_BACKED_STATIC_SLUGS = new Set([
   "travel-info",
   "concierge",
 ]);
+const LOCALIZED_APP_STATIC_PATHS = new Set(["/start-journey"]);
 
 const CMS_PAGE_COLUMNS =
   "id, slug, title, status, seo, settings, content, updated_at";
@@ -529,6 +531,17 @@ export async function getPublicLocaleAvailability(
         locale,
       )) !== null
     );
+  }
+
+  if (normalized.startsWith("/treatments/")) {
+    const slug = normalized.slice("/treatments/".length).trim();
+    return slug.length > 0
+      ? hasPublishedArabicTreatmentTranslation(slug)
+      : false;
+  }
+
+  if (LOCALIZED_APP_STATIC_PATHS.has(normalized)) {
+    return true;
   }
 
   if (
