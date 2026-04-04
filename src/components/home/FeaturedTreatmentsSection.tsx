@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,23 +20,42 @@ import {
   selectPrimaryProcedure,
   type NormalizedTreatment,
 } from "@/lib/treatments";
+import type { PublicLocale } from "@/i18n/routing";
+import { getPublicNumberLocale } from "@/lib/public/numbers";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { cn } from "@/lib/utils";
 
-const formatCurrency = (value: number, currency?: string | null) => {
+const formatCurrency = (
+  value: number,
+  locale: PublicLocale,
+  currency?: string | null,
+) => {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(getPublicNumberLocale(locale), {
       style: "currency",
       currency: currency || "USD",
       maximumFractionDigits: 0,
     }).format(value);
   } catch (error) {
-    return `$${value.toLocaleString()}`;
+    return `$${new Intl.NumberFormat(getPublicNumberLocale(locale)).format(value)}`;
   }
 };
 
-const formatDuration = (duration?: number | null) => {
+const formatDuration = (
+  duration: number | null | undefined,
+  locale: PublicLocale,
+) => {
   if (typeof duration === "number" && Number.isFinite(duration)) {
-    return `${duration} day${duration === 1 ? "" : "s"}`;
+    const formattedDuration = new Intl.NumberFormat(
+      getPublicNumberLocale(locale),
+    ).format(duration);
+
+    return locale === "ar"
+      ? `${formattedDuration} يوم`
+      : `${formattedDuration} day${duration === 1 ? "" : "s"}`;
   }
   return null;
 };
@@ -56,6 +76,7 @@ type FeaturedTreatmentCard = {
 
 export function buildFeaturedTreatmentCards(
   treatments: NormalizedTreatment[],
+  locale: PublicLocale,
 ): FeaturedTreatmentCard[] {
   return treatments.reduce<FeaturedTreatmentCard[]>((acc, treatment) => {
     if (!treatment.slug) {
@@ -68,16 +89,19 @@ export function buildFeaturedTreatmentCards(
       cardImageUrl: treatment.cardImageUrl,
     });
     const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
-    const stay = formatDuration(treatment.durationDays);
-    const recovery = formatDuration(treatment.recoveryTimeDays);
+    const stay = formatDuration(treatment.durationDays, locale);
+    const recovery = formatDuration(treatment.recoveryTimeDays, locale);
 
-    let durationLabel = primaryProcedure?.duration ?? "Personalized itinerary";
+    let durationLabel =
+      primaryProcedure?.duration ??
+      (locale === "ar" ? "خطة علاجية مخصصة" : "Personalized itinerary");
     if (stay && recovery) {
       durationLabel = `${stay} • ${recovery}`;
     } else if (stay) {
       durationLabel = stay;
     } else if (recovery) {
-      durationLabel = `${recovery} recovery`;
+      durationLabel =
+        locale === "ar" ? `${recovery} للتعافي` : `${recovery} recovery`;
     }
 
     const priceCandidate =
@@ -93,11 +117,17 @@ export function buildFeaturedTreatmentCards(
       summary:
         treatment.summary ??
         treatment.description ??
-        "World-class medical care tailored to international patients.",
+        (locale === "ar"
+          ? "رعاية طبية عالمية مصممة خصيصاً للمرضى القادمين من الخارج."
+          : "World-class medical care tailored to international patients."),
       priceLabel:
         typeof priceCandidate === "number"
-          ? `From ${formatCurrency(priceCandidate, treatment.currency)}`
-          : "Custom pricing",
+          ? locale === "ar"
+            ? `ابتداءً من ${formatCurrency(priceCandidate, locale, treatment.currency)}`
+            : `From ${formatCurrency(priceCandidate, locale, treatment.currency)}`
+          : locale === "ar"
+            ? "سعر مخصص حسب الحالة"
+            : "Custom pricing",
       durationLabel,
       successRate: primaryProcedure?.successRate ?? null,
       image: cardImage.image,
@@ -112,8 +142,8 @@ export function buildFeaturedTreatmentCards(
 export function FeaturedTreatmentsSection({
   treatments,
   eyebrow,
-  title = "Featured Treatments",
-  description = "Discover our most popular medical procedures, performed by internationally certified specialists",
+  title,
+  description,
   appearance = "original",
   loading = false,
   error = null,
@@ -128,13 +158,38 @@ export function FeaturedTreatmentsSection({
   error?: string | null;
   embedded?: boolean;
 }) {
+  const locale = useLocale() as PublicLocale;
+  const isArabicLocale = locale === "ar";
   const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
     Record<string, true>
   >({});
+  const resolvedTitle =
+    title ?? (isArabicLocale ? "العلاجات المميزة" : "Featured Treatments");
+  const resolvedDescription =
+    description ??
+    (isArabicLocale
+      ? "اكتشف أكثر الإجراءات الطبية طلباً لدينا، والتي ينفذها متخصصون معتمدون دولياً."
+      : "Discover our most popular medical procedures, performed by internationally certified specialists");
+  const featuredBadgeLabel = isArabicLocale ? "مميز" : "Featured";
+  const primaryActionLabel = isArabicLocale
+    ? "ابدأ رحلتك"
+    : "Start Your Journey";
+  const secondaryActionLabel = isArabicLocale ? "اعرف المزيد" : "Learn More";
+  const itineraryLabel = isArabicLocale ? "الخطة العلاجية" : "Itinerary";
+  const successRateLabel = isArabicLocale ? "نسبة النجاح" : "Success rate";
+  const investmentLabel = isArabicLocale ? "التكلفة" : "Investment";
+  const viewTreatmentLabel = isArabicLocale ? "عرض العلاج" : "View treatment";
+  const planJourneyLabel = isArabicLocale ? "خطط رحلتك" : "Plan journey";
+  const errorLabel = isArabicLocale
+    ? "تعذر تحميل العلاجات المميزة حالياً. حاول مرة أخرى بعد قليل."
+    : "Unable to load featured treatments right now. Please try again shortly.";
+  const emptyStateLabel = isArabicLocale
+    ? "ستظهر العلاجات المميزة هنا بمجرد توفرها."
+    : "Featured treatments will appear here once they are available.";
 
   const featuredTreatments = useMemo(
-    () => buildFeaturedTreatmentCards(treatments),
-    [treatments],
+    () => buildFeaturedTreatmentCards(treatments, locale),
+    [locale, treatments],
   );
   const showEmptyState = !loading && !error && featuredTreatments.length === 0;
   const usesOriginalAppearance = appearance === "original";
@@ -178,12 +233,12 @@ export function FeaturedTreatmentsSection({
             </Badge>
           </div>
         ) : null}
-        {title ? (
+        {resolvedTitle ? (
           <h2 className="mt-4 text-4xl font-bold text-foreground md:text-5xl">
-            {title}
+            {resolvedTitle}
           </h2>
         ) : null}
-        {description ? (
+        {resolvedDescription ? (
           <p
             className={
               usesOriginalAppearance
@@ -191,7 +246,7 @@ export function FeaturedTreatmentsSection({
                 : "mt-2 text-muted-foreground"
             }
           >
-            {description}
+            {resolvedDescription}
           </p>
         ) : null}
       </div>
@@ -298,7 +353,7 @@ export function FeaturedTreatmentsSection({
                                 variant="outline"
                                 className="border-transparent bg-background/92 px-3 py-1 text-[0.72rem] font-semibold tracking-[0.12em] text-primary shadow-sm backdrop-blur-sm hover:bg-background/92 hover:text-primary"
                               >
-                                Featured
+                                {featuredBadgeLabel}
                               </Badge>
                             </div>
                           ) : null}
@@ -343,10 +398,17 @@ export function FeaturedTreatmentsSection({
                                 className="h-10 w-full text-sm transition-transform duration-300 group-hover/featured:translate-x-0.5"
                               >
                                 <Link
-                                  href={`/start-journey?treatment=${treatment.slug}`}
+                                  href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?treatment=${treatment.slug}`}
                                 >
-                                  Start Your Journey
-                                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/featured:translate-x-1" />
+                                  {primaryActionLabel}
+                                  <ArrowRight
+                                    className={cn(
+                                      "h-4 w-4 transition-transform duration-300 group-hover/featured:translate-x-1",
+                                      isArabicLocale
+                                        ? "mr-2 rotate-180"
+                                        : "ml-2",
+                                    )}
+                                  />
                                 </Link>
                               </Button>
                               <Button
@@ -354,8 +416,13 @@ export function FeaturedTreatmentsSection({
                                 variant="outline"
                                 className="h-10 w-full border-border bg-background text-sm font-semibold text-foreground hover:bg-muted hover:text-foreground"
                               >
-                                <Link href={`/treatments/${treatment.slug}`}>
-                                  Learn More
+                                <Link
+                                  href={localizePublicPathname(
+                                    `/treatments/${treatment.slug}`,
+                                    locale,
+                                  )}
+                                >
+                                  {secondaryActionLabel}
                                 </Link>
                               </Button>
                             </div>
@@ -383,7 +450,7 @@ export function FeaturedTreatmentsSection({
                           </Badge>
                         ) : treatment.isFeatured ? (
                           <Badge variant="secondary" className="w-fit text-xs">
-                            Featured
+                            {featuredBadgeLabel}
                           </Badge>
                         ) : null}
                         <CardDescription className="text-sm text-muted-foreground">
@@ -392,21 +459,21 @@ export function FeaturedTreatmentsSection({
                       </CardHeader>
                       <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center justify-between text-xs">
-                          <span>Itinerary</span>
+                          <span>{itineraryLabel}</span>
                           <span className="text-foreground">
                             {treatment.durationLabel}
                           </span>
                         </div>
                         {treatment.successRate ? (
                           <div className="flex items-center justify-between text-xs">
-                            <span>Success rate</span>
+                            <span>{successRateLabel}</span>
                             <span className="text-foreground">
                               {treatment.successRate}
                             </span>
                           </div>
                         ) : null}
                         <div className="flex items-center justify-between text-xs">
-                          <span>Investment</span>
+                          <span>{investmentLabel}</span>
                           <span className="text-foreground">
                             {treatment.priceLabel}
                           </span>
@@ -417,8 +484,13 @@ export function FeaturedTreatmentsSection({
                             size="sm"
                             className="flex-1 transition-transform duration-300 group-hover/featured:translate-x-0.5"
                           >
-                            <Link href={`/treatments/${treatment.slug}`}>
-                              View treatment
+                            <Link
+                              href={localizePublicPathname(
+                                `/treatments/${treatment.slug}`,
+                                locale,
+                              )}
+                            >
+                              {viewTreatmentLabel}
                             </Link>
                           </Button>
                           <Button
@@ -428,9 +500,9 @@ export function FeaturedTreatmentsSection({
                             className="flex-1"
                           >
                             <Link
-                              href={`/start-journey?treatment=${treatment.slug}`}
+                              href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?treatment=${treatment.slug}`}
                             >
-                              Plan journey
+                              {planJourneyLabel}
                             </Link>
                           </Button>
                         </div>
@@ -443,10 +515,7 @@ export function FeaturedTreatmentsSection({
       </div>
 
       {error ? (
-        <p className="mt-10 text-center text-destructive">
-          Unable to load featured treatments right now. Please try again
-          shortly.
-        </p>
+        <p className="mt-10 text-center text-destructive">{errorLabel}</p>
       ) : null}
 
       {showEmptyState ? (
@@ -457,7 +526,7 @@ export function FeaturedTreatmentsSection({
               : "mt-10 text-center text-muted-foreground"
           }
         >
-          Featured treatments will appear here once they are available.
+          {emptyStateLabel}
         </p>
       ) : null}
     </>
