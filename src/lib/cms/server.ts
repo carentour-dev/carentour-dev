@@ -1,5 +1,6 @@
 import { createClient } from "@/integrations/supabase/server";
 import type { Database } from "@/integrations/supabase/types";
+import type { PublicLocale } from "@/i18n/routing";
 import {
   normalizeBlocks,
   type BlockInstance,
@@ -10,11 +11,10 @@ import {
   sanitizeCmsPageSettings,
   type CmsPageSettings,
 } from "@/lib/cms/pageSettings";
-import { normalizeTreatment } from "@/lib/treatments";
-
-type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
-type TreatmentProcedureRow =
-  Database["public"]["Tables"]["treatment_procedures"]["Row"];
+import {
+  getLocalizedPublicTreatmentIndexItems,
+  getLocalizedPublicTreatments,
+} from "@/server/modules/treatments/public";
 
 export type CmsPage = {
   id: string;
@@ -57,8 +57,6 @@ export async function getPublishedPageBySlug(
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type HotelRow = Database["public"]["Tables"]["hotels"]["Row"];
 
-const TREATMENT_SELECT =
-  "id, name, slug, summary, description, overview, category, base_price, currency, duration_days, recovery_time_days, success_rate, is_featured, is_active, is_listed_public, ideal_candidates, card_image_url, hero_image_url, treatment_procedures:treatment_procedures(*)";
 const DOCTOR_SELECT =
   "id, name, title, specialization, bio, experience_years, languages, avatar_url, patient_rating, total_reviews, successful_procedures, is_active";
 
@@ -71,103 +69,22 @@ type TreatmentListingBlockQuery = {
 
 export async function getTreatmentsForBlock(
   config: TreatmentListingBlockQuery,
+  locale: PublicLocale = "en",
 ) {
-  const supabase = await createClient();
-  const limit =
-    typeof config.limit === "number" && config.limit > 0 ? config.limit : 6;
-  const manual = (config.manualTreatments ?? [])
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  if (manual.length > 0) {
-    const { data, error } = await supabase
-      .from("treatments")
-      .select(TREATMENT_SELECT)
-      .in("slug", manual)
-      .eq("is_active", true)
-      .eq("is_listed_public", true);
-
-    if (error) {
-      console.error("Failed to load manual treatments for block", error);
-      return [];
-    }
-
-    const rows = (data ?? []) as (TreatmentRow & {
-      treatment_procedures: TreatmentProcedureRow[];
-    })[];
-    const orderMap = new Map(manual.map((slug, index) => [slug, index]));
-    const sorted = rows.sort((a, b) => {
-      const rankA = orderMap.get(a.slug ?? a.id) ?? Number.MAX_SAFE_INTEGER;
-      const rankB = orderMap.get(b.slug ?? b.id) ?? Number.MAX_SAFE_INTEGER;
-      return rankA - rankB;
-    });
-    return sorted
-      .slice(0, limit)
-      .map((row) => normalizeTreatment(row, row.treatment_procedures ?? []));
-  }
-
-  let query = supabase
-    .from("treatments")
-    .select(TREATMENT_SELECT)
-    .eq("is_active", true)
-    .eq("is_listed_public", true);
-
-  if (config.featuredOnly) {
-    query = query.eq("is_featured", true);
-  }
-
-  if (config.categories && config.categories.length > 0) {
-    query = query.in("category", config.categories);
-  }
-
-  const { data, error } = await query
-    .order("is_featured", { ascending: false })
-    .order("name", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error("Failed to load treatments for block", error);
-    return [];
-  }
-
-  return (data ?? []).map((row) => {
-    const record = row as TreatmentRow & {
-      treatment_procedures?: TreatmentProcedureRow[];
-    };
-    return normalizeTreatment(record, record.treatment_procedures ?? []);
+  return getLocalizedPublicTreatments({
+    locale,
+    limit: config.limit,
+    manualTreatments: config.manualTreatments,
+    featuredOnly: config.featuredOnly,
+    categories: config.categories,
   });
 }
 
-export async function getPublicTreatmentIndexItems(limit = 50) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("treatments")
-    .select("name, slug")
-    .eq("is_active", true)
-    .eq("is_listed_public", true)
-    .order("is_featured", { ascending: false })
-    .order("name", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error("Failed to load treatment index items", error);
-    return [];
-  }
-
-  return (data ?? [])
-    .map((entry) => ({
-      name:
-        typeof entry.name === "string" && entry.name.trim().length > 0
-          ? entry.name.trim()
-          : null,
-      path:
-        typeof entry.slug === "string" && entry.slug.trim().length > 0
-          ? `/treatments/${entry.slug.trim()}`
-          : null,
-    }))
-    .filter((entry): entry is { name: string; path: string } =>
-      Boolean(entry.name && entry.path),
-    );
+export async function getPublicTreatmentIndexItems(
+  locale: PublicLocale = "en",
+  limit = 50,
+) {
+  return getLocalizedPublicTreatmentIndexItems(locale, limit);
 }
 
 export async function getDoctorsForBlock(config: BlockValue<"doctors">) {
