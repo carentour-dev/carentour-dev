@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockStyle, BlockValue } from "@/lib/cms/blocks";
-import { getSafeManagedHref } from "@/lib/managedHrefs";
+import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import {
@@ -46,8 +47,10 @@ const backgroundPresets: Record<
 
 export function CallToActionBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"callToAction">;
+  locale?: PublicLocale;
 }) {
   const actions = block.actions ?? [];
   const derivedBackground =
@@ -153,7 +156,7 @@ export function CallToActionBlock({
                   )}
                 >
                   <Link
-                    href={getSafeManagedHref(action.href)}
+                    href={getLocalizedSafeManagedHref(action.href, locale)}
                     target={action.target ?? "_self"}
                     rel={
                       action.target === "_blank"
