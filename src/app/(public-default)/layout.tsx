@@ -3,7 +3,6 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AppProviders from "@/components/AppProviders";
-import GoogleTag from "@/components/analytics/GoogleTag";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
@@ -32,7 +31,6 @@ export default async function DefaultPublicLayout({
       <NextIntlClientProvider locale={defaultPublicLocale} messages={messages}>
         <PublicShellProvider>
           <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
-            <GoogleTag />
             <MicrosoftClarity />
             <div
               lang={defaultPublicLocale}
