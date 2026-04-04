@@ -1,3 +1,4 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance, TabbedGuideSection } from "@/lib/cms/blocks";
 import {
   getHotelsForGuideSection,
@@ -11,8 +12,10 @@ import { resolveSectionKey } from "./tabbedGuideUtils";
 
 export async function TabbedGuideBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"tabbedGuide">;
+  locale?: PublicLocale;
 }) {
   const hotelMap: TabbedGuideHotelsMap = {};
 
@@ -43,7 +46,9 @@ export async function TabbedGuideBlock({
     }),
   );
 
-  return <TabbedGuideContent block={block} hotelMap={hotelMap} />;
+  return (
+    <TabbedGuideContent block={block} hotelMap={hotelMap} locale={locale} />
+  );
 }
 
 function transformHotelEntry(entry: GuideHotelEntry) {
