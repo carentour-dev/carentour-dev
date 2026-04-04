@@ -1,8 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
-import { getSafeManagedHref, isSafeManagedHref } from "@/lib/managedHrefs";
+import {
+  getLocalizedSafeManagedHref,
+  isSafeManagedHref,
+} from "@/lib/managedHrefs";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { getFirstDefinedResponsiveValue } from "./styleUtils";
@@ -10,8 +14,10 @@ import { resolveIcon } from "./utils";
 
 export function ImageFeatureBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"imageFeature">;
+  locale?: PublicLocale;
 }) {
   const isImageLeft = block.layout === "imageLeft";
   const actions = (block.actions ?? []).filter((action) =>
@@ -120,7 +126,7 @@ export function ImageFeatureBlock({
                     }
                   >
                     <Link
-                      href={getSafeManagedHref(action.href)}
+                      href={getLocalizedSafeManagedHref(action.href, locale)}
                       target={action.target ?? "_self"}
                       rel={
                         action.target === "_blank"
