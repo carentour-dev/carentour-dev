@@ -9,7 +9,6 @@ export const PUBLIC_ARABIC_UNSUPPORTED_PREFIXES = [
   "/doctors",
   "/stories",
   "/consultation",
-  "/start-journey",
 ] as const;
 
 export function isPublicLocale(value: string): value is PublicLocale {
