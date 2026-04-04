@@ -1,5 +1,3 @@
-"use client";
-
 import Script from "next/script";
 
 const googleTagId = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID ?? "G-RYJ3Q9HMVQ";
