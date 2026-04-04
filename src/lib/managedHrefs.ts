@@ -1,3 +1,7 @@
+import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
+import { localizePublicPathnameWithFallback } from "@/lib/public/routing";
+import { isInternalNoindexPath } from "@/lib/seo/utils";
+
 const SAFE_EXTERNAL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
 
 export const SAFE_MANAGED_HREF_MESSAGE =
@@ -35,4 +39,29 @@ export function getSafeManagedHref(
 ) {
   const normalized = normalizeManagedHref(value);
   return isSafeManagedHref(normalized) ? normalized : fallback;
+}
+
+export function getLocalizedSafeManagedHref(
+  value: string | null | undefined,
+  locale: PublicLocale,
+  fallback = "#",
+) {
+  const safeHref = getSafeManagedHref(value, fallback);
+
+  if (
+    locale === defaultPublicLocale ||
+    !safeHref.startsWith("/") ||
+    isInternalNoindexPath(safeHref)
+  ) {
+    return safeHref;
+  }
+
+  const match = safeHref.match(
+    /^(?<pathname>[^?#]*)(?<search>\?[^#]*)?(?<hash>#.*)?$/,
+  );
+  const pathname = match?.groups?.pathname ?? safeHref;
+  const search = match?.groups?.search ?? "";
+  const hash = match?.groups?.hash ?? "";
+
+  return `${localizePublicPathnameWithFallback(pathname || "/", locale)}${search}${hash}`;
 }
