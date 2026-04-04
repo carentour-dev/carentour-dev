@@ -1,3 +1,4 @@
+import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { FeaturedTreatmentsSection } from "@/components/home";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
@@ -6,8 +7,10 @@ import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
 export async function FeaturedTreatmentsHomeBlock({
   block,
+  locale = "en",
 }: {
   block: BlockInstance<"featuredTreatmentsHome">;
+  locale?: PublicLocale;
 }) {
   const blockWithStyle = withBlockStyleDefaults(block, {
     background: {
@@ -17,12 +20,15 @@ export async function FeaturedTreatmentsHomeBlock({
       },
     },
   });
-  const treatments = await getTreatmentsForBlock({
-    manualTreatments: blockWithStyle.manualTreatments,
-    limit: blockWithStyle.limit,
-    featuredOnly: blockWithStyle.featuredOnly,
-    categories: undefined,
-  });
+  const treatments = await getTreatmentsForBlock(
+    {
+      manualTreatments: blockWithStyle.manualTreatments,
+      limit: blockWithStyle.limit,
+      featuredOnly: blockWithStyle.featuredOnly,
+      categories: undefined,
+    },
+    locale,
+  );
 
   return (
     <BlockSurface
