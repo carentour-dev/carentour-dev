@@ -1,10 +1,15 @@
 import Link from "next/link";
 
+import type { PublicLocale } from "@/i18n/routing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import {
+  localizePublicPathname,
+  localizePublicPathnameWithFallback,
+} from "@/lib/public/routing";
 import { cn } from "@/lib/utils";
 
 import { BlockSurface } from "./BlockSurface";
@@ -32,9 +37,11 @@ const initials = (name: string) =>
 export function DoctorsBlockContent({
   block,
   doctors,
+  locale = "en",
 }: {
   block: BlockInstance<"doctors">;
   doctors: DoctorBlockItem[];
+  locale?: PublicLocale;
 }) {
   const isCarousel = block.layout === "carousel";
   const shouldCenterStatic = isCarousel && doctors.length <= 3;
@@ -257,7 +264,14 @@ export function DoctorsBlockContent({
                     )}
                   >
                     <Button asChild size="sm" className="flex-1">
-                      <Link href={`/doctors/${doctor.id}`}>View profile</Link>
+                      <Link
+                        href={localizePublicPathname(
+                          `/doctors/${doctor.id}`,
+                          locale,
+                        )}
+                      >
+                        View profile
+                      </Link>
                     </Button>
                     <Button
                       asChild
@@ -265,7 +279,9 @@ export function DoctorsBlockContent({
                       variant="outline"
                       className="flex-1"
                     >
-                      <Link href={`/start-journey?doctor=${doctor.id}`}>
+                      <Link
+                        href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?doctor=${doctor.id}`}
+                      >
                         Book consult
                       </Link>
                     </Button>
