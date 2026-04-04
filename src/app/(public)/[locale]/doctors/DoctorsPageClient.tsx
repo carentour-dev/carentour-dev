@@ -14,11 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import { Search, Filter } from "lucide-react";
 import { useDoctors } from "@/hooks/useDoctors";
 import { useState } from "react";
+import type { PublicLocale } from "@/i18n/routing";
+import { localizePublicPathnameWithFallback } from "@/lib/public/routing";
 
 export default function Doctors() {
+  const locale = useLocale() as PublicLocale;
   const { doctors, loading, error } = useDoctors();
   const [searchTerm, setSearchTerm] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
@@ -200,10 +204,24 @@ export default function Doctors() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="premium" asChild>
-                <Link href="/consultation">Get Free Consultation</Link>
+                <Link
+                  href={localizePublicPathnameWithFallback(
+                    "/consultation",
+                    locale,
+                  )}
+                >
+                  Get Free Consultation
+                </Link>
               </Button>
               <Button size="lg" variant="hero" asChild>
-                <Link href="/start-journey">Start Your Journey</Link>
+                <Link
+                  href={localizePublicPathnameWithFallback(
+                    "/start-journey",
+                    locale,
+                  )}
+                >
+                  Start Your Journey
+                </Link>
               </Button>
             </div>
           </div>
