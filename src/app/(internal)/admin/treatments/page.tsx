@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   useForm,
   useFieldArray,
@@ -56,10 +57,13 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import { CmsLocaleSwitcher } from "@/components/cms/CmsLocaleSwitcher";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { Loader2, Pencil, PlusCircle, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import type { PublicLocale } from "@/i18n/routing";
+import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -133,8 +137,34 @@ const treatmentSchema = z.object({
   grade: gradeSchema.default("grade_c"),
 });
 
+const arabicProcedureSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  duration: z.string().optional(),
+  recovery: z.string().optional(),
+  price: z.string().optional(),
+  successRate: z.string().optional(),
+  candidateRequirements: z.array(z.string().min(1)).default([]),
+  recoveryStages: z.array(recoveryStageSchema).default([]),
+  additionalNotes: z.string().optional(),
+});
+
+const arabicTreatmentSchema = z.object({
+  status: z.enum(["draft", "published"]).default("draft"),
+  name: z.string().optional(),
+  category_label: z.string().optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
+  overview: z.string().optional(),
+  ideal_candidates: z.array(z.string().min(1)).default([]),
+  procedures: z.array(arabicProcedureSchema).default([]),
+});
+
 type ProcedureFormValues = z.infer<typeof procedureSchema>;
 type TreatmentFormValues = z.infer<typeof treatmentSchema>;
+type ArabicProcedureFormValues = z.infer<typeof arabicProcedureSchema>;
+type ArabicTreatmentFormValues = z.infer<typeof arabicTreatmentSchema>;
 
 type ProcedurePayload = Omit<ProcedureFormValues, "ownerProviderId">;
 
@@ -169,10 +199,29 @@ type TreatmentProcedureRecord =
     created_by_provider_id?: string | null;
   };
 
+type TreatmentProcedureTranslationRecord =
+  Database["public"]["Tables"]["treatment_procedure_translations"]["Row"];
+
 type TreatmentRecord = Database["public"]["Tables"]["treatments"]["Row"] & {
   download_url?: string | null;
   grade: TreatmentGrade;
   procedures: TreatmentProcedureRecord[];
+  translation?: {
+    exists: boolean;
+    locale: "ar";
+    status: "draft" | "published" | null;
+    is_stale: boolean;
+    source_updated_at: string | null;
+    updated_at: string | null;
+    name: string | null;
+    category_label: string | null;
+    summary: string | null;
+    description: string | null;
+    overview: string | null;
+    ideal_candidates: string[];
+    seo: Record<string, unknown> | null;
+  };
+  procedure_translations?: TreatmentProcedureTranslationRecord[];
 };
 
 type DoctorAssignment = {
@@ -226,6 +275,32 @@ const createDefaultFormValues = (): TreatmentFormValues => ({
   grade: "grade_c",
   ideal_candidates: [],
   procedures: [createEmptyProcedure()],
+});
+
+const createEmptyArabicProcedure = (
+  procedureId: string,
+): ArabicProcedureFormValues => ({
+  id: procedureId,
+  name: "",
+  description: "",
+  duration: "",
+  recovery: "",
+  price: "",
+  successRate: "",
+  candidateRequirements: [],
+  recoveryStages: [],
+  additionalNotes: "",
+});
+
+const createDefaultArabicFormValues = (): ArabicTreatmentFormValues => ({
+  status: "draft",
+  name: "",
+  category_label: "",
+  summary: "",
+  description: "",
+  overview: "",
+  ideal_candidates: [],
+  procedures: [],
 });
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -424,6 +499,85 @@ const mapRecordToFormValues = (
   };
 };
 
+const isPublicFacingProcedure = (procedure: TreatmentProcedureRecord) =>
+  procedure.created_by_provider_id == null && procedure.is_public !== false;
+
+const mapArabicProceduresFromRecord = (
+  treatment: TreatmentRecord,
+): ArabicProcedureFormValues[] => {
+  const translationByProcedureId = new Map(
+    (treatment.procedure_translations ?? []).map((translation) => [
+      translation.treatment_procedure_id,
+      translation,
+    ]),
+  );
+
+  return (treatment.procedures ?? [])
+    .filter(isPublicFacingProcedure)
+    .map((procedure) => {
+      const translation = translationByProcedureId.get(procedure.id);
+      const recoveryStages = Array.isArray(translation?.recovery_stages)
+        ? translation.recovery_stages
+            .filter(isRecord)
+            .map((stage) => {
+              const stageRecord = stage as Record<string, unknown>;
+              return {
+                stage:
+                  typeof stageRecord.stage === "string"
+                    ? stageRecord.stage
+                    : "",
+                description:
+                  typeof stageRecord.description === "string"
+                    ? stageRecord.description
+                    : "",
+              };
+            })
+            .filter(
+              (stage) =>
+                stage.stage.trim().length > 0 &&
+                stage.description.trim().length > 0,
+            )
+        : [];
+
+      return {
+        id: procedure.id,
+        name: translation?.name ?? "",
+        description: translation?.description ?? "",
+        duration: translation?.duration ?? "",
+        recovery: translation?.recovery ?? "",
+        price: translation?.price ?? "",
+        successRate: translation?.success_rate ?? "",
+        candidateRequirements: Array.isArray(
+          translation?.candidate_requirements,
+        )
+          ? translation!.candidate_requirements.filter(
+              (entry): entry is string => typeof entry === "string",
+            )
+          : [],
+        recoveryStages,
+        additionalNotes: translation?.additional_notes ?? "",
+      };
+    });
+};
+
+const mapRecordToArabicFormValues = (
+  treatment: TreatmentRecord,
+): ArabicTreatmentFormValues => ({
+  ...createDefaultArabicFormValues(),
+  status: treatment.translation?.status ?? "draft",
+  name: treatment.translation?.name ?? "",
+  category_label: treatment.translation?.category_label ?? "",
+  summary: treatment.translation?.summary ?? "",
+  description: treatment.translation?.description ?? "",
+  overview: treatment.translation?.overview ?? "",
+  ideal_candidates: Array.isArray(treatment.translation?.ideal_candidates)
+    ? treatment.translation!.ideal_candidates.filter(
+        (entry): entry is string => typeof entry === "string",
+      )
+    : [],
+  procedures: mapArabicProceduresFromRecord(treatment),
+});
+
 const trimString = (value?: string | null): string | undefined => {
   if (typeof value !== "string") {
     return undefined;
@@ -431,6 +585,17 @@ const trimString = (value?: string | null): string | undefined => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const sanitizeStringArray = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 };
 
 const normalizeUploadValue = (
@@ -546,6 +711,101 @@ const buildPayloadFromValues = (
   };
 };
 
+const buildArabicPayloadFromValues = (values: ArabicTreatmentFormValues) => ({
+  status: values.status,
+  name: trimString(values.name),
+  category_label: trimString(values.category_label),
+  summary: trimString(values.summary),
+  description: trimString(values.description),
+  overview: trimString(values.overview),
+  ideal_candidates: values.ideal_candidates
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0),
+  procedures: values.procedures.map((procedure) => ({
+    id: procedure.id,
+    name: trimString(procedure.name),
+    description: trimString(procedure.description),
+    duration: trimString(procedure.duration),
+    recovery: trimString(procedure.recovery),
+    price: trimString(procedure.price),
+    successRate: trimString(procedure.successRate),
+    candidateRequirements: procedure.candidateRequirements
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+    recoveryStages: procedure.recoveryStages
+      .map((stage) => ({
+        stage: stage.stage.trim(),
+        description: stage.description.trim(),
+      }))
+      .filter(
+        (stage) => stage.stage.length > 0 && stage.description.length > 0,
+      ),
+    additionalNotes: trimString(procedure.additionalNotes),
+  })),
+});
+
+const resolveArabicBadge = (treatment: TreatmentRecord) => {
+  if (!treatment.translation?.exists) {
+    return {
+      label: "No AR",
+      className: "border border-border/70 bg-muted/40 text-muted-foreground",
+    };
+  }
+
+  if (treatment.translation.is_stale) {
+    return {
+      label: "AR Stale",
+      className: "border border-amber-400/70 bg-amber-500/15 text-amber-800",
+    };
+  }
+
+  if (treatment.translation.status === "published") {
+    return {
+      label: "AR Published",
+      className:
+        "border border-emerald-400/70 bg-emerald-500/15 text-emerald-800",
+    };
+  }
+
+  return {
+    label: "AR Draft",
+    className: "border border-sky-400/70 bg-sky-500/15 text-sky-800",
+  };
+};
+
+const formatStaleDate = (value: string | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString();
+};
+
+const formatRecoveryStageSource = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return "No English source content yet.";
+  }
+
+  const labels = value
+    .filter(isRecord)
+    .map((entry) => {
+      const stage = typeof entry.stage === "string" ? entry.stage.trim() : "";
+      const description =
+        typeof entry.description === "string" ? entry.description.trim() : "";
+      return stage && description ? `${stage}: ${description}` : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  return labels.length > 0
+    ? labels.join(" • ")
+    : "No English source content yet.";
+};
+
 const getArrayErrorMessage = (
   error: FieldError | FieldErrorsImpl<unknown> | undefined,
 ): string | undefined => {
@@ -570,9 +830,13 @@ const getArrayErrorMessage = (
   return undefined;
 };
 
-const QUERY_KEY = ["admin", "treatments"] as const;
+const buildTreatmentsQueryKey = (locale: PublicLocale) =>
+  ["admin", "treatments", locale] as const;
 
 export default function AdminTreatmentsPage() {
+  const searchParams = useSearchParams();
+  const locale = resolveAdminLocale(searchParams);
+  const isArabicLocale = locale === "ar";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -594,15 +858,24 @@ export default function AdminTreatmentsPage() {
     resolver: zodResolver(treatmentSchema),
     defaultValues: createDefaultFormValues(),
   });
+  const arabicForm = useForm<ArabicTreatmentFormValues>({
+    resolver: zodResolver(arabicTreatmentSchema),
+    defaultValues: createDefaultArabicFormValues(),
+  });
 
   const proceduresFieldArray = useFieldArray({
     control: form.control,
     name: "procedures" as const,
   });
+  const arabicProceduresFieldArray = useFieldArray({
+    control: arabicForm.control,
+    name: "procedures" as const,
+  });
 
   const treatmentsQuery = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: () => adminFetch<TreatmentRecord[]>("/api/admin/treatments"),
+    queryKey: buildTreatmentsQueryKey(locale),
+    queryFn: () =>
+      adminFetch<TreatmentRecord[]>(`/api/admin/treatments?locale=${locale}`),
   });
 
   const resetSpecialistsState = useCallback(() => {
@@ -693,12 +966,12 @@ export default function AdminTreatmentsPage() {
 
   const createTreatment = useMutation({
     mutationFn: (payload: TreatmentPayload) =>
-      adminFetch<TreatmentRecord>("/api/admin/treatments", {
+      adminFetch<TreatmentRecord>(`/api/admin/treatments?locale=${locale}`, {
         method: "POST",
         body: JSON.stringify(payload),
       }),
     onSuccess: (_treatment, payload) => {
-      invalidate(QUERY_KEY);
+      invalidate(buildTreatmentsQueryKey(locale));
       closeDialog();
       toast({
         title: "Treatment added",
@@ -715,22 +988,37 @@ export default function AdminTreatmentsPage() {
   });
 
   const updateTreatment = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TreatmentPayload }) =>
-      adminFetch<TreatmentRecord>(`/api/admin/treatments/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: TreatmentPayload | ReturnType<typeof buildArabicPayloadFromValues>;
+    }) =>
+      adminFetch<TreatmentRecord>(
+        `/api/admin/treatments/${id}?locale=${locale}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      ),
     onSuccess: (treatment) => {
-      invalidate(QUERY_KEY);
+      invalidate(buildTreatmentsQueryKey(locale));
       closeDialog();
       toast({
-        title: "Treatment updated",
-        description: `${treatment.name} has been updated.`,
+        title: isArabicLocale
+          ? "Arabic translation updated"
+          : "Treatment updated",
+        description: isArabicLocale
+          ? `${treatment.name} now reflects the latest Arabic content.`
+          : `${treatment.name} has been updated.`,
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to update treatment",
+        title: isArabicLocale
+          ? "Failed to update Arabic translation"
+          : "Failed to update treatment",
         description: error.message,
         variant: "destructive",
       });
@@ -739,19 +1027,25 @@ export default function AdminTreatmentsPage() {
 
   const deleteTreatment = useMutation({
     mutationFn: (id: string) =>
-      adminFetch(`/api/admin/treatments/${id}`, {
+      adminFetch(`/api/admin/treatments/${id}?locale=${locale}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
-      invalidate(QUERY_KEY);
+      invalidate(buildTreatmentsQueryKey(locale));
       toast({
-        title: "Treatment removed",
-        description: "The treatment has been deleted.",
+        title: isArabicLocale
+          ? "Arabic translation removed"
+          : "Treatment removed",
+        description: isArabicLocale
+          ? "The Arabic translation has been deleted."
+          : "The treatment has been deleted.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to delete treatment",
+        title: isArabicLocale
+          ? "Failed to delete Arabic translation"
+          : "Failed to delete treatment",
         description: error.message,
         variant: "destructive",
       });
@@ -800,12 +1094,14 @@ export default function AdminTreatmentsPage() {
   const openCreateDialog = () => {
     setEditingTreatment(null);
     form.reset(createDefaultFormValues());
+    arabicForm.reset(createDefaultArabicFormValues());
     setDialogOpen(true);
   };
 
   const openEditDialog = (treatment: TreatmentRecord) => {
     setEditingTreatment(treatment);
     form.reset(mapRecordToFormValues(treatment));
+    arabicForm.reset(mapRecordToArabicFormValues(treatment));
     setDialogOpen(true);
   };
 
@@ -839,9 +1135,20 @@ export default function AdminTreatmentsPage() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingTreatment(null);
+    form.reset(createDefaultFormValues());
+    arabicForm.reset(createDefaultArabicFormValues());
   };
 
-  const hasUnsavedTreatmentChanges = form.formState.isDirty;
+  useEffect(() => {
+    setDialogOpen(false);
+    setEditingTreatment(null);
+    form.reset(createDefaultFormValues());
+    arabicForm.reset(createDefaultArabicFormValues());
+  }, [arabicForm, form, locale]);
+
+  const hasUnsavedTreatmentChanges = isArabicLocale
+    ? arabicForm.formState.isDirty
+    : form.formState.isDirty;
 
   const attemptCloseDialog = () => {
     if (
@@ -868,6 +1175,17 @@ export default function AdminTreatmentsPage() {
     } else {
       createTreatment.mutate(payload);
     }
+  };
+
+  const onArabicSubmit = (values: ArabicTreatmentFormValues) => {
+    if (!editingTreatment) {
+      return;
+    }
+
+    updateTreatment.mutate({
+      id: editingTreatment.id,
+      data: buildArabicPayloadFromValues(values),
+    });
   };
 
   const toggleDoctorSelection = (doctorId: string) => {
@@ -934,6 +1252,11 @@ export default function AdminTreatmentsPage() {
 
   return (
     <div className="space-y-6">
+      <CmsLocaleSwitcher
+        locale={locale}
+        title="Treatment locale"
+        description="English edits the base treatment and procedures. Arabic edits only the public-facing Arabic translation for the same treatment."
+      />
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -945,410 +1268,430 @@ export default function AdminTreatmentsPage() {
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={openCreateDialog}>
-              <PlusCircle className="h-4 w-4" />
-              Add Treatment
-            </Button>
-          </DialogTrigger>
+          {!isArabicLocale ? (
+            <DialogTrigger asChild>
+              <Button className="gap-2" onClick={openCreateDialog}>
+                <PlusCircle className="h-4 w-4" />
+                Add Treatment
+              </Button>
+            </DialogTrigger>
+          ) : null}
           <DialogContent
             className="max-w-2xl"
             unsaved={hasUnsavedTreatmentChanges}
           >
             <DialogHeader>
               <DialogTitle>
-                {editingTreatment ? "Edit Treatment" : "Add Treatment"}
+                {isArabicLocale
+                  ? editingTreatment
+                    ? "Edit Arabic Translation"
+                    : "Select a treatment to translate"
+                  : editingTreatment
+                    ? "Edit Treatment"
+                    : "Add Treatment"}
               </DialogTitle>
               <DialogDescription>
-                Maintain consistent treatment information for pricing
-                comparisons and concierge planning.
+                {isArabicLocale
+                  ? "Review the English source fields and maintain the Arabic translation that powers public Arabic treatment pages."
+                  : "Maintain consistent treatment information for pricing comparisons and concierge planning."}
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-              <form
-                className="grid gap-4"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
+            {isArabicLocale ? (
+              <ArabicTreatmentTranslationForm
+                form={arabicForm}
+                fieldArray={arabicProceduresFieldArray}
+                treatment={editingTreatment}
+                onSubmit={onArabicSubmit}
+                onCancel={attemptCloseDialog}
+                saving={updateTreatment.isPending}
+              />
+            ) : (
+              <Form {...form}>
+                <form
+                  className="grid gap-4"
+                  onSubmit={form.handleSubmit(onSubmit)}
+                >
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <Input
+                            placeholder="Full Mouth Dental Rejuvenation"
+                            {...field}
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Slug</FormLabel>
+                          <Input placeholder="dental-rejuvenation" {...field} />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <Input
-                          placeholder="Full Mouth Dental Rejuvenation"
+                        <FormLabel>Specialty</FormLabel>
+                        <Input placeholder="Dental" {...field} />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="grade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Internal grade</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gradeValues.map((value) => (
+                                <SelectItem key={value} value={value}>
+                                  {gradeLabels[value]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormDescription>
+                          Guides internal prioritization. Patients never see
+                          this label.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="summary"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Summary</FormLabel>
+                        <Textarea
+                          rows={3}
+                          placeholder="Short overview for listings."
                           {...field}
                         />
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
-                    name="slug"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Slug</FormLabel>
-                        <Input placeholder="dental-rejuvenation" {...field} />
+                        <FormLabel>Detailed description</FormLabel>
+                        <Textarea
+                          rows={4}
+                          placeholder="Long-form content for detail pages."
+                          {...field}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Specialty</FormLabel>
-                      <Input placeholder="Dental" {...field} />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="overview"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Treatment overview</FormLabel>
+                        <Textarea
+                          rows={4}
+                          placeholder="Narrative overview shown near the top of the detail page."
+                          {...field}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="grade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Internal grade</FormLabel>
-                      <FormControl>
+                  <FormField
+                    control={form.control}
+                    name="card_image_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <ImageUploader
+                            label="Card image"
+                            description="Shown on featured cards and listings."
+                            value={field.value ?? null}
+                            onChange={(value) => field.onChange(value)}
+                            bucket="media"
+                            folder="admin/treatments/cards"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hero_image_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <ImageUploader
+                            label="Hero image (detail page)"
+                            description="Optional cover image used on treatment detail pages."
+                            value={field.value ?? null}
+                            onChange={(value) => field.onChange(value)}
+                            bucket="media"
+                            folder="admin/treatments/heroes"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="download_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <ImageUploader
+                            label="Treatment PDF"
+                            description="Optional download shared with patients for deeper guidance."
+                            value={field.value ?? null}
+                            onChange={(value) => field.onChange(value)}
+                            accept="application/pdf"
+                            mode="file"
+                            emptyStateTitle="Upload treatment PDF"
+                            emptyStateDescription="PDF files up to 10MB"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="base_price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Base price</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(Number(event.target.value))
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency</FormLabel>
+                          <Input placeholder="USD" {...field} />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="success_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Success rate (%)</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.1"
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(Number(event.target.value))
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="duration_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (days)</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(Number(event.target.value))
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="recovery_time_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Recovery (days)</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(Number(event.target.value))
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <IdealCandidatesFields form={form} />
+
+                  <ProceduresSection
+                    form={form}
+                    fieldArray={proceduresFieldArray}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="is_featured"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <FormLabel>Homepage spotlight</FormLabel>
+                          <FormDescription>
+                            Display this treatment in the Featured Treatments
+                            section on the home page.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value ?? false}
+                            onCheckedChange={(checked) =>
+                              field.onChange(checked === true)
+                            }
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="is_listed_public"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <FormLabel>List on public pages</FormLabel>
+                          <FormDescription>
+                            Turn off to hide this treatment from the public
+                            treatments catalog while keeping it available in
+                            consultation forms.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value ?? true}
+                            onCheckedChange={(checked) =>
+                              field.onChange(checked === true)
+                            }
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
                         <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
+                          value={(field.value ?? true) ? "active" : "inactive"}
+                          onValueChange={(value) =>
+                            field.onChange(value === "active")
+                          }
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
-                            {gradeValues.map((value) => (
-                              <SelectItem key={value} value={value}>
-                                {gradeLabels[value]}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
                           </SelectContent>
                         </Select>
-                      </FormControl>
-                      <FormDescription>
-                        Guides internal prioritization. Patients never see this
-                        label.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="summary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Summary</FormLabel>
-                      <Textarea
-                        rows={3}
-                        placeholder="Short overview for listings."
-                        {...field}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Detailed description</FormLabel>
-                      <Textarea
-                        rows={4}
-                        placeholder="Long-form content for detail pages."
-                        {...field}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="overview"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Treatment overview</FormLabel>
-                      <Textarea
-                        rows={4}
-                        placeholder="Narrative overview shown near the top of the detail page."
-                        {...field}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="card_image_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <ImageUploader
-                          label="Card image"
-                          description="Shown on featured cards and listings."
-                          value={field.value ?? null}
-                          onChange={(value) => field.onChange(value)}
-                          bucket="media"
-                          folder="admin/treatments/cards"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="hero_image_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <ImageUploader
-                          label="Hero image (detail page)"
-                          description="Optional cover image used on treatment detail pages."
-                          value={field.value ?? null}
-                          onChange={(value) => field.onChange(value)}
-                          bucket="media"
-                          folder="admin/treatments/heroes"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="download_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <ImageUploader
-                          label="Treatment PDF"
-                          description="Optional download shared with patients for deeper guidance."
-                          value={field.value ?? null}
-                          onChange={(value) => field.onChange(value)}
-                          accept="application/pdf"
-                          mode="file"
-                          emptyStateTitle="Upload treatment PDF"
-                          emptyStateDescription="PDF files up to 10MB"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="base_price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Base price</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="currency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Currency</FormLabel>
-                        <Input placeholder="USD" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="success_rate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Success rate (%)</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="0.1"
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="duration_days"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration (days)</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="recovery_time_days"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Recovery (days)</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <IdealCandidatesFields form={form} />
-
-                <ProceduresSection
-                  form={form}
-                  fieldArray={proceduresFieldArray}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_featured"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-1">
-                        <FormLabel>Homepage spotlight</FormLabel>
-                        <FormDescription>
-                          Display this treatment in the Featured Treatments
-                          section on the home page.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value ?? false}
-                          onCheckedChange={(checked) =>
-                            field.onChange(checked === true)
-                          }
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_listed_public"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-3 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-1">
-                        <FormLabel>List on public pages</FormLabel>
-                        <FormDescription>
-                          Turn off to hide this treatment from the public
-                          treatments catalog while keeping it available in
-                          consultation forms.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value ?? true}
-                          onCheckedChange={(checked) =>
-                            field.onChange(checked === true)
-                          }
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        value={(field.value ?? true) ? "active" : "inactive"}
-                        onValueChange={(value) =>
-                          field.onChange(value === "active")
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={attemptCloseDialog}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createTreatment.isPending || updateTreatment.isPending
-                    }
-                  >
-                    {(createTreatment.isPending ||
-                      updateTreatment.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {editingTreatment ? "Save changes" : "Create treatment"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={attemptCloseDialog}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createTreatment.isPending || updateTreatment.isPending
+                      }
+                    >
+                      {(createTreatment.isPending ||
+                        updateTreatment.isPending) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingTreatment ? "Save changes" : "Create treatment"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
           </DialogContent>
         </Dialog>
       </header>
@@ -1401,6 +1744,7 @@ export default function AdminTreatmentsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
+                  {isArabicLocale ? <TableHead>Arabic</TableHead> : null}
                   <TableHead>Grade</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Featured</TableHead>
@@ -1422,6 +1766,21 @@ export default function AdminTreatmentsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{treatment.category || "—"}</TableCell>
+                    {isArabicLocale ? (
+                      <TableCell>
+                        {(() => {
+                          const badge = resolveArabicBadge(treatment);
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={badge.className}
+                            >
+                              {badge.label}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                    ) : null}
                     <TableCell>
                       <Badge variant="outline">
                         {gradeLabels[treatment.grade]}
@@ -1446,6 +1805,7 @@ export default function AdminTreatmentsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        disabled={isArabicLocale}
                         onClick={() => openSpecialistsDialog(treatment)}
                       >
                         <Users className="h-4 w-4" />
@@ -1474,7 +1834,7 @@ export default function AdminTreatmentsPage() {
                   !treatmentsQuery.isLoading && (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={isArabicLocale ? 8 : 7}
                         className="py-10 text-center text-sm text-muted-foreground"
                       >
                         No treatments found. Adjust filters or create a new
@@ -1638,6 +1998,672 @@ function SpecialistsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EnglishSourceValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">{label}:</span>{" "}
+      {trimString(value) ?? "No English source content yet."}
+    </div>
+  );
+}
+
+function ArabicTreatmentTranslationForm({
+  form,
+  fieldArray,
+  treatment,
+  onSubmit,
+  onCancel,
+  saving,
+}: {
+  form: UseFormReturn<ArabicTreatmentFormValues>;
+  fieldArray: UseFieldArrayReturn<ArabicTreatmentFormValues>;
+  treatment: TreatmentRecord | null;
+  onSubmit: (values: ArabicTreatmentFormValues) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const idealCandidates = form.watch("ideal_candidates") ?? [];
+  const translationBadge = treatment ? resolveArabicBadge(treatment) : null;
+  const staleDate = formatStaleDate(treatment?.translation?.source_updated_at);
+  const publicProcedureCount =
+    treatment?.procedures.filter(isPublicFacingProcedure).length ?? 0;
+
+  const submitWithStatus = (status: "draft" | "published") => {
+    form.setValue("status", status, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    void form.handleSubmit(onSubmit)();
+  };
+
+  const addCandidate = () => {
+    form.setValue("ideal_candidates", [...idealCandidates, ""], {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  const removeCandidate = (index: number) => {
+    form.setValue(
+      "ideal_candidates",
+      idealCandidates.filter((_, candidateIndex) => candidateIndex !== index),
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
+  };
+
+  if (!treatment) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+          Arabic mode edits existing treatment translations only. Pick a
+          treatment from the catalogue to add or update its Arabic public
+          content.
+        </div>
+        <div className="flex justify-end">
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Form {...form}>
+      <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/10 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">{treatment.name}</Badge>
+            <Badge variant="outline">{treatment.slug}</Badge>
+            {translationBadge ? (
+              <Badge variant="outline" className={translationBadge.className}>
+                {translationBadge.label}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            English source remains the system record. Arabic mode edits the
+            translated public copy only.
+          </p>
+        </div>
+
+        {treatment.translation?.is_stale ? (
+          <div className="rounded-lg border border-amber-400/70 bg-amber-500/10 p-4 text-sm text-amber-900">
+            The English source changed{staleDate ? ` on ${staleDate}` : ""}.
+            Review and republish the Arabic translation when ready.
+          </div>
+        ) : null}
+
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic treatment name</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={treatment.name}
+              />
+              <Input
+                dir="rtl"
+                placeholder="اسم العلاج بالعربية"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="category_label"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic category label</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={treatment.category}
+              />
+              <Input
+                dir="rtl"
+                placeholder="تصنيف العلاج"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="summary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic summary</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={treatment.summary}
+              />
+              <Textarea
+                dir="rtl"
+                rows={3}
+                placeholder="ملخص موجز لصفحات القوائم"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic detailed description</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={treatment.description}
+              />
+              <Textarea
+                dir="rtl"
+                rows={4}
+                placeholder="الوصف الكامل لصفحة العلاج"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="overview"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic overview</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={treatment.overview}
+              />
+              <Textarea
+                dir="rtl"
+                rows={4}
+                placeholder="نظرة عامة تظهر قرب أعلى الصفحة"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="space-y-3 rounded-lg border border-dashed border-border/60 p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm font-semibold text-foreground">
+              Arabic ideal candidates
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={addCandidate}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add candidate
+            </Button>
+          </div>
+          <EnglishSourceValue
+            label="English source"
+            value={sanitizeStringArray(treatment.ideal_candidates ?? []).join(
+              " • ",
+            )}
+          />
+          <div className="space-y-3">
+            {idealCandidates.map((_, index) => (
+              <FormField
+                key={`arabic_ideal_candidate_${index}`}
+                control={form.control}
+                name={`ideal_candidates.${index}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start gap-2">
+                      <FormControl>
+                        <Input
+                          dir="rtl"
+                          placeholder="المرشحون المناسبون لهذا العلاج"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCandidate(index)}
+                        aria-label="Remove candidate"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
+            {idealCandidates.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-sm text-muted-foreground">
+                No Arabic candidate bullets yet.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <span className="text-sm font-semibold text-foreground">
+              Arabic procedure content
+            </span>
+            <p className="text-sm text-muted-foreground">
+              Translate the public-facing copy for each English procedure. Base
+              pricing, visibility, and PDFs remain English-controlled.
+            </p>
+          </div>
+          {publicProcedureCount > 0 ? (
+            fieldArray.fields.map((field, index) => (
+              <ArabicProcedureFields
+                key={field.id}
+                form={form}
+                index={index}
+                sourceProcedure={
+                  treatment.procedures.filter(isPublicFacingProcedure)[index]
+                }
+              />
+            ))
+          ) : (
+            <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-sm text-muted-foreground">
+              No public-facing procedures are available for translation yet.
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving}
+            onClick={() => submitWithStatus("draft")}
+          >
+            {saving && form.watch("status") === "draft" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Save draft
+          </Button>
+          <Button
+            type="button"
+            disabled={saving}
+            onClick={() => submitWithStatus("published")}
+          >
+            {saving && form.watch("status") === "published" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Publish Arabic
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function ArabicProcedureFields({
+  form,
+  index,
+  sourceProcedure,
+}: {
+  form: UseFormReturn<ArabicTreatmentFormValues>;
+  index: number;
+  sourceProcedure: TreatmentProcedureRecord | undefined;
+}) {
+  const candidateRequirements = useFieldArray<
+    ArabicTreatmentFormValues,
+    FieldArrayPathByValue<
+      ArabicTreatmentFormValues,
+      ArabicProcedureFormValues["candidateRequirements"]
+    >
+  >({
+    control: form.control,
+    name: `procedures.${index}.candidateRequirements` as FieldArrayPathByValue<
+      ArabicTreatmentFormValues,
+      ArabicProcedureFormValues["candidateRequirements"]
+    >,
+  });
+  const recoveryStages = useFieldArray<
+    ArabicTreatmentFormValues,
+    FieldArrayPathByValue<
+      ArabicTreatmentFormValues,
+      ArabicProcedureFormValues["recoveryStages"]
+    >
+  >({
+    control: form.control,
+    name: `procedures.${index}.recoveryStages` as FieldArrayPathByValue<
+      ArabicTreatmentFormValues,
+      ArabicProcedureFormValues["recoveryStages"]
+    >,
+  });
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border/60 p-4">
+      <div className="space-y-1">
+        <h4 className="text-sm font-semibold text-foreground">
+          {sourceProcedure?.name ?? `Procedure ${index + 1}`}
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          English procedure ID: {sourceProcedure?.id ?? "Unknown"}
+        </p>
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`procedures.${index}.name`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Arabic procedure name</FormLabel>
+            <EnglishSourceValue
+              label="English source"
+              value={sourceProcedure?.name}
+            />
+            <Input
+              dir="rtl"
+              placeholder="اسم الإجراء"
+              {...field}
+              value={field.value ?? ""}
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name={`procedures.${index}.description`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Arabic description</FormLabel>
+            <EnglishSourceValue
+              label="English source"
+              value={sourceProcedure?.description}
+            />
+            <Textarea
+              dir="rtl"
+              rows={3}
+              placeholder="وصف موجز للإجراء"
+              {...field}
+              value={field.value ?? ""}
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.duration`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic duration label</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={sourceProcedure?.duration}
+              />
+              <Input
+                dir="rtl"
+                placeholder="مدة الإجراء"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.recovery`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic recovery label</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={sourceProcedure?.recovery}
+              />
+              <Input
+                dir="rtl"
+                placeholder="مدة التعافي"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.price`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic price label</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={sourceProcedure?.price}
+              />
+              <Input
+                dir="rtl"
+                placeholder="صياغة السعر"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`procedures.${index}.successRate`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Arabic success rate label</FormLabel>
+              <EnglishSourceValue
+                label="English source"
+                value={sourceProcedure?.success_rate}
+              />
+              <Input
+                dir="rtl"
+                placeholder="نسبة النجاح"
+                {...field}
+                value={field.value ?? ""}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm font-medium text-foreground">
+            Arabic candidate requirements
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => candidateRequirements.append("")}
+          >
+            Add requirement
+          </Button>
+        </div>
+        <EnglishSourceValue
+          label="English source"
+          value={sanitizeStringArray(
+            sourceProcedure?.candidate_requirements ?? [],
+          ).join(" • ")}
+        />
+        <div className="space-y-3">
+          {candidateRequirements.fields.map((fieldItem, requirementIndex) => (
+            <FormField
+              key={fieldItem.id}
+              control={form.control}
+              name={`procedures.${index}.candidateRequirements.${requirementIndex}`}
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-2">
+                    <FormControl>
+                      <Input
+                        dir="rtl"
+                        placeholder="متطلبات الترشيح"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        candidateRequirements.remove(requirementIndex)
+                      }
+                      aria-label="Remove requirement"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm font-medium text-foreground">
+            Arabic recovery timeline
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              recoveryStages.append({
+                stage: "",
+                description: "",
+              })
+            }
+          >
+            Add stage
+          </Button>
+        </div>
+        <EnglishSourceValue
+          label="English source"
+          value={formatRecoveryStageSource(sourceProcedure?.recovery_stages)}
+        />
+        <div className="space-y-3">
+          {recoveryStages.fields.map((fieldItem, stageIndex) => (
+            <div key={fieldItem.id} className="grid gap-3 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name={`procedures.${index}.recoveryStages.${stageIndex}.stage`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stage</FormLabel>
+                    <Input
+                      dir="rtl"
+                      placeholder="مرحلة التعافي"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`procedures.${index}.recoveryStages.${stageIndex}.description`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <div className="flex items-start gap-2">
+                      <Input
+                        dir="rtl"
+                        placeholder="وصف المرحلة"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => recoveryStages.remove(stageIndex)}
+                        aria-label="Remove stage"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`procedures.${index}.additionalNotes`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Arabic additional notes</FormLabel>
+            <EnglishSourceValue
+              label="English source"
+              value={sourceProcedure?.additional_notes}
+            />
+            <Textarea
+              dir="rtl"
+              rows={3}
+              placeholder="ملاحظات إضافية"
+              {...field}
+              value={field.value ?? ""}
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
 }
 
