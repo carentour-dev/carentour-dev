@@ -48,7 +48,7 @@ async function getSeo(
   locale: PublicLocale,
 ) {
   const localizedPathname = getLocalizedPublicPagePathname(PATHNAME, locale);
-  const treatmentItems = await getPublicTreatmentIndexItems();
+  const treatmentItems = await getPublicTreatmentIndexItems(locale);
   const faqs = extractFaqs(blocks);
   const homeLabel = locale === "ar" ? "الرئيسية" : "Home";
   const treatmentsLabel = locale === "ar" ? "العلاجات" : "Treatments";
