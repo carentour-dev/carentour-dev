@@ -1739,7 +1739,9 @@ export default function AdminTreatmentsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
                 {isArabicLocale ? <TableHead>Arabic</TableHead> : null}
-                <TableHead>Grade</TableHead>
+                <TableHead className="w-[8.5rem] whitespace-nowrap">
+                  Grade
+                </TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Featured</TableHead>
                 <TableHead>Status</TableHead>
@@ -1772,8 +1774,11 @@ export default function AdminTreatmentsPage() {
                       })()}
                     </TableCell>
                   ) : null}
-                  <TableCell>
-                    <Badge variant="outline">
+                  <TableCell className="w-[8.5rem]">
+                    <Badge
+                      variant="outline"
+                      className="min-w-[6.75rem] justify-center whitespace-nowrap"
+                    >
                       {gradeLabels[treatment.grade]}
                     </Badge>
                   </TableCell>
