@@ -1174,8 +1174,8 @@ export function QuotationCalculatorWorkspace({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
+      <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start xl:gap-x-8">
+        <div className="min-w-0 space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             Quotation Calculator
           </h1>
@@ -1189,65 +1189,75 @@ export function QuotationCalculatorWorkspace({
             </Badge>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={isAnySaving || loadQuoteMutation.isPending}
-          >
-            Reset
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleUndoChanges}
-            disabled={!canUndo || isAnySaving || loadQuoteMutation.isPending}
-          >
-            <Undo2 className="mr-2 h-4 w-4" />
-            Undo changes
-          </Button>
-          {editingQuote && (
+        <div className="flex w-full flex-col gap-2 xl:w-auto xl:max-w-[42rem] xl:items-end">
+          <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:justify-end">
             <Button
               variant="outline"
-              onClick={handleExitEditMode}
+              className="min-w-[8.75rem] justify-center"
+              onClick={handleReset}
               disabled={isAnySaving || loadQuoteMutation.isPending}
             >
-              <X className="mr-2 h-4 w-4" />
-              Exit edit mode
+              Reset
             </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => handlePrint(lastSavedQuoteId)}
-            disabled={!lastSavedQuoteId}
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSaveAsNew}
-            disabled={
-              !editingQuote || isAnySaving || loadQuoteMutation.isPending
-            }
-          >
-            {saveAsNewQuoteMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4" />
+            <Button
+              variant="outline"
+              className="min-w-[13rem] justify-center"
+              onClick={handleUndoChanges}
+              disabled={!canUndo || isAnySaving || loadQuoteMutation.isPending}
+            >
+              <Undo2 className="mr-2 h-4 w-4" />
+              Undo changes
+            </Button>
+            {editingQuote && (
+              <Button
+                variant="outline"
+                className="min-w-[12.5rem] justify-center"
+                onClick={handleExitEditMode}
+                disabled={isAnySaving || loadQuoteMutation.isPending}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Exit edit mode
+              </Button>
             )}
-            Save as new
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isAnySaving || loadQuoteMutation.isPending}
-          >
-            {isPrimarySaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {editingQuote ? "Update quote" : "Save quote"}
-          </Button>
+            <Button
+              variant="outline"
+              className="min-w-[14rem] justify-center"
+              onClick={() => handlePrint(lastSavedQuoteId)}
+              disabled={!lastSavedQuoteId}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
+          <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:justify-end">
+            <Button
+              variant="outline"
+              className="min-w-[13rem] justify-center"
+              onClick={handleSaveAsNew}
+              disabled={
+                !editingQuote || isAnySaving || loadQuoteMutation.isPending
+              }
+            >
+              {saveAsNewQuoteMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              Save as new
+            </Button>
+            <Button
+              className="min-w-[14rem] justify-center"
+              onClick={handleSave}
+              disabled={isAnySaving || loadQuoteMutation.isPending}
+            >
+              {isPrimarySaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {editingQuote ? "Update quote" : "Save quote"}
+            </Button>
+          </div>
         </div>
       </header>
 
