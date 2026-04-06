@@ -8,15 +8,7 @@ import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
 import { useFinanceInvalidate } from "@/components/finance/hooks/useFinanceInvalidate";
 import { useToast } from "@/hooks/use-toast";
 import { humanizeFinanceLabel } from "@/lib/finance/labels";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,6 +28,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ComboBox, type ComboOption } from "@/components/ui/combobox";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type FinancePayablesWorkspaceProps = {
   workspaceBasePath: string;
@@ -164,20 +162,20 @@ const formatCurrencyBreakdown = (
     .join(" | ");
 };
 
-const statusBadgeVariant = (status?: string | null) => {
+const statusBadgeTone = (status?: string | null) => {
   switch (status) {
     case "paid":
     case "approved":
       return "success" as const;
     case "partially_paid":
     case "scheduled":
-      return "secondary" as const;
+      return "info" as const;
     case "cancelled":
-      return "outline" as const;
+      return "danger" as const;
     case "draft":
-      return "default" as const;
+      return "muted" as const;
     default:
-      return "secondary" as const;
+      return "muted" as const;
   }
 };
 
@@ -652,458 +650,443 @@ export function FinancePayablesWorkspace({
         </DialogContent>
       </Dialog>
 
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Payables
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage vendor liabilities, approval submission, and settlement
-          readiness.
-        </p>
-      </header>
+      <WorkspacePageHeader
+        breadcrumb="Finance / Payables"
+        title="Payables"
+        subtitle="Manage vendor liabilities, approval submission, and settlement readiness without leaving the finance workspace."
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Open payables</CardDescription>
-            <CardTitle>{totals.openCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Open balance</CardDescription>
-            <CardTitle>
-              {formatCurrencyBreakdown(totals.openBalanceByCurrency)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Due this week</CardDescription>
-            <CardTitle>{totals.dueThisWeekCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Pending approvals</CardDescription>
-            <CardTitle>{totals.pendingApprovals}</CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Open payables"
+          value={totals.openCount}
+          helperText="Approved, scheduled, and partially paid liabilities."
+          icon={Plus}
+        />
+        <WorkspaceMetricCard
+          label="Open balance"
+          value={formatCurrencyBreakdown(totals.openBalanceByCurrency)}
+          valueDensity="compact"
+          helperText="Outstanding payable balance across active currencies."
+          icon={RefreshCw}
+          emphasisTone="info"
+        />
+        <WorkspaceMetricCard
+          label="Due this week"
+          value={totals.dueThisWeekCount}
+          helperText="Approved liabilities entering the next seven-day window."
+          icon={Send}
+          emphasisTone="warning"
+        />
+        <WorkspaceMetricCard
+          label="Pending approvals"
+          value={totals.pendingApprovals}
+          helperText="Drafts already routed into threshold-based approval."
+          icon={XCircle}
+          emphasisTone="success"
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <WorkspacePanel
+        title={
+          <span className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Create payable draft
-          </CardTitle>
-          <CardDescription>
-            Drafts remain editable until submitted for threshold-based approval.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label>Counterparty</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCounterpartyDialogOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add counterparty
-              </Button>
-            </div>
-            <ComboBox
-              value={counterpartyId}
-              options={counterpartyOptions}
-              placeholder="Select counterparty"
-              searchPlaceholder="Search counterparties..."
-              emptyLabel="No counterparties found."
-              disabled={counterpartiesQuery.isLoading}
-              onChange={setCounterpartyId}
-              contentClassName="w-[min(520px,calc(100vw-4rem))] p-0"
-            />
-            {!counterpartiesQuery.isLoading &&
-            (counterpartiesQuery.data ?? []).length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No active counterparties yet. Use &quot;Add counterparty&quot;
-                to create one.
-              </p>
-            ) : null}
+          </span>
+        }
+        description="Drafts remain editable until submitted for threshold-based approval."
+        contentClassName="grid gap-4 md:grid-cols-2"
+      >
+        <div className="space-y-2 md:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>Counterparty</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCounterpartyDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add counterparty
+            </Button>
           </div>
+          <ComboBox
+            value={counterpartyId}
+            options={counterpartyOptions}
+            placeholder="Select counterparty"
+            searchPlaceholder="Search counterparties..."
+            emptyLabel="No counterparties found."
+            disabled={counterpartiesQuery.isLoading}
+            onChange={setCounterpartyId}
+            contentClassName="w-[min(520px,calc(100vw-4rem))] p-0"
+          />
+          {!counterpartiesQuery.isLoading &&
+          (counterpartiesQuery.data ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No active counterparties yet. Use &quot;Add counterparty&quot; to
+              create one.
+            </p>
+          ) : null}
+        </div>
 
+        <div className="space-y-2">
+          <Label>Issue date</Label>
+          <Input
+            type="date"
+            value={issueDate}
+            onChange={(event) => setIssueDate(event.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Due date</Label>
+          <Input
+            type="date"
+            value={dueDate}
+            onChange={(event) => setDueDate(event.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Currency</Label>
+          <Select
+            value={currency}
+            onValueChange={(value) =>
+              setCurrency(
+                value as "EGP" | "USD" | "EUR" | "GBP" | "SAR" | "AED",
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {["EGP", "USD", "EUR", "GBP", "SAR", "AED"].map((code) => (
+                <SelectItem key={code} value={code}>
+                  {code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Line amount</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={lineAmount}
+            onChange={(event) => setLineAmount(event.target.value)}
+            placeholder="0.00"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label>Line description</Label>
+          <Input
+            value={lineDescription}
+            onChange={(event) => setLineDescription(event.target.value)}
+            placeholder="Describe payable line"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label>Line account (recommended)</Label>
+          <Select value={lineAccountId} onValueChange={setLineAccountId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select expense/COGS account" />
+            </SelectTrigger>
+            <SelectContent>
+              {expenseAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name} (Code: {account.account_code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label>Notes</Label>
+          <Textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Optional payable notes"
+            rows={3}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <Button
+            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            Create payable draft
+          </Button>
+        </div>
+      </WorkspacePanel>
+
+      <WorkspacePanel
+        title="Payments register"
+        description="Global payable payment view with method, status, and date filters."
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => paymentsRegisterQuery.refetch()}
+            disabled={paymentsRegisterQuery.isFetching}
+          >
+            {paymentsRegisterQuery.isFetching ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+        }
+        contentClassName="space-y-4"
+      >
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
-            <Label>Issue date</Label>
+            <Label>Date from</Label>
             <Input
               type="date"
-              value={issueDate}
-              onChange={(event) => setIssueDate(event.target.value)}
+              value={paymentsDateFrom}
+              onChange={(event) => setPaymentsDateFrom(event.target.value)}
             />
           </div>
-
           <div className="space-y-2">
-            <Label>Due date</Label>
+            <Label>Date to</Label>
             <Input
               type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
+              value={paymentsDateTo}
+              onChange={(event) => setPaymentsDateTo(event.target.value)}
             />
           </div>
-
           <div className="space-y-2">
-            <Label>Currency</Label>
+            <Label>Method</Label>
             <Select
-              value={currency}
-              onValueChange={(value) =>
-                setCurrency(
-                  value as "EGP" | "USD" | "EUR" | "GBP" | "SAR" | "AED",
-                )
-              }
+              value={paymentsMethodFilter}
+              onValueChange={setPaymentsMethodFilter}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["EGP", "USD", "EUR", "GBP", "SAR", "AED"].map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {code}
+                <SelectItem value="all">All Methods</SelectItem>
+                {paymentMethodOptions.map((method) => (
+                  <SelectItem key={method} value={method}>
+                    {humanizeFinanceLabel(method)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <Label>Line amount</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={lineAmount}
-              onChange={(event) => setLineAmount(event.target.value)}
-              placeholder="0.00"
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>Line description</Label>
-            <Input
-              value={lineDescription}
-              onChange={(event) => setLineDescription(event.target.value)}
-              placeholder="Describe payable line"
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>Line account (recommended)</Label>
-            <Select value={lineAccountId} onValueChange={setLineAccountId}>
+            <Label>Status</Label>
+            <Select
+              value={paymentsStatusFilter}
+              onValueChange={setPaymentsStatusFilter}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select expense/COGS account" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {expenseAccounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name} (Code: {account.account_code})
+                <SelectItem value="all">All Statuses</SelectItem>
+                {paymentStatusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {humanizeFinanceLabel(status)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Optional payable notes"
-              rows={3}
+          <div className="space-y-2">
+            <Label>Search payable/ref</Label>
+            <Input
+              value={paymentsSearch}
+              onChange={(event) => setPaymentsSearch(event.target.value)}
+              placeholder="Payable id, number, or reference"
             />
           </div>
+        </div>
 
-          <div className="md:col-span-2">
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="mr-2 h-4 w-4" />
-              )}
-              Create payable draft
-            </Button>
+        {paymentsRegisterQuery.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading payments register...
           </div>
-        </CardContent>
-      </Card>
+        ) : null}
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle>Payments register</CardTitle>
-              <CardDescription>
-                Global payable payment view with method, status, and date
-                filters.
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => paymentsRegisterQuery.refetch()}
-              disabled={paymentsRegisterQuery.isFetching}
-            >
-              {paymentsRegisterQuery.isFetching ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="space-y-2">
-              <Label>Date from</Label>
-              <Input
-                type="date"
-                value={paymentsDateFrom}
-                onChange={(event) => setPaymentsDateFrom(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Date to</Label>
-              <Input
-                type="date"
-                value={paymentsDateTo}
-                onChange={(event) => setPaymentsDateTo(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Method</Label>
-              <Select
-                value={paymentsMethodFilter}
-                onValueChange={setPaymentsMethodFilter}
+        {paymentsRegisterQuery.isError ? (
+          <p className="text-sm text-destructive">
+            Unable to load payments register.
+          </p>
+        ) : null}
+
+        {filteredPayments.length === 0 && !paymentsRegisterQuery.isLoading ? (
+          <p className="text-sm text-muted-foreground">
+            No payment rows match current filters.
+          </p>
+        ) : null}
+
+        <div className="space-y-2">
+          {filteredPayments.map((payment) => {
+            const payable = payment.finance_payable_id
+              ? payableById.get(payment.finance_payable_id)
+              : null;
+            const payableLabel =
+              payable?.payable_number || payment.finance_payable_id || "N/A";
+
+            return (
+              <div
+                key={payment.id}
+                className="rounded-lg border border-border/70 bg-card p-3"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Methods</SelectItem>
-                  {paymentMethodOptions.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {humanizeFinanceLabel(method)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={paymentsStatusFilter}
-                onValueChange={setPaymentsStatusFilter}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {paymentStatusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {humanizeFinanceLabel(status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Search payable/ref</Label>
-              <Input
-                value={paymentsSearch}
-                onChange={(event) => setPaymentsSearch(event.target.value)}
-                placeholder="Payable id, number, or reference"
-              />
-            </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {formatCurrency(payment.amount, payment.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(payment.payment_date)} •{" "}
+                      {humanizeFinanceLabel(payment.payment_method)}
+                    </p>
+                  </div>
+                  <WorkspaceStatusBadge tone={statusBadgeTone(payment.status)}>
+                    {humanizeFinanceLabel(payment.status)}
+                  </WorkspaceStatusBadge>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>Payable: {payableLabel}</span>
+                  {payment.reference ? (
+                    <span>Ref: {payment.reference}</span>
+                  ) : null}
+                </div>
+
+                {payment.finance_payable_id ? (
+                  <div className="mt-3">
+                    <Button asChild variant="outline" size="sm">
+                      <Link
+                        href={`${workspaceBasePath}/payables/${payment.finance_payable_id}`}
+                      >
+                        Open payable
+                      </Link>
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </WorkspacePanel>
+
+      <WorkspacePanel
+        title="Payables list"
+        description="Track payable lifecycle, approval state, and balances."
+        contentClassName="space-y-3"
+      >
+        {payablesQuery.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading payables...
           </div>
+        ) : null}
 
-          {paymentsRegisterQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading payments register...
+        {(payablesQuery.data ?? []).length === 0 && !payablesQuery.isLoading ? (
+          <p className="text-sm text-muted-foreground">
+            No payables found yet.
+          </p>
+        ) : null}
+
+        {(payablesQuery.data ?? []).map((payable) => (
+          <div
+            key={payable.id}
+            className="rounded-lg border border-border bg-card p-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-medium">{payable.payable_number}</p>
+                <p className="text-xs text-muted-foreground">
+                  {payable.counterparty_name || "Unknown vendor"} • Issued{" "}
+                  {formatDate(payable.issue_date)} • Due{" "}
+                  {formatDate(payable.due_date)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {payable.has_pending_approval ? (
+                  <WorkspaceStatusBadge tone="info">
+                    Pending approval
+                  </WorkspaceStatusBadge>
+                ) : null}
+                <WorkspaceStatusBadge tone={statusBadgeTone(payable.status)}>
+                  {humanizeFinanceLabel(payable.status)}
+                </WorkspaceStatusBadge>
+              </div>
             </div>
-          ) : null}
 
-          {paymentsRegisterQuery.isError ? (
-            <p className="text-sm text-destructive">
-              Unable to load payments register.
-            </p>
-          ) : null}
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+              <p>
+                Total: {formatCurrency(payable.total_amount, payable.currency)}
+              </p>
+              <p>
+                Paid: {formatCurrency(payable.paid_amount, payable.currency)}
+              </p>
+              <p>
+                Balance:{" "}
+                {formatCurrency(payable.balance_amount, payable.currency)}
+              </p>
+            </div>
 
-          {filteredPayments.length === 0 && !paymentsRegisterQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">
-              No payment rows match current filters.
-            </p>
-          ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href={`${workspaceBasePath}/payables/${payable.id}`}>
+                  View details
+                </Link>
+              </Button>
 
-          <div className="space-y-2">
-            {filteredPayments.map((payment) => {
-              const payable = payment.finance_payable_id
-                ? payableById.get(payment.finance_payable_id)
-                : null;
-              const payableLabel =
-                payable?.payable_number || payment.finance_payable_id || "N/A";
-
-              return (
-                <div
-                  key={payment.id}
-                  className="rounded-lg border border-border/70 bg-card p-3"
+              {payable.status === "draft" && !payable.has_pending_approval ? (
+                <Button
+                  size="sm"
+                  onClick={() => submitMutation.mutate(payable.id)}
+                  disabled={submitMutation.isPending}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {formatCurrency(payment.amount, payment.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(payment.payment_date)} •{" "}
-                        {humanizeFinanceLabel(payment.payment_method)}
-                      </p>
-                    </div>
-                    <Badge variant={statusBadgeVariant(payment.status)}>
-                      {humanizeFinanceLabel(payment.status)}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>Payable: {payableLabel}</span>
-                    {payment.reference ? (
-                      <span>Ref: {payment.reference}</span>
-                    ) : null}
-                  </div>
-
-                  {payment.finance_payable_id ? (
-                    <div className="mt-3">
-                      <Button asChild variant="outline" size="sm">
-                        <Link
-                          href={`${workspaceBasePath}/payables/${payment.finance_payable_id}`}
-                        >
-                          Open payable
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payables list</CardTitle>
-          <CardDescription>
-            Track payable lifecycle, approval state, and balances.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {payablesQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading payables...
-            </div>
-          ) : null}
-
-          {(payablesQuery.data ?? []).length === 0 &&
-          !payablesQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">
-              No payables found yet.
-            </p>
-          ) : null}
-
-          {(payablesQuery.data ?? []).map((payable) => (
-            <div
-              key={payable.id}
-              className="rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium">{payable.payable_number}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {payable.counterparty_name || "Unknown vendor"} • Issued{" "}
-                    {formatDate(payable.issue_date)} • Due{" "}
-                    {formatDate(payable.due_date)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {payable.has_pending_approval ? (
-                    <Badge variant="secondary">Pending approval</Badge>
-                  ) : null}
-                  <Badge variant={statusBadgeVariant(payable.status)}>
-                    {humanizeFinanceLabel(payable.status)}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                <p>
-                  Total:{" "}
-                  {formatCurrency(payable.total_amount, payable.currency)}
-                </p>
-                <p>
-                  Paid: {formatCurrency(payable.paid_amount, payable.currency)}
-                </p>
-                <p>
-                  Balance:{" "}
-                  {formatCurrency(payable.balance_amount, payable.currency)}
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`${workspaceBasePath}/payables/${payable.id}`}>
-                    View details
-                  </Link>
+                  {submitMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Submit
                 </Button>
+              ) : null}
 
-                {payable.status === "draft" && !payable.has_pending_approval ? (
-                  <Button
-                    size="sm"
-                    onClick={() => submitMutation.mutate(payable.id)}
-                    disabled={submitMutation.isPending}
-                  >
-                    {submitMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    Submit
-                  </Button>
-                ) : null}
-
-                {payable.status === "draft" ? (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => cancelMutation.mutate(payable.id)}
-                    disabled={cancelMutation.isPending}
-                  >
-                    {cancelMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Cancel
-                  </Button>
-                ) : null}
-              </div>
+              {payable.status === "draft" ? (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => cancelMutation.mutate(payable.id)}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="mr-2 h-4 w-4" />
+                  )}
+                  Cancel
+                </Button>
+              ) : null}
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          </div>
+        ))}
+      </WorkspacePanel>
     </div>
   );
 }
