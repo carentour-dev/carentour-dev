@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { WorkspacePageHeader } from "@/components/workspaces/WorkspacePrimitives";
 
 type FinanceReportScreenProps = {
   report: ReportKind;
@@ -517,15 +518,12 @@ export function FinanceReportScreen({ report }: FinanceReportScreenProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {REPORT_KIND_META[report].title}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {REPORT_KIND_META[report].description}
-        </p>
-      </header>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Finance / Reports"
+        title={REPORT_KIND_META[report].title}
+        subtitle={REPORT_KIND_META[report].description}
+      />
 
       <Card>
         <CardHeader>
