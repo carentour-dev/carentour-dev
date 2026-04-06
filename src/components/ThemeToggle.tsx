@@ -8,8 +8,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
-export function ThemeToggle() {
+type ThemeToggleProps = {
+  variant?: "default" | "workspace";
+  className?: string;
+};
+
+export function ThemeToggle({
+  variant = "default",
+  className,
+}: ThemeToggleProps) {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -40,7 +49,13 @@ export function ThemeToggle() {
       <Button
         variant="outline"
         size="icon"
-        className="bg-background border-border animate-pulse"
+        className={cn(
+          variant === "workspace"
+            ? "h-10 w-10 rounded-xl border-border bg-background/80 text-foreground shadow-none backdrop-blur-sm"
+            : "border-border bg-background",
+          "animate-pulse",
+          className,
+        )}
         disabled
         aria-label="Loading theme toggle"
       >
@@ -55,7 +70,13 @@ export function ThemeToggle() {
         <Button
           variant="outline"
           size="icon"
-          className="bg-background border-border hover:bg-muted/50 transition-colors"
+          className={cn(
+            "transition-colors",
+            variant === "workspace"
+              ? "h-10 w-10 rounded-xl border-border bg-background/80 text-foreground shadow-none backdrop-blur-sm hover:bg-muted/70 hover:text-foreground"
+              : "border-border bg-background hover:bg-muted/50",
+            className,
+          )}
           aria-label="Toggle theme"
         >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
