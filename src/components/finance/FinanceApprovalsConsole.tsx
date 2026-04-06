@@ -37,6 +37,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type FinanceApprovalsConsoleProps = {
   workspaceBasePath: string;
@@ -205,16 +209,12 @@ export function FinanceApprovalsConsole({
 
   if (!canViewQueue) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Finance Approval Console
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Centralized queue for payables, payable payment groups, and credit
-            adjustment approvals.
-          </p>
-        </header>
+      <div className="space-y-8">
+        <WorkspacePageHeader
+          breadcrumb="Finance / Approvals"
+          title="Finance Approval Console"
+          subtitle="Centralized queue for payables, payable payment groups, and credit adjustment approvals."
+        />
 
         <Card className="border-border/80 bg-muted/20">
           <CardHeader>
@@ -231,37 +231,32 @@ export function FinanceApprovalsConsole({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Finance Approval Console
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Review and decide finance approval requests from one queue.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Finance / Approvals"
+        title="Finance Approval Console"
+        subtitle="Review and decide finance approval requests from one queue."
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Queue size</CardDescription>
-            <CardTitle>{queueRows.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Pending in current view</CardDescription>
-            <CardTitle>{pendingCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Decision mode</CardDescription>
-            <CardTitle>
-              {canDecide ? "Approve / reject" : "Read-only"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <WorkspaceMetricCard
+          label="Queue size"
+          value={queueRows.length}
+          helperText="Approval requests matching the current filter set."
+        />
+        <WorkspaceMetricCard
+          label="Pending in current view"
+          value={pendingCount}
+          helperText="Requests still awaiting a finance decision."
+          emphasisTone="warning"
+        />
+        <WorkspaceMetricCard
+          label="Decision mode"
+          value={canDecide ? "Approve / reject" : "Read-only"}
+          valueDensity="compact"
+          helperText="Current action capability for approval items."
+          emphasisTone={canDecide ? "success" : "muted"}
+        />
       </div>
 
       <Card>
