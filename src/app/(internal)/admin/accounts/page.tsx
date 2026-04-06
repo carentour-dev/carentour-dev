@@ -765,44 +765,48 @@ export default function AdminAccountsPage() {
                           ))}
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingAccount(account)}
-                            disabled={
-                              isSavingDetails ||
-                              (isDeletingAccount &&
-                                deletingAccountId === account.id)
-                            }
-                          >
-                            <Pencil className="mr-1 h-4 w-4" />
-                            Edit details
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setAccountPendingDeletion(account)}
-                            disabled={
-                              isDeletingAccount &&
-                              deletingAccountId === account.id
-                            }
-                          >
-                            {isDeletingAccount &&
-                            deletingAccountId === account.id ? (
-                              <>
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="mr-1 h-4 w-4" />
-                                Delete account
-                              </>
-                            )}
-                          </Button>
+                        <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center">
+                          <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full sm:min-w-[9rem]"
+                              onClick={() => setEditingAccount(account)}
+                              disabled={
+                                isSavingDetails ||
+                                (isDeletingAccount &&
+                                  deletingAccountId === account.id)
+                              }
+                            >
+                              <Pencil className="mr-1 h-4 w-4" />
+                              Edit details
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="w-full sm:min-w-[10.5rem]"
+                              onClick={() => setAccountPendingDeletion(account)}
+                              disabled={
+                                isDeletingAccount &&
+                                deletingAccountId === account.id
+                              }
+                            >
+                              {isDeletingAccount &&
+                              deletingAccountId === account.id ? (
+                                <>
+                                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                  Deleting…
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="mr-1 h-4 w-4" />
+                                  Delete account
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
