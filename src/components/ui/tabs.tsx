@@ -10,6 +10,7 @@ const TabsList = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
+    data-slot="tabs-list"
     ref={ref}
     className={cn(
       "inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
@@ -25,6 +26,7 @@ const TabsTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
+    data-slot="tabs-trigger"
     ref={ref}
     type="button"
     className={cn(
@@ -41,6 +43,7 @@ const TabsContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
+    data-slot="tabs-content"
     ref={ref}
     className={cn(
       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
