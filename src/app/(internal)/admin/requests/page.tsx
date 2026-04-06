@@ -10,7 +10,6 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,6 +37,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  WorkspaceEmptyState,
+  WorkspaceFilterBar,
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { useToast } from "@/hooks/use-toast";
 import type { Database, Tables } from "@/integrations/supabase/types";
 
@@ -920,77 +925,73 @@ export default function AdminRequestsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Requests Inbox"
+        subtitle="Review consultation and contact-form submissions, assign ownership, and move qualified cases into patient and consultation workflows."
+      />
+
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as RequestTab)}
         className="space-y-6"
       >
         <div className="overflow-x-auto pb-1">
-          <TabsList className="inline-flex gap-2">
+          <TabsList className="inline-flex gap-2 rounded-full border border-border/70 bg-muted/35 p-1">
             <TabsTrigger
               value="consultation"
-              className="whitespace-nowrap px-4"
+              className="whitespace-nowrap rounded-full px-4"
             >
               Consultation Requests
             </TabsTrigger>
-            <TabsTrigger value="contact" className="whitespace-nowrap px-4">
+            <TabsTrigger
+              value="contact"
+              className="whitespace-nowrap rounded-full px-4"
+            >
               Contact Form Inbox
             </TabsTrigger>
           </TabsList>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Toggle archived view to review closed requests.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={assignmentFilter}
-              onValueChange={(value) =>
-                handleAssignmentFilterChange(value as AssignmentFilter)
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="show-archived-toggle"
-                checked={showArchivedOnly}
-                onCheckedChange={(checked) => setShowArchivedOnly(checked)}
-              />
-              <Label
-                htmlFor="show-archived-toggle"
-                className="text-sm font-normal text-muted-foreground"
-              >
-                Show archived only
-              </Label>
-            </div>
-          </div>
-        </div>
 
         <TabsContent value="consultation" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <Inbox className="h-5 w-5 text-primary" />
-                  Consultation Requests
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Detailed intake submissions from the Get Free Consultation
-                  flow for medical concierge follow-up.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
+          <WorkspacePanel
+            title={
+              <span className="flex items-center gap-2">
+                <Inbox className="h-5 w-5 text-primary" />
+                Consultation Requests
+              </span>
+            }
+            description={
+              consultationRequests.length === 0
+                ? "No consultation requests match the current filters."
+                : `${consultationRequests.length} request${consultationRequests.length === 1 ? "" : "s"} in view.`
+            }
+            contentClassName="space-y-6"
+          >
+            <WorkspaceFilterBar className="gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <p className="max-w-[42rem] text-sm leading-6 text-muted-foreground">
+                Detailed intake submissions from the Get Free Consultation flow
+                for medical concierge follow-up.
+              </p>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:flex-nowrap xl:shrink-0">
+                <Select
+                  value={assignmentFilter}
+                  onValueChange={(value) =>
+                    handleAssignmentFilterChange(value as AssignmentFilter)
+                  }
+                >
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[190px]">
+                    <SelectValue placeholder="Filter assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select
                   value={consultationStatus}
                   onValueChange={(value) =>
@@ -998,7 +999,7 @@ export default function AdminRequestsPage() {
                   }
                   disabled={showArchivedOnly}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[210px]">
                     <SelectValue placeholder="Filter status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1009,9 +1010,23 @@ export default function AdminRequestsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="flex h-11 shrink-0 items-center gap-3 rounded-xl border border-border/70 bg-background/70 px-4 text-sm">
+                  <Switch
+                    id="consultation-show-archived-toggle"
+                    checked={showArchivedOnly}
+                    onCheckedChange={(checked) => setShowArchivedOnly(checked)}
+                  />
+                  <Label
+                    htmlFor="consultation-show-archived-toggle"
+                    className="whitespace-nowrap text-sm font-normal text-muted-foreground"
+                  >
+                    Show archived only
+                  </Label>
+                </div>
                 <Button
                   variant="outline"
                   size="icon"
+                  className="size-11 shrink-0 rounded-xl self-end sm:self-auto"
                   disabled={consultationQuery.isFetching}
                   onClick={() => consultationQuery.refetch()}
                   aria-label="Refresh consultation requests"
@@ -1023,142 +1038,479 @@ export default function AdminRequestsPage() {
                   )}
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {consultationQuery.isLoading && (
-                <div className="flex min-h-[200px] items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
+            </WorkspaceFilterBar>
+            {consultationQuery.isLoading && (
+              <div className="flex min-h-[200px] items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {consultationQuery.isError && (
+              <WorkspaceEmptyState
+                title="Unable to load consultation requests"
+                description="Try refreshing this queue. If the issue persists, check the admin requests API."
+                icon={<FileQuestion className="h-6 w-6" />}
+              />
+            )}
+
+            {!consultationQuery.isLoading &&
+              consultationRequests.length === 0 && (
+                <WorkspaceEmptyState
+                  title="No consultation requests match this filter"
+                  description="Adjust the current filters or switch to archived view to inspect older requests."
+                  icon={<FileQuestion className="h-6 w-6" />}
+                />
               )}
 
-              {consultationQuery.isError && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                  Failed to load consultation requests. Please try refreshing
-                  the page.
-                </div>
-              )}
-
-              {!consultationQuery.isLoading &&
-                consultationRequests.length === 0 && (
-                  <div className="rounded-md border border-dashed border-muted-foreground/30 p-8 text-center">
-                    <FileQuestion className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      No consultation requests match this filter yet.
-                    </p>
-                  </div>
-                )}
-
-              {consultationRequests.length > 0 && (
-                <div className="space-y-4">
-                  {consultationRequests.map((request) => {
-                    const scheduleTooltip = getScheduleTooltip(request);
-                    const scheduleLabel = getScheduleButtonLabel(request);
-                    const archived = getArchivedState(request);
-                    const archiveLabel = archived ? "Unarchive" : "Archive";
-                    const assignment = formatAssignee(request);
-                    const isRowUpdating =
-                      updateRequest.isPending && updatingId === request.id;
-                    const isRowDeleting =
-                      deleteRequest.isPending && deletingId === request.id;
-                    return (
-                      <div
-                        key={request.id}
-                        className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                      >
-                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="flex flex-1 flex-col gap-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {request.first_name} {request.last_name}
-                                  </p>
-                                  <Badge
-                                    variant="secondary"
-                                    className="capitalize"
-                                  >
-                                    {request.origin ?? "web"}
-                                  </Badge>
+            {consultationRequests.length > 0 && (
+              <div className="space-y-4">
+                {consultationRequests.map((request) => {
+                  const scheduleTooltip = getScheduleTooltip(request);
+                  const scheduleLabel = getScheduleButtonLabel(request);
+                  const archived = getArchivedState(request);
+                  const archiveLabel = archived ? "Unarchive" : "Archive";
+                  const assignment = formatAssignee(request);
+                  const isRowUpdating =
+                    updateRequest.isPending && updatingId === request.id;
+                  const isRowDeleting =
+                    deleteRequest.isPending && deletingId === request.id;
+                  return (
+                    <div
+                      key={request.id}
+                      className="rounded-[1.2rem] border border-border/70 bg-background/55 p-5 shadow-[0_24px_48px_-40px_rgba(0,0,0,0.9)] transition-colors hover:border-border hover:bg-background/70"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-1 flex-col gap-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-lg font-semibold text-foreground">
+                                  {request.first_name} {request.last_name}
+                                </p>
+                                <Badge
+                                  variant="secondary"
+                                  className="capitalize"
+                                >
+                                  {request.origin ?? "web"}
+                                </Badge>
+                                <Badge variant="outline" className="capitalize">
+                                  {capitalize(request.request_type)}
+                                </Badge>
+                                {assignment.label && (
                                   <Badge
                                     variant="outline"
-                                    className="capitalize"
+                                    className="gap-1 text-xs font-normal"
                                   >
-                                    {capitalize(request.request_type)}
+                                    Assigned • {assignment.label}
                                   </Badge>
-                                  {assignment.label && (
-                                    <Badge
-                                      variant="outline"
-                                      className="gap-1 text-xs font-normal"
-                                    >
-                                      Assigned • {assignment.label}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                  <span>
-                                    Received{" "}
-                                    {formatDateTime(request.created_at)}
-                                  </span>
-                                  <span>
-                                    Updated {formatDateTime(request.updated_at)}
-                                  </span>
-                                </div>
-                                <div className="space-y-1 text-sm text-muted-foreground">
-                                  <p>{request.email}</p>
-                                  {request.phone && <p>{request.phone}</p>}
-                                  {request.country && (
-                                    <p className="uppercase">
-                                      Based in {request.country}
-                                    </p>
-                                  )}
-                                  {request.contact_preference && (
-                                    <p className="font-medium text-primary">
-                                      Prefers: {request.contact_preference}
-                                    </p>
-                                  )}
-                                  {request.patient_id && (
-                                    <Badge
-                                      variant="outline"
-                                      className="mt-1 w-fit text-xs font-normal"
-                                    >
-                                      Linked patient •{" "}
-                                      {request.patient_id.slice(0, 8)}
-                                      {request.patient_id.length > 8 ? "…" : ""}
-                                    </Badge>
-                                  )}
-                                </div>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span>
+                                  Received {formatDateTime(request.created_at)}
+                                </span>
+                                <span>
+                                  Updated {formatDateTime(request.updated_at)}
+                                </span>
+                              </div>
+                              <div className="space-y-1 text-sm text-muted-foreground">
+                                <p>{request.email}</p>
+                                {request.phone && <p>{request.phone}</p>}
+                                {request.country && (
+                                  <p className="uppercase">
+                                    Based in {request.country}
+                                  </p>
+                                )}
+                                {request.contact_preference && (
+                                  <p className="font-medium text-primary">
+                                    Prefers: {request.contact_preference}
+                                  </p>
+                                )}
+                                {request.patient_id && (
+                                  <Badge
+                                    variant="outline"
+                                    className="mt-1 w-fit text-xs font-normal"
+                                  >
+                                    Linked patient •{" "}
+                                    {request.patient_id.slice(0, 8)}
+                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                Treatment
+                              </p>
+                              <p className="text-sm text-foreground">
+                                {request.treatment ?? "Not specified"}
+                              </p>
+                              <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                                {request.budget_range && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                      Budget
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {request.budget_range}
+                                    </p>
+                                  </div>
+                                )}
+                                {request.medical_reports && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                      Medical Reports
+                                    </p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {request.medical_reports}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {request.health_background &&
+                              request.health_background.trim().length > 0 && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Background
+                                  </p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                    {request.health_background}
+                                  </p>
+                                </div>
+                              )}
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                Travel window
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDateTime(request.travel_window)}
+                              </p>
+                              {request.companions && (
+                                <p className="text-xs text-muted-foreground">
+                                  Companion plan: {request.companions}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex w-full flex-col gap-3 lg:w-[14.5rem] lg:shrink-0">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl"
+                              onClick={() => openDialogFor(request)}
+                            >
+                              View
+                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSchedule(request)}
+                                  className="h-10 w-full rounded-xl px-3"
+                                >
+                                  {scheduleLabel}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{scheduleTooltip}</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <AssignmentControl
+                            assigneeId={assignment.id}
+                            assigneeLabel={assignment.label}
+                            assigneeDescription={assignment.description}
+                            onAssign={(memberId) => {
+                              void handleAssignmentChange(request, memberId);
+                            }}
+                            isPending={isRowUpdating}
+                            disabled={isRowDeleting}
+                            triggerClassName="h-10 w-full justify-start rounded-xl px-3.5 text-left"
+                          />
+                          <div className="space-y-1.5 text-xs text-muted-foreground">
+                            <p className="uppercase tracking-wide text-muted-foreground/80">
+                              Status
+                            </p>
+                            <Select
+                              value={request.status}
+                              onValueChange={(value) => {
+                                void handleStatusChange(
+                                  request.id,
+                                  value as ContactRequestStatus,
+                                );
+                              }}
+                              disabled={isRowUpdating || isRowDeleting}
+                            >
+                              <SelectTrigger className="h-10 w-full rounded-xl bg-background/85">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUS_OPTIONS.filter(
+                                  (option) => option.value !== "all",
+                                ).map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl"
+                              onClick={() => void handleArchiveToggle(request)}
+                              disabled={
+                                (updateRequest.isPending &&
+                                  updatingId === request.id) ||
+                                (deleteRequest.isPending &&
+                                  deletingId === request.id)
+                              }
+                            >
+                              {updatingId === request.id &&
+                              updateRequest.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                  Updating
+                                </>
+                              ) : (
+                                archiveLabel
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl text-destructive"
+                              onClick={() => handleDelete(request.id)}
+                              disabled={
+                                deleteRequest.isPending &&
+                                deletingId === request.id
+                              }
+                            >
+                              {deletingId === request.id &&
+                              deleteRequest.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                  Deleting
+                                </>
+                              ) : (
+                                "Delete"
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </WorkspacePanel>
+        </TabsContent>
+
+        <TabsContent value="contact" className="mt-6">
+          <WorkspacePanel
+            title={
+              <span className="flex items-center gap-2">
+                <Inbox className="h-5 w-5 text-primary" />
+                Contact Requests
+              </span>
+            }
+            description={
+              contactRequests.length === 0
+                ? "No contact requests match the current filters."
+                : `${contactRequests.length} request${contactRequests.length === 1 ? "" : "s"} in view.`
+            }
+            contentClassName="space-y-6"
+          >
+            <WorkspaceFilterBar className="gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <p className="max-w-[42rem] text-sm leading-6 text-muted-foreground">
+                Track inbound inquiries from the public contact form and
+                coordinate follow-up.
+              </p>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:flex-nowrap xl:shrink-0">
+                <Select
+                  value={assignmentFilter}
+                  onValueChange={(value) =>
+                    handleAssignmentFilterChange(value as AssignmentFilter)
+                  }
+                >
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[190px]">
+                    <SelectValue placeholder="Filter assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNMENT_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={contactStatus}
+                  onValueChange={(value) =>
+                    updateStatusFilter("contact", value as StatusFilter)
+                  }
+                  disabled={showArchivedOnly}
+                >
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[210px]">
+                    <SelectValue placeholder="Filter status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex h-11 shrink-0 items-center gap-3 rounded-xl border border-border/70 bg-background/70 px-4 text-sm">
+                  <Switch
+                    id="contact-show-archived-toggle"
+                    checked={showArchivedOnly}
+                    onCheckedChange={(checked) => setShowArchivedOnly(checked)}
+                  />
+                  <Label
+                    htmlFor="contact-show-archived-toggle"
+                    className="whitespace-nowrap text-sm font-normal text-muted-foreground"
+                  >
+                    Show archived only
+                  </Label>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-11 shrink-0 rounded-xl self-end sm:self-auto"
+                  disabled={contactQuery.isFetching}
+                  onClick={() => contactQuery.refetch()}
+                  aria-label="Refresh contact requests"
+                >
+                  {contactQuery.isFetching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </WorkspaceFilterBar>
+            {contactQuery.isLoading && (
+              <div className="flex min-h-[200px] items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {contactQuery.isError && (
+              <WorkspaceEmptyState
+                title="Unable to load contact requests"
+                description="Try refreshing this queue. If the issue persists, inspect the admin requests API."
+                icon={<FileQuestion className="h-6 w-6" />}
+              />
+            )}
+
+            {!contactQuery.isLoading && contactRequests.length === 0 && (
+              <WorkspaceEmptyState
+                title="No contact requests found for this filter"
+                description="Adjust the current filters or switch to archived view to inspect older submissions."
+                icon={<FileQuestion className="h-6 w-6" />}
+              />
+            )}
+
+            {contactRequests.length > 0 && (
+              <div className="space-y-4">
+                {contactRequests.map((request) => {
+                  const scheduleTooltip = getScheduleTooltip(request);
+                  const scheduleLabel = getScheduleButtonLabel(request);
+                  const archived = getArchivedState(request);
+                  const archiveLabel = archived ? "Unarchive" : "Archive";
+                  const assignment = formatAssignee(request);
+                  const isRowUpdating =
+                    updateRequest.isPending && updatingId === request.id;
+                  const isRowDeleting =
+                    deleteRequest.isPending && deletingId === request.id;
+
+                  return (
+                    <div
+                      key={request.id}
+                      className="rounded-[1.2rem] border border-border/70 bg-background/55 p-5 shadow-[0_24px_48px_-40px_rgba(0,0,0,0.9)] transition-colors hover:border-border hover:bg-background/70"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-1 flex-col gap-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-lg font-semibold text-foreground">
+                                  {request.first_name} {request.last_name}
+                                </p>
+                                <Badge
+                                  variant="secondary"
+                                  className="capitalize"
+                                >
+                                  {request.origin ?? "web"}
+                                </Badge>
+                                <Badge variant="outline" className="capitalize">
+                                  {capitalize(request.request_type)}
+                                </Badge>
+                                {assignment.label && (
+                                  <Badge
+                                    variant="outline"
+                                    className="gap-1 text-xs font-normal"
+                                  >
+                                    Assigned • {assignment.label}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span>
+                                  Received {formatDateTime(request.created_at)}
+                                </span>
+                                <span>
+                                  Updated {formatDateTime(request.updated_at)}
+                                </span>
+                              </div>
+                              <div className="space-y-1 text-sm text-muted-foreground">
+                                <p>{request.email}</p>
+                                {request.phone && <p>{request.phone}</p>}
+                                {request.country && (
+                                  <p className="uppercase">{request.country}</p>
+                                )}
+                                {request.contact_preference && (
+                                  <p className="font-medium text-primary">
+                                    Prefers: {request.contact_preference}
+                                  </p>
+                                )}
+                                {request.patient_id && (
+                                  <Badge
+                                    variant="outline"
+                                    className="mt-1 w-fit text-xs font-normal"
+                                  >
+                                    Linked patient •{" "}
+                                    {request.patient_id.slice(0, 8)}
+                                    {request.patient_id.length > 8 ? "…" : ""}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-3">
                               <div>
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
                                   Treatment
                                 </p>
                                 <p className="text-sm text-foreground">
-                                  {request.treatment ?? "Not specified"}
+                                  {request.treatment &&
+                                  request.treatment.trim().length > 0
+                                    ? request.treatment
+                                    : "Not specified"}
                                 </p>
-                                <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                                  {request.budget_range && (
-                                    <div>
-                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                        Budget
-                                      </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {request.budget_range}
-                                      </p>
-                                    </div>
-                                  )}
-                                  {request.medical_reports && (
-                                    <div>
-                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                        Medical Reports
-                                      </p>
-                                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                        {request.medical_reports}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
                               </div>
                               {request.health_background &&
                                 request.health_background.trim().length > 0 && (
@@ -1176,7 +1528,9 @@ export default function AdminRequestsPage() {
                                   Travel window
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {formatDateTime(request.travel_window)}
+                                  {request.travel_window
+                                    ? formatDateTime(request.travel_window)
+                                    : "Not provided"}
                                 </p>
                                 {request.companions && (
                                   <p className="text-xs text-muted-foreground">
@@ -1184,466 +1538,150 @@ export default function AdminRequestsPage() {
                                   </p>
                                 )}
                               </div>
+                              {request.notes &&
+                                request.notes.trim().length > 0 && (
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                      Note
+                                    </p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {request.notes}
+                                    </p>
+                                  </div>
+                                )}
+                            </div>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              {request.additional_questions &&
+                                request.additional_questions.trim().length >
+                                  0 && (
+                                  <p>
+                                    <span className="font-medium text-muted-foreground/90">
+                                      Additional details:&nbsp;
+                                    </span>
+                                    {request.additional_questions}
+                                  </p>
+                                )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                        </div>
+                        <div className="flex w-full flex-col gap-3 lg:w-[14.5rem] lg:shrink-0">
+                          <div className="grid grid-cols-2 gap-2">
                             <Button
                               variant="outline"
                               size="sm"
+                              className="h-10 w-full rounded-xl"
                               onClick={() => openDialogFor(request)}
                             >
                               View
                             </Button>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span>
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => handleSchedule(request)}
-                                    className="w-full"
-                                  >
-                                    {scheduleLabel}
-                                  </Button>
-                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSchedule(request)}
+                                  className="h-10 w-full rounded-xl px-3"
+                                >
+                                  {scheduleLabel}
+                                </Button>
                               </TooltipTrigger>
                               <TooltipContent>{scheduleTooltip}</TooltipContent>
                             </Tooltip>
-                            <AssignmentControl
-                              assigneeId={assignment.id}
-                              assigneeLabel={assignment.label}
-                              assigneeDescription={assignment.description}
-                              onAssign={(memberId) => {
-                                void handleAssignmentChange(request, memberId);
+                          </div>
+                          <AssignmentControl
+                            assigneeId={assignment.id}
+                            assigneeLabel={assignment.label}
+                            assigneeDescription={assignment.description}
+                            onAssign={(memberId) => {
+                              void handleAssignmentChange(request, memberId);
+                            }}
+                            isPending={isRowUpdating}
+                            disabled={isRowDeleting}
+                            triggerClassName="h-10 w-full justify-start rounded-xl px-3.5 text-left"
+                          />
+                          <div className="space-y-1.5 text-xs text-muted-foreground">
+                            <p className="uppercase tracking-wide text-muted-foreground/80">
+                              Status
+                            </p>
+                            <Select
+                              value={request.status}
+                              onValueChange={(value) => {
+                                void handleStatusChange(
+                                  request.id,
+                                  value as ContactRequestStatus,
+                                );
                               }}
-                              isPending={isRowUpdating}
-                              disabled={isRowDeleting}
-                            />
-                            <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                              <p className="uppercase tracking-wide text-muted-foreground/80">
-                                Status
-                              </p>
-                              <Select
-                                value={request.status}
-                                onValueChange={(value) => {
-                                  void handleStatusChange(
-                                    request.id,
-                                    value as ContactRequestStatus,
-                                  );
-                                }}
-                                disabled={isRowUpdating || isRowDeleting}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_OPTIONS.filter(
-                                    (option) => option.value !== "all",
-                                  ).map((option) => (
-                                    <SelectItem
-                                      key={option.value}
-                                      value={option.value}
-                                    >
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="sm:w-auto"
-                                onClick={() =>
-                                  void handleArchiveToggle(request)
-                                }
-                                disabled={
-                                  (updateRequest.isPending &&
-                                    updatingId === request.id) ||
-                                  (deleteRequest.isPending &&
-                                    deletingId === request.id)
-                                }
-                              >
-                                {updatingId === request.id &&
-                                updateRequest.isPending ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                    Updating
-                                  </>
-                                ) : (
-                                  archiveLabel
-                                )}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive sm:w-auto"
-                                onClick={() => handleDelete(request.id)}
-                                disabled={
-                                  deleteRequest.isPending &&
-                                  deletingId === request.id
-                                }
-                              >
-                                {deletingId === request.id &&
-                                deleteRequest.isPending ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                    Deleting
-                                  </>
-                                ) : (
-                                  "Delete"
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="contact" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <Inbox className="h-5 w-5 text-primary" />
-                  Contact Requests
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Track inbound inquiries from the public contact form and
-                  coordinate follow-up.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Select
-                  value={contactStatus}
-                  onValueChange={(value) =>
-                    updateStatusFilter("contact", value as StatusFilter)
-                  }
-                  disabled={showArchivedOnly}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={contactQuery.isFetching}
-                  onClick={() => contactQuery.refetch()}
-                  aria-label="Refresh contact requests"
-                >
-                  {contactQuery.isFetching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCcw className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {contactQuery.isLoading && (
-                <div className="flex min-h-[200px] items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-
-              {contactQuery.isError && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                  Failed to load contact requests. Please try refreshing the
-                  page.
-                </div>
-              )}
-
-              {!contactQuery.isLoading && contactRequests.length === 0 && (
-                <div className="rounded-md border border-dashed border-muted-foreground/30 p-8 text-center">
-                  <FileQuestion className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    No contact requests found for this filter.
-                  </p>
-                </div>
-              )}
-
-              {contactRequests.length > 0 && (
-                <div className="space-y-4">
-                  {contactRequests.map((request) => {
-                    const scheduleTooltip = getScheduleTooltip(request);
-                    const scheduleLabel = getScheduleButtonLabel(request);
-                    const archived = getArchivedState(request);
-                    const archiveLabel = archived ? "Unarchive" : "Archive";
-                    const assignment = formatAssignee(request);
-                    const isRowUpdating =
-                      updateRequest.isPending && updatingId === request.id;
-                    const isRowDeleting =
-                      deleteRequest.isPending && deletingId === request.id;
-
-                    return (
-                      <div
-                        key={request.id}
-                        className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                      >
-                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="flex flex-1 flex-col gap-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {request.first_name} {request.last_name}
-                                  </p>
-                                  <Badge
-                                    variant="secondary"
-                                    className="capitalize"
+                              disabled={isRowUpdating || isRowDeleting}
+                            >
+                              <SelectTrigger className="h-10 w-full rounded-xl bg-background/85">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUS_OPTIONS.filter(
+                                  (option) => option.value !== "all",
+                                ).map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
                                   >
-                                    {request.origin ?? "web"}
-                                  </Badge>
-                                  <Badge
-                                    variant="outline"
-                                    className="capitalize"
-                                  >
-                                    {capitalize(request.request_type)}
-                                  </Badge>
-                                  {assignment.label && (
-                                    <Badge
-                                      variant="outline"
-                                      className="gap-1 text-xs font-normal"
-                                    >
-                                      Assigned • {assignment.label}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                  <span>
-                                    Received{" "}
-                                    {formatDateTime(request.created_at)}
-                                  </span>
-                                  <span>
-                                    Updated {formatDateTime(request.updated_at)}
-                                  </span>
-                                </div>
-                                <div className="space-y-1 text-sm text-muted-foreground">
-                                  <p>{request.email}</p>
-                                  {request.phone && <p>{request.phone}</p>}
-                                  {request.country && (
-                                    <p className="uppercase">
-                                      {request.country}
-                                    </p>
-                                  )}
-                                  {request.contact_preference && (
-                                    <p className="font-medium text-primary">
-                                      Prefers: {request.contact_preference}
-                                    </p>
-                                  )}
-                                  {request.patient_id && (
-                                    <Badge
-                                      variant="outline"
-                                      className="mt-1 w-fit text-xs font-normal"
-                                    >
-                                      Linked patient •{" "}
-                                      {request.patient_id.slice(0, 8)}
-                                      {request.patient_id.length > 8 ? "…" : ""}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="grid gap-4 md:grid-cols-2">
-                              <div className="space-y-3">
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    Treatment
-                                  </p>
-                                  <p className="text-sm text-foreground">
-                                    {request.treatment &&
-                                    request.treatment.trim().length > 0
-                                      ? request.treatment
-                                      : "Not specified"}
-                                  </p>
-                                </div>
-                                {request.health_background &&
-                                  request.health_background.trim().length >
-                                    0 && (
-                                    <div>
-                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                        Background
-                                      </p>
-                                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                        {request.health_background}
-                                      </p>
-                                    </div>
-                                  )}
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    Travel window
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {request.travel_window
-                                      ? formatDateTime(request.travel_window)
-                                      : "Not provided"}
-                                  </p>
-                                  {request.companions && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Companion plan: {request.companions}
-                                    </p>
-                                  )}
-                                </div>
-                                {request.notes &&
-                                  request.notes.trim().length > 0 && (
-                                    <div>
-                                      <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                        Note
-                                      </p>
-                                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                        {request.notes}
-                                      </p>
-                                    </div>
-                                  )}
-                              </div>
-                              <div className="space-y-2 text-sm text-muted-foreground">
-                                {request.additional_questions &&
-                                  request.additional_questions.trim().length >
-                                    0 && (
-                                    <p>
-                                      <span className="font-medium text-muted-foreground/90">
-                                        Additional details:&nbsp;
-                                      </span>
-                                      {request.additional_questions}
-                                    </p>
-                                  )}
-                              </div>
-                            </div>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                          <div className="grid grid-cols-2 gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openDialogFor(request)}
+                              className="h-10 w-full rounded-xl"
+                              onClick={() => void handleArchiveToggle(request)}
+                              disabled={
+                                (updateRequest.isPending &&
+                                  updatingId === request.id) ||
+                                (deleteRequest.isPending &&
+                                  deletingId === request.id)
+                              }
                             >
-                              View
+                              {updatingId === request.id &&
+                              updateRequest.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                  Updating
+                                </>
+                              ) : (
+                                archiveLabel
+                              )}
                             </Button>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span>
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => handleSchedule(request)}
-                                    className="w-full"
-                                  >
-                                    {scheduleLabel}
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>{scheduleTooltip}</TooltipContent>
-                            </Tooltip>
-                            <AssignmentControl
-                              assigneeId={assignment.id}
-                              assigneeLabel={assignment.label}
-                              assigneeDescription={assignment.description}
-                              onAssign={(memberId) => {
-                                void handleAssignmentChange(request, memberId);
-                              }}
-                              isPending={isRowUpdating}
-                              disabled={isRowDeleting}
-                            />
-                            <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                              <p className="uppercase tracking-wide text-muted-foreground/80">
-                                Status
-                              </p>
-                              <Select
-                                value={request.status}
-                                onValueChange={(value) => {
-                                  void handleStatusChange(
-                                    request.id,
-                                    value as ContactRequestStatus,
-                                  );
-                                }}
-                                disabled={isRowUpdating || isRowDeleting}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_OPTIONS.filter(
-                                    (option) => option.value !== "all",
-                                  ).map((option) => (
-                                    <SelectItem
-                                      key={option.value}
-                                      value={option.value}
-                                    >
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="sm:w-auto"
-                                onClick={() =>
-                                  void handleArchiveToggle(request)
-                                }
-                                disabled={
-                                  (updateRequest.isPending &&
-                                    updatingId === request.id) ||
-                                  (deleteRequest.isPending &&
-                                    deletingId === request.id)
-                                }
-                              >
-                                {updatingId === request.id &&
-                                updateRequest.isPending ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                    Updating
-                                  </>
-                                ) : (
-                                  archiveLabel
-                                )}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive sm:w-auto"
-                                onClick={() => handleDelete(request.id)}
-                                disabled={
-                                  deleteRequest.isPending &&
-                                  deletingId === request.id
-                                }
-                              >
-                                {deletingId === request.id &&
-                                deleteRequest.isPending ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                    Deleting
-                                  </>
-                                ) : (
-                                  "Delete"
-                                )}
-                              </Button>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl text-destructive"
+                              onClick={() => handleDelete(request.id)}
+                              disabled={
+                                deleteRequest.isPending &&
+                                deletingId === request.id
+                              }
+                            >
+                              {deletingId === request.id &&
+                              deleteRequest.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                  Deleting
+                                </>
+                              ) : (
+                                "Delete"
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </WorkspacePanel>
         </TabsContent>
       </Tabs>
 
@@ -1651,7 +1689,10 @@ export default function AdminRequestsPage() {
         open={dialogOpen}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
       >
-        <DialogContent className="max-w-xl" unsaved={hasUnsavedDialogChanges}>
+        <DialogContent
+          className="max-h-[min(92vh,860px)] overflow-y-auto sm:max-w-3xl"
+          unsaved={hasUnsavedDialogChanges}
+        >
           <DialogHeader>
             <DialogTitle>
               {activeRequest?.request_type === "consultation"
@@ -1917,7 +1958,7 @@ export default function AdminRequestsPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 border-t border-border/70 pt-2">
             <Button variant="outline" onClick={attemptCloseDialog}>
               Cancel
             </Button>
