@@ -560,14 +560,28 @@ export default function PatientDetailsPage() {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="intake">Intake</TabsTrigger>
-          <TabsTrigger value="care">Care</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="inline-flex h-auto min-w-max gap-1 rounded-xl border border-border bg-muted/40 p-1 md:grid md:w-full md:min-w-0 md:grid-cols-6">
+            <TabsTrigger value="overview" className="shrink-0 px-4 md:px-3">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="intake" className="shrink-0 px-4 md:px-3">
+              Intake
+            </TabsTrigger>
+            <TabsTrigger value="care" className="shrink-0 px-4 md:px-3">
+              Care
+            </TabsTrigger>
+            <TabsTrigger value="finance" className="shrink-0 px-4 md:px-3">
+              Finance
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="shrink-0 px-4 md:px-3">
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="content" className="shrink-0 px-4 md:px-3">
+              Content
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <Card>
