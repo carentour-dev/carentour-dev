@@ -6,13 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -49,7 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import {
   adminFetch,
   useAdminInvalidate,
@@ -57,9 +49,16 @@ import {
 import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
+import {
+  WorkspaceEmptyState,
+  WorkspaceFilterBar,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
-import { CalendarClock, Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
@@ -103,6 +102,21 @@ const consultationStatuses = [
   "no_show",
 ] as const;
 type ConsultationStatus = (typeof consultationStatuses)[number];
+
+const getConsultationStatusTone = (status: ConsultationStatus) => {
+  switch (status) {
+    case "completed":
+      return "success" as const;
+    case "cancelled":
+    case "no_show":
+      return "danger" as const;
+    case "rescheduled":
+      return "warning" as const;
+    default:
+      return "default" as const;
+  }
+};
+
 type AssignmentFilter = "all" | "me" | "unassigned";
 const ASSIGNMENT_FILTER_OPTIONS: Array<{
   value: AssignmentFilter;
@@ -705,34 +719,48 @@ export default function AdminConsultationsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-            <CalendarClock className="h-6 w-6 text-primary" />
-            Patient Consultations
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Monitor scheduled consultations and coordinate next steps across the
-            care team.
-          </p>
-        </div>
-        <Button onClick={openCreateDialog}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Schedule consultation
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Patient Consultations"
+        subtitle="Monitor specialist consultations, ownership, and follow-up context across the care team."
+        actions={
+          <Button size="sm" onClick={openCreateDialog}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Schedule consultation
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Consultations</CardTitle>
-            <CardDescription>
-              {consultations.length === 0
-                ? "No consultations match the current filters."
-                : `${consultations.length} consultation${consultations.length === 1 ? "" : "s"} in view.`}
-            </CardDescription>
+      <WorkspacePanel
+        title="Consultations"
+        description={
+          consultations.length === 0
+            ? "No consultations match the current filters."
+            : `${consultations.length} consultation${consultations.length === 1 ? "" : "s"} in view.`
+        }
+        contentClassName="space-y-6"
+      >
+        <WorkspaceFilterBar className="gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {consultationStatuses.map((status) => (
+              <WorkspaceStatusBadge
+                key={status}
+                tone={
+                  statusFilter === "all" || statusFilter === status
+                    ? getConsultationStatusTone(status)
+                    : "muted"
+                }
+                className="gap-2 border-border/70 px-3 py-1.5"
+              >
+                <span>{status.replace("_", " ")}</span>
+                <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[9px] tracking-[0.16em] text-foreground/80">
+                  {groupedByStatus[status]}
+                </span>
+              </WorkspaceStatusBadge>
+            ))}
           </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Select
               value={assignmentFilter}
@@ -740,7 +768,7 @@ export default function AdminConsultationsPage() {
                 handleAssignmentFilterChange(value as AssignmentFilter)
               }
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px] bg-background/80">
                 <SelectValue placeholder="Filter coordinator" />
               </SelectTrigger>
               <SelectContent>
@@ -751,13 +779,14 @@ export default function AdminConsultationsPage() {
                 ))}
               </SelectContent>
             </Select>
+
             <Select
               value={statusFilter}
               onValueChange={(value) =>
                 setStatusFilter(value as ConsultationStatus | "all")
               }
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] bg-background/80">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
@@ -769,7 +798,8 @@ export default function AdminConsultationsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2 text-sm">
+
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-2 text-sm">
               <Switch
                 checked={upcomingOnly}
                 onCheckedChange={setUpcomingOnly}
@@ -780,194 +810,192 @@ export default function AdminConsultationsPage() {
               </label>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3 text-sm">
-            {consultationStatuses.map((status) => (
-              <Badge
-                key={status}
-                variant={statusFilter === status ? "default" : "secondary"}
-                className="flex items-center gap-1"
-              >
-                <span className="capitalize">{status.replace("_", " ")}</span>
-                <span className="text-xs">{groupedByStatus[status]}</span>
-              </Badge>
-            ))}
-          </div>
-          <Separator />
-          {query.isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading consultations…
-            </div>
-          ) : consultations.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-muted-foreground/30 p-10 text-center">
-              <p className="font-medium text-foreground">
-                No consultations found.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Adjust filters or schedule a new consultation to see it here.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Scheduled</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Contact Request
-                    </TableHead>
-                    <TableHead className="w-[140px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {consultations.map((consultation) => {
-                    const coordinator = formatCoordinator(consultation);
-                    const isAssigning =
-                      assigningId === consultation.id &&
-                      coordinatorMutation.isPending;
+        </WorkspaceFilterBar>
 
-                    return (
-                      <TableRow key={consultation.id}>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
+        {query.isLoading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading consultations…
+          </div>
+        ) : consultations.length === 0 ? (
+          <WorkspaceEmptyState
+            title="No consultations found"
+            description="Adjust the current filters or schedule a new consultation to populate this workspace."
+          />
+        ) : (
+          <div className="overflow-hidden rounded-[1.15rem] border border-border/70 bg-background/55">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/70 hover:bg-transparent">
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Patient
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Doctor
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Scheduled
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="hidden h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground lg:table-cell">
+                    Contact Request
+                  </TableHead>
+                  <TableHead className="h-12 w-[14.5rem] px-5 text-right text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {consultations.map((consultation) => {
+                  const coordinator = formatCoordinator(consultation);
+                  const isAssigning =
+                    assigningId === consultation.id &&
+                    coordinatorMutation.isPending;
+
+                  return (
+                    <TableRow
+                      key={consultation.id}
+                      className="border-border/70 hover:bg-muted/30"
+                    >
+                      <TableCell className="px-5 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-foreground">
+                            {consultation.patients?.full_name ??
+                              "Unknown patient"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {consultation.patients?.contact_email ??
+                              consultation.patient_id}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-5 py-4">
+                        {consultation.doctors ? (
+                          <div className="flex flex-col">
                             <span className="font-medium text-foreground">
-                              {consultation.patients?.full_name ??
-                                "Unknown patient"}
+                              {consultation.doctors.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {consultation.patients?.contact_email ??
-                                consultation.patient_id}
+                              {consultation.doctors.title}
                             </span>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {consultation.doctors ? (
-                            <div className="flex flex-col">
-                              <span className="font-medium text-foreground">
-                                {consultation.doctors.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {consultation.doctors.title}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              Not assigned
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Not assigned
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-5 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {format(
+                              new Date(consultation.scheduled_at),
+                              "PPpp",
+                            )}
+                          </span>
+                          {consultation.duration_minutes ? (
+                            <span className="text-xs text-muted-foreground">
+                              {consultation.duration_minutes} minutes
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-5 py-4">
+                        <Badge
+                          variant={
+                            consultation.status === "scheduled" ||
+                            consultation.status === "rescheduled"
+                              ? "default"
+                              : consultation.status === "completed"
+                                ? "success"
+                                : "secondary"
+                          }
+                          className="capitalize"
+                        >
+                          {consultation.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden px-5 py-4 lg:table-cell">
+                        {consultation.contact_requests ? (
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {format(
-                                new Date(consultation.scheduled_at),
-                                "PPpp",
-                              )}
+                            <span className="text-sm">
+                              {consultation.contact_requests.request_type ??
+                                "general"}
                             </span>
-                            {consultation.duration_minutes ? (
-                              <span className="text-xs text-muted-foreground">
-                                {consultation.duration_minutes} minutes
-                              </span>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              consultation.status === "scheduled" ||
-                              consultation.status === "rescheduled"
-                                ? "default"
-                                : consultation.status === "completed"
-                                  ? "success"
-                                  : "secondary"
-                            }
-                            className="capitalize"
-                          >
-                            {consultation.status.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {consultation.contact_requests ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm">
-                                {consultation.contact_requests.request_type ??
-                                  "general"}
-                              </span>
-                              <span className="text-xs text-muted-foreground capitalize">
-                                {consultation.contact_requests.status} •{" "}
-                                {consultation.contact_requests.origin}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              Not linked
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {consultation.contact_requests.status} •{" "}
+                              {consultation.contact_requests.origin}
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="w-[260px]">
-                          <div className="flex flex-col items-end gap-2">
-                            <AssignmentControl
-                              assigneeId={coordinator.id}
-                              assigneeLabel={coordinator.label}
-                              assigneeDescription={coordinator.description}
-                              onAssign={(memberId) => {
-                                if (
-                                  (consultation.coordinator_id ?? null) ===
-                                  (memberId ?? null)
-                                ) {
-                                  return;
-                                }
-                                coordinatorMutation.mutate({
-                                  id: consultation.id,
-                                  coordinatorId: memberId,
-                                });
-                              }}
-                              isPending={isAssigning}
-                              disabled={deleteMutation.isPending}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEditDialog(consultation)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() =>
-                                  deleteMutation.mutate(consultation.id)
-                                }
-                              >
-                                Delete
-                              </Button>
-                            </div>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Not linked
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="w-[14.5rem] px-5 py-4">
+                        <div className="ml-auto flex w-full max-w-[14.5rem] flex-col gap-2.5">
+                          <AssignmentControl
+                            assigneeId={coordinator.id}
+                            assigneeLabel={coordinator.label}
+                            assigneeDescription={coordinator.description}
+                            onAssign={(memberId) => {
+                              if (
+                                (consultation.coordinator_id ?? null) ===
+                                (memberId ?? null)
+                              ) {
+                                return;
+                              }
+                              coordinatorMutation.mutate({
+                                id: consultation.id,
+                                coordinatorId: memberId,
+                              });
+                            }}
+                            isPending={isAssigning}
+                            disabled={deleteMutation.isPending}
+                            triggerClassName="h-10 w-full justify-start rounded-xl px-3.5 text-left"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl"
+                              onClick={() => openEditDialog(consultation)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-full rounded-xl text-destructive"
+                              onClick={() =>
+                                deleteMutation.mutate(consultation.id)
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </WorkspacePanel>
 
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(open))}
       >
-        <DialogContent className="sm:max-w-2xl" unsaved={hasUnsavedChanges}>
+        <DialogContent
+          className="max-h-[min(92vh,860px)] overflow-y-auto sm:max-w-4xl"
+          unsaved={hasUnsavedChanges}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingConsultation
@@ -982,8 +1010,8 @@ export default function AdminConsultationsPage() {
           </DialogHeader>
           {renderLinkedRequestSummary()}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-7">
+              <div className="grid gap-5 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="patient_id"
@@ -1164,7 +1192,7 @@ export default function AdminConsultationsPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <DialogFooter className="border-t border-border/70 pt-2">
                 <Button
                   type="button"
                   variant="outline"
