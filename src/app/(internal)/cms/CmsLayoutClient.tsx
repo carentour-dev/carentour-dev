@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  CircleHelp,
   LayoutDashboard,
   FilePlus,
   Link2,
@@ -16,7 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
+import {
+  InternalWorkspaceShell,
+  type InternalWorkspaceShellNavSection,
+} from "@/components/workspaces/InternalWorkspaceShell";
 import { metadataIndicatesStaffAccount, useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -35,9 +39,10 @@ import { buildModuleTabs } from "@/lib/workspaces/module-nav";
 const NAV_ITEMS = [
   { href: "/cms", label: "Overview", icon: LayoutDashboard },
   { href: "/cms/new", label: "New Page", icon: FilePlus },
-  { href: "/cms/blog", label: "Blog", icon: FileText, badge: "Blog" },
+  { href: "/cms/blog", label: "Blog", icon: FileText },
   { href: "/cms/media", label: "Media Library", icon: PanelsTopLeft },
   { href: "/cms/navigation", label: "Navigation Links", icon: Link2 },
+  { href: "/cms/faqs", label: "FAQs", icon: CircleHelp },
   { href: "/cms/seo", label: "SEO", icon: Search },
 ];
 
@@ -49,6 +54,18 @@ const CMS_FALLBACK_ROLE_SLUGS = new Set([
   "content_manager",
   "content-editor",
 ]);
+
+const isCmsNavItemActive = (itemHref: string, pathname: string | null) => {
+  if (!pathname) {
+    return false;
+  }
+
+  if (itemHref === "/cms") {
+    return pathname === "/cms";
+  }
+
+  return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
+};
 
 const collectRoleCandidates = (value: unknown, bucket: Set<string>) => {
   if (value === null || value === undefined) {
@@ -138,7 +155,7 @@ const hasCmsMetadataAccess = (
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
   const [resolvingGuardExpired, setResolvingGuardExpired] = useState(false);
 
@@ -233,6 +250,28 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
       ),
     [canViewSeoWorkspace],
   );
+  const shellNavSections = useMemo<InternalWorkspaceShellNavSection[]>(
+    () =>
+      [
+        {
+          label: "Publishing",
+          items: navItems.slice(0, 3),
+        },
+        {
+          label: "Structure",
+          items: navItems.slice(3),
+        },
+      ]
+        .map((section) => ({
+          label: section.label,
+          items: section.items.map((item) => ({
+            ...item,
+            active: isCmsNavItemActive(item.href, pathname),
+          })),
+        }))
+        .filter((section) => section.items.length > 0),
+    [navItems, pathname],
+  );
   const moduleTabs = useMemo(
     () =>
       buildModuleTabs({
@@ -253,6 +292,15 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
       resolvedRoles,
     ],
   );
+  const isPreviewRoute = pathname?.startsWith("/cms/preview") ?? false;
+  const isEditorRoute =
+    pathname?.startsWith("/cms/new") ||
+    pathname?.endsWith("/edit") ||
+    pathname?.startsWith("/cms/blog/posts/");
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/auth");
+  };
 
   if (isResolvingAccess) {
     return (
@@ -307,73 +355,44 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <WorkspaceModuleTopBar
-        tabs={moduleTabs}
-        title="CMS Workspace"
-        subtitle="Manage pages, media, blog content, and navigation."
-        rightSlot={
-          <>
-            <ThemeToggle />
-            <Button asChild size="sm">
-              <Link href="/cms/new">New Page</Link>
-            </Button>
-          </>
-        }
-      />
-      <div className="border-b border-border/70 bg-card/40">
-        <div className="container mx-auto px-4">
-          <nav className="flex flex-wrap items-center gap-2 overflow-x-auto py-4">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full border border-transparent px-4 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-primary/15 text-primary border-primary/30"
-                      : "text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="flex flex-col gap-3 pb-4 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between md:text-sm">
-            <div>
-              <p className="font-medium text-foreground">Need help?</p>
-              <p className="max-w-2xl">
-                Preview changes, manage navigation, and publish pages directly
-                from the CMS.
-              </p>
-            </div>
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="self-start md:self-auto"
-            >
-              <Link href="/cms/navigation">Manage navigation</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-      <main
-        className={cn(
-          "py-8",
-          pathname?.startsWith("/cms/preview")
-            ? "px-0"
-            : "container mx-auto px-4",
-        )}
-      >
-        {children}
-      </main>
-    </div>
+    <InternalWorkspaceShell
+      branding={{
+        title: "Care N Tour",
+        subtitle: "CMS Workspace",
+        lightLogoSrc: "/carentour-logo-dark-alt.png",
+        darkLogoSrc: "/carentour-logo-light-alt.png",
+        logoAlt: "Care N Tour logo",
+      }}
+      navSections={shellNavSections}
+      moduleTabs={moduleTabs}
+      headerTitle="CMS Workspace"
+      headerSubtitle="Pages, blog, SEO, media, and navigation in one place."
+      headerActions={
+        <>
+          <ThemeToggle variant="workspace" />
+        </>
+      }
+      profile={{
+        displayName: profile?.displayName ?? user?.email ?? "CMS editor",
+        roles: resolvedRoles,
+        icon: FileText,
+      }}
+      onSignOut={handleSignOut}
+      loading={profileLoading}
+      loadingMessage="Refreshing CMS access..."
+      contentWidth={isPreviewRoute ? "full" : isEditorRoute ? "editor" : "full"}
+      contentClassName={cn(
+        isPreviewRoute && "max-w-none",
+        isEditorRoute && "max-w-[1120px]",
+        !isPreviewRoute && !isEditorRoute && "max-w-[1680px]",
+      )}
+      mainClassName={cn(
+        isPreviewRoute
+          ? "px-0 pb-0 pt-0 sm:px-0 lg:px-0"
+          : "pb-8 pt-7 lg:pb-10 lg:pt-8",
+      )}
+    >
+      {children}
+    </InternalWorkspaceShell>
   );
 }
