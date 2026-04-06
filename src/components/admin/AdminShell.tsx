@@ -1,29 +1,8 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -36,9 +15,12 @@ import {
   hasCmsWorkspaceAccess,
   hasFinanceWorkspaceAccess,
 } from "@/lib/workspaces/access-policies";
-import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
+import { buildModuleTabs } from "@/lib/workspaces/module-nav";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTheme } from "next-themes";
+import {
+  InternalWorkspaceShell,
+  type InternalWorkspaceShellNavSection,
+} from "@/components/workspaces/InternalWorkspaceShell";
 import {
   ActivitySquare,
   Building2,
@@ -49,7 +31,6 @@ import {
   Inbox,
   LayoutDashboard,
   Loader2,
-  LogOut,
   Plane,
   Sparkles,
   Stethoscope,
@@ -78,6 +59,24 @@ const NAV_ITEMS = [
   { label: "Hotels", href: "/admin/hotels", icon: Hotel },
   { label: "Team Accounts", href: "/admin/accounts", icon: UserPlus },
   { label: "Access", href: "/admin/access", icon: ShieldCheck },
+];
+
+const NAV_SECTIONS: Array<{
+  label: string;
+  items: typeof NAV_ITEMS;
+}> = [
+  {
+    label: "Core",
+    items: NAV_ITEMS.slice(0, 6),
+  },
+  {
+    label: "Catalog",
+    items: NAV_ITEMS.slice(6, 12),
+  },
+  {
+    label: "Access",
+    items: NAV_ITEMS.slice(12),
+  },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -129,6 +128,28 @@ export function AdminShell({ children }: { children: ReactNode }) {
       hasOperationsAccess,
       pathname,
     ],
+  );
+  const navSections = useMemo<InternalWorkspaceShellNavSection[]>(
+    () =>
+      NAV_SECTIONS.map((section) => ({
+        label: section.label,
+        items: section.items.map((item) => ({
+          ...item,
+          active:
+            pathname === item.href ||
+            (item.href !== "/admin" && pathname.startsWith(item.href)),
+        })),
+      })),
+    [pathname],
+  );
+  const activeNavItem = useMemo(
+    () =>
+      NAV_ITEMS.find(
+        (item) =>
+          pathname === item.href ||
+          (item.href !== "/admin" && pathname.startsWith(item.href)),
+      ),
+    [pathname],
   );
 
   // Reuse existing auth provider to fully sign out admins.
@@ -192,159 +213,31 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
-      <SidebarProvider>
-        <Sidebar
-          collapsible="icon"
-          className="bg-sidebar text-sidebar-foreground"
-        >
-          <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-            <AdminBranding />
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Management</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {NAV_ITEMS.map((item) => {
-                    const Icon = item.icon;
-                    const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/admin" &&
-                        pathname.startsWith(item.href));
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          tooltip={item.label}
-                        >
-                          <Link href={item.href}>
-                            <Icon className="h-4 w-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="border-t border-sidebar-border">
-            <div className="flex items-center gap-3 rounded-md bg-sidebar-accent/30 px-3 py-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <Users className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {profile?.displayName ?? "Admin"}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {(profile?.roles ?? ["user"]).map((role) => (
-                    <Badge
-                      key={role}
-                      variant="outline"
-                      className="w-fit text-xs capitalize"
-                    >
-                      {role.replace(/[-_]/g, " ")}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-          <AdminTopbar tabs={moduleTabs} />
-          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-
-      {isCheckingAccess && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/60 backdrop-blur-sm">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Refreshing admin access…
-          </p>
-        </div>
-      )}
-    </>
-  );
-}
-
-function AdminTopbar({ tabs }: { tabs: ModuleTab[] }) {
-  return (
-    <WorkspaceModuleTopBar
-      tabs={tabs}
-      title="Admin Console"
-      subtitle="Care N Tour Admin"
-      leftSlot={
-        <>
-          {/* Mobile trigger keeps sidebar accessible on smaller screens. */}
-          <SidebarTrigger className="lg:hidden" />
-          <SidebarSeparator className="lg:hidden" />
-        </>
-      }
-      rightSlot={<ThemeToggle />}
-    />
-  );
-}
-
-function AdminBranding() {
-  const { state } = useSidebar();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const logoSrc =
-    mounted && resolvedTheme === "dark"
-      ? "/carentour-logo-light-alt.png"
-      : "/carentour-logo-dark-alt.png";
-  const isCollapsed = state === "collapsed";
-
-  if (isCollapsed) {
-    return (
-      <div className="flex items-center justify-center">
-        <Image
-          src={logoSrc}
-          alt="Care N Tour logo"
-          width={64}
-          height={64}
-          className="h-14 w-14 rounded-md border border-sidebar-border bg-sidebar-accent/30 p-1.5 object-contain"
-          priority
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex w-full flex-col items-center gap-2 text-center">
-      <Image
-        src={logoSrc}
-        alt="Care N Tour logo"
-        width={240}
-        height={240}
-        className="h-16 w-auto max-w-[240px] object-contain"
-        priority
-      />
-      <span className="text-xs text-muted-foreground">Admin Console</span>
-    </div>
+    <InternalWorkspaceShell
+      branding={{
+        title: "Care N Tour",
+        subtitle: "Admin Console",
+        lightLogoSrc: "/carentour-logo-dark-alt.png",
+        darkLogoSrc: "/carentour-logo-light-alt.png",
+        logoAlt: "Care N Tour logo",
+      }}
+      navSections={navSections}
+      moduleTabs={moduleTabs}
+      headerTitle={activeNavItem?.label ?? "Admin"}
+      headerSubtitle="Admin Console"
+      headerActions={<ThemeToggle variant="workspace" />}
+      profile={{
+        displayName: profile?.displayName ?? "Admin",
+        roles: profile?.roles ?? [],
+        icon: Users,
+      }}
+      onSignOut={handleSignOut}
+      loading={isCheckingAccess}
+      loadingMessage="Refreshing admin access..."
+      contentWidth="dashboard"
+      contentClassName="max-w-[1520px]"
+    >
+      {children}
+    </InternalWorkspaceShell>
   );
 }
