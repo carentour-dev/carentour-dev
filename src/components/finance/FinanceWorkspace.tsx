@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
+  BarChart3,
   CheckCircle2,
   Loader2,
   Plus,
@@ -40,6 +41,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ComboBox, type ComboOption } from "@/components/ui/combobox";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type OperationsQuote = {
   id: string;
@@ -842,15 +848,11 @@ export function FinanceWorkspace({
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Finance Workspace
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Manage quote-to-invoice conversion, installment schedules, payment
-          allocations, receivables aging, and credit-approval workflows.
-        </p>
-      </header>
+      <WorkspacePageHeader
+        breadcrumb="Finance"
+        title="Finance Workspace"
+        subtitle="Manage quote-to-invoice conversion, installment schedules, payment allocations, receivables aging, and credit-approval workflows."
+      />
 
       {hasFinanceDataError ? (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -866,136 +868,141 @@ export function FinanceWorkspace({
         </Card>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Total invoices</CardDescription>
-            <CardTitle>
-              {canViewInvoices ? (invoicesQuery.data?.length ?? 0) : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Outstanding receivables</CardDescription>
-            <CardTitle>
-              {canViewInvoices
-                ? formatCurrencyBreakdown(outstandingByCurrency)
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Overdue installments</CardDescription>
-            <CardTitle>
-              {canViewInvoices ? overdueInstallmentsCount : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Pending approvals</CardDescription>
-            <CardTitle>
-              {canViewApprovalsQueue ? (approvalsQuery.data?.length ?? 0) : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Open payables</CardDescription>
-            <CardTitle>{canViewPayables ? openPayables.length : "-"}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Period net income</CardDescription>
-            <CardTitle>
-              {canViewReports
-                ? formatCurrency(
-                    profitLossQuery.data?.netIncome ?? 0,
-                    profitLossQuery.data?.baseCurrency ?? "EGP",
-                  )
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+        <WorkspaceMetricCard
+          label="Total invoices"
+          value={canViewInvoices ? (invoicesQuery.data?.length ?? 0) : "-"}
+          helperText="Invoices currently available in the finance workspace."
+          icon={ReceiptText}
+        />
+        <WorkspaceMetricCard
+          label="Outstanding receivables"
+          value={
+            canViewInvoices
+              ? formatCurrencyBreakdown(outstandingByCurrency)
+              : "-"
+          }
+          valueDensity="compact"
+          helperText="Balance still open across invoice currencies."
+          icon={Wallet}
+          emphasisTone="info"
+        />
+        <WorkspaceMetricCard
+          label="Overdue installments"
+          value={canViewInvoices ? overdueInstallmentsCount : "-"}
+          helperText="Installments already past due."
+          icon={AlertCircle}
+          emphasisTone="warning"
+        />
+        <WorkspaceMetricCard
+          label="Pending approvals"
+          value={
+            canViewApprovalsQueue ? (approvalsQuery.data?.length ?? 0) : "-"
+          }
+          helperText="Approvals waiting for review."
+          icon={CheckCircle2}
+          emphasisTone="success"
+        />
+        <WorkspaceMetricCard
+          label="Open payables"
+          value={canViewPayables ? openPayables.length : "-"}
+          helperText="Vendor liabilities still in progress."
+          icon={Wallet}
+        />
+        <WorkspaceMetricCard
+          label="Period net income"
+          value={
+            canViewReports
+              ? formatCurrency(
+                  profitLossQuery.data?.netIncome ?? 0,
+                  profitLossQuery.data?.baseCurrency ?? "EGP",
+                )
+              : "-"
+          }
+          valueDensity="compact"
+          helperText="Current profit and loss snapshot."
+          icon={BarChart3}
+          emphasisTone="success"
+        />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>AP open balance</CardDescription>
-            <CardTitle>
-              {canViewPayables
-                ? formatCurrencyBreakdown(openPayablesBalanceByCurrency)
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>AP due this week</CardDescription>
-            <CardTitle>
-              {canViewPayables ? dueThisWeekPayablesCount : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Quick links</CardDescription>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {canViewPayables ? (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+        <WorkspaceMetricCard
+          label="AP open balance"
+          value={
+            canViewPayables
+              ? formatCurrencyBreakdown(openPayablesBalanceByCurrency)
+              : "-"
+          }
+          valueDensity="compact"
+          helperText="Remaining balance across open vendor payables."
+          icon={Wallet}
+          emphasisTone="info"
+        />
+        <WorkspaceMetricCard
+          label="AP due this week"
+          value={canViewPayables ? dueThisWeekPayablesCount : "-"}
+          helperText="Approved payables due over the next seven days."
+          icon={XCircle}
+          emphasisTone="warning"
+        />
+        <WorkspacePanel
+          title="Quick links"
+          description="Jump into adjacent finance workstreams without leaving the overview."
+          densityVariant="compact"
+          contentClassName="space-y-3"
+        >
+          <div className="flex flex-wrap gap-2">
+            {canViewPayables ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/payables`}>
+                  Payables
+                </Link>
+              </Button>
+            ) : null}
+            {canViewReports ? (
+              <>
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`${invoiceDetailsBasePath}/payables`}>
-                    Payables
+                  <Link href={`${invoiceDetailsBasePath}/ledger/journals`}>
+                    Journals
                   </Link>
                 </Button>
-              ) : null}
-              {canViewReports ? (
-                <>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`${invoiceDetailsBasePath}/ledger/journals`}>
-                      Journals
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`${invoiceDetailsBasePath}/reports/ap-aging`}>
-                      AP Aging
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`${invoiceDetailsBasePath}/reports/ar-aging`}>
-                      AR Aging
-                    </Link>
-                  </Button>
-                </>
-              ) : null}
-              {canViewApprovalsConsole ? (
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`${invoiceDetailsBasePath}/approvals`}>
-                    Approvals
+                  <Link href={`${invoiceDetailsBasePath}/reports/ap-aging`}>
+                    AP Aging
                   </Link>
                 </Button>
-              ) : null}
-              {canViewSettingsConsole ? (
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`${invoiceDetailsBasePath}/settings`}>
-                    Settings
+                  <Link href={`${invoiceDetailsBasePath}/reports/ar-aging`}>
+                    AR Aging
                   </Link>
                 </Button>
-              ) : null}
-              {!canViewPayables &&
-              !canViewReports &&
-              !canViewApprovalsConsole &&
-              !canViewSettingsConsole ? (
-                <p className="text-xs text-muted-foreground">
-                  No quick links available for this role.
-                </p>
-              ) : null}
-            </div>
-          </CardHeader>
-        </Card>
+              </>
+            ) : null}
+            {canViewApprovalsConsole ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/approvals`}>
+                  Approvals
+                </Link>
+              </Button>
+            ) : null}
+            {canViewSettingsConsole ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${invoiceDetailsBasePath}/settings`}>
+                  Settings
+                </Link>
+              </Button>
+            ) : null}
+            {!canViewPayables &&
+            !canViewReports &&
+            !canViewApprovalsConsole &&
+            !canViewSettingsConsole ? (
+              <p className="text-xs text-muted-foreground">
+                No quick links available for this role.
+              </p>
+            ) : null}
+          </div>
+        </WorkspacePanel>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
