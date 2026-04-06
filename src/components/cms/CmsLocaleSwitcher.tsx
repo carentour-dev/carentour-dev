@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Languages } from "lucide-react";
@@ -14,6 +15,7 @@ type CmsLocaleSwitcherProps = {
   className?: string;
   title?: string;
   description?: string;
+  actions?: ReactNode;
 };
 
 export function CmsLocaleSwitcher({
@@ -21,6 +23,7 @@ export function CmsLocaleSwitcher({
   className,
   title = "Editing locale",
   description = "English edits the base record. Arabic edits the translation row for the same public URL.",
+  actions,
 }: CmsLocaleSwitcherProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,12 +31,12 @@ export function CmsLocaleSwitcher({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 xl:flex-row xl:items-center xl:justify-between",
         className,
       )}
     >
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
+      <div className="min-w-0 space-y-1 xl:flex-1">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1.5">
             <Languages className="h-3.5 w-3.5" />
             {title}
@@ -42,9 +45,11 @@ export function CmsLocaleSwitcher({
             {locale === "ar" ? "Arabic" : "English"}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 xl:justify-end">
         <Button
           asChild
           size="sm"
@@ -63,6 +68,7 @@ export function CmsLocaleSwitcher({
             Arabic
           </Link>
         </Button>
+        {actions}
       </div>
     </div>
   );
