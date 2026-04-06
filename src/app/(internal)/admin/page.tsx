@@ -296,16 +296,6 @@ export default function AdminOverviewPage() {
       <WorkspacePanel
         title="Priority workstreams"
         description="The highest-frequency admin routes, grouped by how staff already operate inside the workspace."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild className="rounded-xl">
-              <Link href="/admin/requests">Open intake queue</Link>
-            </Button>
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/admin/finance">Finance workspace</Link>
-            </Button>
-          </div>
-        }
         contentClassName="grid gap-4 xl:grid-cols-3"
       >
         {GROUP_ORDER.map((group) => {
@@ -350,26 +340,18 @@ export default function AdminOverviewPage() {
       </WorkspacePanel>
 
       <Tabs defaultValue="all" className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <TabsList className="h-auto rounded-xl border border-border bg-muted/40 p-1">
+        <div className="-mx-1 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="inline-flex h-auto min-w-max justify-start rounded-xl border border-border bg-muted/40 p-1">
             {TAB_ORDER.map((tab) => (
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground"
+                className="shrink-0 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground"
               >
                 {TAB_LABELS[tab]}
               </TabsTrigger>
             ))}
           </TabsList>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/admin/accounts">Team accounts</Link>
-            </Button>
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/admin/access">Workspace access</Link>
-            </Button>
-          </div>
         </div>
 
         {TAB_ORDER.map((tab) => (
