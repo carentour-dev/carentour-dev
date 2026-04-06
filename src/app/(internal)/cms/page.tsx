@@ -4,15 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -23,19 +18,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowUpRight,
-  BarChart3,
   BookOpenCheck,
   Edit3,
-  Layers,
   Loader2,
+  Map,
   Plus,
   RefreshCcw,
   Search,
-  Sparkles,
   Wand2,
   Trash2,
 } from "lucide-react";
@@ -71,6 +63,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  WorkspaceDataTableShell,
+  WorkspaceEmptyState,
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -109,6 +109,7 @@ export default function CmsIndexPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const cmsNavigationHref = buildAdminLocaleHref("/cms/navigation", locale);
   const cmsFaqHref = buildAdminLocaleHref("/cms/faqs", locale);
+  const cmsSeoHref = buildAdminLocaleHref("/cms/seo", locale);
   const cmsNewPageHref =
     locale === "ar" ? "/cms/new" : buildAdminLocaleHref("/cms/new", locale);
 
@@ -171,108 +172,92 @@ export default function CmsIndexPage() {
 
   return (
     <div className="space-y-8">
-      <CmsLocaleSwitcher locale={locale} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+      <WorkspacePageHeader
+        breadcrumb="CMS"
+        title="CMS Overview"
+        subtitle="Manage pages, blog content, navigation, FAQs, and SEO from one editorial workspace."
+      />
+
+      <CmsLocaleSwitcher
+        locale={locale}
+        description={
+          locale === "ar"
+            ? "Arabic mode updates the translation row for the same public URL. Create new public pages from the English base page first."
+            : "English mode edits the base record used to create Arabic translations for the same public URL."
+        }
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Pages in library"
+          value={stats.total}
+          trend={`${filteredPages.length} shown`}
+          helperText="Published and draft content across this locale."
+          icon={Edit3}
+        />
+        <WorkspaceMetricCard
+          label="Published"
+          value={stats.published}
+          trend="Live routes"
+          helperText="Pages already visible on the public site."
+          icon={ArrowUpRight}
+          emphasisTone="success"
+        />
+        <WorkspaceMetricCard
+          label="Drafts"
+          value={stats.drafts}
+          trend="Needs review"
+          helperText="Content waiting for completion or approval."
+          icon={Wand2}
+          emphasisTone="warning"
+        />
+        <WorkspaceMetricCard
+          label="SEO follow-up"
+          value={stats.needsSeo}
+          trend={stats.needsSeo > 0 ? "Metadata missing" : "Coverage healthy"}
+          helperText="Routes missing a title, description, or both."
+          icon={BookOpenCheck}
+          emphasisTone={stats.needsSeo > 0 ? "warning" : "success"}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,360px)] 2xl:grid-cols-[minmax(0,1.9fr)_minmax(340px,380px)]">
         <div className="space-y-6">
-          <Card className="relative overflow-hidden border border-primary/25 bg-gradient-to-br from-primary/10 via-background to-background">
-            <CardHeader className="flex flex-col gap-6 border-none bg-transparent pb-0 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <Badge className="px-3 py-1 text-[11px]">Content Studio</Badge>
-                <CardTitle className="text-3xl">
-                  Welcome back to Care N Tour CMS
-                </CardTitle>
-                <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-                  Craft new experiences, keep pages fresh, and monitor what
-                  needs attention all from this command center.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button asChild size="lg" className="shadow-card sm:w-auto">
-                  <Link href={cmsNewPageHref}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {locale === "ar"
-                      ? "Create English Base Page"
-                      : "Start a New Page"}
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="sm:w-auto"
-                >
-                  <Link href={cmsNavigationHref}>Manage navigation</Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="sm:w-auto"
-                >
-                  <Link href={cmsFaqHref}>Manage FAQs</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardFooter className="border-none bg-transparent pt-0">
-              <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground md:text-sm">
-                <span className="inline-flex items-center gap-2 text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Drag-and-drop blocks, reusable templates, and instant
-                  previews.
-                </span>
-                {locale === "ar" ? (
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    Arabic mode edits translation rows only. New public pages
-                    still start in English.
-                  </span>
-                ) : null}
-              </div>
-            </CardFooter>
-          </Card>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InsightCard
-              title="Total Pages"
-              value={stats.total}
-              icon={<Layers className="h-4 w-4" />}
-              helper="Across every campaign"
-            />
-            <InsightCard
-              title="Published"
-              value={stats.published}
-              tone="success"
-              icon={<BarChart3 className="h-4 w-4" />}
-              helper="Live on the site"
-            />
-            <InsightCard
-              title="Drafts"
-              value={stats.drafts}
-              tone="warning"
-              icon={<Edit3 className="h-4 w-4" />}
-              helper="Waiting for review"
-            />
-            <InsightCard
-              title="Needs SEO"
-              value={stats.needsSeo}
-              tone="info"
-              icon={<BookOpenCheck className="h-4 w-4" />}
-              helper="Missing title or description"
-            />
-          </div>
-
-          <Card>
-            <CardHeader className="space-y-6 border-none bg-transparent pb-0">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-xl">Page Library</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Search, filter, and jump directly into editing.
-                  </p>
+          <WorkspaceDataTableShell
+            title="Page Library"
+            description="A calmer editorial inventory with direct paths into editing, review, and live routes."
+            controls={
+              <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="relative min-w-0 flex-1 xl:max-w-[36rem]">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by title or slug"
+                    className="pl-9"
+                  />
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:ml-auto xl:flex-nowrap">
+                  <Tabs
+                    value={statusFilter}
+                    onValueChange={setStatusFilter as (value: string) => void}
+                  >
+                    <TabsList className="h-auto rounded-full bg-muted/40 p-1">
+                      {statusFilters.map((filter) => (
+                        <TabsTrigger
+                          key={filter.value}
+                          value={filter.value}
+                          className="rounded-full px-4 py-1 text-sm"
+                        >
+                          {filter.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
                   <Button
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     onClick={() => refetch()}
                     disabled={isFetching}
                   >
@@ -283,64 +268,17 @@ export default function CmsIndexPage() {
                     )}
                     Refresh
                   </Button>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href={cmsNewPageHref}>
-                      <Plus className="mr-2 h-4 w-4" /> New Page
-                    </Link>
-                  </Button>
                 </div>
               </div>
-
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="relative w-full max-w-lg">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by title or slug"
-                    className="pl-9"
-                  />
-                </div>
-                <Tabs
-                  value={statusFilter}
-                  onValueChange={setStatusFilter as (value: string) => void}
-                >
-                  <TabsList className="rounded-full bg-muted/40 p-1">
-                    {statusFilters.map((filter) => (
-                      <TabsTrigger
-                        key={filter.value}
-                        value={filter.value}
-                        className="rounded-full px-4 py-1 text-sm"
-                      >
-                        {filter.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <Skeleton key={index} className="h-44 rounded-xl" />
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
-                  Could not load pages. Please try again.
-                </div>
-              ) : filteredPages.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-muted/60 bg-muted/10 p-10 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                    <Wand2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold">No pages found</h3>
-                  <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                    Adjust your filters or start a new page to bring fresh
-                    content online.
-                  </p>
-                  <div className="mt-6 flex justify-center gap-2">
+            }
+            isEmpty={!isLoading && !error && filteredPages.length === 0}
+            emptyState={
+              <WorkspaceEmptyState
+                title="No pages found"
+                description="Adjust your filters or start a new page to bring fresh content online."
+                icon={<Wand2 className="h-5 w-5" />}
+                action={
+                  <>
                     <Button
                       variant="outline"
                       size="sm"
@@ -351,141 +289,177 @@ export default function CmsIndexPage() {
                     <Button asChild size="sm">
                       <Link href={cmsNewPageHref}>Create page</Link>
                     </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                  {filteredPages.map((page) => (
-                    <PageCard
-                      key={page.id}
-                      page={page}
-                      locale={locale}
-                      onDeleted={refetch}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </>
+                }
+              />
+            }
+          >
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-28 rounded-[1.2rem]" />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
+                Could not load pages. Please try again.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredPages.map((page) => (
+                  <PageCard
+                    key={page.id}
+                    page={page}
+                    locale={locale}
+                    onDeleted={refetch}
+                  />
+                ))}
+              </div>
+            )}
+          </WorkspaceDataTableShell>
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader className="border-none bg-transparent pb-0">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="h-4 w-4 text-primary" /> Templates &
-                accelerators
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TemplateSidebarLauncher locale={locale} />
-            </CardContent>
-          </Card>
+          <WorkspacePanel
+            title="Publishing actions"
+            description="Open the CMS tools already implemented in this workspace instead of routing through placeholder overview widgets."
+            contentClassName="space-y-3"
+          >
+            <CmsActionRow
+              title="Create page"
+              description={
+                locale === "ar"
+                  ? "Create the English base page first, then continue translation work in Arabic mode."
+                  : "Start a new page from a blank editor or template."
+              }
+              href={cmsNewPageHref}
+              actionLabel={locale === "ar" ? "Create base page" : "New page"}
+              icon={Plus}
+              statusLabel="Editing"
+              statusTone="default"
+            />
+            <CmsActionRow
+              title="Navigation"
+              description="Maintain header and footer route structure without leaving the CMS workspace."
+              href={cmsNavigationHref}
+              actionLabel="Manage"
+              icon={Map}
+              statusLabel="Live"
+              statusTone="success"
+            />
+            <CmsActionRow
+              title="FAQs"
+              description="Update question-and-answer content used across the public site."
+              href={cmsFaqHref}
+              actionLabel="Manage"
+              icon={Edit3}
+              statusLabel="Live"
+              statusTone="success"
+            />
+            <CmsActionRow
+              title="SEO coverage"
+              description="Review metadata coverage and open the dedicated SEO screen for deeper cleanup."
+              href={cmsSeoHref}
+              actionLabel="Open SEO"
+              icon={BookOpenCheck}
+              statusLabel={`${stats.needsSeo} pending`}
+              statusTone={stats.needsSeo > 0 ? "warning" : "success"}
+            />
+          </WorkspacePanel>
 
-          <Card>
-            <CardHeader className="border-none bg-transparent pb-0">
-              <CardTitle className="text-lg">Recent activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentActivity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Edits will appear here once you start publishing.
-                </p>
-              ) : (
-                recentActivity.map((page) => (
-                  <div key={page.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">
-                        {page.title}
-                      </span>
-                      <Badge
-                        className={
-                          statusStyles[page.status] ??
-                          "bg-muted text-muted-foreground"
-                        }
-                      >
-                        {page.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Updated{" "}
-                      {page.updated_at
-                        ? formatDistanceToNow(new Date(page.updated_at), {
-                            addSuffix: true,
-                          })
-                        : "recently"}
-                    </p>
+          <WorkspacePanel
+            title="Templates & accelerators"
+            description="Start from curated structures instead of rebuilding every page from scratch."
+          >
+            <TemplateSidebarLauncher locale={locale} />
+          </WorkspacePanel>
+
+          <WorkspacePanel
+            title="Recent activity"
+            description="Latest pages updated in this locale."
+            contentClassName="space-y-4"
+          >
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Edits will appear here once you start publishing.
+              </p>
+            ) : (
+              recentActivity.map((page) => (
+                <div key={page.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-foreground">
+                      {page.title}
+                    </span>
+                    <Badge
+                      className={
+                        statusStyles[page.status] ??
+                        "bg-muted text-muted-foreground"
+                      }
+                    >
+                      {page.status}
+                    </Badge>
                   </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="border-none bg-transparent pb-0">
-              <CardTitle className="text-lg">
-                Tips to elevate your pages
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <Tip
-                title="Compose with blocks"
-                description="Mix hero, stat, FAQ, and CTA blocks to tell a complete story."
-              />
-              <Separator />
-              <Tip
-                title="Preview before publishing"
-                description="Use the live preview to validate layout and links."
-              />
-              <Separator />
-              <Tip
-                title="Collaborate with notes"
-                description="Record final copy decisions directly in the content JSON until inline comments arrive."
-              />
-            </CardContent>
-          </Card>
+                  <p className="text-xs text-muted-foreground">
+                    Updated{" "}
+                    {page.updated_at
+                      ? formatDistanceToNow(new Date(page.updated_at), {
+                          addSuffix: true,
+                        })
+                      : "recently"}
+                  </p>
+                </div>
+              ))
+            )}
+          </WorkspacePanel>
         </div>
       </div>
     </div>
   );
 }
 
-type InsightCardProps = {
+type CmsActionRowProps = {
   title: string;
-  value: number;
-  icon: React.ReactNode;
-  helper: string;
-  tone?: "success" | "warning" | "info";
+  description: string;
+  href: string;
+  actionLabel: string;
+  icon: LucideIcon;
+  statusLabel: string;
+  statusTone: "default" | "success" | "warning";
 };
 
-function InsightCard({ title, value, icon, helper, tone }: InsightCardProps) {
-  let toneClasses = "border-border/70 bg-card/95 dark:bg-card/60";
-  if (tone === "success") {
-    toneClasses =
-      "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-100";
-  } else if (tone === "warning") {
-    toneClasses =
-      "border-amber-500/40 bg-amber-500/10 dark:bg-amber-500/20 text-amber-900 dark:text-amber-100";
-  } else if (tone === "info") {
-    toneClasses =
-      "border-primary/50 bg-primary/10 dark:bg-primary/20 text-primary-900 dark:text-primary-100";
-  }
-
+function CmsActionRow({
+  title,
+  description,
+  href,
+  actionLabel,
+  icon: Icon,
+  statusLabel,
+  statusTone,
+}: CmsActionRowProps) {
   return (
-    <Card className={`border ${toneClasses}`}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 border-none bg-transparent pb-1">
-        <CardTitle className="text-sm font-semibold text-muted-foreground">
-          {title}
-        </CardTitle>
-        <div className="rounded-full bg-muted/40 p-2 text-muted-foreground dark:bg-muted/20">
-          {icon}
+    <div className="flex flex-col gap-4 rounded-[1.15rem] border border-border/70 bg-background/55 p-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-foreground">
+          <Icon className="h-4 w-4" />
         </div>
-      </CardHeader>
-      <CardContent className="pt-3">
-        <div className="text-3xl font-semibold text-foreground">{value}</div>
-        <p className="text-xs text-muted-foreground">{helper}</p>
-      </CardContent>
-    </Card>
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <WorkspaceStatusBadge tone={statusTone}>
+              {statusLabel}
+            </WorkspaceStatusBadge>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button asChild size="sm" variant="outline" className="rounded-lg">
+          <Link href={href}>{actionLabel}</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -519,6 +493,11 @@ function PageCard({ page, locale, onDeleted }: PageCardProps) {
   const blockCount = Array.isArray(page.content) ? page.content.length : 0;
   const seoReady = Boolean(page.seo?.title && page.seo?.description);
   const isHomePage = page.slug === "home";
+  const visibleBlockTypes = blockTypes.slice(0, 2);
+  const remainingBlockTypes = Math.max(
+    blockTypes.length - visibleBlockTypes.length,
+    0,
+  );
   const homePageLayoutMode = isHomePage
     ? resolveHomePageLayoutMode(
         sanitizeCmsPageSettings(page.settings),
@@ -569,121 +548,144 @@ function PageCard({ page, locale, onDeleted }: PageCardProps) {
   };
 
   return (
-    <Card className="flex h-full flex-col border border-border/50 shadow-sm">
-      <CardHeader className="space-y-4 border-none bg-transparent pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg leading-tight text-foreground">
-              {page.title}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">/{page.slug}</p>
+    <Card className="border border-border/60 shadow-sm">
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-lg leading-tight text-foreground">
+                {page.title}
+              </CardTitle>
+              <Badge className={statusClass}>{page.status}</Badge>
+              {homePageLayoutMode ? (
+                <HomePageModeBadge mode={homePageLayoutMode} />
+              ) : null}
+            </div>
+
+            <p className="truncate text-sm text-muted-foreground">
+              /{page.slug}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-xs border-border/60 bg-muted/40 text-muted-foreground"
+              >
+                Updated{" "}
+                {page.updated_at
+                  ? formatDistanceToNow(new Date(page.updated_at), {
+                      addSuffix: true,
+                    })
+                  : "recently"}
+              </Badge>
+              <Badge
+                variant="outline"
+                className="text-xs border-border/60 bg-muted/40 text-muted-foreground"
+              >
+                {blockCount} block{blockCount === 1 ? "" : "s"}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs border px-3",
+                  seoReady
+                    ? "border-emerald-500/40 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-100"
+                    : "border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-100",
+                )}
+              >
+                {seoReady ? "SEO ready" : "SEO draft"}
+              </Badge>
+              {visibleBlockTypes.map((type) => (
+                <Badge
+                  key={type}
+                  variant="outline"
+                  className="text-xs capitalize border-primary/40 bg-primary/10 text-primary-700 dark:text-primary-100"
+                >
+                  {type.replace(/([A-Z])/g, " $1").trim()}
+                </Badge>
+              ))}
+              {remainingBlockTypes > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="text-xs border-border/60 bg-muted/40 text-muted-foreground"
+                >
+                  +{remainingBlockTypes} more
+                </Badge>
+              ) : null}
+            </div>
           </div>
-          <Badge className={statusClass}>{page.status}</Badge>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant="outline"
-            className="text-xs border-border/60 bg-muted/40 text-muted-foreground"
-          >
-            {blockCount} block{blockCount === 1 ? "" : "s"}
-          </Badge>
-          {homePageLayoutMode ? (
-            <HomePageModeBadge mode={homePageLayoutMode} />
-          ) : null}
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs border px-3",
-              seoReady
-                ? "border-emerald-500/40 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-100"
-                : "border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-100",
-            )}
-          >
-            {seoReady ? "SEO ready" : "SEO draft"}
-          </Badge>
-          {blockTypes.map((type) => (
-            <Badge
-              key={type}
-              variant="outline"
-              className="text-xs capitalize border-primary/40 bg-primary/10 text-primary-700 dark:text-primary-100"
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2 xl:justify-end">
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="rounded-lg"
             >
-              {type.replace(/([A-Z])/g, " $1").trim()}
-            </Badge>
-          ))}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 border-none bg-transparent pb-0 text-sm text-muted-foreground">
-        <div className="flex items-center justify-between text-xs">
-          <span>Last updated</span>
-          <span className="text-foreground">
-            {page.updated_at
-              ? formatDistanceToNow(new Date(page.updated_at), {
-                  addSuffix: true,
-                })
-              : "—"}
-          </span>
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-none bg-transparent pt-4">
-        <Button
-          asChild
-          size="sm"
-          variant="secondary"
-          className="w-full sm:w-auto"
-        >
-          <Link href={editHref}>
-            <Edit3 className="mr-2 h-4 w-4" /> Edit
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-center gap-2">
-          {page.status === "published" && (
-            <Button asChild size="sm" variant="outline">
-              <Link href={viewHref} target="_blank" rel="noopener noreferrer">
-                <ArrowUpRight className="mr-2 h-4 w-4" /> View
+              <Link href={editHref}>
+                <Edit3 className="mr-2 h-4 w-4" /> Edit
               </Link>
             </Button>
-          )}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="destructive" disabled={deleting}>
-                {deleting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </>
-                )}
+            {page.status === "published" && (
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="rounded-lg"
+              >
+                <Link href={viewHref} target="_blank" rel="noopener noreferrer">
+                  <ArrowUpRight className="mr-2 h-4 w-4" /> View
+                </Link>
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this page?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {locale === "ar"
-                    ? `This removes the Arabic translation for “${page.title}”. The English page remains available.`
-                    : `This action permanently removes “${page.title}” and its content. You will not be able to restore it.`}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={deleting}>
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
-                  onClick={handleDelete}
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="rounded-lg"
                   disabled={deleting}
                 >
-                  {locale === "ar"
-                    ? "Delete Arabic translation"
-                    : "Confirm delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  {deleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                      Deleting…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    </>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete this page?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {locale === "ar"
+                      ? `This removes the Arabic translation for “${page.title}”. The English page remains available.`
+                      : `This action permanently removes “${page.title}” and its content. You will not be able to restore it.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {locale === "ar"
+                      ? "Delete Arabic translation"
+                      : "Confirm delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }
@@ -701,20 +703,6 @@ function HomePageModeBadge({ mode }: { mode: HomePageLayoutMode }) {
     >
       {mode === "cms" ? "Home route: CMS" : "Home route: Legacy"}
     </Badge>
-  );
-}
-
-type TipProps = {
-  title: string;
-  description: string;
-};
-
-function Tip({ title, description }: TipProps) {
-  return (
-    <div>
-      <p className="font-medium text-foreground">{title}</p>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </div>
   );
 }
 
