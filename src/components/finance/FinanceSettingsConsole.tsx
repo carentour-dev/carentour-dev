@@ -38,6 +38,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type FinanceSettingsConsoleProps = {
   workspaceBasePath: string;
@@ -612,15 +616,12 @@ export function FinanceSettingsConsole({
 
   if (!canViewSettings) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Finance Settings Console
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Centralized policy and maintenance controls for finance operations.
-          </p>
-        </header>
+      <div className="space-y-8">
+        <WorkspacePageHeader
+          breadcrumb="Finance / Settings"
+          title="Finance Settings Console"
+          subtitle="Centralized policy and maintenance controls for finance operations."
+        />
 
         <Card className="border-border/80 bg-muted/20">
           <CardHeader>
@@ -636,38 +637,32 @@ export function FinanceSettingsConsole({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Finance Settings Console
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage approval thresholds, posting-account mappings, and maintenance
-          actions from a centralized workspace.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Finance / Settings"
+        title="Finance Settings Console"
+        subtitle="Manage approval thresholds, posting-account mappings, and maintenance actions from a centralized workspace."
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="border-b-0 pb-2">
-            <CardDescription>Policy permissions</CardDescription>
-            <CardTitle>{canManageSettings ? "Manage" : "Read-only"}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 pb-2">
-            <CardDescription>Active chart accounts</CardDescription>
-            <CardTitle>{activeChartAccounts.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 pb-2">
-            <CardDescription>Latest sync run</CardDescription>
-            <CardTitle className="text-base">
-              {formatDateTime(latestAuditRun?.created_at)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <WorkspaceMetricCard
+          label="Policy permissions"
+          value={canManageSettings ? "Manage" : "Read-only"}
+          valueDensity="compact"
+          helperText="Current access mode for finance policy controls."
+          emphasisTone={canManageSettings ? "success" : "muted"}
+        />
+        <WorkspaceMetricCard
+          label="Active chart accounts"
+          value={activeChartAccounts.length}
+          helperText="Accounts currently available for posting and mapping."
+        />
+        <WorkspaceMetricCard
+          label="Latest sync run"
+          value={formatDateTime(latestAuditRun?.created_at)}
+          valueDensity="compact"
+          helperText="Most recent settings-related audit activity."
+        />
       </div>
 
       {canManageSettings ? (
