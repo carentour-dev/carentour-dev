@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import AppProviders from "@/components/AppProviders";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
+import { InternalWorkspaceBodyScope } from "@/components/workspaces/InternalWorkspaceBodyScope";
 import { defaultPublicLocale } from "@/i18n/routing";
 import { isNavigationVisible } from "@/lib/navigation";
 import { loadPublicNavigationLinks } from "@/server/navigation";
@@ -47,7 +48,8 @@ export default async function InternalRootLayout({
     <AppProviders>
       <NextIntlClientProvider locale={defaultPublicLocale} messages={messages}>
         <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
-          {children}
+          <InternalWorkspaceBodyScope />
+          <div data-internal-workspace-root="true">{children}</div>
         </NavigationProvider>
       </NextIntlClientProvider>
     </AppProviders>
