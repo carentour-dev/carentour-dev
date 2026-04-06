@@ -3,16 +3,15 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  WorkspaceEmptyState,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { createEntitlementContext } from "@/lib/operations/entitlements";
 import { getAccessibleOperationsSections } from "@/lib/operations/sections";
@@ -22,6 +21,17 @@ import type { Tables } from "@/integrations/supabase/types";
 type ContactRequestRow = Tables<"contact_requests">;
 type StartJourneySubmissionRow = Tables<"start_journey_submissions">;
 type ConsultationRow = Tables<"patient_consultations">;
+type QueueBadgeTone = "info" | "success" | "warning";
+
+type QueueSurface = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  count: number;
+  isLoading: boolean;
+  badgeTone: QueueBadgeTone;
+};
 
 export default function OperationsOverviewPage() {
   const { profile, loading } = useUserProfile();
@@ -106,9 +116,6 @@ export default function OperationsOverviewPage() {
     ).length;
   }, [hasConsultationsAccess, consultationsAssignedQuery.data]);
 
-  const showSummary =
-    hasRequestsAccess || hasStartJourneyAccess || hasConsultationsAccess;
-
   const requestsLoading =
     hasRequestsAccess &&
     (requestsAssignedQuery.isLoading || requestsAssignedQuery.isFetching);
@@ -121,151 +128,181 @@ export default function OperationsOverviewPage() {
     (consultationsAssignedQuery.isLoading ||
       consultationsAssignedQuery.isFetching);
 
+  const queueSurfaces = useMemo<QueueSurface[]>(
+    () => [
+      ...(hasRequestsAccess
+        ? [
+            {
+              id: "requests",
+              title: "Requests queue",
+              description:
+                "Contact and consultation intake items currently assigned to you.",
+              href: "/operations/requests?assigned=me",
+              count: openRequestsCount,
+              isLoading: requestsLoading,
+              badgeTone: "info" as const,
+            },
+          ]
+        : []),
+      ...(hasStartJourneyAccess
+        ? [
+            {
+              id: "start-journey",
+              title: "Start Journey follow-up",
+              description:
+                "Active journey submissions waiting for coordination or next-step follow-up.",
+              href: "/operations/start-journey?assigned=me",
+              count: activeStartJourneyCount,
+              isLoading: startJourneyLoading,
+              badgeTone: "success" as const,
+            },
+          ]
+        : []),
+      ...(hasConsultationsAccess
+        ? [
+            {
+              id: "consultations",
+              title: "Consultation schedule",
+              description:
+                "Upcoming consultations you are coordinating right now.",
+              href: "/operations/consultations?assigned=me",
+              count: upcomingConsultationsCount,
+              isLoading: consultationsLoading,
+              badgeTone: "warning" as const,
+            },
+          ]
+        : []),
+    ],
+    [
+      activeStartJourneyCount,
+      consultationsLoading,
+      hasConsultationsAccess,
+      hasRequestsAccess,
+      hasStartJourneyAccess,
+      openRequestsCount,
+      requestsLoading,
+      startJourneyLoading,
+      upcomingConsultationsCount,
+    ],
+  );
+
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Operations Overview
-        </h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Access the tools that match your role. Sections below adapt to the
-          permissions granted to your staff account.
-        </p>
-      </header>
+      <WorkspacePageHeader
+        breadcrumb="Operations"
+        title="Operations Overview"
+        subtitle="Queues and workspaces adapt to the permissions granted to your staff account, with quick visibility into what is assigned to you today."
+      />
 
       {loading ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading permissions…</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Preparing your Operations workspace.
-            </p>
-          </CardContent>
-        </Card>
+        <WorkspacePanel
+          title="Loading permissions"
+          densityVariant="comfortable"
+        >
+          <p className="text-sm text-muted-foreground">
+            Preparing your Operations workspace.
+          </p>
+        </WorkspacePanel>
       ) : sections.length ? (
-        <>
-          {showSummary && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {hasRequestsAccess && (
-                <AssignedSummaryCard
-                  title="My Requests"
-                  description="Open contact and consultation intake items."
-                  href="/operations/requests?assigned=me"
-                  count={openRequestsCount}
-                  loading={requestsLoading}
-                />
-              )}
-              {hasStartJourneyAccess && (
-                <AssignedSummaryCard
-                  title="My Start Journey"
-                  description="Active journey submissions needing follow-up."
-                  href="/operations/start-journey?assigned=me"
-                  count={activeStartJourneyCount}
-                  loading={startJourneyLoading}
-                />
-              )}
-              {hasConsultationsAccess && (
-                <AssignedSummaryCard
-                  title="My Consultations"
-                  description="Upcoming consultations you coordinate."
-                  href="/operations/consultations?assigned=me"
-                  count={upcomingConsultationsCount}
-                  loading={consultationsLoading}
-                />
-              )}
-            </div>
-          )}
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.9fr)]">
+          <WorkspacePanel
+            title="Assigned queues"
+            description="Open the sections already assigned to you instead of scanning abstract summary cards."
+            contentClassName="space-y-3"
+          >
+            {queueSurfaces.length ? (
+              queueSurfaces.map((surface) => (
+                <div
+                  key={surface.id}
+                  className="flex flex-col gap-4 rounded-[1.15rem] border border-border/70 bg-background/55 p-4 lg:flex-row lg:items-start lg:justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        {surface.title}
+                      </p>
+                      <WorkspaceStatusBadge tone={surface.badgeTone}>
+                        {surface.isLoading
+                          ? "Loading"
+                          : `${surface.count} assigned`}
+                      </WorkspaceStatusBadge>
+                    </div>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {surface.description}
+                    </p>
+                  </div>
+                  <Button asChild size="sm" className="shrink-0 rounded-lg">
+                    <Link href={surface.href}>
+                      Open queue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <WorkspaceEmptyState
+                title="No personal queues"
+                description="This role can access Operations, but none of the current sections expose assigned-to-me queues."
+              />
+            )}
+          </WorkspacePanel>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <WorkspacePanel
+            title="Available sections"
+            description="These are the operational modules already enabled for your staff account."
+            contentClassName="space-y-3"
+          >
             {sections.map((section) => {
               const Icon = section.icon;
               return (
-                <Card key={section.id} className="transition hover:shadow-lg">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                      <Icon className="h-5 w-5 text-primary" />
-                      {section.label}
-                    </CardTitle>
-                    <Button asChild variant="ghost" size="icon">
-                      <Link href={section.href}>
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>{section.description}</CardDescription>
-                  </CardContent>
-                </Card>
+                <div
+                  key={section.id}
+                  className="flex items-start justify-between gap-4 rounded-[1.15rem] border border-border/70 bg-background/55 p-4"
+                >
+                  <div className="flex min-w-0 gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-foreground">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          {section.label}
+                        </p>
+                        <WorkspaceStatusBadge tone="muted">
+                          Available
+                        </WorkspaceStatusBadge>
+                      </div>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                  >
+                    <Link href={section.href}>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
               );
             })}
-          </div>
-        </>
+          </WorkspacePanel>
+        </div>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>No operations modules assigned</CardTitle>
-            <CardDescription>
-              Your account has access to the Operations workspace, but no
-              sections have been enabled yet. Reach out to an administrator if
-              this is unexpected.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <WorkspaceEmptyState
+          title="No operations modules assigned"
+          description="Your account can open the Operations workspace, but no sections have been enabled yet. Reach out to an administrator if this is unexpected."
+          action={
             <Button asChild variant="outline">
               <Link href="/auth/support">Contact support</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       )}
     </div>
-  );
-}
-
-type AssignedSummaryCardProps = {
-  title: string;
-  description: string;
-  href: string;
-  count: number;
-  loading: boolean;
-};
-
-function AssignedSummaryCard({
-  title,
-  description,
-  href,
-  count,
-  loading,
-}: AssignedSummaryCardProps) {
-  return (
-    <Card className="border-border/60 bg-card/80">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {title}
-          </CardTitle>
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            <span className="text-2xl font-semibold text-primary">{count}</span>
-          )}
-        </div>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="w-full justify-between"
-        >
-          <Link href={href}>
-            Review
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
   );
 }
