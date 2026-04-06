@@ -7,7 +7,6 @@ import {
   FileQuestion,
   Loader2,
   Paperclip,
-  Plane,
   RefreshCcw,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +16,6 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -38,6 +36,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  WorkspaceEmptyState,
+  WorkspaceFilterBar,
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type StartJourneySubmissionRow =
   Database["public"]["Tables"]["start_journey_submissions"]["Row"];
@@ -662,27 +666,36 @@ export default function AdminStartJourneyPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Plane className="h-5 w-5 text-primary" />
-              Start Journey Submissions
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Comprehensive intake forms submitted through the Start Journey
-              flow with medical history, travel preferences, and documents.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Start Journey Submissions"
+        subtitle="Comprehensive intake forms submitted through the Start Journey flow, including medical history, travel preferences, and supporting documents."
+      />
+
+      <WorkspacePanel
+        title="Submission queue"
+        description={
+          submissions.length === 0
+            ? "No Start Journey submissions match the current filters."
+            : `${submissions.length} submission${submissions.length === 1 ? "" : "s"} in view.`
+        }
+        contentClassName="space-y-6"
+      >
+        <WorkspaceFilterBar className="gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <p className="max-w-[40rem] text-sm leading-6 text-muted-foreground">
+            Review intake packets, assign ownership, and move qualified cases
+            into patient records and consultation scheduling.
+          </p>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:flex-nowrap">
             <Select
               value={assignmentFilter}
               onValueChange={(value) =>
                 handleAssignmentFilterChange(value as AssignmentFilter)
               }
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[190px]">
                 <SelectValue placeholder="Filter assignee" />
               </SelectTrigger>
               <SelectContent>
@@ -697,7 +710,7 @@ export default function AdminStartJourneyPage() {
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StatusFilter)}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-xl bg-background/85 sm:w-[210px]">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
@@ -711,6 +724,7 @@ export default function AdminStartJourneyPage() {
             <Button
               variant="outline"
               size="icon"
+              className="size-11 shrink-0 rounded-xl self-end sm:self-auto"
               disabled={submissionsQuery.isFetching}
               onClick={() => submissionsQuery.refetch()}
               aria-label="Refresh submissions"
@@ -722,161 +736,167 @@ export default function AdminStartJourneyPage() {
               )}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {submissionsQuery.isLoading && (
-            <div className="flex min-h-[200px] items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
+        </WorkspaceFilterBar>
 
-          {submissionsQuery.isError && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-              Failed to load submissions. Please try refreshing the page.
-            </div>
-          )}
+        {submissionsQuery.isLoading ? (
+          <div className="flex min-h-[240px] items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : submissionsQuery.isError ? (
+          <WorkspaceEmptyState
+            title="Unable to load submissions"
+            description="Try refreshing the queue again. If the issue persists, inspect the underlying admin API response."
+            icon={<FileQuestion className="h-6 w-6" />}
+            action={
+              <Button
+                variant="outline"
+                onClick={() => submissionsQuery.refetch()}
+                disabled={submissionsQuery.isFetching}
+              >
+                Refresh queue
+              </Button>
+            }
+          />
+        ) : submissions.length === 0 ? (
+          <WorkspaceEmptyState
+            title="No submissions match this filter"
+            description="Change the status or assignee filters to pull a wider queue into view."
+            icon={<FileQuestion className="h-6 w-6" />}
+          />
+        ) : (
+          <div className="space-y-4">
+            {submissions.map((submission) => {
+              const assignment = formatSubmissionAssignee(submission);
+              const isRowUpdating =
+                updateSubmission.isPending && updatingId === submission.id;
+              const isRowDeleting =
+                deleteSubmission.isPending && deletingId === submission.id;
 
-          {!submissionsQuery.isLoading && submissions.length === 0 && (
-            <div className="rounded-md border border-dashed border-muted-foreground/30 p-8 text-center">
-              <FileQuestion className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                No submissions match this filter yet.
-              </p>
-            </div>
-          )}
-
-          {submissions.length > 0 && (
-            <div className="space-y-4">
-              {submissions.map((submission) => {
-                const assignment = formatSubmissionAssignee(submission);
-                const isRowUpdating =
-                  updateSubmission.isPending && updatingId === submission.id;
-                const isRowDeleting =
-                  deleteSubmission.isPending && deletingId === submission.id;
-
-                return (
-                  <div
-                    key={submission.id}
-                    className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                  >
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex flex-1 flex-col gap-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-lg font-semibold text-foreground">
-                                {submission.first_name} {submission.last_name}
-                              </p>
-                              <Badge variant="secondary" className="capitalize">
-                                {submission.origin ?? "web"}
+              return (
+                <div
+                  key={submission.id}
+                  className="rounded-[1.2rem] border border-border/70 bg-background/55 p-5 shadow-[0_24px_48px_-40px_rgba(0,0,0,0.9)] transition-colors hover:border-border hover:bg-background/70"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex flex-1 flex-col gap-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-lg font-semibold text-foreground">
+                              {submission.first_name} {submission.last_name}
+                            </p>
+                            <Badge variant="secondary" className="capitalize">
+                              {submission.origin ?? "web"}
+                            </Badge>
+                            {submission.age && (
+                              <Badge variant="outline">
+                                Age: {submission.age}
                               </Badge>
-                              {submission.age && (
-                                <Badge variant="outline">
-                                  Age: {submission.age}
-                                </Badge>
-                              )}
-                              {assignment.label && (
-                                <Badge
-                                  variant="outline"
-                                  className="gap-1 text-xs font-normal"
-                                >
-                                  Assigned • {assignment.label}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                              <span>
-                                Received {formatDateTime(submission.created_at)}
-                              </span>
-                              <span>
-                                Updated {formatDateTime(submission.updated_at)}
-                              </span>
-                            </div>
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              <p>{submission.email}</p>
-                              <p>{submission.phone}</p>
-                              <p className="uppercase">
-                                Based in {submission.country}
+                            )}
+                            {assignment.label && (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 text-xs font-normal"
+                              >
+                                Assigned • {assignment.label}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span>
+                              Received {formatDateTime(submission.created_at)}
+                            </span>
+                            <span>
+                              Updated {formatDateTime(submission.updated_at)}
+                            </span>
+                          </div>
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            <p>{submission.email}</p>
+                            <p>{submission.phone}</p>
+                            <p className="uppercase">
+                              Based in {submission.country}
+                            </p>
+                            {submission.consultation_mode && (
+                              <p className="font-medium text-primary capitalize">
+                                Prefers: {submission.consultation_mode}{" "}
+                                consultation
                               </p>
-                              {submission.consultation_mode && (
-                                <p className="font-medium text-primary capitalize">
-                                  Prefers: {submission.consultation_mode}{" "}
-                                  consultation
-                                </p>
-                              )}
-                              {submission.patient_id && (
-                                <Badge
-                                  variant="outline"
-                                  className="mt-1 w-fit text-xs font-normal"
-                                >
-                                  Linked patient •{" "}
-                                  {submission.patient_id.slice(0, 8)}
-                                  {submission.patient_id.length > 8 ? "…" : ""}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                              Treatment
-                            </p>
-                            <p className="text-sm text-foreground">
-                              {submission.treatment_name ?? "Not specified"}
-                              {submission.procedure_name &&
-                                ` — ${submission.procedure_name}`}
-                            </p>
-                            <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                              {submission.budget_range && (
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    Budget
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {submission.budget_range}
-                                  </p>
-                                </div>
-                              )}
-                              {submission.timeline && (
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    Timeline
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {submission.timeline}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                              Medical Condition
-                            </p>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {submission.medical_condition}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                              Travel Dates
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatTravelDates(submission.travel_dates)}
-                            </p>
-                            {submission.companion_travelers && (
-                              <p className="text-xs text-muted-foreground">
-                                Companions: {submission.companion_travelers}
-                              </p>
+                            )}
+                            {submission.patient_id && (
+                              <Badge
+                                variant="outline"
+                                className="mt-1 w-fit text-xs font-normal"
+                              >
+                                Linked patient •{" "}
+                                {submission.patient_id.slice(0, 8)}
+                                {submission.patient_id.length > 8 ? "…" : ""}
+                              </Badge>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-col items-stretch gap-2 md:items-end md:text-right">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                            Treatment
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {submission.treatment_name ?? "Not specified"}
+                            {submission.procedure_name &&
+                              ` — ${submission.procedure_name}`}
+                          </p>
+                          <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                            {submission.budget_range && (
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                  Budget
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {submission.budget_range}
+                                </p>
+                              </div>
+                            )}
+                            {submission.timeline && (
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                  Timeline
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {submission.timeline}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                            Medical Condition
+                          </p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {submission.medical_condition}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                            Travel Dates
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatTravelDates(submission.travel_dates)}
+                          </p>
+                          {submission.companion_travelers && (
+                            <p className="text-xs text-muted-foreground">
+                              Companions: {submission.companion_travelers}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex w-full flex-col gap-3 lg:w-[14.5rem] lg:shrink-0">
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="h-10 w-full rounded-xl px-3"
                           onClick={() => openDialogFor(submission)}
                         >
                           View Details
@@ -885,87 +905,88 @@ export default function AdminStartJourneyPage() {
                           size="sm"
                           variant="default"
                           onClick={() => handleSchedule(submission)}
-                          className="w-full"
+                          className="h-10 w-full rounded-xl px-3"
                         >
                           {getActionButtonLabel(submission)}
                         </Button>
-                        <AssignmentControl
-                          assigneeId={assignment.id}
-                          assigneeLabel={assignment.label}
-                          assigneeDescription={assignment.description}
-                          onAssign={(memberId) => {
-                            void handleAssignmentChange(submission, memberId);
-                          }}
-                          isPending={isRowUpdating}
-                          disabled={isRowDeleting}
-                        />
-                        <div className="space-y-1 text-xs text-muted-foreground md:text-right">
-                          <p className="uppercase tracking-wide text-muted-foreground/80">
-                            Status
-                          </p>
-                          <Select
-                            value={submission.status}
-                            onValueChange={(value) => {
-                              void handleStatusChange(
-                                submission.id,
-                                value as SubmissionStatus,
-                              );
-                            }}
-                            disabled={isRowUpdating || isRowDeleting}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STATUS_OPTIONS.filter(
-                                (option) => option.value !== "all",
-                              ).map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => handleDelete(submission.id)}
-                          disabled={
-                            deleteSubmission.isPending &&
-                            deletingId === submission.id
-                          }
-                        >
-                          {deletingId === submission.id &&
-                          deleteSubmission.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                              Deleting
-                            </>
-                          ) : (
-                            "Delete"
-                          )}
-                        </Button>
                       </div>
+                      <AssignmentControl
+                        assigneeId={assignment.id}
+                        assigneeLabel={assignment.label}
+                        assigneeDescription={assignment.description}
+                        onAssign={(memberId) => {
+                          void handleAssignmentChange(submission, memberId);
+                        }}
+                        isPending={isRowUpdating}
+                        disabled={isRowDeleting}
+                        triggerClassName="h-10 w-full justify-start rounded-xl px-3.5 text-left"
+                      />
+                      <div className="space-y-1.5 text-xs text-muted-foreground">
+                        <p className="uppercase tracking-wide text-muted-foreground/80">
+                          Status
+                        </p>
+                        <Select
+                          value={submission.status}
+                          onValueChange={(value) => {
+                            void handleStatusChange(
+                              submission.id,
+                              value as SubmissionStatus,
+                            );
+                          }}
+                          disabled={isRowUpdating || isRowDeleting}
+                        >
+                          <SelectTrigger className="h-10 w-full rounded-xl bg-background/85">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.filter(
+                              (option) => option.value !== "all",
+                            ).map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-full rounded-xl text-destructive"
+                        onClick={() => handleDelete(submission.id)}
+                        disabled={
+                          deleteSubmission.isPending &&
+                          deletingId === submission.id
+                        }
+                      >
+                        {deletingId === submission.id &&
+                        deleteSubmission.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                            Deleting
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </WorkspacePanel>
 
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
       >
         <DialogContent
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          className="max-h-[min(92vh,860px)] overflow-y-auto sm:max-w-4xl"
           unsaved={hasUnsavedDialogChanges}
         >
           <DialogHeader>
@@ -1229,7 +1250,7 @@ export default function AdminStartJourneyPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 border-t border-border/70 pt-2">
             <Button variant="outline" onClick={attemptCloseDialog}>
               Cancel
             </Button>
