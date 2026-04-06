@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -100,13 +100,18 @@ type PagesResponse = {
   pages: PageSummary[];
 };
 
+type LibraryFocusFilter = "all" | "review" | "seo";
+
 export default function CmsIndexPage() {
   const searchParams = useSearchParams();
   const locale = resolveAdminLocale(
     new URLSearchParams(searchParams.toString()),
   );
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [libraryFocusFilter, setLibraryFocusFilter] =
+    useState<LibraryFocusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const libraryRef = useRef<HTMLDivElement | null>(null);
   const cmsNavigationHref = buildAdminLocaleHref("/cms/navigation", locale);
   const cmsFaqHref = buildAdminLocaleHref("/cms/faqs", locale);
   const cmsSeoHref = buildAdminLocaleHref("/cms/seo", locale);
@@ -145,11 +150,26 @@ export default function CmsIndexPage() {
     return { total, published, drafts, needsSeo };
   }, [pages]);
 
+  const activeStatusFilter =
+    libraryFocusFilter === "review"
+      ? "draft"
+      : libraryFocusFilter === "seo"
+        ? "all"
+        : statusFilter;
+
   const filteredPages = useMemo(() => {
     return pages
       .filter((page) =>
-        statusFilter === "all" ? true : page.status === statusFilter,
+        activeStatusFilter === "all"
+          ? true
+          : page.status === activeStatusFilter,
       )
+      .filter((page) => {
+        if (libraryFocusFilter === "seo") {
+          return !(page.seo?.title && page.seo?.description);
+        }
+        return true;
+      })
       .filter((page) => {
         if (!searchTerm.trim()) return true;
         const query = searchTerm.toLowerCase();
@@ -158,7 +178,29 @@ export default function CmsIndexPage() {
           page.slug.toLowerCase().includes(query)
         );
       });
-  }, [pages, statusFilter, searchTerm]);
+  }, [pages, activeStatusFilter, libraryFocusFilter, searchTerm]);
+
+  const focusLibrary = (focus: Exclude<LibraryFocusFilter, "all">) => {
+    setLibraryFocusFilter(focus);
+    setSearchTerm("");
+    requestAnimationFrame(() => {
+      libraryRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+
+  const clearLibraryFocus = () => {
+    setLibraryFocusFilter("all");
+  };
+
+  const focusBadgeLabel =
+    libraryFocusFilter === "review"
+      ? "Showing draft pages that need review"
+      : libraryFocusFilter === "seo"
+        ? "Showing pages with missing metadata"
+        : null;
 
   const recentActivity = useMemo(() => {
     return [...pages]
@@ -210,6 +252,8 @@ export default function CmsIndexPage() {
           helperText="Content waiting for completion or approval."
           icon={Wand2}
           emphasisTone="warning"
+          onClick={() => focusLibrary("review")}
+          ariaLabel="Show draft pages that need review"
         />
         <WorkspaceMetricCard
           label="SEO follow-up"
@@ -218,11 +262,15 @@ export default function CmsIndexPage() {
           helperText="Routes missing a title, description, or both."
           icon={BookOpenCheck}
           emphasisTone={stats.needsSeo > 0 ? "warning" : "success"}
+          onClick={stats.needsSeo > 0 ? () => focusLibrary("seo") : undefined}
+          ariaLabel={
+            stats.needsSeo > 0 ? "Show pages with missing metadata" : undefined
+          }
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,360px)] 2xl:grid-cols-[minmax(0,1.9fr)_minmax(340px,380px)]">
-        <div className="space-y-6">
+        <div ref={libraryRef} className="space-y-6">
           <WorkspaceDataTableShell
             title="Page Library"
             description="A calmer editorial inventory with direct paths into editing, review, and live routes."
@@ -239,8 +287,11 @@ export default function CmsIndexPage() {
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:ml-auto xl:flex-nowrap">
                   <Tabs
-                    value={statusFilter}
-                    onValueChange={setStatusFilter as (value: string) => void}
+                    value={activeStatusFilter}
+                    onValueChange={(value) => {
+                      clearLibraryFocus();
+                      setStatusFilter(value);
+                    }}
                   >
                     <TabsList className="h-auto rounded-full bg-muted/40 p-1">
                       {statusFilters.map((filter) => (
@@ -270,6 +321,23 @@ export default function CmsIndexPage() {
                   </Button>
                 </div>
               </div>
+            }
+            footerActions={
+              focusBadgeLabel ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <Badge variant="secondary" className="w-fit">
+                    {focusBadgeLabel}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-fit"
+                    onClick={clearLibraryFocus}
+                  >
+                    Clear focus
+                  </Button>
+                </div>
+              ) : undefined
             }
             isEmpty={!isLoading && !error && filteredPages.length === 0}
             emptyState={
