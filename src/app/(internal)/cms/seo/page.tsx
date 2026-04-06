@@ -37,6 +37,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
+import {
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type InventoryEntry = {
   routeKey: string;
@@ -1128,10 +1132,16 @@ export default function CmsSeoWorkspacePage() {
 
   return (
     <div className="space-y-8 pb-12">
+      <WorkspacePageHeader
+        breadcrumb="CMS / SEO"
+        title="SEO Control Center"
+        subtitle="Pick a route, review SEO health, edit overrides, and manage redirect continuity without leaving the CMS workspace."
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-4">
-            <span>SEO Control Center</span>
+            <span>Inventory filters</span>
             <Button
               variant="outline"
               size="sm"
@@ -1540,74 +1550,76 @@ export default function CmsSeoWorkspacePage() {
         </DialogContent>
       </Dialog>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LinkIcon className="h-5 w-5" /> Redirect Continuity
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <Input
-              value={redirectFrom}
-              onChange={(event) => setRedirectFrom(event.target.value)}
-              placeholder="From path (e.g. /old-slug)"
-            />
-            <Input
-              value={redirectTo}
-              onChange={(event) => setRedirectTo(event.target.value)}
-              placeholder="To path (e.g. /new-slug)"
-            />
-            <Button onClick={createRedirect} disabled={redirectSaving}>
-              {redirectSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Create 301"
-              )}
-            </Button>
+      <WorkspacePanel
+        title={
+          <span className="flex items-center gap-2">
+            <LinkIcon className="h-5 w-5" />
+            Redirect Continuity
+          </span>
+        }
+        description="Keep route changes safe by creating and toggling redirect coverage directly from the SEO workspace."
+        contentClassName="space-y-4"
+      >
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+          <Input
+            value={redirectFrom}
+            onChange={(event) => setRedirectFrom(event.target.value)}
+            placeholder="From path (e.g. /old-slug)"
+          />
+          <Input
+            value={redirectTo}
+            onChange={(event) => setRedirectTo(event.target.value)}
+            placeholder="To path (e.g. /new-slug)"
+          />
+          <Button onClick={createRedirect} disabled={redirectSaving}>
+            {redirectSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Create 301"
+            )}
+          </Button>
+        </div>
+
+        {redirectsQuery.isError ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            Could not load redirects. Please refresh and try again.
           </div>
+        ) : null}
 
-          {redirectsQuery.isError ? (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              Could not load redirects. Please refresh and try again.
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            {(redirectsQuery.data?.redirects ?? []).map((entry) => (
-              <div
-                key={entry.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
-              >
-                <div className="space-y-1 text-sm">
-                  <div className="font-medium">
-                    {entry.from_path}{" "}
-                    <span className="text-muted-foreground">→</span>{" "}
-                    {entry.to_path}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {entry.code} • {entry.source ?? "n/a"}
-                  </div>
+        <div className="space-y-2">
+          {(redirectsQuery.data?.redirects ?? []).map((entry) => (
+            <div
+              key={entry.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
+            >
+              <div className="space-y-1 text-sm">
+                <div className="font-medium">
+                  {entry.from_path}{" "}
+                  <span className="text-muted-foreground">→</span>{" "}
+                  {entry.to_path}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleRedirect(entry)}
-                  disabled={redirectToggleId === entry.id}
-                >
-                  {redirectToggleId === entry.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : entry.is_active ? (
-                    "Disable"
-                  ) : (
-                    "Enable"
-                  )}
-                </Button>
+                <div className="text-muted-foreground">
+                  {entry.code} • {entry.source ?? "n/a"}
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toggleRedirect(entry)}
+                disabled={redirectToggleId === entry.id}
+              >
+                {redirectToggleId === entry.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : entry.is_active ? (
+                  "Disable"
+                ) : (
+                  "Enable"
+                )}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </WorkspacePanel>
 
       <Dialog
         open={editorOpen}
