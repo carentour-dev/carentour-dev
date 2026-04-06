@@ -51,6 +51,7 @@ type AssignmentControlProps = {
   disabled?: boolean;
   allowUnassign?: boolean;
   placeholder?: string;
+  triggerClassName?: string;
 };
 
 export function AssignmentControl({
@@ -62,6 +63,7 @@ export function AssignmentControl({
   disabled = false,
   allowUnassign = true,
   placeholder = "Assign to…",
+  triggerClassName,
 }: AssignmentControlProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -104,7 +106,7 @@ export function AssignmentControl({
           variant="outline"
           size="sm"
           disabled={disabled || isPending || isFetching}
-          className="flex items-center gap-2"
+          className={cn("flex items-center gap-2", triggerClassName)}
         >
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
