@@ -128,30 +128,30 @@ export default function BlogDashboard() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
             <QuickActionButton
               href="/cms/blog/posts"
               icon={<FileText className="h-5 w-5" />}
               title="Manage Posts"
-              description="View and edit all posts"
+              description="Open the post library and edit published or draft articles."
             />
             <QuickActionButton
               href="/cms/blog/categories"
               icon={<BarChart3 className="h-5 w-5" />}
               title="Categories"
-              description="Organize content"
+              description="Organize blog topics and keep archive structure easy to browse."
             />
             <QuickActionButton
               href="/cms/blog/authors"
               icon={<Edit3 className="h-5 w-5" />}
               title="Authors"
-              description="Manage authors"
+              description="Maintain contributor profiles and ownership across posts."
             />
             <QuickActionButton
               href="/cms/blog/tags"
               icon={<Tag className="h-5 w-5" />}
               title="Tags"
-              description="Manage post tags"
+              description="Keep reusable tag labels clean, searchable, and consistent."
             />
           </div>
         </CardContent>
@@ -287,15 +287,25 @@ function QuickActionButton({
   description: string;
 }) {
   return (
-    <Link href={href}>
-      <Card className="hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
-        <CardContent className="flex items-start gap-3 p-4">
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            {icon}
+    <Link href={href} className="group block h-full">
+      <Card className="h-full cursor-pointer border-border/70 bg-card/60 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_20px_40px_-28px_rgba(0,0,0,0.85)]">
+        <CardContent className="flex h-full flex-col justify-between gap-8 p-5">
+          <div className="space-y-5">
+            <div className="flex size-14 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-foreground">
+              {icon}
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                {title}
+              </h3>
+              <p className="min-h-[3.5rem] text-sm leading-6 text-muted-foreground">
+                {description}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{title}</h3>
-            <p className="text-sm text-muted-foreground">{description}</p>
+          <div className="flex items-center justify-between text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+            <span>Open section</span>
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
           </div>
         </CardContent>
       </Card>
