@@ -1,29 +1,10 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { WorkspaceModuleTopBar } from "@/components/workspaces/WorkspaceModuleTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -40,7 +21,11 @@ import {
   resolveFinanceCapabilities,
   type FinanceCapabilities,
 } from "@/lib/finance/capabilities";
-import { buildModuleTabs, type ModuleTab } from "@/lib/workspaces/module-nav";
+import { buildModuleTabs } from "@/lib/workspaces/module-nav";
+import {
+  InternalWorkspaceShell,
+  type InternalWorkspaceShellNavSection,
+} from "@/components/workspaces/InternalWorkspaceShell";
 import {
   BarChart3,
   BookOpen,
@@ -49,7 +34,6 @@ import {
   CircleDollarSign,
   LayoutDashboard,
   Loader2,
-  LogOut,
   SlidersHorizontal,
   Users,
   Wallet,
@@ -136,6 +120,20 @@ const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
   },
 ];
 
+const FINANCE_NAV_SECTIONS: Array<{
+  label: string;
+  items: FinanceNavItem[];
+}> = [
+  {
+    label: "Workspace",
+    items: FINANCE_NAV_ITEMS.slice(0, 6),
+  },
+  {
+    label: "Ledger & Reports",
+    items: FINANCE_NAV_ITEMS.slice(6),
+  },
+];
+
 export function FinanceShell({ children }: FinanceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -182,13 +180,6 @@ export function FinanceShell({ children }: FinanceShellProps) {
     hasAnyOperationsSection(operationsEntitlements);
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
   const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
-  const visibleFinanceNavItems = useMemo(
-    () =>
-      FINANCE_NAV_ITEMS.filter((item) =>
-        item.isVisible ? item.isVisible(financeCapabilities) : true,
-      ),
-    [financeCapabilities],
-  );
   const moduleTabs = useMemo(
     () =>
       buildModuleTabs({
@@ -207,6 +198,26 @@ export function FinanceShell({ children }: FinanceShellProps) {
       hasOperationsAccess,
       pathname,
     ],
+  );
+  const shellNavSections = useMemo<InternalWorkspaceShellNavSection[]>(
+    () =>
+      FINANCE_NAV_SECTIONS.map((section) => ({
+        label: section.label,
+        items: section.items
+          .filter((item) =>
+            item.isVisible ? item.isVisible(financeCapabilities) : true,
+          )
+          .map((item) => ({
+            label: item.label,
+            href: item.href,
+            icon: item.icon,
+            active:
+              pathname === item.href ||
+              (item.href !== "/finance" &&
+                Boolean(pathname?.startsWith(`${item.href}/`))),
+          })),
+      })).filter((section) => section.items.length > 0),
+    [financeCapabilities, pathname],
   );
 
   const handleSignOut = async () => {
@@ -266,159 +277,40 @@ export function FinanceShell({ children }: FinanceShellProps) {
   }
 
   return (
-    <>
-      <SidebarProvider>
-        <Sidebar
-          collapsible="icon"
-          className="bg-sidebar text-sidebar-foreground print:hidden"
-        >
-          <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-            <FinanceBranding />
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Finance</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {visibleFinanceNavItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/finance" &&
-                        pathname?.startsWith(`${item.href}/`));
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          tooltip={item.label}
-                        >
-                          <Link href={item.href}>
-                            <Icon className="h-4 w-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="border-t border-sidebar-border">
-            <div className="flex items-center gap-3 rounded-md bg-sidebar-accent/30 px-3 py-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <Users className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {profile?.displayName ?? "Team member"}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {(profile?.roles ?? ["user"]).map((role) => (
-                    <Badge
-                      key={role}
-                      variant="outline"
-                      className="w-fit text-xs capitalize"
-                    >
-                      {role.replace(/[-_]/g, " ")}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background">
-          <FinanceTopbar tabs={moduleTabs} hasAdminAccess={hasAdminAccess} />
-          <main className="flex-1 overflow-y-auto px-6 pb-10 pt-6 lg:px-10">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-
-      {isLoading ? (
-        <div className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/60 backdrop-blur-sm">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Refreshing finance access…
-          </p>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function FinanceTopbar({
-  tabs,
-  hasAdminAccess,
-}: {
-  tabs: ModuleTab[];
-  hasAdminAccess: boolean;
-}) {
-  return (
-    <WorkspaceModuleTopBar
-      tabs={tabs}
-      title="Finance Workspace"
-      subtitle="Invoice lifecycle, payments, and receivables."
-      leftSlot={<SidebarTrigger className="-ml-1 lg:hidden" />}
-      rightSlot={
+    <InternalWorkspaceShell
+      branding={{
+        title: "Care N Tour",
+        subtitle: "Finance Workspace",
+        lightLogoSrc: "/carentour-logo-dark-alt.png",
+        darkLogoSrc: "/carentour-logo-light-alt.png",
+        logoAlt: "Care N Tour logo",
+      }}
+      navSections={shellNavSections}
+      moduleTabs={moduleTabs}
+      headerTitle="Finance Workspace"
+      headerSubtitle="Invoice lifecycle, payables, journals, and reporting."
+      headerActions={
         <>
           {hasAdminAccess ? (
             <Button asChild size="sm" variant="outline">
               <Link href="/admin/finance">Admin Finance View</Link>
             </Button>
           ) : null}
-          <ThemeToggle />
+          <ThemeToggle variant="workspace" />
         </>
       }
-    />
-  );
-}
-
-function FinanceBranding() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const logoSrc =
-    mounted && resolvedTheme === "dark"
-      ? "/carentour-logo-light-alt.png"
-      : "/carentour-logo-dark-alt.png";
-
-  return (
-    <div className="flex items-center gap-3 px-1">
-      <Image
-        src={logoSrc}
-        alt="Care N Tour"
-        width={600}
-        height={400}
-        className="h-10 w-auto object-contain"
-        priority
-      />
-      <div className="flex flex-col">
-        <span className="text-xs font-medium uppercase tracking-tight text-muted-foreground">
-          Staff workspace
-        </span>
-        <span className="flex items-center gap-1 text-sm font-semibold text-foreground">
-          <CircleDollarSign className="h-4 w-4 text-primary" />
-          Finance
-        </span>
-      </div>
-    </div>
+      profile={{
+        displayName: profile?.displayName ?? "Team member",
+        roles: profile?.roles ?? [],
+        icon: CircleDollarSign,
+      }}
+      onSignOut={handleSignOut}
+      loading={isLoading}
+      loadingMessage="Refreshing finance access..."
+      contentWidth="dashboard"
+      contentClassName="max-w-[1520px]"
+    >
+      {children}
+    </InternalWorkspaceShell>
   );
 }
