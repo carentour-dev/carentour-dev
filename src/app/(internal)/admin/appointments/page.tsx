@@ -6,13 +6,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -49,16 +42,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
+import {
+  WorkspaceEmptyState,
+  WorkspaceFilterBar,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
-import { CalendarDays, Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 
 type AppointmentRow =
@@ -94,6 +93,21 @@ const appointmentStatuses = [
   "rescheduled",
 ] as const;
 type AppointmentStatus = (typeof appointmentStatuses)[number];
+
+const getAppointmentStatusTone = (status: AppointmentStatus) => {
+  switch (status) {
+    case "completed":
+      return "success" as const;
+    case "cancelled":
+      return "danger" as const;
+    case "rescheduled":
+      return "warning" as const;
+    case "confirmed":
+      return "info" as const;
+    default:
+      return "default" as const;
+  }
+};
 
 const nullableUuidField = z.preprocess((value) => {
   if (typeof value === "string") {
@@ -360,34 +374,48 @@ export default function AdminAppointmentsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-            <CalendarDays className="h-6 w-6 text-primary" />
-            Care Appointments
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Track patient appointments across service providers and ensure
-            everyone has the right context.
-          </p>
-        </div>
-        <Button onClick={openCreateDialog}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add appointment
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Care Appointments"
+        subtitle="Track patient appointments across service providers and ensure every coordinator, doctor, and patient handoff stays aligned."
+        actions={
+          <Button size="sm" onClick={openCreateDialog}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add appointment
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Appointments</CardTitle>
-            <CardDescription>
-              {appointments.length === 0
-                ? "No appointments match the current filters."
-                : `${appointments.length} appointment${appointments.length === 1 ? "" : "s"} in view.`}
-            </CardDescription>
+      <WorkspacePanel
+        title="Appointments"
+        description={
+          appointments.length === 0
+            ? "No appointments match the current filters."
+            : `${appointments.length} appointment${appointments.length === 1 ? "" : "s"} in view.`
+        }
+        contentClassName="space-y-6"
+      >
+        <WorkspaceFilterBar className="gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {appointmentStatuses.map((status) => (
+              <WorkspaceStatusBadge
+                key={status}
+                tone={
+                  statusFilter === "all" || statusFilter === status
+                    ? getAppointmentStatusTone(status)
+                    : "muted"
+                }
+                className="gap-2 border-border/70 px-3 py-1.5"
+              >
+                <span>{status.replace("_", " ")}</span>
+                <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[9px] tracking-[0.16em] text-foreground/80">
+                  {groupedByStatus[status]}
+                </span>
+              </WorkspaceStatusBadge>
+            ))}
           </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Select
               value={statusFilter}
@@ -395,7 +423,7 @@ export default function AdminAppointmentsPage() {
                 setStatusFilter(value as AppointmentStatus | "all")
               }
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] bg-background/80">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
@@ -407,7 +435,8 @@ export default function AdminAppointmentsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2 text-sm">
+
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-2 text-sm">
               <Switch
                 checked={upcomingOnly}
                 onCheckedChange={setUpcomingOnly}
@@ -418,155 +447,148 @@ export default function AdminAppointmentsPage() {
               </label>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3 text-sm">
-            {appointmentStatuses.map((status) => (
-              <Badge
-                key={status}
-                variant={statusFilter === status ? "default" : "secondary"}
-                className="flex items-center gap-1"
-              >
-                <span className="capitalize">{status.replace("_", " ")}</span>
-                <span className="text-xs">{groupedByStatus[status]}</span>
-              </Badge>
-            ))}
+        </WorkspaceFilterBar>
+
+        {query.isLoading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading appointments…
           </div>
-          <Separator />
-          {query.isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading appointments…
-            </div>
-          ) : appointments.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-muted-foreground/30 p-10 text-center">
-              <p className="font-medium text-foreground">
-                No appointments found.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Adjust filters or add a new appointment to see it here.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Starts</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Service Provider
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Consultation
-                    </TableHead>
-                    <TableHead className="w-[140px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
+        ) : appointments.length === 0 ? (
+          <WorkspaceEmptyState
+            title="No appointments found"
+            description="Adjust the current filters or create a new appointment to populate this schedule."
+          />
+        ) : (
+          <div className="overflow-hidden rounded-[1.15rem] border border-border/70 bg-background/55">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/70 hover:bg-transparent">
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Patient
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Doctor
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Starts
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="hidden h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground lg:table-cell">
+                    Service Provider
+                  </TableHead>
+                  <TableHead className="hidden h-12 px-5 text-xs uppercase tracking-[0.22em] text-muted-foreground lg:table-cell">
+                    Consultation
+                  </TableHead>
+                  <TableHead className="h-12 px-5 text-right text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {appointments.map((appointment) => (
+                  <TableRow
+                    key={appointment.id}
+                    className="border-border/70 hover:bg-muted/30"
+                  >
+                    <TableCell className="px-5 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-foreground">
+                          {appointment.patients?.full_name ?? "Unknown patient"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {appointment.patients?.contact_email ??
+                            appointment.patient_id}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      {appointment.doctors ? (
+                        <div className="flex flex-col">
                           <span className="font-medium text-foreground">
-                            {appointment.patients?.full_name ??
-                              "Unknown patient"}
+                            {appointment.doctors.name}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {appointment.patients?.contact_email ??
-                              appointment.patient_id}
+                            {appointment.doctors.title}
                           </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {appointment.doctors ? (
-                          <div className="flex flex-col">
-                            <span className="font-medium text-foreground">
-                              {appointment.doctors.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {appointment.doctors.title}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not assigned
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Not assigned
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {format(new Date(appointment.starts_at), "PPpp")}
+                        </span>
+                        {appointment.ends_at ? (
+                          <span className="text-xs text-muted-foreground">
+                            Ends {format(new Date(appointment.ends_at), "PPpp")}
                           </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      <Badge
+                        variant={
+                          appointment.status === "scheduled" ||
+                          appointment.status === "confirmed"
+                            ? "default"
+                            : appointment.status === "completed"
+                              ? "success"
+                              : "secondary"
+                        }
+                        className="capitalize"
+                      >
+                        {appointment.status.replace("_", " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden px-5 py-4 lg:table-cell">
+                      {appointment.service_provider ? (
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">
-                            {format(new Date(appointment.starts_at), "PPpp")}
+                            {appointment.service_provider.name}
                           </span>
-                          {appointment.ends_at ? (
-                            <span className="text-xs text-muted-foreground">
-                              Ends{" "}
-                              {format(new Date(appointment.ends_at), "PPpp")}
-                            </span>
-                          ) : null}
+                          <span className="text-xs text-muted-foreground">
+                            {appointment.service_provider.facility_type}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            appointment.status === "scheduled" ||
-                            appointment.status === "confirmed"
-                              ? "default"
-                              : appointment.status === "completed"
-                                ? "success"
-                                : "secondary"
-                          }
-                          className="capitalize"
-                        >
-                          {appointment.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {appointment.service_provider ? (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {appointment.service_provider.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {appointment.service_provider.facility_type}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not assigned
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Not assigned
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden px-5 py-4 lg:table-cell">
+                      {appointment.patient_consultations ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {format(
+                              new Date(
+                                appointment.patient_consultations.scheduled_at,
+                              ),
+                              "PPpp",
+                            )}
                           </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {appointment.patient_consultations ? (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {format(
-                                new Date(
-                                  appointment.patient_consultations.scheduled_at,
-                                ),
-                                "PPpp",
-                              )}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {appointment.patient_consultations.status.replace(
-                                "_",
-                                " ",
-                              )}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not linked
+                          <span className="text-xs text-muted-foreground">
+                            {appointment.patient_consultations.status.replace(
+                              "_",
+                              " ",
+                            )}
                           </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="flex justify-end gap-2">
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Not linked
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -582,21 +604,24 @@ export default function AdminAppointmentsPage() {
                         >
                           Delete
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </WorkspacePanel>
 
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(open))}
       >
-        <DialogContent className="sm:max-w-2xl" unsaved={hasUnsavedChanges}>
+        <DialogContent
+          className="max-h-[min(92vh,860px)] overflow-y-auto sm:max-w-4xl"
+          unsaved={hasUnsavedChanges}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingAppointment ? "Edit appointment" : "Create appointment"}
@@ -608,8 +633,8 @@ export default function AdminAppointmentsPage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-7">
+              <div className="grid gap-5 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="patient_id"
@@ -836,7 +861,7 @@ export default function AdminAppointmentsPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <DialogFooter className="border-t border-border/70 pt-2">
                 <Button
                   type="button"
                   variant="outline"
