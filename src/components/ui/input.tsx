@@ -31,7 +31,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       commonProps.defaultValue = normalizeInputValue(defaultValue);
     }
 
-    return <input {...commonProps} ref={ref} />;
+    return <input data-slot="input" {...commonProps} ref={ref} />;
   },
 );
 Input.displayName = "Input";
