@@ -39,6 +39,10 @@ import { Switch } from "@/components/ui/switch";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { resolveFinanceCapabilities } from "@/lib/finance/capabilities";
 import { humanizeFinanceLabel } from "@/lib/finance/labels";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type Counterparty = {
   id: string;
@@ -547,15 +551,12 @@ export function FinanceCounterpartiesWorkspace() {
 
   if (!canViewCounterparties && !canRunSyncPreview) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Counterparty Registry
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage AP counterparties and run manual sync with providers/hotels.
-          </p>
-        </header>
+      <div className="space-y-8">
+        <WorkspacePageHeader
+          breadcrumb="Finance / Counterparties"
+          title="Counterparty Registry"
+          subtitle="Manage AP counterparties and run manual sync with providers and hotels."
+        />
         <Card className="border-border/80 bg-muted/20">
           <CardHeader>
             <CardTitle>Counterparty access is required</CardTitle>
@@ -570,47 +571,35 @@ export function FinanceCounterpartiesWorkspace() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Counterparty Registry
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage AP counterparties and run manual sync with providers/hotels.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Finance / Counterparties"
+        title="Counterparty Registry"
+        subtitle="Manage AP counterparties and run manual sync with providers and hotels."
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Total counterparties</CardDescription>
-            <CardTitle>{canViewCounterparties ? summary.total : "-"}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Active</CardDescription>
-            <CardTitle>
-              {canViewCounterparties ? summary.active : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Linked from source</CardDescription>
-            <CardTitle>
-              {canViewCounterparties ? summary.linked : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="border-b-0 bg-transparent pb-2">
-            <CardDescription>Latest row sync</CardDescription>
-            <CardTitle className="text-base">
-              {formatDateTime(summary.latestSyncedAt)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Total counterparties"
+          value={canViewCounterparties ? summary.total : "-"}
+          helperText="Partner records currently available for payable workflows."
+        />
+        <WorkspaceMetricCard
+          label="Active"
+          value={canViewCounterparties ? summary.active : "-"}
+          helperText="Registry entries available for sync and payable linkage."
+        />
+        <WorkspaceMetricCard
+          label="Linked from source"
+          value={canViewCounterparties ? summary.linked : "-"}
+          helperText="Rows imported from provider and hotel source systems."
+        />
+        <WorkspaceMetricCard
+          label="Latest row sync"
+          value={formatDateTime(summary.latestSyncedAt)}
+          valueDensity="compact"
+          helperText="Most recent counterparty synchronization timestamp."
+        />
       </div>
 
       <Card>
