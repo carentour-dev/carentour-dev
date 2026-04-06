@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +22,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -47,6 +45,10 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import {
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -338,424 +340,409 @@ export default function AdminDoctorsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Doctors
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage medical experts, clinical experience, and availability for
-            Care N Tour patients.
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={openCreateDialog}>
-              <PlusCircle className="h-4 w-4" />
-              Add Doctor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
-            <DialogHeader>
-              <DialogTitle>
-                {editingDoctor ? "Edit Doctor" : "Add Doctor"}
-              </DialogTitle>
-              <DialogDescription>
-                Provide credentials and profile details. You can refine the
-                record later with additional data.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                className="grid gap-4"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <Input placeholder="Dr. Layla Khalil" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <Input placeholder="Chief Ophthalmologist" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="specialization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specialization</FormLabel>
-                        <Input placeholder="Refractive Surgery" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="experience_years"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Experience (years)</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Doctors"
+        subtitle="Manage medical experts, clinical experience, and availability for Care N Tour patients."
+        actions={
+          <Button size="sm" onClick={openCreateDialog}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Doctor
+          </Button>
+        }
+      />
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
+          <DialogHeader>
+            <DialogTitle>
+              {editingDoctor ? "Edit Doctor" : "Add Doctor"}
+            </DialogTitle>
+            <DialogDescription>
+              Provide credentials and profile details. You can refine the record
+              later with additional data.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="education"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Education</FormLabel>
+                      <FormLabel>Name</FormLabel>
+                      <Input placeholder="Dr. Layla Khalil" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <Input placeholder="Chief Ophthalmologist" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="specialization"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Specialization</FormLabel>
+                      <Input placeholder="Refractive Surgery" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="experience_years"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience (years)</FormLabel>
                       <Input
-                        placeholder="Johns Hopkins Fellowship"
+                        type="number"
+                        min={0}
                         {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <FormField
+                control={form.control}
+                name="education"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Education</FormLabel>
+                    <Input placeholder="Johns Hopkins Fellowship" {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Biography</FormLabel>
+                    <Textarea
+                      rows={3}
+                      placeholder="Short overview shown on doctor profiles."
+                      {...field}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="languages_input"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Languages</FormLabel>
+                    <FormDescription>
+                      Comma separated list (e.g. English, Arabic).
+                    </FormDescription>
+                    <Input {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="bio"
+                  name="achievements_input"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Biography</FormLabel>
-                      <Textarea
-                        rows={3}
-                        placeholder="Short overview shown on doctor profiles."
-                        {...field}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="languages_input"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Languages</FormLabel>
+                      <FormLabel>Achievements</FormLabel>
                       <FormDescription>
-                        Comma separated list (e.g. English, Arabic).
+                        Comma separated (e.g. 1,500+ surgeries).
                       </FormDescription>
                       <Input {...field} />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="achievements_input"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Achievements</FormLabel>
-                        <FormDescription>
-                          Comma separated (e.g. 1,500+ surgeries).
-                        </FormDescription>
-                        <Input {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="certifications_input"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Certifications</FormLabel>
-                        <FormDescription>
-                          Comma separated (e.g. Board Certified).
-                        </FormDescription>
-                        <Input {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="patient_rating"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Patient rating</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={5}
-                          step="0.1"
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="total_reviews"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total reviews</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="successful_procedures"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total procedures</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="research_publications"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Research publications</FormLabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          {...field}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <FormField
                   control={form.control}
-                  name="is_active"
+                  name="certifications_input"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        value={(field.value ?? true) ? "active" : "inactive"}
-                        onValueChange={(value) =>
-                          field.onChange(value === "active")
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Certifications</FormLabel>
+                      <FormDescription>
+                        Comma separated (e.g. Board Certified).
+                      </FormDescription>
+                      <Input {...field} />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="avatar_url"
+                  name="patient_rating"
                   render={({ field }) => (
                     <FormItem>
-                      <ImageUploader
-                        label="Profile photo"
-                        description="Upload a square image for best results."
-                        value={field.value ?? ""}
-                        onChange={(url) => field.onChange(url ?? null)}
+                      <FormLabel>Patient rating</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step="0.1"
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="total_reviews"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total reviews</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-                <div className="flex justify-end gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={attemptCloseDialog}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createDoctor.isPending || updateDoctor.isPending}
-                  >
-                    {(createDoctor.isPending || updateDoctor.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {editingDoctor ? "Save changes" : "Create doctor"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </header>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="successful_procedures"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total procedures</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="research_publications"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Research publications</FormLabel>
+                      <Input
+                        type="number"
+                        min={0}
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-      <Card>
-        <CardHeader className="space-y-4">
-          <CardTitle className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <span>Doctor directory</span>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                placeholder="Search doctors..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="sm:w-48 lg:w-72"
-              />
-              <Select
-                value={specializationFilter}
-                onValueChange={setSpecializationFilter}
-              >
-                <SelectTrigger className="sm:w-44">
-                  <SelectValue placeholder="Filter specialization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {specializations.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {doctorsQuery.isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name &amp; Title</TableHead>
-                  <TableHead>Specialization</TableHead>
-                  <TableHead>Experience</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDoctors.map((doctor) => (
-                  <TableRow key={doctor.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {doctor.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {doctor.title}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{doctor.specialization}</Badge>
-                    </TableCell>
-                    <TableCell>{doctor.experience_years} yrs</TableCell>
-                    <TableCell>
-                      {typeof doctor.patient_rating === "number"
-                        ? `${doctor.patient_rating.toFixed(1)}/5`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(doctor)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        disabled={deleteDoctor.isPending}
-                        onClick={() => deleteDoctor.mutate(doctor.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-
-                {filteredDoctors.length === 0 && !doctorsQuery.isLoading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="py-10 text-center text-sm text-muted-foreground"
+              <FormField
+                control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      value={(field.value ?? true) ? "active" : "inactive"}
+                      onValueChange={(value) =>
+                        field.onChange(value === "active")
+                      }
                     >
-                      No doctors found. Adjust filters or create a new record.
-                    </TableCell>
-                  </TableRow>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              />
+
+              <FormField
+                control={form.control}
+                name="avatar_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <ImageUploader
+                      label="Profile photo"
+                      description="Upload a square image for best results."
+                      value={field.value ?? ""}
+                      onChange={(url) => field.onChange(url ?? null)}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={attemptCloseDialog}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createDoctor.isPending || updateDoctor.isPending}
+                >
+                  {(createDoctor.isPending || updateDoctor.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {editingDoctor ? "Save changes" : "Create doctor"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <WorkspacePanel
+        title="Doctor directory"
+        actions={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <Input
+              placeholder="Search doctors..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-11 rounded-xl bg-background/85 sm:w-[280px]"
+            />
+            <Select
+              value={specializationFilter}
+              onValueChange={setSpecializationFilter}
+            >
+              <SelectTrigger className="h-11 rounded-xl bg-background/85 sm:w-[180px]">
+                <SelectValue placeholder="Filter specialization" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {specializations.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      >
+        {doctorsQuery.isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name &amp; Title</TableHead>
+                <TableHead>Specialization</TableHead>
+                <TableHead>Experience</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead className="w-32 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredDoctors.map((doctor) => (
+                <TableRow key={doctor.id}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">
+                        {doctor.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {doctor.title}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{doctor.specialization}</Badge>
+                  </TableCell>
+                  <TableCell>{doctor.experience_years} yrs</TableCell>
+                  <TableCell>
+                    {typeof doctor.patient_rating === "number"
+                      ? `${doctor.patient_rating.toFixed(1)}/5`
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(doctor)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      disabled={deleteDoctor.isPending}
+                      onClick={() => deleteDoctor.mutate(doctor.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {filteredDoctors.length === 0 && !doctorsQuery.isLoading && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-10 text-center text-sm text-muted-foreground"
+                  >
+                    No doctors found. Adjust filters or create a new record.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </WorkspacePanel>
     </div>
   );
 }
