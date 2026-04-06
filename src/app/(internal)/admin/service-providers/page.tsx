@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +14,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -50,6 +48,10 @@ import {
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  WorkspacePageHeader,
+  WorkspacePanel,
+} from "@/components/workspaces/WorkspacePrimitives";
 import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -821,1295 +823,1273 @@ export default function AdminServiceProvidersPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Service Providers
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Catalogue partner service providers with accreditation, amenities,
-            and concierge contacts.
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={openCreateDialog}>
-              <PlusCircle className="h-4 w-4" />
-              Add Service Provider
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
-            <DialogHeader>
-              <DialogTitle>
-                {editingServiceProvider
-                  ? "Edit Service Provider"
-                  : "Add Service Provider"}
-              </DialogTitle>
-              <DialogDescription>
-                Store partner service provider metadata so coordinators can
-                match patients with the right location.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                className="grid gap-4"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <Input placeholder="Cairo Heart Institute" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Slug</FormLabel>
-                        <Input placeholder="cairo-heart-institute" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="facility_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Service provider type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {serviceProviderTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type.replace("_", " ")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="rating"
-                    render={({ field }) => {
-                      const { name, onBlur, ref, value, onChange } = field;
-
-                      return (
-                        <FormItem>
-                          <FormLabel>Rating</FormLabel>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={5}
-                            step="0.1"
-                            name={name}
-                            ref={ref}
-                            value={value ?? ""}
-                            onBlur={onBlur}
-                            onChange={(event) =>
-                              onChange(
-                                event.target.value === ""
-                                  ? undefined
-                                  : Number(event.target.value),
-                              )
-                            }
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="review_count"
-                    render={({ field }) => {
-                      const { name, onBlur, ref, value, onChange } = field;
-
-                      return (
-                        <FormItem>
-                          <FormLabel>Review count</FormLabel>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="1"
-                            name={name}
-                            ref={ref}
-                            value={value ?? ""}
-                            onBlur={onBlur}
-                            onChange={(event) =>
-                              onChange(
-                                event.target.value === ""
-                                  ? undefined
-                                  : Number(event.target.value),
-                              )
-                            }
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="country_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <FormDescription>
-                          Used for filtering and provider listings.
-                        </FormDescription>
-                        <Input placeholder="Egypt" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <Input placeholder="Cairo" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Admin"
+        title="Service Providers"
+        subtitle="Catalogue partner service providers with accreditation, amenities, and concierge contacts."
+        actions={
+          <Button size="sm" onClick={openCreateDialog}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Service Provider
+          </Button>
+        }
+      />
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-2xl" unsaved={hasUnsavedChanges}>
+          <DialogHeader>
+            <DialogTitle>
+              {editingServiceProvider
+                ? "Edit Service Provider"
+                : "Add Service Provider"}
+            </DialogTitle>
+            <DialogDescription>
+              Store partner service provider metadata so coordinators can match
+              patients with the right location.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="description"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <Textarea
-                        rows={3}
-                        placeholder="Highlight specialties, certifications, and recovery suites."
-                        {...field}
-                      />
+                      <FormLabel>Name</FormLabel>
+                      <Input placeholder="Cairo Heart Institute" {...field} />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
-                  name="overview"
+                  name="slug"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Overview</FormLabel>
-                      <Textarea
-                        rows={3}
-                        placeholder="Short summary for the provider profile page."
-                        {...field}
-                      />
+                      <FormLabel>Slug</FormLabel>
+                      <Input placeholder="cairo-heart-institute" {...field} />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="address_line1"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Street / district</FormLabel>
-                        <Input placeholder="Medical District" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="address_city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <Input placeholder="Cairo" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="address_country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <Input placeholder="Egypt" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <Input placeholder="+20 100 7654321" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contact_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <Input
-                          placeholder="coordinator@provider.com"
-                          {...field}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <Input placeholder="https://provider.com" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="amenities_input"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amenities</FormLabel>
-                        <FormDescription>
-                          Comma separated list (e.g. 24/7 ICU, Concierge desk).
-                        </FormDescription>
-                        <Input {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="specialties_input"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specialties</FormLabel>
-                        <FormDescription>
-                          Comma separated (e.g. Cardiology, Orthopedics).
-                        </FormDescription>
-                        <Input {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="facilities_input"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Facilities provided</FormLabel>
-                        <FormDescription>
-                          Comma separated (e.g. Cath lab, Recovery suites).
-                        </FormDescription>
-                        <Input {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="rounded-lg border border-border/60 p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <FormLabel className="text-base">
-                        Infrastructure
-                      </FormLabel>
-                      <FormDescription>
-                        Capture capacity and clinical capabilities shown on the
-                        provider profile.
-                      </FormDescription>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <FormField
-                      control={form.control}
-                      name="bed_count"
-                      render={({ field }) => {
-                        const { name, onBlur, ref, value, onChange } = field;
-                        return (
-                          <FormItem>
-                            <FormLabel>Total beds</FormLabel>
-                            <Input
-                              type="number"
-                              min={0}
-                              name={name}
-                              ref={ref}
-                              value={value ?? ""}
-                              onBlur={onBlur}
-                              onChange={(event) =>
-                                onChange(
-                                  event.target.value === ""
-                                    ? undefined
-                                    : Number(event.target.value),
-                                )
-                              }
-                            />
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="icu_beds"
-                      render={({ field }) => {
-                        const { name, onBlur, ref, value, onChange } = field;
-                        return (
-                          <FormItem>
-                            <FormLabel>ICU beds</FormLabel>
-                            <Input
-                              type="number"
-                              min={0}
-                              name={name}
-                              ref={ref}
-                              value={value ?? ""}
-                              onBlur={onBlur}
-                              onChange={(event) =>
-                                onChange(
-                                  event.target.value === ""
-                                    ? undefined
-                                    : Number(event.target.value),
-                                )
-                              }
-                            />
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="operating_rooms"
-                      render={({ field }) => {
-                        const { name, onBlur, ref, value, onChange } = field;
-                        return (
-                          <FormItem>
-                            <FormLabel>Operating rooms</FormLabel>
-                            <Input
-                              type="number"
-                              min={0}
-                              name={name}
-                              ref={ref}
-                              value={value ?? ""}
-                              onBlur={onBlur}
-                              onChange={(event) =>
-                                onChange(
-                                  event.target.value === ""
-                                    ? undefined
-                                    : Number(event.target.value),
-                                )
-                              }
-                            />
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="imaging_input"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Imaging</FormLabel>
-                          <FormDescription>
-                            Comma separated (e.g. MRI, CT, Cath lab imaging).
-                          </FormDescription>
-                          <Input {...field} />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="accreditations_input"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Accreditations</FormLabel>
-                          <FormDescription>
-                            Comma separated (e.g. JCI, TEMOS).
-                          </FormDescription>
-                          <Input {...field} />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="emergency_support"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-input p-4 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel>Emergency support</FormLabel>
-                          <FormDescription>
-                            Toggle if the provider offers 24/7 emergency cover.
-                          </FormDescription>
-                        </div>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+              <div className="grid gap-4 md:grid-cols-3">
                 <FormField
                   control={form.control}
-                  name="procedure_ids"
-                  render={({ field }) => {
-                    const selected = new Set(field.value ?? []);
-                    const visibleProcedureOptions = showAllProcedureOptions
-                      ? procedureOptions
-                      : procedureOptions.filter((option) =>
-                          selected.has(option.id),
-                        );
-                    return (
-                      <FormItem>
-                        <FormLabel>Procedures offered</FormLabel>
-                        <FormDescription>
-                          {showAllProcedureOptions
-                            ? "Select procedures for filtering on the public providers page."
-                            : "Showing linked procedures only. Switch to all procedures to add more."}
-                        </FormDescription>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setShowAllProcedureOptions(
-                                (previous) => !previous,
-                              )
-                            }
-                          >
-                            {showAllProcedureOptions
-                              ? "Show linked only"
-                              : "Show all procedures"}
-                          </Button>
-                        </div>
-                        <div className="rounded-md border border-border/60">
-                          {treatmentsQuery.isLoading ? (
-                            <div className="p-4 text-sm text-muted-foreground">
-                              Loading procedures...
-                            </div>
-                          ) : procedureOptions.length === 0 ? (
-                            <div className="p-4 text-sm text-muted-foreground">
-                              No procedures available. Add procedures to
-                              treatments first.
-                            </div>
-                          ) : visibleProcedureOptions.length === 0 ? (
-                            <div className="p-4 text-sm text-muted-foreground">
-                              {showAllProcedureOptions
-                                ? "No procedures available."
-                                : "No linked procedures. Switch to all procedures to add one."}
-                            </div>
-                          ) : (
-                            <div className="max-h-64 space-y-2 overflow-auto p-3">
-                              {visibleProcedureOptions.map((option) => {
-                                const isSelected = selected.has(option.id);
-                                const isOwnedByProvider =
-                                  option.createdByProviderId ===
-                                  editingServiceProvider?.id;
-                                const isDeletingThisProcedure =
-                                  deleteProviderProcedure.isPending &&
-                                  deletingProcedureId === option.id;
-                                const isUnlinkingThisProcedure =
-                                  unlinkProviderProcedure.isPending &&
-                                  unlinkingProcedureId === option.id;
-
-                                return (
-                                  <div
-                                    key={option.id}
-                                    className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2 hover:bg-muted/60"
-                                  >
-                                    <label className="flex cursor-pointer items-start gap-3">
-                                      <Checkbox
-                                        checked={isSelected}
-                                        onCheckedChange={(checked) => {
-                                          const next = new Set(
-                                            field.value ?? [],
-                                          );
-                                          if (checked) {
-                                            next.add(option.id);
-                                          } else {
-                                            next.delete(option.id);
-                                          }
-                                          field.onChange(Array.from(next));
-                                        }}
-                                      />
-                                      <div className="space-y-0.5">
-                                        <p className="text-sm font-medium text-foreground">
-                                          {option.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {option.treatmentName}
-                                        </p>
-                                      </div>
-                                    </label>
-                                    {isSelected ? (
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => {
-                                            if (!providerId) return;
-                                            const targetProcedureId =
-                                              normalizeProcedureId(option.id);
-                                            const currentProcedureIds =
-                                              sanitizeProcedureIds(
-                                                (form.getValues(
-                                                  "procedure_ids",
-                                                ) ?? []) as string[],
-                                              );
-                                            const nextProcedureIds =
-                                              currentProcedureIds.filter(
-                                                (id) =>
-                                                  normalizeProcedureId(id) !==
-                                                  targetProcedureId,
-                                              );
-                                            const removedCount =
-                                              currentProcedureIds.length -
-                                              nextProcedureIds.length;
-
-                                            if (removedCount <= 0) {
-                                              toast({
-                                                title: "Already unlinked",
-                                                description:
-                                                  "This procedure is no longer linked to the provider.",
-                                              });
-                                              return;
-                                            }
-
-                                            unlinkProviderProcedure.mutate({
-                                              providerId,
-                                              procedureId: option.id,
-                                              nextProcedureIds,
-                                            });
-                                          }}
-                                          disabled={
-                                            unlinkProviderProcedure.isPending ||
-                                            deleteProviderProcedure.isPending
-                                          }
-                                        >
-                                          {isUnlinkingThisProcedure ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                          ) : (
-                                            "Unlink"
-                                          )}
-                                        </Button>
-                                        {isOwnedByProvider ? (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            disabled={
-                                              deleteProviderProcedure.isPending
-                                            }
-                                            onClick={() => {
-                                              if (!providerId) return;
-                                              deleteProviderProcedure.mutate({
-                                                providerId,
-                                                procedureId: option.id,
-                                              });
-                                            }}
-                                          >
-                                            {isDeletingThisProcedure ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              "Delete"
-                                            )}
-                                          </Button>
-                                        ) : null}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <div className="rounded-lg border border-border/60 p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-semibold text-foreground">
-                        Create a procedure for this provider
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Adds a provider-owned procedure and links it to this
-                        profile.
-                      </p>
-                    </div>
-                  </div>
-                  {editingServiceProvider?.id ? (
-                    <div className="space-y-4">
-                      <Form {...providerProcedureForm}>
-                        <div
-                          className="space-y-3"
-                          role="group"
-                          aria-label="Create provider procedure"
-                        >
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="treatmentId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Treatment</FormLabel>
-                                  <Select
-                                    value={field.value}
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select treatment" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {(treatmentsQuery.data ?? []).map(
-                                        (treatment) => (
-                                          <SelectItem
-                                            key={treatment.id}
-                                            value={treatment.id}
-                                          >
-                                            {treatment.name}
-                                          </SelectItem>
-                                        ),
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormItem>
-                              <FormLabel>Specialty</FormLabel>
-                              <FormControl>
-                                <Input
-                                  value={
-                                    selectedProviderTreatment?.category ?? ""
-                                  }
-                                  placeholder="Set a specialty on the treatment"
-                                  readOnly
-                                />
-                              </FormControl>
-                              {!selectedProviderTreatment?.category ? (
-                                <FormDescription>
-                                  Specialty comes from the selected treatment.
-                                </FormDescription>
-                              ) : null}
-                            </FormItem>
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="name"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Procedure name</FormLabel>
-                                  <Input
-                                    placeholder="Coronary Bypass (provider specific)"
-                                    {...field}
-                                  />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={providerProcedureForm.control}
-                            name="description"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <Textarea
-                                  rows={3}
-                                  placeholder="Brief details for this provider's procedure."
-                                  {...field}
-                                />
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="price"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Price label</FormLabel>
-                                  <Input placeholder="$12,000" {...field} />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="egyptPrice"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Egypt price (USD)</FormLabel>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    value={
-                                      typeof field.value === "number"
-                                        ? field.value
-                                        : (field.value ?? "")
-                                    }
-                                    onChange={(event) =>
-                                      field.onChange(
-                                        event.target.value === ""
-                                          ? undefined
-                                          : Number(event.target.value),
-                                      )
-                                    }
-                                  />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="duration"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Duration</FormLabel>
-                                  <Input placeholder="4-6 hours" {...field} />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="recovery"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Recovery</FormLabel>
-                                  <Input placeholder="6-8 weeks" {...field} />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="successRate"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Success rate</FormLabel>
-                                  <Input placeholder="95%" {...field} />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="pdfUrl"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>
-                                    Procedure PDF (optional)
-                                  </FormLabel>
-                                  <Input
-                                    placeholder="https://..."
-                                    {...field}
-                                    value={field.value ?? ""}
-                                  />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={providerProcedureForm.control}
-                              name="additionalNotes"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Additional notes</FormLabel>
-                                  <Input
-                                    placeholder="Notes for provider patients"
-                                    {...field}
-                                  />
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              onClick={onCreateProviderProcedure}
-                              disabled={createProviderProcedure.isPending}
-                            >
-                              {createProviderProcedure.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : null}
-                              Add provider procedure
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={() => providerProcedureForm.reset()}
-                              disabled={createProviderProcedure.isPending}
-                            >
-                              Clear
-                            </Button>
-                          </div>
-                        </div>
-                      </Form>
-
-                      <div className="space-y-2 border-t border-border/60 pt-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-foreground">
-                            Provider procedures
-                          </h4>
-                          <span className="text-xs text-muted-foreground">
-                            {providerProcedures.length} total
-                          </span>
-                        </div>
-                        {treatmentsQuery.isLoading ? (
-                          <p className="text-xs text-muted-foreground">
-                            Loading procedures...
-                          </p>
-                        ) : providerProcedures.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            No provider-owned procedures yet.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {providerProcedures.map((procedure) => (
-                              <div
-                                key={procedure.id}
-                                className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2"
-                              >
-                                <div className="space-y-0.5">
-                                  <p className="text-sm font-medium text-foreground">
-                                    {procedure.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {procedure.treatmentName}
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:text-destructive"
-                                  disabled={deleteProviderProcedure.isPending}
-                                  onClick={() => {
-                                    if (!providerId) return;
-                                    deleteProviderProcedure.mutate({
-                                      providerId,
-                                      procedureId: procedure.id,
-                                    });
-                                  }}
-                                  aria-label={`Delete ${procedure.name}`}
-                                >
-                                  {deleteProviderProcedure.isPending &&
-                                  deletingProcedureId === procedure.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Save the provider before adding provider-owned procedures.
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="hero_image"
-                    render={({ field }) => (
-                      <FormItem>
-                        <ImageUploader
-                          label="Hero image"
-                          description="Primary service provider photo for listings."
-                          value={field.value ?? ""}
-                          onChange={(url) => field.onChange(url ?? null)}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="logo_image"
-                    render={({ field }) => (
-                      <FormItem>
-                        <ImageUploader
-                          label="Logo"
-                          description="Optional logo for cards and profiles."
-                          value={field.value ?? ""}
-                          onChange={(url) => field.onChange(url ?? null)}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="gallery_urls"
-                  render={({ field }) => {
-                    const images = field.value ?? [];
-
-                    const updateImage = (index: number, url: string | null) => {
-                      const next = [...images];
-                      next[index] = url ?? "";
-                      field.onChange(next);
-                    };
-
-                    const removeImage = (index: number) => {
-                      const next = [...images];
-                      next.splice(index, 1);
-                      field.onChange(next);
-                    };
-
-                    const addImage = () => {
-                      field.onChange([...(images ?? []), ""]);
-                    };
-
-                    return (
-                      <FormItem>
-                        <ImageUploader
-                          label="Gallery images"
-                          description="Upload facility photos to showcase the provider."
-                          value={images[0] ?? ""}
-                          onChange={(url) => {
-                            if (images.length === 0) {
-                              field.onChange(url ? [url] : []);
-                              return;
-                            }
-                            updateImage(0, url ?? null);
-                          }}
-                        />
-                        {images.length > 1 ? (
-                          <div className="mt-3 space-y-3">
-                            {images.slice(1).map((image, index) => (
-                              <div
-                                key={index + 1}
-                                className="rounded-lg border border-border/60 p-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <p className="text-sm text-muted-foreground">
-                                    Gallery image {index + 2}
-                                  </p>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeImage(index + 1)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                                <div className="mt-2">
-                                  <ImageUploader
-                                    label=""
-                                    description=""
-                                    value={image ?? ""}
-                                    onChange={(url) =>
-                                      updateImage(index + 1, url ?? null)
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={addImage}
-                            disabled={(images ?? []).length >= 6}
-                          >
-                            Add gallery image
-                          </Button>
-                          {images.length > 1 ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={() => field.onChange([images[0]])}
-                            >
-                              Keep hero + first gallery
-                            </Button>
-                          ) : null}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_partner"
+                  name="facility_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Partner status</FormLabel>
+                      <FormLabel>Service provider type</FormLabel>
                       <Select
-                        value={(field.value ?? true) ? "partner" : "hidden"}
-                        onValueChange={(value) =>
-                          field.onChange(value === "partner")
-                        }
+                        onValueChange={field.onChange}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="partner">Partner</SelectItem>
-                          <SelectItem value="hidden">Hidden</SelectItem>
+                          {serviceProviderTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type.replace("_", " ")}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="rating"
+                  render={({ field }) => {
+                    const { name, onBlur, ref, value, onChange } = field;
 
-                <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={closeDialog}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createServiceProvider.isPending ||
-                      updateServiceProvider.isPending
-                    }
-                  >
-                    {(createServiceProvider.isPending ||
-                      updateServiceProvider.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {editingServiceProvider
-                      ? "Save changes"
-                      : "Create service provider"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </header>
+                    return (
+                      <FormItem>
+                        <FormLabel>Rating</FormLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={5}
+                          step="0.1"
+                          name={name}
+                          ref={ref}
+                          value={value ?? ""}
+                          onBlur={onBlur}
+                          onChange={(event) =>
+                            onChange(
+                              event.target.value === ""
+                                ? undefined
+                                : Number(event.target.value),
+                            )
+                          }
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name="review_count"
+                  render={({ field }) => {
+                    const { name, onBlur, ref, value, onChange } = field;
 
-      <Card>
-        <CardHeader className="space-y-4">
-          <CardTitle className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <span>Partner service providers</span>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                placeholder="Search service providers..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="sm:w-48 lg:w-72"
+                    return (
+                      <FormItem>
+                        <FormLabel>Review count</FormLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="1"
+                          name={name}
+                          ref={ref}
+                          value={value ?? ""}
+                          onBlur={onBlur}
+                          onChange={(event) =>
+                            onChange(
+                              event.target.value === ""
+                                ? undefined
+                                : Number(event.target.value),
+                            )
+                          }
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="country_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormDescription>
+                        Used for filtering and provider listings.
+                      </FormDescription>
+                      <Input placeholder="Egypt" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <Input placeholder="Cairo" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <Textarea
+                      rows={3}
+                      placeholder="Highlight specialties, certifications, and recovery suites."
+                      {...field}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {serviceProviderTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace("_", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={partnerFilter} onValueChange={setPartnerFilter}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Partner status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="hidden">Hidden</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {serviceProvidersQuery.isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredServiceProviders.map((provider) => (
-                  <TableRow key={provider.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {provider.name}
-                        </span>
+
+              <FormField
+                control={form.control}
+                name="overview"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Overview</FormLabel>
+                    <Textarea
+                      rows={3}
+                      placeholder="Short summary for the provider profile page."
+                      {...field}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="address_line1"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street / district</FormLabel>
+                      <Input placeholder="Medical District" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address_city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <Input placeholder="Cairo" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address_country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <Input placeholder="Egypt" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <Input placeholder="+20 100 7654321" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="contact_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <Input
+                        placeholder="coordinator@provider.com"
+                        {...field}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <Input placeholder="https://provider.com" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="amenities_input"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amenities</FormLabel>
+                      <FormDescription>
+                        Comma separated list (e.g. 24/7 ICU, Concierge desk).
+                      </FormDescription>
+                      <Input {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="specialties_input"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Specialties</FormLabel>
+                      <FormDescription>
+                        Comma separated (e.g. Cardiology, Orthopedics).
+                      </FormDescription>
+                      <Input {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="facilities_input"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facilities provided</FormLabel>
+                      <FormDescription>
+                        Comma separated (e.g. Cath lab, Recovery suites).
+                      </FormDescription>
+                      <Input {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="rounded-lg border border-border/60 p-4 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <FormLabel className="text-base">Infrastructure</FormLabel>
+                    <FormDescription>
+                      Capture capacity and clinical capabilities shown on the
+                      provider profile.
+                    </FormDescription>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="bed_count"
+                    render={({ field }) => {
+                      const { name, onBlur, ref, value, onChange } = field;
+                      return (
+                        <FormItem>
+                          <FormLabel>Total beds</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            name={name}
+                            ref={ref}
+                            value={value ?? ""}
+                            onBlur={onBlur}
+                            onChange={(event) =>
+                              onChange(
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                              )
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="icu_beds"
+                    render={({ field }) => {
+                      const { name, onBlur, ref, value, onChange } = field;
+                      return (
+                        <FormItem>
+                          <FormLabel>ICU beds</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            name={name}
+                            ref={ref}
+                            value={value ?? ""}
+                            onBlur={onBlur}
+                            onChange={(event) =>
+                              onChange(
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                              )
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="operating_rooms"
+                    render={({ field }) => {
+                      const { name, onBlur, ref, value, onChange } = field;
+                      return (
+                        <FormItem>
+                          <FormLabel>Operating rooms</FormLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            name={name}
+                            ref={ref}
+                            value={value ?? ""}
+                            onBlur={onBlur}
+                            onChange={(event) =>
+                              onChange(
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                              )
+                            }
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="imaging_input"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Imaging</FormLabel>
+                        <FormDescription>
+                          Comma separated (e.g. MRI, CT, Cath lab imaging).
+                        </FormDescription>
+                        <Input {...field} />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accreditations_input"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Accreditations</FormLabel>
+                        <FormDescription>
+                          Comma separated (e.g. JCI, TEMOS).
+                        </FormDescription>
+                        <Input {...field} />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="emergency_support"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-input p-4 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Emergency support</FormLabel>
+                        <FormDescription>
+                          Toggle if the provider offers 24/7 emergency cover.
+                        </FormDescription>
+                      </div>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="procedure_ids"
+                render={({ field }) => {
+                  const selected = new Set(field.value ?? []);
+                  const visibleProcedureOptions = showAllProcedureOptions
+                    ? procedureOptions
+                    : procedureOptions.filter((option) =>
+                        selected.has(option.id),
+                      );
+                  return (
+                    <FormItem>
+                      <FormLabel>Procedures offered</FormLabel>
+                      <FormDescription>
+                        {showAllProcedureOptions
+                          ? "Select procedures for filtering on the public providers page."
+                          : "Showing linked procedures only. Switch to all procedures to add more."}
+                      </FormDescription>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setShowAllProcedureOptions((previous) => !previous)
+                          }
+                        >
+                          {showAllProcedureOptions
+                            ? "Show linked only"
+                            : "Show all procedures"}
+                        </Button>
+                      </div>
+                      <div className="rounded-md border border-border/60">
+                        {treatmentsQuery.isLoading ? (
+                          <div className="p-4 text-sm text-muted-foreground">
+                            Loading procedures...
+                          </div>
+                        ) : procedureOptions.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">
+                            No procedures available. Add procedures to
+                            treatments first.
+                          </div>
+                        ) : visibleProcedureOptions.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">
+                            {showAllProcedureOptions
+                              ? "No procedures available."
+                              : "No linked procedures. Switch to all procedures to add one."}
+                          </div>
+                        ) : (
+                          <div className="max-h-64 space-y-2 overflow-auto p-3">
+                            {visibleProcedureOptions.map((option) => {
+                              const isSelected = selected.has(option.id);
+                              const isOwnedByProvider =
+                                option.createdByProviderId ===
+                                editingServiceProvider?.id;
+                              const isDeletingThisProcedure =
+                                deleteProviderProcedure.isPending &&
+                                deletingProcedureId === option.id;
+                              const isUnlinkingThisProcedure =
+                                unlinkProviderProcedure.isPending &&
+                                unlinkingProcedureId === option.id;
+
+                              return (
+                                <div
+                                  key={option.id}
+                                  className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2 hover:bg-muted/60"
+                                >
+                                  <label className="flex cursor-pointer items-start gap-3">
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={(checked) => {
+                                        const next = new Set(field.value ?? []);
+                                        if (checked) {
+                                          next.add(option.id);
+                                        } else {
+                                          next.delete(option.id);
+                                        }
+                                        field.onChange(Array.from(next));
+                                      }}
+                                    />
+                                    <div className="space-y-0.5">
+                                      <p className="text-sm font-medium text-foreground">
+                                        {option.name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {option.treatmentName}
+                                      </p>
+                                    </div>
+                                  </label>
+                                  {isSelected ? (
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (!providerId) return;
+                                          const targetProcedureId =
+                                            normalizeProcedureId(option.id);
+                                          const currentProcedureIds =
+                                            sanitizeProcedureIds(
+                                              (form.getValues(
+                                                "procedure_ids",
+                                              ) ?? []) as string[],
+                                            );
+                                          const nextProcedureIds =
+                                            currentProcedureIds.filter(
+                                              (id) =>
+                                                normalizeProcedureId(id) !==
+                                                targetProcedureId,
+                                            );
+                                          const removedCount =
+                                            currentProcedureIds.length -
+                                            nextProcedureIds.length;
+
+                                          if (removedCount <= 0) {
+                                            toast({
+                                              title: "Already unlinked",
+                                              description:
+                                                "This procedure is no longer linked to the provider.",
+                                            });
+                                            return;
+                                          }
+
+                                          unlinkProviderProcedure.mutate({
+                                            providerId,
+                                            procedureId: option.id,
+                                            nextProcedureIds,
+                                          });
+                                        }}
+                                        disabled={
+                                          unlinkProviderProcedure.isPending ||
+                                          deleteProviderProcedure.isPending
+                                        }
+                                      >
+                                        {isUnlinkingThisProcedure ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          "Unlink"
+                                        )}
+                                      </Button>
+                                      {isOwnedByProvider ? (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive"
+                                          disabled={
+                                            deleteProviderProcedure.isPending
+                                          }
+                                          onClick={() => {
+                                            if (!providerId) return;
+                                            deleteProviderProcedure.mutate({
+                                              providerId,
+                                              procedureId: option.id,
+                                            });
+                                          }}
+                                        >
+                                          {isDeletingThisProcedure ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            "Delete"
+                                          )}
+                                        </Button>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+
+              <div className="rounded-lg border border-border/60 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Create a procedure for this provider
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Adds a provider-owned procedure and links it to this
+                      profile.
+                    </p>
+                  </div>
+                </div>
+                {editingServiceProvider?.id ? (
+                  <div className="space-y-4">
+                    <Form {...providerProcedureForm}>
+                      <div
+                        className="space-y-3"
+                        role="group"
+                        aria-label="Create provider procedure"
+                      >
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="treatmentId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Treatment</FormLabel>
+                                <Select
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select treatment" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(treatmentsQuery.data ?? []).map(
+                                      (treatment) => (
+                                        <SelectItem
+                                          key={treatment.id}
+                                          value={treatment.id}
+                                        >
+                                          {treatment.name}
+                                        </SelectItem>
+                                      ),
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormItem>
+                            <FormLabel>Specialty</FormLabel>
+                            <FormControl>
+                              <Input
+                                value={
+                                  selectedProviderTreatment?.category ?? ""
+                                }
+                                placeholder="Set a specialty on the treatment"
+                                readOnly
+                              />
+                            </FormControl>
+                            {!selectedProviderTreatment?.category ? (
+                              <FormDescription>
+                                Specialty comes from the selected treatment.
+                              </FormDescription>
+                            ) : null}
+                          </FormItem>
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Procedure name</FormLabel>
+                                <Input
+                                  placeholder="Coronary Bypass (provider specific)"
+                                  {...field}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={providerProcedureForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <Textarea
+                                rows={3}
+                                placeholder="Brief details for this provider's procedure."
+                                {...field}
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="price"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Price label</FormLabel>
+                                <Input placeholder="$12,000" {...field} />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="egyptPrice"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Egypt price (USD)</FormLabel>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={
+                                    typeof field.value === "number"
+                                      ? field.value
+                                      : (field.value ?? "")
+                                  }
+                                  onChange={(event) =>
+                                    field.onChange(
+                                      event.target.value === ""
+                                        ? undefined
+                                        : Number(event.target.value),
+                                    )
+                                  }
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="duration"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Duration</FormLabel>
+                                <Input placeholder="4-6 hours" {...field} />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="recovery"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Recovery</FormLabel>
+                                <Input placeholder="6-8 weeks" {...field} />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="successRate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Success rate</FormLabel>
+                                <Input placeholder="95%" {...field} />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="pdfUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Procedure PDF (optional)</FormLabel>
+                                <Input
+                                  placeholder="https://..."
+                                  {...field}
+                                  value={field.value ?? ""}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerProcedureForm.control}
+                            name="additionalNotes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Additional notes</FormLabel>
+                                <Input
+                                  placeholder="Notes for provider patients"
+                                  {...field}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            onClick={onCreateProviderProcedure}
+                            disabled={createProviderProcedure.isPending}
+                          >
+                            {createProviderProcedure.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Add provider procedure
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => providerProcedureForm.reset()}
+                            disabled={createProviderProcedure.isPending}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                    </Form>
+
+                    <div className="space-y-2 border-t border-border/60 pt-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-foreground">
+                          Provider procedures
+                        </h4>
                         <span className="text-xs text-muted-foreground">
-                          {provider.slug}
+                          {providerProcedures.length} total
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {provider.facility_type.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const address = (provider.address ?? {}) as Record<
-                          string,
-                          unknown
-                        >;
-                        const location = [
-                          provider.city ??
-                            (address["city"] as string) ??
-                            undefined,
-                          provider.country_code ??
-                            (address["country"] as string) ??
-                            undefined,
-                        ]
-                          .filter(Boolean)
-                          .join(", ");
-                        return location.length > 0 ? location : "—";
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      {typeof provider.rating === "number"
-                        ? `${provider.rating.toFixed(1)}/5`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          provider.is_partner === false ? "outline" : "default"
-                        }
-                      >
-                        {provider.is_partner === false ? "Hidden" : "Partner"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(provider)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        disabled={deleteServiceProvider.isPending}
-                        onClick={() =>
-                          deleteServiceProvider.mutate(provider.id)
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {treatmentsQuery.isLoading ? (
+                        <p className="text-xs text-muted-foreground">
+                          Loading procedures...
+                        </p>
+                      ) : providerProcedures.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No provider-owned procedures yet.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {providerProcedures.map((procedure) => (
+                            <div
+                              key={procedure.id}
+                              className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2"
+                            >
+                              <div className="space-y-0.5">
+                                <p className="text-sm font-medium text-foreground">
+                                  {procedure.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {procedure.treatmentName}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                disabled={deleteProviderProcedure.isPending}
+                                onClick={() => {
+                                  if (!providerId) return;
+                                  deleteProviderProcedure.mutate({
+                                    providerId,
+                                    procedureId: procedure.id,
+                                  });
+                                }}
+                                aria-label={`Delete ${procedure.name}`}
+                              >
+                                {deleteProviderProcedure.isPending &&
+                                deletingProcedureId === procedure.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Save the provider before adding provider-owned procedures.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="hero_image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <ImageUploader
+                        label="Hero image"
+                        description="Primary service provider photo for listings."
+                        value={field.value ?? ""}
+                        onChange={(url) => field.onChange(url ?? null)}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="logo_image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <ImageUploader
+                        label="Logo"
+                        description="Optional logo for cards and profiles."
+                        value={field.value ?? ""}
+                        onChange={(url) => field.onChange(url ?? null)}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="gallery_urls"
+                render={({ field }) => {
+                  const images = field.value ?? [];
+
+                  const updateImage = (index: number, url: string | null) => {
+                    const next = [...images];
+                    next[index] = url ?? "";
+                    field.onChange(next);
+                  };
+
+                  const removeImage = (index: number) => {
+                    const next = [...images];
+                    next.splice(index, 1);
+                    field.onChange(next);
+                  };
+
+                  const addImage = () => {
+                    field.onChange([...(images ?? []), ""]);
+                  };
+
+                  return (
+                    <FormItem>
+                      <ImageUploader
+                        label="Gallery images"
+                        description="Upload facility photos to showcase the provider."
+                        value={images[0] ?? ""}
+                        onChange={(url) => {
+                          if (images.length === 0) {
+                            field.onChange(url ? [url] : []);
+                            return;
+                          }
+                          updateImage(0, url ?? null);
+                        }}
+                      />
+                      {images.length > 1 ? (
+                        <div className="mt-3 space-y-3">
+                          {images.slice(1).map((image, index) => (
+                            <div
+                              key={index + 1}
+                              className="rounded-lg border border-border/60 p-3"
+                            >
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                  Gallery image {index + 2}
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeImage(index + 1)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                              <div className="mt-2">
+                                <ImageUploader
+                                  label=""
+                                  description=""
+                                  value={image ?? ""}
+                                  onChange={(url) =>
+                                    updateImage(index + 1, url ?? null)
+                                  }
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={addImage}
+                          disabled={(images ?? []).length >= 6}
+                        >
+                          Add gallery image
+                        </Button>
+                        {images.length > 1 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => field.onChange([images[0]])}
+                          >
+                            Keep hero + first gallery
+                          </Button>
+                        ) : null}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_partner"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Partner status</FormLabel>
+                    <Select
+                      value={(field.value ?? true) ? "partner" : "hidden"}
+                      onValueChange={(value) =>
+                        field.onChange(value === "partner")
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="partner">Partner</SelectItem>
+                        <SelectItem value="hidden">Hidden</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="ghost" onClick={closeDialog}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    createServiceProvider.isPending ||
+                    updateServiceProvider.isPending
+                  }
+                >
+                  {(createServiceProvider.isPending ||
+                    updateServiceProvider.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {editingServiceProvider
+                    ? "Save changes"
+                    : "Create service provider"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <WorkspacePanel
+        title="Partner service providers"
+        actions={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <Input
+              placeholder="Search service providers..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-11 rounded-xl bg-background/85 sm:w-[280px]"
+            />
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-11 rounded-xl bg-background/85 sm:w-[180px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {serviceProviderTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.replace("_", " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+              <SelectTrigger className="h-11 rounded-xl bg-background/85 sm:w-[160px]">
+                <SelectValue placeholder="Partner status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="partner">Partner</SelectItem>
+                <SelectItem value="hidden">Hidden</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      >
+        {serviceProvidersQuery.isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-32 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredServiceProviders.map((provider) => (
+                <TableRow key={provider.id}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">
+                        {provider.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {provider.slug}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {provider.facility_type.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const address = (provider.address ?? {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const location = [
+                        provider.city ??
+                          (address["city"] as string) ??
+                          undefined,
+                        provider.country_code ??
+                          (address["country"] as string) ??
+                          undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(", ");
+                      return location.length > 0 ? location : "—";
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {typeof provider.rating === "number"
+                      ? `${provider.rating.toFixed(1)}/5`
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        provider.is_partner === false ? "outline" : "default"
+                      }
+                    >
+                      {provider.is_partner === false ? "Hidden" : "Partner"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(provider)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      disabled={deleteServiceProvider.isPending}
+                      onClick={() => deleteServiceProvider.mutate(provider.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {filteredServiceProviders.length === 0 &&
+                !serviceProvidersQuery.isLoading && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
+                      No service providers found. Adjust filters or add a new
+                      partner service provider.
                     </TableCell>
                   </TableRow>
-                ))}
-
-                {filteredServiceProviders.length === 0 &&
-                  !serviceProvidersQuery.isLoading && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-10 text-center text-sm text-muted-foreground"
-                      >
-                        No service providers found. Adjust filters or add a new
-                        partner service provider.
-                      </TableCell>
-                    </TableRow>
-                  )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                )}
+            </TableBody>
+          </Table>
+        )}
+      </WorkspacePanel>
     </div>
   );
 }
