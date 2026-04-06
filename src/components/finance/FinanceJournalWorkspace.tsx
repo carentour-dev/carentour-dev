@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+} from "@/components/workspaces/WorkspacePrimitives";
 
 type FinanceJournalWorkspaceProps = {
   workspaceBasePath: string;
@@ -153,16 +157,12 @@ export function FinanceJournalWorkspace({
 
   if (!canViewJournalEntries && !canRunBackfill) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Journal Explorer
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Review posted accounting entries generated from AR/AP lifecycle
-            events.
-          </p>
-        </header>
+      <div className="space-y-8">
+        <WorkspacePageHeader
+          breadcrumb="Finance / Journal"
+          title="Journal Explorer"
+          subtitle="Review posted accounting entries generated from AR/AP lifecycle events."
+        />
         <Card className="border-border/80 bg-muted/20">
           <CardHeader>
             <CardTitle>Journal access is required</CardTitle>
@@ -177,56 +177,48 @@ export function FinanceJournalWorkspace({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Journal Explorer
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Review posted accounting entries generated from AR/AP lifecycle
-          events.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <WorkspacePageHeader
+        breadcrumb="Finance / Journal"
+        title="Journal Explorer"
+        subtitle="Review posted accounting entries generated from AR/AP lifecycle events."
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Entries</CardDescription>
-            <CardTitle>{canViewJournalEntries ? totals.count : "-"}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total debits</CardDescription>
-            <CardTitle>
-              {canViewJournalEntries
-                ? formatCurrency(totals.debit, "EGP")
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total credits</CardDescription>
-            <CardTitle>
-              {canViewJournalEntries
-                ? formatCurrency(totals.credit, "EGP")
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Balance state</CardDescription>
-            <CardTitle>
-              {canViewJournalEntries
-                ? totals.balanced
-                  ? "Balanced"
-                  : "Out of balance"
-                : "-"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Entries"
+          value={canViewJournalEntries ? totals.count : "-"}
+          helperText="Posted journal entries matching the current filter set."
+        />
+        <WorkspaceMetricCard
+          label="Total debits"
+          value={
+            canViewJournalEntries ? formatCurrency(totals.debit, "EGP") : "-"
+          }
+          valueDensity="compact"
+          helperText="Debit-side total across the visible journal selection."
+        />
+        <WorkspaceMetricCard
+          label="Total credits"
+          value={
+            canViewJournalEntries ? formatCurrency(totals.credit, "EGP") : "-"
+          }
+          valueDensity="compact"
+          helperText="Credit-side total across the visible journal selection."
+        />
+        <WorkspaceMetricCard
+          label="Balance state"
+          value={
+            canViewJournalEntries
+              ? totals.balanced
+                ? "Balanced"
+                : "Out of balance"
+              : "-"
+          }
+          valueDensity="compact"
+          helperText="Quick balance check for the journals currently in view."
+          emphasisTone={totals.balanced ? "success" : "warning"}
+        />
       </div>
 
       <Card>
