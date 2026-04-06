@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,8 @@ export type WorkspaceMetricCardProps = {
   helperText?: ReactNode;
   icon?: LucideIcon;
   emphasisTone?: WorkspaceStatusTone;
+  onClick?: () => void;
+  ariaLabel?: string;
   className?: string;
 };
 
@@ -172,20 +174,37 @@ export function WorkspaceMetricCard({
   helperText,
   icon: Icon,
   emphasisTone = "default",
+  onClick,
+  ariaLabel,
   className,
 }: WorkspaceMetricCardProps) {
   const tone = METRIC_TONE_STYLES[emphasisTone];
+  const isInteractive = Boolean(onClick);
   const valueClassName =
     valueDensity === "compact"
       ? "text-[clamp(1.95rem,2.8vw,2.5rem)] leading-[0.98] tracking-[-0.05em]"
       : "text-[clamp(2.2rem,3.2vw,2.9rem)] leading-[0.96] tracking-[-0.055em]";
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
 
   return (
     <Card
       data-workspace-surface="interactive"
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
       className={cn(
         "group/workspace-metric overflow-hidden rounded-[1.5rem] border backdrop-blur-sm",
         tone.container,
+        isInteractive &&
+          "cursor-pointer transition-transform duration-300 ease-smooth hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
     >
