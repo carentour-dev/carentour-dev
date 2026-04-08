@@ -79,7 +79,7 @@ export default function Treatments() {
   const locale = useLocale() as PublicLocale;
   const router = useRouter();
   const { treatments, loading, error } = useTreatments();
-  const { doctors } = useDoctors();
+  const { doctors } = useDoctors(undefined, { locale });
   const [expandedComparison, setExpandedComparison] = useState<string | null>(
     null,
   );
