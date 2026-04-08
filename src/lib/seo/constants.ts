@@ -102,9 +102,10 @@ export const STATIC_PUBLIC_ROUTE_DEFAULTS = [
   },
   {
     pathname: "/doctors",
-    title: "Our Doctors | Care N Tour",
+    title:
+      "Specialist Doctors in Egypt for International Patients | Care N Tour",
     description:
-      "Meet experienced specialist doctors supporting patient journeys with Care N Tour.",
+      "Explore Care N Tour's specialist doctors in Egypt. Compare specialties, languages, experience, and next steps for medical tourism and treatment planning.",
     source: "doctors",
   },
   {
