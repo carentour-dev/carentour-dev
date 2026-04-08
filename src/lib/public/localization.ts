@@ -41,6 +41,7 @@ import {
   localizeCompanyNameDeep,
 } from "@/lib/public/brand";
 import { isInternalNoindexPath, normalizePath } from "@/lib/seo/utils";
+import { hasPublishedArabicDoctorTranslation } from "@/server/modules/doctors/public";
 import { hasPublishedArabicTreatmentTranslation } from "@/server/modules/treatments/public";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import {
@@ -540,6 +541,13 @@ export async function getPublicLocaleAvailability(
       : false;
   }
 
+  if (normalized.startsWith("/doctors/")) {
+    const doctorId = normalized.slice("/doctors/".length).trim();
+    return doctorId.length > 0
+      ? hasPublishedArabicDoctorTranslation(doctorId)
+      : false;
+  }
+
   if (LOCALIZED_APP_STATIC_PATHS.has(normalized)) {
     return true;
   }
@@ -611,6 +619,7 @@ export async function getLocalizedNavigationLinks(
       { data: navRows, error: navError },
       { data: cmsPages, error: cmsError },
       translationResult,
+      cmsPageTranslationResult,
     ] = await Promise.all([
       supabase
         .from("navigation_links")
@@ -628,6 +637,13 @@ export async function getLocalizedNavigationLinks(
             .from("navigation_link_translations")
             .select("navigation_link_id, locale, label, status, updated_at")
             .eq("locale", locale),
+      locale === defaultPublicLocale
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("cms_page_translations")
+            .select("cms_page_id, locale, title, status, updated_at")
+            .eq("locale", locale)
+            .eq("status", "published"),
     ]);
 
     if (navError) {
@@ -654,11 +670,20 @@ export async function getLocalizedNavigationLinks(
         row,
       ]),
     );
+    const cmsPageTranslationsById = new Map<string, CmsPageTranslationRow>(
+      (cmsPageTranslationResult.data ?? []).map((row: any) => [
+        row.cms_page_id,
+        row,
+      ]),
+    );
 
     const localizedLinks: NavigationLink[] = [];
 
     for (const link of baseLinks) {
       const translation = translationsByLinkId.get(link.id);
+      const cmsPageTranslation = link.cmsPageId
+        ? cmsPageTranslationsById.get(link.cmsPageId)
+        : undefined;
       const isAvailable = await getPublicLocaleAvailability(link.href, locale);
 
       const resolvedStatus = translation?.status ?? link.status;
@@ -675,7 +700,9 @@ export async function getLocalizedNavigationLinks(
       localizedLinks.push({
         ...link,
         label: localizeCompanyName(
-          cleanText(translation?.label) ?? link.label,
+          cleanText(translation?.label) ??
+            cleanText(cmsPageTranslation?.title) ??
+            link.label,
           locale,
         ),
         status: resolvedStatus,
