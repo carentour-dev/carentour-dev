@@ -11,7 +11,7 @@ export async function DoctorsBlock({
   block: BlockInstance<"doctors">;
   locale?: PublicLocale;
 }) {
-  const doctors = await getDoctorsForBlock(block);
+  const doctors = await getDoctorsForBlock(block, locale);
 
   if (!doctors.length) {
     return null;
