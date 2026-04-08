@@ -28,6 +28,7 @@ export { FaqDirectoryBlock } from "./FaqDirectoryBlock";
 export { FaqDirectoryPreview } from "./FaqDirectoryPreview";
 export { MedicalFacilitiesDirectoryBlock } from "./MedicalFacilitiesDirectoryBlock";
 export { MedicalFacilitiesDirectoryPreview } from "./MedicalFacilitiesDirectoryPreview";
+export { DoctorDirectoryBlock } from "./DoctorDirectoryBlock";
 export { QuoteBlock } from "./QuoteBlock";
 export { MedicalFacilityProfileBlock } from "./MedicalFacilityProfileBlock";
 export { MedicalFacilityProfilePreview } from "./MedicalFacilityProfilePreview";
