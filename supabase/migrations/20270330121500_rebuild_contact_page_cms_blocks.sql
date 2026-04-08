@@ -13,7 +13,7 @@ VALUES (
       "eyebrow": "Contact Care N Tour",
       "heading": "One point of contact for international patients, families, referral partners, and corporate enquiries.",
       "description": "We coordinate medical travel planning, patient communication, referral support, and partner conversations through one Egypt-based team built for cross-border care journeys.",
-      "backgroundImageUrl": "/consultation.jpg",
+      "backgroundImageUrl": "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png",
       "overlay": {
         "fromColor": "#000000",
         "fromOpacity": 0.7,
