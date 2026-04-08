@@ -38,12 +38,14 @@ import { JourneyStepsBlock } from "./blocks/JourneyStepsBlock";
 import { LogoGridBlock } from "./blocks/LogoGridBlock";
 import { AboutHeroBlock } from "./blocks/AboutHeroBlock";
 import { MedicalFacilitiesDirectoryClient } from "./blocks/MedicalFacilitiesDirectoryClient";
+import { DoctorDirectoryClient } from "./blocks/DoctorDirectoryClient";
 import { MedicalFacilityProfileClient } from "./blocks/MedicalFacilityProfileClient";
 import { MissionVisionValuesBlock } from "./blocks/MissionVisionValuesBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
 import {
   previewFaqCategories,
   previewFaqs,
+  previewDoctorDirectoryData,
   previewMedicalFacilitiesDirectoryData,
   previewMedicalFacilityDetail,
 } from "./blocks/previewFixtures";
@@ -182,6 +184,29 @@ function MedicalFacilitiesDirectoryEditorPreview({
         <MedicalFacilitiesDirectoryClient
           block={block}
           initialData={previewMedicalFacilitiesDirectoryData}
+          disableLiveFetch
+        />
+      )}
+    </BlockSurface>
+  );
+}
+
+function DoctorDirectoryEditorPreview({
+  block,
+}: {
+  block: BlockInstance<"doctorDirectory">;
+}) {
+  return (
+    <BlockSurface
+      block={block}
+      className="overflow-visible border-y border-border/50 bg-background"
+      defaultPadding={{ top: "5rem", bottom: "5rem" }}
+      contentClassName="space-y-10"
+    >
+      {() => (
+        <DoctorDirectoryClient
+          block={block}
+          initialData={previewDoctorDirectoryData}
           disableLiveFetch
         />
       )}
@@ -405,6 +430,10 @@ export function BlockPreviewRenderer({
                   key={blockKey}
                   block={block}
                 />
+              );
+            case "doctorDirectory":
+              return (
+                <DoctorDirectoryEditorPreview key={blockKey} block={block} />
               );
             case "quote":
               return <QuoteBlock key={blockKey} block={block} />;
