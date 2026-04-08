@@ -14009,6 +14009,659 @@ function BlogArticleBodyBlockFields({
   );
 }
 
+function DoctorDirectoryBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"doctorDirectory">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Our Doctors"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="heading"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Heading</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search specialist doctors represented by Care N Tour"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Supporting directory copy"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Trust callout</h4>
+          <p className="text-sm text-muted-foreground">
+            Configure the editorial framing shown beside the directory
+            introduction.
+          </p>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="trustCallout.eyebrow"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust eyebrow</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Global patient readiness"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="trustCallout.title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Doctors presented with greater decision clarity"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="trustCallout.description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trust description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain why this directory is structured for international patient decision-making."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="searchPlaceholder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Search placeholder</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search doctors by name or specialty..."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="clearButtonLabel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Clear button label</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Clear filters"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Filter labels</h4>
+          <p className="text-sm text-muted-foreground">
+            Controls the visible labels above the live directory filters.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="filterLabels.search"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Search label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Specialty"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Language label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Language"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Filter placeholders
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Controls the button placeholder text and combobox search states.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All specialties"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterPlaceholders.language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Language placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="All languages"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search specialties..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterSearchPlaceholders.language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Language search placeholder</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Search languages..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterEmptyCopy.specialty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialty empty copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="No specialties found."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterEmptyCopy.language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Language empty copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="No languages found."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Results and state copy
+          </h4>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="states.resultsIntro"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results intro</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain what visitors can do with the live doctor directory."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="states.resultsCountLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results count label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="doctors available"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.loading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Loading copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Loading doctors..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.updating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Updating copy</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Refreshing directory..."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyHeading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty state heading</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="No doctors found"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty state description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Adjust your search or filters to explore more specialists."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.errorTitle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Error title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Unable to load doctors"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.errorDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Error description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Please try again later."
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">Card labels</h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="cardLabels.featuredBadge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Featured badge label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Featured specialist"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.experience"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Experience"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.experienceSuffix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience suffix</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="years"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.languages"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Languages label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Languages"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.education"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Education label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Education"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Procedures"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.publications"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Publications label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Publications"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.ratingLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rating label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="rating"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.reviewsSuffix"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reviews suffix</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="reviews"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.viewProfile"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>View profile label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="View profile"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="cardLabels.primaryCta"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Primary CTA label</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Start your journey"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlogAuthorSummaryBlockFields({
   form,
 }: {
@@ -14108,6 +14761,7 @@ const blockEditors: Record<
   medicalFacilitiesDirectory: (form) => (
     <MedicalFacilitiesDirectoryBlockFields form={form} />
   ),
+  doctorDirectory: (form) => <DoctorDirectoryBlockFields form={form} />,
   quote: (form) => <QuoteBlockFields form={form} />,
   medicalFacilityProfile: (form) => (
     <MedicalFacilityProfileBlockFields form={form} />
@@ -14326,6 +14980,8 @@ export function blockSummary(block: BlockInstance): string {
       return block.heading ?? "Dynamic FAQ directory";
     case "medicalFacilitiesDirectory":
       return block.heading ?? "Medical facilities directory";
+    case "doctorDirectory":
+      return block.heading ?? "Doctor directory";
     case "quote":
       return block.attribution ?? "Quote";
     case "medicalFacilityProfile":
