@@ -6,7 +6,6 @@ import {
 import { normalizePath } from "@/lib/seo/utils";
 
 export const PUBLIC_ARABIC_UNSUPPORTED_PREFIXES = [
-  "/doctors",
   "/stories",
   "/consultation",
 ] as const;
