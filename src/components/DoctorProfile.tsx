@@ -13,31 +13,50 @@ import {
   Stethoscope,
 } from "lucide-react";
 import Link from "next/link";
-
-interface Doctor {
-  id: string;
-  name: string;
-  title: string;
-  specialization: string;
-  bio?: string;
-  experience_years: number;
-  education: string;
-  languages: string[];
-  avatar_url?: string;
-  achievements: string[];
-  certifications: string[];
-  research_publications: number;
-  successful_procedures: number;
-  patient_rating: number;
-  total_reviews: number;
-}
+import type { PublicLocale } from "@/i18n/routing";
+import type { ClientDoctor } from "@/lib/doctors";
+import { localizePublicPathnameWithFallback } from "@/lib/public/routing";
 
 interface DoctorProfileProps {
-  doctor: Doctor;
+  doctor: ClientDoctor;
   className?: string;
+  locale?: PublicLocale;
 }
 
-export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
+export const DoctorProfile = ({
+  doctor,
+  className,
+  locale = "en",
+}: DoctorProfileProps) => {
+  const copy =
+    locale === "ar"
+      ? {
+          years: "سنوات",
+          reviews: "مراجعة",
+          education: "التعليم",
+          languages: "اللغات",
+          procedures: "الإجراءات",
+          completed: "مكتملة",
+          research: "الأبحاث",
+          publications: "منشورات",
+          achievements: "أبرز الإنجازات",
+          certifications: "الاعتمادات",
+          viewProfile: "عرض الملف الكامل",
+        }
+      : {
+          years: "years",
+          reviews: "reviews",
+          education: "Education",
+          languages: "Languages",
+          procedures: "Procedures",
+          completed: "completed",
+          research: "Research",
+          publications: "publications",
+          achievements: "Key Achievements",
+          certifications: "Certifications",
+          viewProfile: "View Full Profile",
+        };
+
   return (
     <Card
       className={`border-border/50 hover:shadow-card-hover transition-spring ${className}`}
@@ -71,14 +90,14 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
               <div className="flex items-center gap-1">
                 <Award className="h-4 w-4 text-primary" />
                 <span className="text-muted-foreground">
-                  {doctor.experience_years}+ years
+                  {doctor.experience_years}+ {copy.years}
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <span className="text-muted-foreground">
                   {doctor.patient_rating.toFixed(1)} ({doctor.total_reviews}{" "}
-                  reviews)
+                  {copy.reviews})
                 </span>
               </div>
             </div>
@@ -97,7 +116,9 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-4 w-4 text-primary" />
-              <span className="font-medium text-foreground">Education</span>
+              <span className="font-medium text-foreground">
+                {copy.education}
+              </span>
             </div>
             <p className="text-muted-foreground">{doctor.education}</p>
           </div>
@@ -105,7 +126,9 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Languages className="h-4 w-4 text-primary" />
-              <span className="font-medium text-foreground">Languages</span>
+              <span className="font-medium text-foreground">
+                {copy.languages}
+              </span>
             </div>
             <div className="flex flex-wrap gap-1">
               {doctor.languages.map((language, index) => (
@@ -121,20 +144,24 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Stethoscope className="h-4 w-4 text-primary" />
-              <span className="font-medium text-foreground">Procedures</span>
+              <span className="font-medium text-foreground">
+                {copy.procedures}
+              </span>
             </div>
             <p className="text-muted-foreground">
-              {doctor.successful_procedures.toLocaleString()}+ completed
+              {doctor.successful_procedures.toLocaleString()}+ {copy.completed}
             </p>
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Users className="h-4 w-4 text-primary" />
-              <span className="font-medium text-foreground">Research</span>
+              <span className="font-medium text-foreground">
+                {copy.research}
+              </span>
             </div>
             <p className="text-muted-foreground">
-              {doctor.research_publications} publications
+              {doctor.research_publications} {copy.publications}
             </p>
           </div>
         </div>
@@ -142,7 +169,7 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
         {doctor.achievements.length > 0 && (
           <div className="pt-4 border-t border-border">
             <h4 className="font-medium text-foreground mb-2">
-              Key Achievements
+              {copy.achievements}
             </h4>
             <ul className="text-xs text-muted-foreground space-y-1">
               {doctor.achievements.map((achievement, index) => (
@@ -157,7 +184,9 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
 
         {doctor.certifications.length > 0 && (
           <div className="pt-4 border-t border-border">
-            <h4 className="font-medium text-foreground mb-2">Certifications</h4>
+            <h4 className="font-medium text-foreground mb-2">
+              {copy.certifications}
+            </h4>
             <div className="flex flex-wrap gap-1">
               {doctor.certifications.map((cert, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
@@ -169,9 +198,14 @@ export const DoctorProfile = ({ doctor, className }: DoctorProfileProps) => {
         )}
 
         <div className="pt-4 border-t border-border">
-          <Link href={`/doctors/${doctor.id}`}>
+          <Link
+            href={localizePublicPathnameWithFallback(
+              `/doctors/${doctor.id}`,
+              locale,
+            )}
+          >
             <Button variant="outline" className="w-full">
-              View Full Profile
+              {copy.viewProfile}
             </Button>
           </Link>
         </div>
