@@ -949,6 +949,68 @@ const medicalFacilitiesDirectoryCardLabelsSchema = z.object({
   partnerBadge: z.string().default("Partner facility"),
 });
 
+const doctorDirectoryFilterLabelsSchema = z.object({
+  search: z.string().default("Search"),
+  specialty: z.string().default("Specialty"),
+  language: z.string().default("Language"),
+});
+
+const doctorDirectoryFilterPlaceholdersSchema = z.object({
+  specialty: z.string().default("All specialties"),
+  language: z.string().default("All languages"),
+});
+
+const doctorDirectoryFilterSearchSchema = z.object({
+  specialty: z.string().default("Search specialties..."),
+  language: z.string().default("Search languages..."),
+});
+
+const doctorDirectoryFilterEmptySchema = z.object({
+  specialty: z.string().default("No specialties found."),
+  language: z.string().default("No languages found."),
+});
+
+const doctorDirectoryTrustCalloutSchema = z.object({
+  eyebrow: z.string().default("Global patient readiness"),
+  title: z.string().default("Doctors presented with greater decision clarity"),
+  description: z
+    .string()
+    .default(
+      "Care N Tour frames each doctor profile for international patients who need specialist credibility, communication confidence, and a clearer next step.",
+    ),
+});
+
+const doctorDirectoryStateCopySchema = z.object({
+  resultsIntro: z
+    .string()
+    .default(
+      "Search the live doctor directory by name, specialty, or language while keeping the surrounding Care N Tour guidance fully editable in the CMS.",
+    ),
+  resultsCountLabel: z.string().default("doctors available"),
+  loading: z.string().default("Loading doctors..."),
+  updating: z.string().default("Refreshing directory..."),
+  emptyHeading: z.string().default("No doctors found"),
+  emptyDescription: z
+    .string()
+    .default("Adjust your search or filters to explore more specialists."),
+  errorTitle: z.string().default("Unable to load doctors"),
+  errorDescription: z.string().default("Please try again later."),
+});
+
+const doctorDirectoryCardLabelsSchema = z.object({
+  featuredBadge: z.string().default("Featured specialist"),
+  experience: z.string().default("Experience"),
+  experienceSuffix: z.string().default("years"),
+  languages: z.string().default("Languages"),
+  education: z.string().default("Education"),
+  procedures: z.string().default("Procedures"),
+  publications: z.string().default("Publications"),
+  ratingLabel: z.string().default("rating"),
+  reviewsSuffix: z.string().default("reviews"),
+  viewProfile: z.string().default("View profile"),
+  primaryCta: z.string().default("Start your journey"),
+});
+
 const medicalFacilitiesDirectoryBlockSchema = z
   .object({
     type: z.literal("medicalFacilitiesDirectory"),
@@ -1014,6 +1076,67 @@ const medicalFacilitiesDirectoryBlockSchema = z
       reviewsSuffix: "reviews",
       fallbackMeta: "Partner facility",
       partnerBadge: "Partner facility",
+    }),
+  })
+  .extend(blockMetaShape);
+
+const doctorDirectoryBlockSchema = z
+  .object({
+    type: z.literal("doctorDirectory"),
+    eyebrow: z.string().optional(),
+    heading: z.string().optional(),
+    description: z.string().optional(),
+    trustCallout: doctorDirectoryTrustCalloutSchema.default({
+      eyebrow: "Global patient readiness",
+      title: "Doctors presented with greater decision clarity",
+      description:
+        "Care N Tour frames each doctor profile for international patients who need specialist credibility, communication confidence, and a clearer next step.",
+    }),
+    searchPlaceholder: z
+      .string()
+      .default("Search doctors by name or specialty..."),
+    filterLabels: doctorDirectoryFilterLabelsSchema.default({
+      search: "Search",
+      specialty: "Specialty",
+      language: "Language",
+    }),
+    filterPlaceholders: doctorDirectoryFilterPlaceholdersSchema.default({
+      specialty: "All specialties",
+      language: "All languages",
+    }),
+    filterSearchPlaceholders: doctorDirectoryFilterSearchSchema.default({
+      specialty: "Search specialties...",
+      language: "Search languages...",
+    }),
+    filterEmptyCopy: doctorDirectoryFilterEmptySchema.default({
+      specialty: "No specialties found.",
+      language: "No languages found.",
+    }),
+    clearButtonLabel: z.string().default("Clear filters"),
+    states: doctorDirectoryStateCopySchema.default({
+      resultsIntro:
+        "Search the live doctor directory by name, specialty, or language while keeping the surrounding Care N Tour guidance fully editable in the CMS.",
+      resultsCountLabel: "doctors available",
+      loading: "Loading doctors...",
+      updating: "Refreshing directory...",
+      emptyHeading: "No doctors found",
+      emptyDescription:
+        "Adjust your search or filters to explore more specialists.",
+      errorTitle: "Unable to load doctors",
+      errorDescription: "Please try again later.",
+    }),
+    cardLabels: doctorDirectoryCardLabelsSchema.default({
+      featuredBadge: "Featured specialist",
+      experience: "Experience",
+      experienceSuffix: "years",
+      languages: "Languages",
+      education: "Education",
+      procedures: "Procedures",
+      publications: "Publications",
+      ratingLabel: "rating",
+      reviewsSuffix: "reviews",
+      viewProfile: "View profile",
+      primaryCta: "Start your journey",
     }),
   })
   .extend(blockMetaShape);
@@ -1507,6 +1630,7 @@ const blockSchemas = [
   faqBlockSchema,
   faqDirectoryBlockSchema,
   medicalFacilitiesDirectoryBlockSchema,
+  doctorDirectoryBlockSchema,
   quoteBlockSchema,
   medicalFacilityProfileBlockSchema,
   treatmentSpecialtiesBlockSchema,
@@ -2426,6 +2550,71 @@ export const blockRegistry = {
       },
     },
   } satisfies BlockDefinition<typeof medicalFacilitiesDirectoryBlockSchema>,
+  doctorDirectory: {
+    type: "doctorDirectory",
+    label: "Doctor Directory",
+    description:
+      "Live doctor directory with CMS-managed framing, filter copy, and CTA labels.",
+    category: "content",
+    schema: doctorDirectoryBlockSchema,
+    defaultItem: {
+      type: "doctorDirectory",
+      eyebrow: "Our Doctors",
+      heading: "Search specialist doctors represented by Care N Tour",
+      description:
+        "Present the live doctor directory inside a more editorial, globally legible page structure while keeping every visible label editable through the CMS.",
+      trustCallout: {
+        eyebrow: "Global patient readiness",
+        title: "Doctors presented with greater decision clarity",
+        description:
+          "Care N Tour frames each doctor profile for international patients who need specialist credibility, communication confidence, and a clearer next step.",
+      },
+      searchPlaceholder: "Search doctors by name or specialty...",
+      filterLabels: {
+        search: "Search",
+        specialty: "Specialty",
+        language: "Language",
+      },
+      filterPlaceholders: {
+        specialty: "All specialties",
+        language: "All languages",
+      },
+      filterSearchPlaceholders: {
+        specialty: "Search specialties...",
+        language: "Search languages...",
+      },
+      filterEmptyCopy: {
+        specialty: "No specialties found.",
+        language: "No languages found.",
+      },
+      clearButtonLabel: "Clear filters",
+      states: {
+        resultsIntro:
+          "Search the live doctor directory by name, specialty, or language while keeping the surrounding Care N Tour guidance fully editable in the CMS.",
+        resultsCountLabel: "doctors available",
+        loading: "Loading doctors...",
+        updating: "Refreshing directory...",
+        emptyHeading: "No doctors found",
+        emptyDescription:
+          "Adjust your search or filters to explore more specialists.",
+        errorTitle: "Unable to load doctors",
+        errorDescription: "Please try again later.",
+      },
+      cardLabels: {
+        featuredBadge: "Featured specialist",
+        experience: "Experience",
+        experienceSuffix: "years",
+        languages: "Languages",
+        education: "Education",
+        procedures: "Procedures",
+        publications: "Publications",
+        ratingLabel: "rating",
+        reviewsSuffix: "reviews",
+        viewProfile: "View profile",
+        primaryCta: "Start your journey",
+      },
+    },
+  } satisfies BlockDefinition<typeof doctorDirectoryBlockSchema>,
   quote: {
     type: "quote",
     label: "Quote",
