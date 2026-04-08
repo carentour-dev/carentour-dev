@@ -115,6 +115,7 @@ export async function PATCH(
 
   const updates = isAutoManaged
     ? {
+        label: payload.label ?? existing.label,
         status: payload.status ?? existing.status,
         position: payload.position ?? existing.position,
       }
