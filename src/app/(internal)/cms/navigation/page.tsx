@@ -496,7 +496,11 @@ export default function CmsNavigationPage() {
         data: isArabicLocale
           ? { label: values.label, status: values.status }
           : isAutoManaged(editing)
-            ? { status: values.status, position: values.position }
+            ? {
+                label: values.label,
+                status: values.status,
+                position: values.position,
+              }
             : values,
       });
     } else {
@@ -790,18 +794,25 @@ export default function CmsNavigationPage() {
                   name="label"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Label</FormLabel>
+                      <FormLabel>
+                        {isArabicLocale ? "Navigation label" : "Menu label"}
+                      </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Plan Your Trip"
-                          {...field}
-                          disabled={
-                            editing
-                              ? !isArabicLocale && isAutoManaged(editing)
-                              : false
-                          }
-                        />
+                        <Input placeholder="Plan Your Trip" {...field} />
                       </FormControl>
+                      {isArabicLocale && editing ? (
+                        <FormDescription>
+                          Changes only the Arabic navigation item. Edit the
+                          Arabic CMS page content to change the page title or
+                          section headings.
+                        </FormDescription>
+                      ) : null}
+                      {!isArabicLocale && editing && isAutoManaged(editing) ? (
+                        <FormDescription>
+                          Changes only the navigation item. Edit the linked CMS
+                          page to change the page title or section headings.
+                        </FormDescription>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -845,6 +856,12 @@ export default function CmsNavigationPage() {
                           }
                         />
                       </FormControl>
+                      {!isArabicLocale && editing && isAutoManaged(editing) ? (
+                        <FormDescription>
+                          Linked CMS pages manage their route from the page
+                          editor.
+                        </FormDescription>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}
