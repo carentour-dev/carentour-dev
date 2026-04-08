@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -104,6 +104,7 @@ type LibraryFocusFilter = "all" | "review" | "seo";
 
 export default function CmsIndexPage() {
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const locale = resolveAdminLocale(
     new URLSearchParams(searchParams.toString()),
   );
@@ -111,7 +112,9 @@ export default function CmsIndexPage() {
   const [libraryFocusFilter, setLibraryFocusFilter] =
     useState<LibraryFocusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isProvisioningDoctors, setIsProvisioningDoctors] = useState(false);
   const libraryRef = useRef<HTMLDivElement | null>(null);
+  const hasAttemptedDoctorsProvision = useRef(false);
   const cmsNavigationHref = buildAdminLocaleHref("/cms/navigation", locale);
   const cmsFaqHref = buildAdminLocaleHref("/cms/faqs", locale);
   const cmsSeoHref = buildAdminLocaleHref("/cms/seo", locale);
@@ -137,6 +140,10 @@ export default function CmsIndexPage() {
     });
 
   const pages = useMemo(() => data?.pages ?? [], [data?.pages]);
+  const existingPageSlugs = useMemo(
+    () => new Set(pages.map((page) => page.slug)),
+    [pages],
+  );
 
   const stats = useMemo(() => {
     const total = pages.length;
@@ -212,6 +219,73 @@ export default function CmsIndexPage() {
       .slice(0, 6);
   }, [pages]);
 
+  useEffect(() => {
+    if (locale !== "en") return;
+    if (isLoading) return;
+    if (error) return;
+    if (hasAttemptedDoctorsProvision.current) return;
+    if (existingPageSlugs.has("doctors")) return;
+
+    hasAttemptedDoctorsProvision.current = true;
+
+    let cancelled = false;
+
+    const provisionDoctorsTemplate = async () => {
+      setIsProvisioningDoctors(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const response = await fetch("/api/cms/pages/provision-template", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ templateSlug: "doctors-global" }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(
+            payload?.error ||
+              `Failed to provision template: ${response.status}`,
+          );
+        }
+
+        if (cancelled) return;
+
+        await refetch();
+        toast({
+          title: "Doctors page added to CMS",
+          description:
+            "The Doctors template was provisioned automatically and is now editable from the CMS.",
+        });
+      } catch (provisionError: any) {
+        if (cancelled) return;
+
+        toast({
+          title: "Could not provision Doctors page",
+          description:
+            provisionError?.message ??
+            "Open the Doctors template from the CMS gallery and create it manually.",
+          variant: "destructive",
+        });
+      } finally {
+        if (!cancelled) {
+          setIsProvisioningDoctors(false);
+        }
+      }
+    };
+
+    void provisionDoctorsTemplate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [error, existingPageSlugs, isLoading, locale, refetch, toast]);
+
   return (
     <div className="space-y-8">
       <WorkspacePageHeader
@@ -228,6 +302,13 @@ export default function CmsIndexPage() {
             : "English mode edits the base record used to create Arabic translations for the same public URL."
         }
       />
+
+      {isProvisioningDoctors ? (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Provisioning the Doctors CMS page from the default template.
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <WorkspaceMetricCard
@@ -439,7 +520,10 @@ export default function CmsIndexPage() {
             title="Templates & accelerators"
             description="Start from curated structures instead of rebuilding every page from scratch."
           >
-            <TemplateSidebarLauncher locale={locale} />
+            <TemplateSidebarLauncher
+              locale={locale}
+              existingPageSlugs={existingPageSlugs}
+            />
           </WorkspacePanel>
 
           <WorkspacePanel
@@ -775,9 +859,42 @@ function HomePageModeBadge({ mode }: { mode: HomePageLayoutMode }) {
 }
 
 const templates = cmsTemplates;
+const recommendedTemplateSlugs = [
+  "home-exact",
+  "about-global",
+  "treatments-global",
+  "doctors-global",
+  "plan-global",
+  "travel-info",
+  "concierge-global",
+  "contact-global",
+  "faq-global",
+  "medical-facilities-global",
+  "blog-global",
+] as const;
 
-function TemplateSidebarLauncher({ locale }: { locale: PublicLocale }) {
+function TemplateSidebarLauncher({
+  locale,
+  existingPageSlugs,
+}: {
+  locale: PublicLocale;
+  existingPageSlugs: Set<string>;
+}) {
   const featuredTemplates = templates.slice(0, 4);
+  const missingRecommendedTemplates = templates.filter(
+    (template) =>
+      recommendedTemplateSlugs.includes(
+        template.slug as (typeof recommendedTemplateSlugs)[number],
+      ) && !existingPageSlugs.has(template.defaultSlug),
+  );
+
+  const buildTemplateHref = (templateSlug: string) =>
+    locale === "ar"
+      ? `/cms/new?template=${encodeURIComponent(templateSlug)}`
+      : buildAdminLocaleHref(
+          `/cms/new?template=${encodeURIComponent(templateSlug)}`,
+          locale,
+        );
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
@@ -796,15 +913,48 @@ function TemplateSidebarLauncher({ locale }: { locale: PublicLocale }) {
         </Badge>
       </div>
 
+      {missingRecommendedTemplates.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Missing recommended pages
+              </p>
+              <p className="text-xs text-muted-foreground">
+                These template-backed public pages do not have CMS records yet.
+              </p>
+            </div>
+            <Badge variant="outline">
+              {missingRecommendedTemplates.length}
+            </Badge>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {missingRecommendedTemplates.map((template) => (
+              <div
+                key={template.slug}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {template.name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    /{template.defaultSlug} • not created yet
+                  </p>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href={buildTemplateHref(template.slug)}>Create</Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-4 space-y-2">
         {featuredTemplates.map((template) => {
-          const href =
-            locale === "ar"
-              ? `/cms/new?template=${encodeURIComponent(template.slug)}`
-              : buildAdminLocaleHref(
-                  `/cms/new?template=${encodeURIComponent(template.slug)}`,
-                  locale,
-                );
+          const href = buildTemplateHref(template.slug);
 
           return (
             <div
