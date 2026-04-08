@@ -667,6 +667,71 @@ export type Database = {
         };
         Relationships: [];
       };
+      doctor_translations: {
+        Row: {
+          achievements: string[];
+          bio: string | null;
+          certifications: string[];
+          created_at: string;
+          doctor_id: string;
+          education: string | null;
+          id: string;
+          is_stale: boolean;
+          languages: string[];
+          locale: string;
+          name: string | null;
+          source_updated_at: string | null;
+          specialization: string | null;
+          status: string;
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          achievements?: string[];
+          bio?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          doctor_id: string;
+          education?: string | null;
+          id?: string;
+          is_stale?: boolean;
+          languages?: string[];
+          locale: string;
+          name?: string | null;
+          source_updated_at?: string | null;
+          specialization?: string | null;
+          status?: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          achievements?: string[];
+          bio?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          doctor_id?: string;
+          education?: string | null;
+          id?: string;
+          is_stale?: boolean;
+          languages?: string[];
+          locale?: string;
+          name?: string | null;
+          source_updated_at?: string | null;
+          specialization?: string | null;
+          status?: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "doctor_translations_doctor_id_fkey";
+            columns: ["doctor_id"];
+            isOneToOne: false;
+            referencedRelation: "doctors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       faqs: {
         Row: {
           answer: string;
