@@ -58,6 +58,14 @@ type BlogPostInventoryTranslationRow = {
   status: "draft" | "published";
 };
 
+type DoctorInventoryTranslationRow = {
+  doctor_id: string;
+  name: string | null;
+  specialization: string | null;
+  bio: string | null;
+  status: "draft" | "published";
+};
+
 type BlogTagInventoryTranslationRow = {
   blog_tag_id: string;
   slug: string | null;
@@ -701,6 +709,7 @@ export async function getPublicRouteInventory(
     blogAuthorTranslationsRes,
     treatmentsRes,
     doctorsRes,
+    doctorTranslationsRes,
     providersRes,
     patientStoriesRes,
     overridesRes,
@@ -763,6 +772,13 @@ export async function getPublicRouteInventory(
       .from("doctors")
       .select("id, name, specialization, bio, avatar_url, updated_at")
       .eq("is_active", true),
+    locale === DEFAULT_SEO_LOCALE
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("doctor_translations")
+          .select("doctor_id, name, specialization, bio, status")
+          .eq("locale", locale)
+          .eq("status", "published"),
     supabase
       .from("service_providers")
       .select(
@@ -798,6 +814,7 @@ export async function getPublicRouteInventory(
     ["blog_author_translations", blogAuthorTranslationsRes.error],
     ["treatments", treatmentsRes.error],
     ["doctors", doctorsRes.error],
+    ["doctor_translations", doctorTranslationsRes.error],
     ["service_providers", providersRes.error],
     ["patient_stories", patientStoriesRes.error],
     ["seo_overrides", overridesRes.error],
@@ -1323,14 +1340,37 @@ export async function getPublicRouteInventory(
     avatar_url?: string | null;
     updated_at?: string | null;
   }>;
+  const doctorTranslationsById = new Map(
+    ((doctorTranslationsRes.data ?? []) as DoctorInventoryTranslationRow[]).map(
+      (translation) => [translation.doctor_id, translation],
+    ),
+  );
 
   for (const doctor of doctors) {
+    const translation =
+      locale === DEFAULT_SEO_LOCALE
+        ? null
+        : (doctorTranslationsById.get(doctor.id) ?? null);
+
+    if (locale !== DEFAULT_SEO_LOCALE && !translation) {
+      continue;
+    }
+
+    const localizedDoctorName = translation?.name?.trim() || doctor.name;
+    const localizedDoctorSpecialization =
+      translation?.specialization?.trim() || doctor.specialization;
+    const localizedDoctorBio = translation?.bio?.trim() || doctor.bio;
     const pathname = normalizePath(`/doctors/${doctor.id}`);
-    const sourceTitle = `${doctor.name} | Doctors | Care N Tour`;
+    const sourceTitle =
+      locale === DEFAULT_SEO_LOCALE
+        ? `${localizedDoctorName} | Doctors | Care N Tour`
+        : `${localizedDoctorName} | الأطباء | كير آند تور`;
     const sourceDescription =
-      doctor.bio ??
-      (doctor.specialization
-        ? `${doctor.specialization} specialist at Care N Tour`
+      localizedDoctorBio ??
+      (localizedDoctorSpecialization
+        ? locale === DEFAULT_SEO_LOCALE
+          ? `${localizedDoctorSpecialization} specialist at Care N Tour`
+          : `${localizedDoctorSpecialization} مع كير آند تور`
         : null);
     const sourceImage = doctor.avatar_url ?? null;
     const effectiveOverride = overrideLookup.get(pathname);
@@ -1343,7 +1383,10 @@ export async function getPublicRouteInventory(
       routeKey: pathname,
       pathname,
       sourceType: "doctor",
-      label: `Doctor: ${doctor.name}`,
+      label:
+        locale === DEFAULT_SEO_LOCALE
+          ? `Doctor: ${localizedDoctorName}`
+          : `طبيب: ${localizedDoctorName}`,
       indexable: effectiveOverride?.robots_index ?? true,
       locale,
       sourceTitle,
