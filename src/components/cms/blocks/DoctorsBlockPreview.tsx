@@ -78,7 +78,7 @@ export function DoctorsBlockPreview({
 }: {
   block: BlockInstance<"doctors">;
 }) {
-  const { doctors, loading, error } = useDoctors();
+  const { doctors, loading, error } = useDoctors(undefined, { locale: "en" });
   const selectedDoctors = useMemo(
     () => selectPreviewDoctors(doctors, block),
     [block, doctors],
