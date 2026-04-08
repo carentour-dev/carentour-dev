@@ -188,7 +188,9 @@ export default function TreatmentDetails({
     ? rawDoctorCategory.trim().toLowerCase()
     : undefined;
 
-  const { doctors, loading: doctorsLoading } = useDoctors(doctorCategorySlug);
+  const { doctors, loading: doctorsLoading } = useDoctors(doctorCategorySlug, {
+    locale,
+  });
   const { reviews: patientReviews, loading: patientReviewsLoading } =
     usePatientReviews({
       treatmentId,
@@ -746,7 +748,11 @@ export default function TreatmentDetails({
             ) : doctors.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
                 {doctors.map((doctor) => (
-                  <DoctorProfile key={doctor.id} doctor={doctor} />
+                  <DoctorProfile
+                    key={doctor.id}
+                    doctor={doctor}
+                    locale={locale}
+                  />
                 ))}
               </div>
             ) : (
