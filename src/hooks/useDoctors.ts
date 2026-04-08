@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import type { PublicLocale } from "@/i18n/routing";
+import {
+  normalizeDoctorForClient,
+  type LocalizedPublicDoctor,
+} from "@/lib/doctors";
 
-interface Doctor {
+export interface Doctor {
   id: string;
   name: string;
   title: string;
@@ -19,6 +23,12 @@ interface Doctor {
   total_reviews: number;
 }
 
+type UseDoctorsOptions = {
+  enabled?: boolean;
+  initialData?: Doctor[];
+  locale?: PublicLocale;
+};
+
 interface DoctorReview {
   id: string;
   patient_name: string;
@@ -34,38 +44,47 @@ interface DoctorReview {
   created_at: string;
 }
 
-const fetchDoctors = async (treatmentCategory?: string): Promise<Doctor[]> => {
-  let query = supabase.from("doctors").select("*").eq("is_active", true);
+const fetchDoctors = async (
+  locale: PublicLocale,
+  treatmentCategory?: string,
+): Promise<Doctor[]> => {
+  const params = new URLSearchParams();
+  params.set("locale", locale);
 
   if (treatmentCategory) {
-    // Join with doctor_treatments to filter by treatment category
-    query = supabase
-      .from("doctors")
-      .select(
-        `
-        *,
-        doctor_treatments!inner(treatment_category)
-      `,
-      )
-      .eq("is_active", true)
-      .eq("doctor_treatments.treatment_category", treatmentCategory);
+    params.set("treatmentCategory", treatmentCategory);
   }
 
-  const { data, error } = await query;
+  const response = await fetch(`/api/doctors?${params.toString()}`, {
+    credentials: "same-origin",
+  });
+  const payload = await response.json();
 
-  if (error) throw error;
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Failed to load doctors");
+  }
 
-  return data || [];
+  return ((payload?.data ?? []) as LocalizedPublicDoctor[]).map(
+    normalizeDoctorForClient,
+  );
 };
 
-export const useDoctors = (treatmentCategory?: string) => {
+export const useDoctors = (
+  treatmentCategory?: string,
+  options?: UseDoctorsOptions,
+) => {
+  const locale = options?.locale ?? "en";
   const {
     data: doctors = [],
     isLoading: loading,
+    isFetching,
     error,
   } = useQuery({
-    queryKey: ["doctors", treatmentCategory],
-    queryFn: () => fetchDoctors(treatmentCategory),
+    queryKey: ["doctors", locale, treatmentCategory],
+    queryFn: () => fetchDoctors(locale, treatmentCategory),
+    enabled: options?.enabled ?? true,
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? 0 : undefined,
     staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
   });
@@ -73,43 +92,41 @@ export const useDoctors = (treatmentCategory?: string) => {
   return {
     doctors,
     loading,
+    isFetching,
     error: error instanceof Error ? error.message : null,
   };
 };
 
 const fetchDoctorReviews = async (
   doctorId: string,
+  locale: PublicLocale,
 ): Promise<DoctorReview[]> => {
-  const { data, error } = await supabase
-    .from("doctor_reviews")
-    .select(
-      "id, patient_name, patient_country, treatment_id, procedure_name, rating, review_text, recovery_time, is_verified, created_at, treatments(slug, name)",
-    )
-    .eq("published", true)
-    .eq("doctor_id", doctorId)
-    .order("created_at", { ascending: false });
+  const response = await fetch(
+    `/api/doctors/${doctorId}/reviews?locale=${locale}`,
+    {
+      credentials: "same-origin",
+    },
+  );
+  const payload = await response.json();
 
-  if (error) throw error;
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Failed to load doctor reviews");
+  }
 
-  return (data || []).map((review: any) => {
-    const mapped: DoctorReview = {
-      ...review,
-      treatment_slug: review.treatments?.slug ?? null,
-      treatment_name: review.treatments?.name ?? null,
-    };
-    delete (mapped as any).treatments;
-    return mapped;
-  });
+  return (payload?.data ?? []) as DoctorReview[];
 };
 
-export const useDoctorReviews = (doctorId: string) => {
+export const useDoctorReviews = (
+  doctorId: string,
+  locale: PublicLocale = "en",
+) => {
   const {
     data: reviews = [],
     isLoading: loading,
     error,
   } = useQuery({
-    queryKey: ["doctor-reviews", doctorId],
-    queryFn: () => fetchDoctorReviews(doctorId),
+    queryKey: ["doctor-reviews", locale, doctorId],
+    queryFn: () => fetchDoctorReviews(doctorId, locale),
     staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
     enabled: !!doctorId, // Only run query if doctorId is provided
