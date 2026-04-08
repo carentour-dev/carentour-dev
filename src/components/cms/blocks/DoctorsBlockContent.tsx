@@ -43,6 +43,24 @@ export function DoctorsBlockContent({
   doctors: DoctorBlockItem[];
   locale?: PublicLocale;
 }) {
+  const copy =
+    locale === "ar"
+      ? {
+          badge: "الأطباء",
+          rating: "التقييم",
+          reviews: "مراجعات",
+          procedures: "إجراءات",
+          viewProfile: "عرض الملف",
+          bookConsult: "احجز استشارة",
+        }
+      : {
+          badge: "Doctors",
+          rating: "rating",
+          reviews: "reviews",
+          procedures: "procedures",
+          viewProfile: "View profile",
+          bookConsult: "Book consult",
+        };
   const isCarousel = block.layout === "carousel";
   const shouldCenterStatic = isCarousel && doctors.length <= 3;
   const layoutClass = shouldCenterStatic
@@ -136,7 +154,7 @@ export function DoctorsBlockContent({
               variant="outline"
               className={cn("text-xs uppercase tracking-wide", badgeAlignClass)}
             >
-              Doctors
+              {copy.badge}
             </Badge>
             {block.title ? (
               <h2
@@ -229,14 +247,18 @@ export function DoctorsBlockContent({
                         <span className="font-semibold text-foreground">
                           {doctor.patient_rating.toFixed(1)}
                         </span>
-                        <span className="ml-1">rating</span>
+                        <span className="ml-1">{copy.rating}</span>
                       </div>
                     ) : null}
                     {typeof doctor.total_reviews === "number" ? (
-                      <div>{doctor.total_reviews}+ reviews</div>
+                      <div>
+                        {doctor.total_reviews}+ {copy.reviews}
+                      </div>
                     ) : null}
                     {typeof doctor.successful_procedures === "number" ? (
-                      <div>{doctor.successful_procedures}+ procedures</div>
+                      <div>
+                        {doctor.successful_procedures}+ {copy.procedures}
+                      </div>
                     ) : null}
                   </div>
                   {doctor.languages && doctor.languages.length ? (
@@ -270,7 +292,7 @@ export function DoctorsBlockContent({
                           locale,
                         )}
                       >
-                        View profile
+                        {copy.viewProfile}
                       </Link>
                     </Button>
                     <Button
@@ -282,7 +304,7 @@ export function DoctorsBlockContent({
                       <Link
                         href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?doctor=${doctor.id}`}
                       >
-                        Book consult
+                        {copy.bookConsult}
                       </Link>
                     </Button>
                   </div>
