@@ -2,6 +2,7 @@ import type { PublicLocale } from "@/i18n/routing";
 import type { BlogBlockContextEntity } from "@/lib/blog/server";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { normalizeBlocks } from "@/lib/cms/blocks";
+import type { DoctorDirectoryResponse } from "@/lib/doctors";
 import type {
   MedicalFacilitiesDirectoryResponse,
   MedicalFacilityDetail,
@@ -36,6 +37,7 @@ import {
   FaqBlock,
   FaqDirectoryBlock,
   MedicalFacilitiesDirectoryBlock,
+  DoctorDirectoryBlock,
   QuoteBlock,
   MedicalFacilityProfileBlock,
   TreatmentSpecialtiesBlock,
@@ -51,6 +53,7 @@ import {
 
 export type CmsBlockRenderContext = {
   medicalFacilitiesDirectoryData?: MedicalFacilitiesDirectoryResponse | null;
+  doctorDirectoryData?: DoctorDirectoryResponse | null;
   medicalFacility?: MedicalFacilityDetail | null;
   medicalFacilitySlug?: string;
   blog?: BlogBlockContextEntity | null;
@@ -175,6 +178,15 @@ export function BlockRenderer({
                   context={context}
                 />
               );
+            case "doctorDirectory":
+              return (
+                <DoctorDirectoryBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                  locale={locale}
+                />
+              );
             case "quote":
               return <QuoteBlock key={key} block={block} />;
             case "medicalFacilityProfile":
@@ -198,7 +210,7 @@ export function BlockRenderer({
                 <TreatmentsBlock key={key} block={block} locale={locale} />
               );
             case "doctors":
-              return <DoctorsBlock key={key} block={block} />;
+              return <DoctorsBlock key={key} block={block} locale={locale} />;
             case "tabbedGuide":
               return (
                 <TabbedGuideBlock key={key} block={block} locale={locale} />
