@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useDoctors } from "@/hooks/useDoctors";
 
 const DoctorsSection = () => {
-  const { doctors, loading } = useDoctors();
+  const { doctors, loading } = useDoctors(undefined, { locale: "en" });
 
   // Show top 3 doctors based on rating and reviews - memoized to prevent re-sorting
   const featuredDoctors = useMemo(() => {
