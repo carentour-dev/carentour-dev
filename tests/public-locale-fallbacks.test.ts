@@ -11,15 +11,22 @@ function readSource(relativePath: string) {
 
 test("keeps unsupported Arabic public routes on their English fallback paths", () => {
   const routingSource = readSource("src/lib/public/routing.ts");
+  const localizationSource = readSource("src/lib/public/localization.ts");
 
   assert.match(routingSource, /PUBLIC_ARABIC_UNSUPPORTED_PREFIXES/);
   assert.match(routingSource, /"\/consultation"/);
+  assert.doesNotMatch(routingSource, /"\/doctors"/);
   assert.doesNotMatch(routingSource, /"\/start-journey"/);
   assert.match(
     routingSource,
     /export function localizePublicPathnameWithFallback/,
   );
   assert.match(routingSource, /isPublicPathStaticallySupported/);
+  assert.match(localizationSource, /normalized\.startsWith\("\/doctors\/"\)/);
+  assert.match(
+    localizationSource,
+    /getLocalizedCmsPageBySlug\("doctors", locale\)/,
+  );
 });
 
 test("syncs document root language and direction with the active public locale", () => {
@@ -122,4 +129,15 @@ test("uses locale-aware start journey links across public pages and CMS blocks",
   assert.match(richTextSource, /getLocalizedSafeManagedHref/);
   assert.match(serviceCatalogSource, /getLocalizedSafeManagedHref/);
   assert.match(tabbedGuideSource, /getLocalizedSafeManagedHref/);
+});
+
+test("falls back to translated CMS page titles for Arabic navigation labels", () => {
+  const localizationSource = readSource("src/lib/public/localization.ts");
+
+  assert.match(localizationSource, /\.from\("cms_page_translations"\)/);
+  assert.match(localizationSource, /cmsPageTranslationsById/);
+  assert.match(
+    localizationSource,
+    /cleanText\(translation\?\.label\)\s*\?\?\s*cleanText\(cmsPageTranslation\?\.title\)\s*\?\?\s*link\.label/,
+  );
 });
