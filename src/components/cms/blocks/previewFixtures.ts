@@ -4,6 +4,7 @@ import {
   type FaqCategory,
   type FaqEntry,
 } from "@/lib/faq/data";
+import type { DoctorDirectoryResponse, PublicDoctor } from "@/lib/doctors";
 import type {
   MedicalFacilitiesDirectoryResponse,
   MedicalFacilityDetail,
@@ -12,6 +13,84 @@ import type {
 
 export const previewFaqs: FaqEntry[] = getFallbackFaqs().slice(0, 10);
 export const previewFaqCategories: FaqCategory[] = getDefaultCategories();
+
+const previewDoctors: PublicDoctor[] = [
+  {
+    id: "preview-doctor-1",
+    name: "Dr. Ahmed Mansour",
+    title: "Consultant Cardiac Surgeon",
+    specialization: "Cardiac Surgery",
+    bio: "Dr. Ahmed Mansour supports international cardiac patients who need complex surgery planning, multilingual communication, and confidence in every phase of the decision-making journey.",
+    experience_years: 18,
+    education:
+      "MD, Cairo University • Fellowship training in advanced cardiac surgery",
+    languages: ["English", "Arabic", "French"],
+    avatar_url: "/doctor-ahmed-mansour.jpg",
+    achievements: [
+      "Led complex valve and bypass programs for regional referral patients",
+    ],
+    certifications: ["Egyptian Board of Cardiac Surgery"],
+    patient_rating: 4.9,
+    total_reviews: 126,
+    successful_procedures: 3200,
+    research_publications: 24,
+    is_active: true,
+    created_at: "2026-03-01T00:00:00.000Z",
+    updated_at: "2026-03-01T00:00:00.000Z",
+  },
+  {
+    id: "preview-doctor-2",
+    name: "Dr. Layla Khalil",
+    title: "Senior Fertility Consultant",
+    specialization: "Fertility",
+    bio: "Dr. Layla Khalil helps patients compare fertility pathways with clear treatment planning, realistic travel coordination, and a highly personalized clinical approach.",
+    experience_years: 15,
+    education: "MD, Alexandria University • Reproductive medicine fellowship",
+    languages: ["English", "Arabic"],
+    avatar_url: "/doctor-layla-khalil.jpg",
+    achievements: [
+      "Built multidisciplinary fertility pathways for overseas patients",
+    ],
+    certifications: ["Reproductive Endocrinology Certification"],
+    patient_rating: 4.8,
+    total_reviews: 98,
+    successful_procedures: 1850,
+    research_publications: 16,
+    is_active: true,
+    created_at: "2026-03-01T00:00:00.000Z",
+    updated_at: "2026-03-01T00:00:00.000Z",
+  },
+  {
+    id: "preview-doctor-3",
+    name: "Dr. Youssef Elshamy",
+    title: "Orthopedic and Joint Replacement Specialist",
+    specialization: "Orthopedics",
+    bio: "Dr. Youssef Elshamy presents orthopedic care through a recovery-focused model that helps international patients plan surgery, rehabilitation, and return travel with greater clarity.",
+    experience_years: 20,
+    education: "MD, Ain Shams University • Joint reconstruction fellowship",
+    languages: ["English", "Arabic", "German"],
+    avatar_url: "/doctor-youssef-elshamy.jpg",
+    achievements: [
+      "Recognized for joint replacement outcomes and recovery planning",
+    ],
+    certifications: ["Egyptian Orthopedic Association"],
+    patient_rating: 4.7,
+    total_reviews: 143,
+    successful_procedures: 4100,
+    research_publications: 19,
+    is_active: true,
+    created_at: "2026-03-01T00:00:00.000Z",
+    updated_at: "2026-03-01T00:00:00.000Z",
+  },
+];
+
+export const previewDoctorDirectoryData: DoctorDirectoryResponse = {
+  doctors: previewDoctors,
+  filters: {
+    specialties: ["Cardiac Surgery", "Fertility", "Orthopedics"],
+    languages: ["Arabic", "English", "French", "German"],
+  },
+};
 
 const previewProviders: ServiceProviderRow[] = [
   {
