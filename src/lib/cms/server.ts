@@ -15,6 +15,7 @@ import {
   getLocalizedPublicTreatmentIndexItems,
   getLocalizedPublicTreatments,
 } from "@/server/modules/treatments/public";
+import { fetchLocalizedPublicDoctors } from "@/server/modules/doctors/public";
 
 export type CmsPage = {
   id: string;
@@ -87,57 +88,41 @@ export async function getPublicTreatmentIndexItems(
   return getLocalizedPublicTreatmentIndexItems(locale, limit);
 }
 
-export async function getDoctorsForBlock(config: BlockValue<"doctors">) {
-  const supabase = await createClient();
+export async function getDoctorsForBlock(
+  config: BlockValue<"doctors">,
+  locale: PublicLocale = "en",
+) {
   const manual = (config.manualDoctors ?? [])
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-  if (manual.length > 0) {
-    const { data, error } = await supabase
-      .from("doctors")
-      .select(DOCTOR_SELECT)
-      .in("id", manual);
-
-    if (error) {
-      console.error("Failed to load manual doctors for block", error);
-      return [];
-    }
-
-    const rows = (data ?? []) as DoctorRow[];
-    const orderMap = new Map(manual.map((id, index) => [id, index]));
-    const sorted = rows.sort((a, b) => {
-      const rankA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const rankB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      return rankA - rankB;
+  try {
+    const rows = await fetchLocalizedPublicDoctors({
+      locale,
+      doctorIds: manual.length > 0 ? manual : undefined,
+      featuredOnly: config.featuredOnly,
+      specializations: config.specialties,
+      limit: config.limit,
     });
-    return sorted.slice(0, config.limit);
-  }
 
-  let query = supabase
-    .from("doctors")
-    .select(DOCTOR_SELECT)
-    .eq("is_active", true);
-
-  if (config.featuredOnly) {
-    query = query.gte("patient_rating", 4.5);
-  }
-
-  if (config.specialties && config.specialties.length > 0) {
-    query = query.in("specialization", config.specialties);
-  }
-
-  const { data, error } = await query
-    .order("patient_rating", { ascending: false, nullsFirst: false })
-    .order("successful_procedures", { ascending: false, nullsFirst: false })
-    .limit(config.limit);
-
-  if (error) {
+    return rows.map((doctor) => ({
+      id: doctor.id,
+      name: doctor.name,
+      title: doctor.title,
+      specialization: doctor.specialization,
+      bio: doctor.bio,
+      experience_years: doctor.experience_years,
+      languages: doctor.languages,
+      avatar_url: doctor.avatar_url,
+      patient_rating: doctor.patient_rating,
+      total_reviews: doctor.total_reviews,
+      successful_procedures: doctor.successful_procedures,
+      is_active: doctor.is_active,
+    })) as DoctorRow[];
+  } catch (error) {
     console.error("Failed to load doctors for block", error);
     return [];
   }
-
-  return (data ?? []) as DoctorRow[];
 }
 
 export type GuideHotelEntry = {
