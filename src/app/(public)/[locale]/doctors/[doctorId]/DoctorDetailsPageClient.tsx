@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { DoctorReviews } from "@/components/DoctorReviews";
@@ -21,82 +21,103 @@ import {
   FileText,
   ChevronLeft,
   MessageCircle,
-  Phone,
 } from "lucide-react";
-import { useDoctors, useDoctorReviews } from "@/hooks/useDoctors";
+import type { PublicLocale } from "@/i18n/routing";
+import type { LocalizedPublicDoctor } from "@/lib/doctors";
+import { getPublicNumberLocale } from "@/lib/public/numbers";
+import type { LocalizedDoctorReview } from "@/server/modules/doctors/public";
+import { localizePublicPathnameWithFallback } from "@/lib/public/routing";
 
-export default function DoctorDetail() {
-  const { doctorId } = useParams();
+type Props = {
+  doctor: LocalizedPublicDoctor;
+  reviews: LocalizedDoctorReview[];
+  locale: PublicLocale;
+};
+
+export default function DoctorDetail({ doctor, reviews, locale }: Props) {
   const router = useRouter();
-  const { doctors, loading, error } = useDoctors();
-  const doctor = doctors.find((d) => d.id === doctorId);
-  const { reviews, loading: reviewsLoading } = useDoctorReviews(
-    (doctorId as string) || "",
+  const isArabicLocale = locale === "ar";
+  const numberLocale = getPublicNumberLocale(locale);
+  const integerFormatter = useMemo(
+    () => new Intl.NumberFormat(numberLocale),
+    [numberLocale],
   );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading doctor details...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error || !doctor) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-destructive mb-4">Doctor not found</p>
-            <Button onClick={() => router.push("/doctors")}>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to Doctors
-            </Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const ratingFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(numberLocale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    [numberLocale],
+  );
+  const firstName = doctor.name.split(" ")[1] || doctor.name.split(" ")[0];
+  const copy = {
+    loading: isArabicLocale
+      ? "جاري تحميل تفاصيل الطبيب..."
+      : "Loading doctor details...",
+    notFound: isArabicLocale ? "الطبيب غير موجود" : "Doctor not found",
+    backToDoctors: isArabicLocale ? "العودة إلى الأطباء" : "Back to Doctors",
+    reviewsLabel: isArabicLocale ? "مراجعة" : "reviews",
+    yearsExperience: isArabicLocale ? "سنوات خبرة" : "years experience",
+    procedures: isArabicLocale ? "إجراء" : "procedures",
+    scheduleConsultation: isArabicLocale
+      ? "احجز استشارة"
+      : "Schedule Consultation",
+    about: isArabicLocale
+      ? `نبذة عن د. ${firstName}`
+      : `About Dr. ${firstName}`,
+    education: isArabicLocale ? "التعليم والتدريب" : "Education & Training",
+    achievements: isArabicLocale
+      ? "الإنجازات والجوائز"
+      : "Achievements & Awards",
+    certifications: isArabicLocale ? "الاعتمادات" : "Certifications",
+    quickStats: isArabicLocale ? "إحصاءات سريعة" : "Quick Stats",
+    experience: isArabicLocale ? "الخبرة" : "Experience",
+    proceduresCount: isArabicLocale ? "الإجراءات" : "Procedures",
+    publications: isArabicLocale ? "الأبحاث" : "Publications",
+    patientRating: isArabicLocale ? "تقييم المرضى" : "Patient Rating",
+    languages: isArabicLocale ? "اللغات" : "Languages",
+    readyToSchedule: isArabicLocale ? "جاهز للحجز؟" : "Ready to Schedule?",
+    readyDescription: isArabicLocale
+      ? `احجز استشارة مع د. ${firstName} لمناقشة خيارات العلاج المناسبة لك.`
+      : `Book a consultation with Dr. ${firstName} to discuss your treatment options.`,
+  };
 
   return (
     <div className="min-h-screen">
       <Header />
 
       <main>
-        {/* Back Navigation */}
-        <section className="py-4 bg-background border-b border-border">
+        <section className="border-b border-border bg-background py-4">
           <div className="container mx-auto px-4">
             <Button
               variant="ghost"
-              onClick={() => router.push("/doctors")}
+              onClick={() =>
+                router.push(
+                  localizePublicPathnameWithFallback("/doctors", locale),
+                )
+              }
               className="mb-4"
             >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to All Doctors
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              {copy.backToDoctors}
             </Button>
           </div>
         </section>
 
-        {/* Doctor Header */}
         <section className="bg-surface-subtle py-12">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                <Avatar className="w-32 h-32 border-4 border-background shadow-lg">
-                  <AvatarImage src={doctor.avatar_url} alt={doctor.name} />
+            <div className="mx-auto max-w-4xl">
+              <div className="flex flex-col items-start gap-8 md:flex-row">
+                <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                  <AvatarImage
+                    src={doctor.avatar_url ?? undefined}
+                    alt={doctor.name}
+                  />
                   <AvatarFallback className="text-2xl">
                     {doctor.name
                       .split(" ")
-                      .map((n) => n[0])
+                      .map((part) => part[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
@@ -105,37 +126,49 @@ export default function DoctorDetail() {
                   <Badge variant="outline" className="mb-2">
                     {doctor.specialization}
                   </Badge>
-                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                  <h1 className="mb-2 text-3xl font-bold text-foreground md:text-4xl">
                     {doctor.name}
                   </h1>
-                  <p className="text-xl text-muted-foreground mb-4">
+                  <p className="mb-4 text-xl text-muted-foreground">
                     {doctor.title}
                   </p>
 
-                  <div className="flex flex-wrap gap-4 mb-6">
+                  <div className="mb-6 flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                      <Star className="h-4 w-4 fill-current text-yellow-500" />
                       <span className="font-semibold">
-                        {doctor.patient_rating}
+                        {ratingFormatter.format(doctor.patient_rating)}
                       </span>
                       <span className="text-muted-foreground">
-                        ({doctor.total_reviews} reviews)
+                        ({integerFormatter.format(doctor.total_reviews)}{" "}
+                        {copy.reviewsLabel})
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-primary" />
-                      <span>{doctor.experience_years} years experience</span>
+                      <span>
+                        {integerFormatter.format(doctor.experience_years)}{" "}
+                        {copy.yearsExperience}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-primary" />
-                      <span>{doctor.successful_procedures} procedures</span>
+                      <span>
+                        {integerFormatter.format(doctor.successful_procedures)}{" "}
+                        {copy.procedures}
+                      </span>
                     </div>
                   </div>
 
                   <Button size="lg" asChild>
-                    <Link href="/consultation">
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Schedule Consultation
+                    <Link
+                      href={localizePublicPathnameWithFallback(
+                        "/consultation",
+                        locale,
+                      )}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      {copy.scheduleConsultation}
                     </Link>
                   </Button>
                 </div>
@@ -144,36 +177,31 @@ export default function DoctorDetail() {
           </div>
         </section>
 
-        {/* Doctor Details */}
-        <section className="py-20 bg-background">
+        <section className="bg-background py-20">
           <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-8">
-                {/* About */}
-                {doctor.bio && (
+            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="space-y-8 lg:col-span-2">
+                {doctor.bio ? (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5" />
-                        About Dr.{" "}
-                        {doctor.name.split(" ")[1] || doctor.name.split(" ")[0]}
+                        {copy.about}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground leading-relaxed">
+                      <p className="leading-relaxed text-muted-foreground">
                         {doctor.bio}
                       </p>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Education */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <GraduationCap className="h-5 w-5" />
-                      Education & Training
+                      {copy.education}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -181,20 +209,19 @@ export default function DoctorDetail() {
                   </CardContent>
                 </Card>
 
-                {/* Achievements */}
-                {doctor.achievements && doctor.achievements.length > 0 && (
+                {doctor.achievements?.length ? (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Award className="h-5 w-5" />
-                        Achievements & Awards
+                        {copy.achievements}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
                         {doctor.achievements.map((achievement, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <Award className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                            <Award className="mt-1 h-4 w-4 flex-shrink-0 text-primary" />
                             <span className="text-muted-foreground">
                               {achievement}
                             </span>
@@ -203,84 +230,84 @@ export default function DoctorDetail() {
                       </ul>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Certifications */}
-                {doctor.certifications && doctor.certifications.length > 0 && (
+                {doctor.certifications?.length ? (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Certifications</CardTitle>
+                      <CardTitle>{copy.certifications}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {doctor.certifications.map((cert, index) => (
+                        {doctor.certifications.map((certification, index) => (
                           <Badge key={index} variant="secondary">
-                            {cert}
+                            {certification}
                           </Badge>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Reviews */}
-                {!reviewsLoading && reviews.length > 0 && (
-                  <DoctorReviews reviews={reviews} />
-                )}
+                {reviews.length > 0 ? (
+                  <DoctorReviews reviews={reviews} locale={locale} />
+                ) : null}
               </div>
 
-              {/* Sidebar */}
               <div className="space-y-6">
-                {/* Quick Stats */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Quick Stats</CardTitle>
+                    <CardTitle>{copy.quickStats}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Experience</span>
-                      <span className="font-semibold">
-                        {doctor.experience_years} years
+                      <span className="text-muted-foreground">
+                        {copy.experience}
                       </span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Procedures</span>
                       <span className="font-semibold">
-                        {doctor.successful_procedures}
+                        {integerFormatter.format(doctor.experience_years)}{" "}
+                        {isArabicLocale ? "سنة" : "years"}
                       </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Publications
+                        {copy.proceduresCount}
                       </span>
                       <span className="font-semibold">
-                        {doctor.research_publications}
+                        {integerFormatter.format(doctor.successful_procedures)}
                       </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Patient Rating
+                        {copy.publications}
+                      </span>
+                      <span className="font-semibold">
+                        {integerFormatter.format(doctor.research_publications)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {copy.patientRating}
                       </span>
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        <Star className="h-4 w-4 fill-current text-yellow-500" />
                         <span className="font-semibold">
-                          {doctor.patient_rating}
+                          {ratingFormatter.format(doctor.patient_rating)}
                         </span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Languages */}
-                {doctor.languages && doctor.languages.length > 0 && (
+                {doctor.languages?.length ? (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Languages className="h-5 w-5" />
-                        Languages
+                        {copy.languages}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -293,21 +320,25 @@ export default function DoctorDetail() {
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Contact CTA */}
                 <Card className="bg-surface-subtle">
                   <CardHeader>
-                    <CardTitle>Ready to Schedule?</CardTitle>
+                    <CardTitle>{copy.readyToSchedule}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Book a consultation with Dr.{" "}
-                      {doctor.name.split(" ")[1] || doctor.name.split(" ")[0]}{" "}
-                      to discuss your treatment options.
+                      {copy.readyDescription}
                     </p>
                     <Button className="w-full" size="lg" asChild>
-                      <Link href="/consultation">Schedule Consultation</Link>
+                      <Link
+                        href={localizePublicPathnameWithFallback(
+                          "/consultation",
+                          locale,
+                        )}
+                      >
+                        {copy.scheduleConsultation}
+                      </Link>
                     </Button>
                   </CardContent>
                 </Card>
