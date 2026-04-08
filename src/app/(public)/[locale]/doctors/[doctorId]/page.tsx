@@ -13,7 +13,10 @@ import {
   resolveSeo,
   webPageSchema,
 } from "@/lib/seo";
-import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import {
+  fetchLocalizedDoctorReviews,
+  fetchLocalizedPublicDoctorById,
+} from "@/server/modules/doctors/public";
 import DoctorDetailsPageClient from "./DoctorDetailsPageClient";
 
 export const revalidate = 300;
@@ -22,84 +25,76 @@ type PageProps = {
   params: Promise<{ locale: string; doctorId: string }>;
 };
 
-async function getDoctorById(doctorId: string) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("doctors")
-    .select("id, name, specialization, bio, avatar_url, is_active, updated_at")
-    .eq("id", doctorId)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Failed to load doctor for SEO", { doctorId, error });
-    return null;
-  }
-
-  return data;
-}
-
-async function getSeo(
-  doctorId: string,
-  doctor: Awaited<ReturnType<typeof getDoctorById>> | null,
-  locale: PublicLocale,
-) {
+async function getSeo(doctorId: string, locale: PublicLocale) {
+  const doctor = await fetchLocalizedPublicDoctorById(locale, doctorId);
   const pathname = `/doctors/${doctorId}`;
   const localizedPathname = getLocalizedPublicPagePathname(pathname, locale);
+  const doctorsLabel = locale === "ar" ? "الأطباء" : "Doctors";
   const defaultTitle = doctor
-    ? `${doctor.name} | Doctors | Care N Tour`
-    : "Doctor | Care N Tour";
+    ? locale === "ar"
+      ? `${doctor.name} | الأطباء | كير آند تور`
+      : `${doctor.name} | Doctors | Care N Tour`
+    : locale === "ar"
+      ? "طبيب | كير آند تور"
+      : "Doctor | Care N Tour";
   const defaultDescription =
     doctor?.bio ??
     (doctor?.specialization
-      ? `${doctor.specialization} specialist at Care N Tour.`
-      : "Meet one of our specialist doctors.");
+      ? locale === "ar"
+        ? `${doctor.specialization} مع كير آند تور.`
+        : `${doctor.specialization} specialist at Care N Tour.`
+      : locale === "ar"
+        ? "تعرّف على أحد أطبائنا المتخصصين."
+        : "Meet one of our specialist doctors.");
 
-  return resolveSeo({
-    routeKey: pathname,
-    pathname: localizedPathname,
-    locale,
-    defaults: {
-      title: defaultTitle,
-      description: defaultDescription,
-    },
-    source: doctor
-      ? {
-          title: defaultTitle,
-          description: defaultDescription,
-          ogImageUrl: doctor.avatar_url,
-        }
-      : undefined,
-    schema: doctor
-      ? [
-          webPageSchema({
+  return {
+    doctor,
+    seo: await resolveSeo({
+      routeKey: pathname,
+      pathname: localizedPathname,
+      locale,
+      defaults: {
+        title: defaultTitle,
+        description: defaultDescription,
+      },
+      source: doctor
+        ? {
+            title: defaultTitle,
+            description: defaultDescription,
+            ogImageUrl: doctor.avatar_url,
+          }
+        : undefined,
+      schema: doctor
+        ? [
+            webPageSchema({
+              urlPath: localizedPathname,
+              title: defaultTitle,
+              description: defaultDescription,
+              breadcrumbs: [
+                {
+                  name: doctorsLabel,
+                  path: getLocalizedPublicPagePathname("/doctors", locale),
+                },
+                { name: doctor.name, path: localizedPathname },
+              ],
+            }),
+            physicianSchema({
+              path: localizedPathname,
+              name: doctor.name,
+              description: defaultDescription,
+              imageUrl: doctor.avatar_url,
+              specialty: doctor.specialization,
+            }),
+          ]
+        : webPageSchema({
             urlPath: localizedPathname,
             title: defaultTitle,
             description: defaultDescription,
-            breadcrumbs: [
-              {
-                name: "Doctors",
-                path: getLocalizedPublicPagePathname("/doctors", locale),
-              },
-              { name: doctor.name, path: localizedPathname },
-            ],
           }),
-          physicianSchema({
-            path: localizedPathname,
-            name: doctor.name,
-            description: defaultDescription,
-            imageUrl: doctor.avatar_url,
-            specialty: doctor.specialization,
-          }),
-        ]
-      : webPageSchema({
-          urlPath: localizedPathname,
-          title: defaultTitle,
-          description: defaultDescription,
-        }),
-    indexable: Boolean(doctor),
-    modifiedTime: doctor?.updated_at ?? undefined,
-  });
+      indexable: Boolean(doctor),
+      modifiedTime: doctor?.updated_at ?? undefined,
+    }),
+  };
 }
 
 export async function generateMetadata({
@@ -108,8 +103,7 @@ export async function generateMetadata({
   const { doctorId } = await params;
   const locale = await getPublicLocaleFromParams(params);
   await assertPublicPageAvailable(`/doctors/${doctorId}`, locale);
-  const doctor = await getDoctorById(doctorId);
-  const seo = await getSeo(doctorId, doctor, locale);
+  const { seo } = await getSeo(doctorId, locale);
   return seo.metadata;
 }
 
@@ -120,17 +114,23 @@ export default async function DoctorDetailsPage({ params }: PageProps) {
 
   await assertPublicPageAvailable(pathname, locale);
   await maybeRedirectFromLegacyPath(pathname);
-  const doctor = await getDoctorById(doctorId);
+  const [{ doctor, seo }, reviews] = await Promise.all([
+    getSeo(doctorId, locale),
+    fetchLocalizedDoctorReviews(doctorId, locale),
+  ]);
+
   if (!doctor) {
     notFound();
   }
 
-  const seo = await getSeo(doctorId, doctor, locale);
-
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <DoctorDetailsPageClient />
+      <DoctorDetailsPageClient
+        doctor={doctor}
+        reviews={reviews}
+        locale={locale}
+      />
     </>
   );
 }
