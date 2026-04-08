@@ -13,7 +13,7 @@ VALUES (
       "eyebrow": "Care N Tour FAQ",
       "heading": "We answer the questions international patients ask before choosing treatment in Egypt.",
       "description": "We explain how we coordinate treatment planning, travel, pricing, accommodation, safety, and recovery so patients and families can move forward with clarity.",
-      "backgroundImageUrl": "/consultation.jpg",
+      "backgroundImageUrl": "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png",
       "overlay": {
         "fromColor": "#000000",
         "fromOpacity": 0.7,
