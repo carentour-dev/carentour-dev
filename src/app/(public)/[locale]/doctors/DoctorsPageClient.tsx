@@ -23,7 +23,7 @@ import { localizePublicPathnameWithFallback } from "@/lib/public/routing";
 
 export default function Doctors() {
   const locale = useLocale() as PublicLocale;
-  const { doctors, loading, error } = useDoctors();
+  const { doctors, loading, error } = useDoctors(undefined, { locale });
   const [searchTerm, setSearchTerm] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
@@ -185,7 +185,11 @@ export default function Doctors() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {filteredDoctors.map((doctor) => (
-                  <DoctorProfile key={doctor.id} doctor={doctor} />
+                  <DoctorProfile
+                    key={doctor.id}
+                    doctor={doctor}
+                    locale={locale}
+                  />
                 ))}
               </div>
             )}
