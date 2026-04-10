@@ -7,6 +7,11 @@ import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
 import { createClient as createSupabaseClient } from "@/integrations/supabase/server";
 
+const travelWindowSchema = z.object({
+  from: z.string().min(1, "travel window start is required"),
+  to: z.string().nullable().optional(),
+});
+
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
   email: z.string().email("A valid email is required"),
@@ -16,7 +21,7 @@ const consultationSchema = z.object({
   treatmentId: z.string().optional(),
   procedure: z.string().optional(),
   destination: z.string().optional(),
-  travelWindow: z.string().min(1, "Please share your ideal travel window"),
+  travelWindow: travelWindowSchema,
   healthBackground: z
     .string()
     .min(1, "Health goals or current diagnosis is required"),
@@ -59,6 +64,12 @@ const splitFullName = (
     firstName: parts[0],
     lastName: parts.slice(1).join(" "),
   };
+};
+
+const formatTravelWindow = (window: z.infer<typeof travelWindowSchema>) => {
+  if (!window?.from) return "";
+  if (!window.to) return window.from;
+  return `${window.from} - ${window.to}`;
 };
 
 export const POST = async (req: NextRequest) => {
@@ -110,6 +121,7 @@ export const POST = async (req: NextRequest) => {
 
     const payload = consultationSchema.parse(await req.json());
     const { firstName, lastName } = splitFullName(payload.fullName);
+    const travelWindow = formatTravelWindow(payload.travelWindow);
 
     const healthBackground = payload.healthBackground.trim();
     const documents = payload.documents ?? [];
@@ -137,7 +149,7 @@ export const POST = async (req: NextRequest) => {
       country: payload.country,
       treatment: payload.treatment,
       destination: payload.destination,
-      travel_window: payload.travelWindow,
+      travel_window: travelWindow,
       health_background: healthBackground,
       budget_range: payload.budgetRange,
       companions: payload.companions,
@@ -165,7 +177,7 @@ export const POST = async (req: NextRequest) => {
           treatment: payload.treatment,
           procedure: payload.procedure,
           destination: payload.destination,
-          travelWindow: payload.travelWindow,
+          travelWindow,
           healthBackground,
           message: healthBackground,
           budgetRange: payload.budgetRange,
