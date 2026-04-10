@@ -266,6 +266,9 @@ const formatTravelWindow = (value: string | null | undefined) => {
   return value;
 };
 
+const hasText = (value: string | null | undefined) =>
+  typeof value === "string" && value.trim().length > 0;
+
 const formatFileSize = (bytes?: number | null) => {
   if (!Number.isFinite(bytes ?? NaN) || (bytes ?? 0) <= 0) {
     return "";
@@ -1466,6 +1469,11 @@ export default function AdminRequestsPage() {
                   const archived = getArchivedState(request);
                   const archiveLabel = archived ? "Unarchive" : "Archive";
                   const assignment = formatAssignee(request);
+                  const showTravelWindow =
+                    request.request_type === "consultation" ||
+                    request.request_type === "start_journey" ||
+                    hasText(request.travel_window) ||
+                    hasText(request.companions);
                   const isRowUpdating =
                     updateRequest.isPending && updatingId === request.id;
                   const isRowDeleting =
@@ -1558,21 +1566,25 @@ export default function AdminRequestsPage() {
                                     </p>
                                   </div>
                                 )}
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                  Travel window
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {request.travel_window
-                                    ? formatTravelWindow(request.travel_window)
-                                    : "Not provided"}
-                                </p>
-                                {request.companions && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Companion plan: {request.companions}
+                              {showTravelWindow && (
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Travel window
                                   </p>
-                                )}
-                              </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {request.travel_window
+                                      ? formatTravelWindow(
+                                          request.travel_window,
+                                        )
+                                      : "Not provided"}
+                                  </p>
+                                  {request.companions && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Companion plan: {request.companions}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                               {request.notes &&
                                 request.notes.trim().length > 0 && (
                                   <div>
