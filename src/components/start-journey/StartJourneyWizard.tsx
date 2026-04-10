@@ -1404,8 +1404,8 @@ function StartJourneyWizardContent({
                                     ? "No treatments available"
                                     : "Select a treatment"
                               }
-                              searchPlaceholder="Search featured treatments..."
-                              emptyLabel="No featured treatments found."
+                              searchPlaceholder="Search treatments..."
+                              emptyLabel="No treatments found."
                               onChange={(selected) => {
                                 field.onChange(selected);
                                 form.clearErrors("treatmentId");
