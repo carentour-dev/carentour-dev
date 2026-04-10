@@ -20,7 +20,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch, type FieldErrors } from "react-hook-form";
-import { format } from "date-fns";
 import {
   ArrowLeft,
   ArrowRight,
@@ -61,21 +60,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ComboBox, type ComboOption } from "@/components/ui/combobox";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 const steps = [
   { id: 1, title: "Basic Information", icon: User },
@@ -372,6 +360,17 @@ const interpreterOptions = [
   { value: "other", label: "Other / please specify in notes" },
 ];
 
+const countryComboOptions: ComboOption[] = COUNTRY_OPTIONS.map((country) => ({
+  value: country,
+  label: country,
+}));
+
+const treatmentTimelineComboOptions: ComboOption[] = treatmentTimelineOptions;
+const budgetComboOptions: ComboOption[] = budgetOptions;
+const accommodationComboOptions: ComboOption[] = accommodationOptions;
+const companionComboOptions: ComboOption[] = companionOptions;
+const interpreterComboOptions: ComboOption[] = interpreterOptions;
+
 const defaultValues = {
   firstName: "",
   lastName: "",
@@ -479,6 +478,10 @@ function StartJourneyWizardContent({
   const { toast } = useToast();
   const { session } = useAuth();
   const { treatments, loading: treatmentsLoading } = useTreatments();
+  const featuredTreatments = useMemo(
+    () => treatments.filter((treatment) => treatment.isFeatured === true),
+    [treatments],
+  );
 
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [uploadState, setUploadState] = useState<UploadState>({
@@ -521,12 +524,34 @@ function StartJourneyWizardContent({
   });
 
   const selectedTreatment = useMemo(
-    () => treatments.find((treatment) => treatment.id === treatmentId) ?? null,
-    [treatmentId, treatments],
+    () =>
+      featuredTreatments.find((treatment) => treatment.id === treatmentId) ??
+      null,
+    [featuredTreatments, treatmentId],
   );
   const procedureOptions = useMemo(
     () => getProcedureOptions(selectedTreatment ?? undefined),
     [selectedTreatment],
+  );
+  const featuredTreatmentComboOptions = useMemo<ComboOption[]>(
+    () =>
+      featuredTreatments.map((treatment) => ({
+        value: treatment.id,
+        label: treatment.name,
+        description: treatment.category ?? undefined,
+        searchTerms: [treatment.slug, treatment.category].filter(
+          (entry): entry is string => Boolean(entry),
+        ),
+      })),
+    [featuredTreatments],
+  );
+  const procedureComboOptions = useMemo<ComboOption[]>(
+    () =>
+      procedureOptions.map((procedure) => ({
+        value: procedure.id,
+        label: procedure.name,
+      })),
+    [procedureOptions],
   );
 
   useEffect(() => {
@@ -551,7 +576,7 @@ function StartJourneyWizardContent({
   useEffect(() => {
     const treatmentParam = searchParams.get("treatment");
     const procedureParam = searchParams.get("procedure");
-    if (!treatments.length || (!treatmentParam && !procedureParam)) {
+    if (!featuredTreatments.length || (!treatmentParam && !procedureParam)) {
       return;
     }
 
@@ -571,7 +596,7 @@ function StartJourneyWizardContent({
     const sluggedTreatmentParam = slugifyLoose(treatmentParam);
 
     const matchedTreatment =
-      treatments.find((treatment) => {
+      featuredTreatments.find((treatment) => {
         const slugMatches =
           normalizedTreatmentParam &&
           (normalize(treatment.slug) === normalizedTreatmentParam ||
@@ -589,7 +614,7 @@ function StartJourneyWizardContent({
         return slugMatches || nameMatches || categoryMatches || idMatches;
       }) ??
       (procedureParam
-        ? treatments.find((treatment) =>
+        ? featuredTreatments.find((treatment) =>
             treatment.procedures.some(
               (procedure) =>
                 procedure.id === procedureParam ||
@@ -652,7 +677,7 @@ function StartJourneyWizardContent({
     }
 
     isApplyingPrefill.current = false;
-  }, [form, procedureOptions, searchParams, treatments]);
+  }, [featuredTreatments, form, procedureOptions, searchParams]);
 
   useEffect(() => {
     if (!pendingProcedureId.current) return;
@@ -938,8 +963,9 @@ function StartJourneyWizardContent({
 
         const { treatmentId: selectedTreatmentId, procedureId } = values;
         const treatmentName =
-          treatments.find((treatment) => treatment.id === selectedTreatmentId)
-            ?.name ?? "";
+          featuredTreatments.find(
+            (treatment) => treatment.id === selectedTreatmentId,
+          )?.name ?? "";
 
         const preparedTravelWindow = (() => {
           const from = values.travelDates?.from;
@@ -1043,13 +1069,13 @@ function StartJourneyWizardContent({
       }
     },
     [
+      featuredTreatments,
       form,
       router,
       session?.access_token,
       setCurrentStep,
       successRedirectHref,
       toast,
-      treatments,
     ],
   );
 
@@ -1057,20 +1083,6 @@ function StartJourneyWizardContent({
     () => Math.round((currentStep / steps.length) * 100),
     [currentStep],
   );
-
-  const renderTravelDateLabel = useCallback(() => {
-    const { from, to } = form.getValues("travelDates") ?? {};
-    if (!from) {
-      return "Select travel window";
-    }
-    if (!to) {
-      return `Departing ${format(from, "PPP")}`;
-    }
-    if (format(from, "yyyy-MM-dd") === format(to, "yyyy-MM-dd")) {
-      return format(from, "PPP");
-    }
-    return `${format(from, "PPP")} – ${format(to, "PPP")}`;
-  }, [form]);
 
   const renderDocumentList = useCallback(
     (definition: DocumentDefinition) => {
@@ -1328,31 +1340,24 @@ function StartJourneyWizardContent({
                     <FormField
                       control={form.control}
                       name="country"
-                      render={({
-                        field: { value, onChange, ...fieldProps },
-                      }) => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormLabel>Country *</FormLabel>
-                          <Select
-                            onValueChange={(selected) => {
-                              onChange(selected);
-                              form.clearErrors("country");
-                            }}
-                            value={value ?? ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger {...fieldProps}>
-                                <SelectValue placeholder="Choose your country" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-64">
-                              {COUNTRY_OPTIONS.map((country) => (
-                                <SelectItem key={country} value={country}>
-                                  {country}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={countryComboOptions}
+                              placeholder="Choose your country"
+                              searchPlaceholder="Search countries..."
+                              emptyLabel="No countries found."
+                              onChange={(selected) => {
+                                field.onChange(selected);
+                                form.clearErrors("country");
+                              }}
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1363,26 +1368,18 @@ function StartJourneyWizardContent({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Treatment timeline</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? undefined}
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={field.ref}>
-                                <SelectValue placeholder="When would you like to travel?" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {treatmentTimelineOptions.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={treatmentTimelineComboOptions}
+                              placeholder="When would you like to travel?"
+                              searchPlaceholder="Search timelines..."
+                              emptyLabel="No timeline options found."
+                              onChange={field.onChange}
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1396,40 +1393,31 @@ function StartJourneyWizardContent({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Treatment of interest *</FormLabel>
-                          <Select
-                            onValueChange={(selected) => {
-                              field.onChange(selected);
-                              form.clearErrors("treatmentId");
-                            }}
-                            value={field.value ?? undefined}
-                            disabled={
-                              treatmentsLoading || treatments.length === 0
-                            }
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={field.ref}>
-                                <SelectValue
-                                  placeholder={
-                                    treatmentsLoading
-                                      ? "Loading treatments..."
-                                      : treatments.length === 0
-                                        ? "No treatments available"
-                                        : "Select a treatment"
-                                  }
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {treatments.map((treatment) => (
-                                <SelectItem
-                                  key={treatment.id}
-                                  value={treatment.id}
-                                >
-                                  {treatment.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={featuredTreatmentComboOptions}
+                              placeholder={
+                                treatmentsLoading
+                                  ? "Loading treatments..."
+                                  : featuredTreatments.length === 0
+                                    ? "No treatments available"
+                                    : "Select a treatment"
+                              }
+                              searchPlaceholder="Search featured treatments..."
+                              emptyLabel="No featured treatments found."
+                              onChange={(selected) => {
+                                field.onChange(selected);
+                                form.clearErrors("treatmentId");
+                              }}
+                              disabled={
+                                treatmentsLoading ||
+                                featuredTreatments.length === 0
+                              }
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1443,38 +1431,28 @@ function StartJourneyWizardContent({
                             Procedure details{" "}
                             {procedureOptions.length ? "*" : "(optional)"}
                           </FormLabel>
-                          <Select
-                            onValueChange={(selected) => {
-                              field.onChange(selected);
-                              form.clearErrors("procedureId");
-                            }}
-                            value={field.value ?? undefined}
-                            disabled={procedureOptions.length === 0}
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={field.ref}>
-                                <SelectValue
-                                  placeholder={
-                                    treatmentId
-                                      ? procedureOptions.length === 0
-                                        ? "No procedures available"
-                                        : "Select a procedure"
-                                      : "Select a treatment first"
-                                  }
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {procedureOptions.map((procedure) => (
-                                <SelectItem
-                                  key={procedure.id}
-                                  value={procedure.id}
-                                >
-                                  {procedure.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={procedureComboOptions}
+                              placeholder={
+                                treatmentId
+                                  ? procedureOptions.length === 0
+                                    ? "No procedures available"
+                                    : "Select a procedure"
+                                  : "Select a treatment first"
+                              }
+                              searchPlaceholder="Search procedures..."
+                              emptyLabel="No procedures found."
+                              onChange={(selected) => {
+                                field.onChange(selected);
+                                form.clearErrors("procedureId");
+                              }}
+                              disabled={procedureOptions.length === 0}
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormDescription>
                             We use this to match you with the right surgical
                             teams and price guides.
@@ -1491,26 +1469,18 @@ function StartJourneyWizardContent({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Budget guidance</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <FormControl>
-                            <SelectTrigger ref={field.ref}>
-                              <SelectValue placeholder="Share an estimated budget (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {budgetOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <ComboBox
+                            value={field.value ?? ""}
+                            options={budgetComboOptions}
+                            placeholder="Share an estimated budget (optional)"
+                            searchPlaceholder="Search budget ranges..."
+                            emptyLabel="No budget ranges found."
+                            onChange={field.onChange}
+                            className="font-normal"
+                            contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1657,40 +1627,21 @@ function StartJourneyWizardContent({
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Preferred travel dates *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !field.value?.from && "text-muted-foreground",
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {renderTravelDateLabel()}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="range"
-                              defaultMonth={field.value?.from ?? todaysDate}
-                              selected={
-                                field.value?.from
-                                  ? {
-                                      from: field.value.from,
-                                      to: field.value.to ?? undefined,
-                                    }
-                                  : undefined
-                              }
-                              onSelect={(range) => field.onChange(range)}
-                              numberOfMonths={2}
-                              disabled={(date) => date < todaysDate}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <DateRangePicker
+                            value={
+                              field.value?.from
+                                ? {
+                                    from: field.value.from,
+                                    to: field.value.to ?? undefined,
+                                  }
+                                : undefined
+                            }
+                            onChange={(range) => field.onChange(range)}
+                            placeholder="Select travel window"
+                            minDate={todaysDate}
+                          />
+                        </FormControl>
                         <FormDescription>
                           Pick a start date and optional return date. Dates can
                           be adjusted with your coordinator later.
@@ -1707,26 +1658,18 @@ function StartJourneyWizardContent({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Accommodation preference</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? undefined}
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={field.ref}>
-                                <SelectValue placeholder="Select accommodation type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {accommodationOptions.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={accommodationComboOptions}
+                              placeholder="Select accommodation type"
+                              searchPlaceholder="Search accommodation options..."
+                              emptyLabel="No accommodation options found."
+                              onChange={field.onChange}
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1737,26 +1680,18 @@ function StartJourneyWizardContent({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Companion travelers</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? undefined}
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={field.ref}>
-                                <SelectValue placeholder="How many companions?" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {companionOptions.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ComboBox
+                              value={field.value ?? ""}
+                              options={companionComboOptions}
+                              placeholder="How many companions?"
+                              searchPlaceholder="Search companion counts..."
+                              emptyLabel="No companion options found."
+                              onChange={field.onChange}
+                              className="font-normal"
+                              contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1769,26 +1704,18 @@ function StartJourneyWizardContent({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Interpreter preference</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <FormControl>
-                            <SelectTrigger ref={field.ref}>
-                              <SelectValue placeholder="Do you need language support?" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {interpreterOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <ComboBox
+                            value={field.value ?? ""}
+                            options={interpreterComboOptions}
+                            placeholder="Do you need language support?"
+                            searchPlaceholder="Search interpreter options..."
+                            emptyLabel="No interpreter options found."
+                            onChange={field.onChange}
+                            className="font-normal"
+                            contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
