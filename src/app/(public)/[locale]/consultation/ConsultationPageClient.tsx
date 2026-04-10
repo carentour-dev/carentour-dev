@@ -21,23 +21,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { ComboBox, type ComboOption } from "@/components/ui/combobox";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Calendar as CalendarIcon,
   CalendarDays,
   Globe2,
   HeartPulse,
@@ -63,6 +50,25 @@ const consultationDocumentSchema = z.object({
   uploadedAt: z.string(),
 });
 
+const consultationTravelWindowSchema = z
+  .object({
+    from: z.date({ required_error: "Select your ideal travel window" }),
+    to: z.date().nullable().optional(),
+  })
+  .refine(
+    (value) => {
+      if (!value.to || !value.from) {
+        return true;
+      }
+
+      return value.to >= value.from;
+    },
+    {
+      path: ["to"],
+      message: "Return date must be after the start date",
+    },
+  );
+
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Share your full name"),
   email: z.string().email("Enter a valid email"),
@@ -70,7 +76,7 @@ const consultationSchema = z.object({
   country: z.string().min(1, "Tell us where you live"),
   treatmentId: z.string().min(1, "Select a treatment"),
   procedure: z.string().min(1, "Select a procedure"),
-  travelWindow: z.date({ required_error: "Select your ideal travel date" }),
+  travelWindow: consultationTravelWindowSchema,
   healthBackground: z
     .string()
     .min(20, "Describe your health goals or diagnosis (20 characters minimum)"),
@@ -108,6 +114,10 @@ const TRAVEL_HINTS = [
 
 const DOCUMENT_UPLOAD_ENDPOINT = "/api/consultations/documents";
 const ALLOWED_FILE_TYPES = "application/pdf,image/png,image/jpeg,image/jpg";
+const countryComboOptions: ComboOption[] = COUNTRY_OPTIONS.map((country) => ({
+  value: country,
+  label: country,
+}));
 
 const splitFullName = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -124,6 +134,14 @@ const splitFullName = (fullName: string) => {
     firstName: parts[0],
     lastName: parts.slice(1).join(" "),
   };
+};
+
+const formatTravelWindow = (
+  window: ConsultationFormValues["travelWindow"],
+): string => {
+  if (!window?.from) return "";
+  if (!window.to) return format(window.from, "PPP");
+  return `${format(window.from, "PPP")} - ${format(window.to, "PPP")}`;
 };
 
 export default function ConsultationPage() {
@@ -143,7 +161,10 @@ export default function ConsultationPage() {
       country: "",
       treatmentId: "",
       procedure: "",
-      travelWindow: undefined,
+      travelWindow: { from: undefined, to: undefined } as {
+        from?: Date;
+        to?: Date | null;
+      },
       healthBackground: "",
       budgetRange: "",
       companions: "",
@@ -160,25 +181,51 @@ export default function ConsultationPage() {
     useTreatments();
 
   const treatments = useMemo(() => treatmentRows, [treatmentRows]);
+  const featuredTreatments = useMemo(
+    () => treatments.filter((treatment) => treatment.isFeatured === true),
+    [treatments],
+  );
+  const treatmentComboOptions = useMemo<ComboOption[]>(
+    () =>
+      featuredTreatments.map((treatment) => ({
+        value: treatment.id,
+        label: treatment.name,
+        description: treatment.category ?? undefined,
+        searchTerms: [treatment.slug, treatment.category].filter(
+          (entry): entry is string => Boolean(entry),
+        ),
+      })),
+    [featuredTreatments],
+  );
 
   const selectedTreatmentId = form.watch("treatmentId");
   const documents = form.watch("documents") ?? [];
 
   const selectedTreatment = useMemo(
-    () => treatments.find((treatment) => treatment.id === selectedTreatmentId),
-    [selectedTreatmentId, treatments],
+    () =>
+      featuredTreatments.find(
+        (treatment) => treatment.id === selectedTreatmentId,
+      ),
+    [featuredTreatments, selectedTreatmentId],
   );
 
-  const procedureOptions = selectedTreatment?.procedures ?? [];
+  const procedureOptions = useMemo(
+    () => selectedTreatment?.procedures ?? [],
+    [selectedTreatment],
+  );
+  const procedureComboOptions = useMemo<ComboOption[]>(
+    () =>
+      procedureOptions.map((procedureOption) => ({
+        value: procedureOption.name,
+        label: procedureOption.name,
+        description: procedureOption.description,
+      })),
+    [procedureOptions],
+  );
 
   useEffect(() => {
-    if (selectedTreatmentId) {
-      form.setValue("procedure", "");
-      form.clearErrors("procedure");
-    } else {
-      form.setValue("procedure", "");
-      form.clearErrors("procedure");
-    }
+    form.setValue("procedure", "");
+    form.clearErrors("procedure");
   }, [selectedTreatmentId, form]);
 
   const uploadDocument = async (file: File): Promise<ConsultationDocument> => {
@@ -341,7 +388,7 @@ export default function ConsultationPage() {
         treatmentId,
         procedure,
         treatment: combinedTreatment || selectedTreatmentName || procedure,
-        travelWindow: travelWindow.toISOString(),
+        travelWindow: formatTravelWindow(travelWindow),
       };
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -502,23 +549,21 @@ export default function ConsultationPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Country of Residence *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select your country" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {COUNTRY_OPTIONS.map((country) => (
-                                    <SelectItem key={country} value={country}>
-                                      {country}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value ?? ""}
+                                  options={countryComboOptions}
+                                  placeholder="Select your country"
+                                  searchPlaceholder="Search countries..."
+                                  emptyLabel="No countries found."
+                                  onChange={(selected) => {
+                                    field.onChange(selected);
+                                    form.clearErrors("country");
+                                  }}
+                                  className="font-normal"
+                                  contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -532,37 +577,31 @@ export default function ConsultationPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Preferred Treatment *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={
-                                  treatmentsLoading || treatments.length === 0
-                                }
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={
-                                        treatmentsLoading
-                                          ? "Loading treatments..."
-                                          : treatments.length === 0
-                                            ? "No treatments available"
-                                            : "Select a treatment"
-                                      }
-                                    />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {treatments.map((treatment) => (
-                                    <SelectItem
-                                      key={treatment.id}
-                                      value={treatment.id}
-                                    >
-                                      {treatment.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value ?? ""}
+                                  options={treatmentComboOptions}
+                                  placeholder={
+                                    treatmentsLoading
+                                      ? "Loading treatments..."
+                                      : featuredTreatments.length === 0
+                                        ? "No treatments available"
+                                        : "Select a treatment"
+                                  }
+                                  searchPlaceholder="Search treatments..."
+                                  emptyLabel="No treatments found."
+                                  onChange={(selected) => {
+                                    field.onChange(selected);
+                                    form.clearErrors("treatmentId");
+                                  }}
+                                  disabled={
+                                    treatmentsLoading ||
+                                    featuredTreatments.length === 0
+                                  }
+                                  className="font-normal"
+                                  contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -573,41 +612,31 @@ export default function ConsultationPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Preferred Procedure *</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  form.clearErrors("procedure");
-                                }}
-                                value={field.value}
-                                disabled={
-                                  !selectedTreatment ||
-                                  procedureOptions.length === 0
-                                }
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={
-                                        selectedTreatment
-                                          ? procedureOptions.length === 0
-                                            ? "No procedures available"
-                                            : "Select a procedure"
-                                          : "Select a treatment first"
-                                      }
-                                    />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {procedureOptions.map((procedureOption) => (
-                                    <SelectItem
-                                      key={procedureOption.name}
-                                      value={procedureOption.name}
-                                    >
-                                      {procedureOption.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <ComboBox
+                                  value={field.value ?? ""}
+                                  options={procedureComboOptions}
+                                  placeholder={
+                                    selectedTreatment
+                                      ? procedureOptions.length === 0
+                                        ? "No procedures available"
+                                        : "Select a procedure"
+                                      : "Select a treatment first"
+                                  }
+                                  searchPlaceholder="Search procedures..."
+                                  emptyLabel="No procedures found."
+                                  onChange={(selected) => {
+                                    field.onChange(selected);
+                                    form.clearErrors("procedure");
+                                  }}
+                                  disabled={
+                                    !selectedTreatment ||
+                                    procedureOptions.length === 0
+                                  }
+                                  className="font-normal"
+                                  contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -620,35 +649,21 @@ export default function ConsultationPage() {
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Ideal Travel Window *</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value
-                                    ? format(field.value, "PPP")
-                                    : "Select a date"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={(date) => field.onChange(date)}
-                                  initialFocus
-                                  disabled={(date) => date < today}
-                                />
-                              </PopoverContent>
-                            </Popover>
+                            <FormControl>
+                              <DateRangePicker
+                                value={
+                                  field.value?.from
+                                    ? {
+                                        from: field.value.from,
+                                        to: field.value.to ?? undefined,
+                                      }
+                                    : undefined
+                                }
+                                onChange={(range) => field.onChange(range)}
+                                placeholder="Select travel window"
+                                minDate={today}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
