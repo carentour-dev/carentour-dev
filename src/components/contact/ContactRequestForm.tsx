@@ -13,8 +13,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { COUNTRY_OPTIONS } from "@/constants/countries";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { BlockValue } from "@/lib/cms/blocks";
@@ -40,6 +42,11 @@ const requiredFieldNames = new Set<keyof ContactRequestFormValues>([
   "email",
   "message",
 ]);
+
+const countryComboOptions: ComboOption[] = COUNTRY_OPTIONS.map((country) => ({
+  value: country,
+  label: country,
+}));
 
 function renderLabel(
   label: string,
@@ -231,10 +238,15 @@ export function ContactRequestForm({
                     {renderLabel(block.labels.country, "country")}
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      autoComplete="country-name"
+                    <ComboBox
+                      value={field.value ?? ""}
+                      options={countryComboOptions}
                       placeholder={block.placeholders.country}
+                      searchPlaceholder="Search countries..."
+                      emptyLabel="No countries found."
+                      onChange={field.onChange}
+                      className="font-normal"
+                      contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
                     />
                   </FormControl>
                   <FormMessage />
