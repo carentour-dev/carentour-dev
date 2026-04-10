@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentPropsWithoutRef } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +44,10 @@ export type ComboBoxProps = {
   onChange: (value: string) => void;
   className?: string;
   contentClassName?: string;
-};
+} & Omit<
+  ComponentPropsWithoutRef<typeof Button>,
+  "value" | "onChange" | "children"
+>;
 
 const getOptionInitials = (label: string) => {
   const parts = label.split(" ").filter(Boolean);
@@ -65,6 +68,7 @@ export const ComboBox = ({
   onChange,
   className,
   contentClassName = "w-[360px] p-0",
+  ...buttonProps
 }: ComboBoxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -97,6 +101,7 @@ export const ComboBox = ({
             "w-full justify-between overflow-hidden text-left",
             className,
           )}
+          {...buttonProps}
         >
           <span
             className={cn(
