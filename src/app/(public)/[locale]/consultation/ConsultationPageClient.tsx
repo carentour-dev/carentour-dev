@@ -136,14 +136,6 @@ const splitFullName = (fullName: string) => {
   };
 };
 
-const formatTravelWindow = (
-  window: ConsultationFormValues["travelWindow"],
-): string => {
-  if (!window?.from) return "";
-  if (!window.to) return format(window.from, "PPP");
-  return `${format(window.from, "PPP")} - ${format(window.to, "PPP")}`;
-};
-
 export default function ConsultationPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -380,6 +372,18 @@ export default function ConsultationPage() {
         .join(" — ");
 
       const { treatmentId, procedure, travelWindow, ...rest } = values;
+      const preparedTravelWindow = (() => {
+        const from = travelWindow?.from;
+        const to = travelWindow?.to;
+        if (!from) {
+          return null;
+        }
+
+        return {
+          from: from.toISOString(),
+          to: to ? to.toISOString() : null,
+        };
+      })();
 
       const submissionPayload = {
         ...rest,
@@ -388,7 +392,7 @@ export default function ConsultationPage() {
         treatmentId,
         procedure,
         treatment: combinedTreatment || selectedTreatmentName || procedure,
-        travelWindow: formatTravelWindow(travelWindow),
+        travelWindow: preparedTravelWindow,
       };
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
