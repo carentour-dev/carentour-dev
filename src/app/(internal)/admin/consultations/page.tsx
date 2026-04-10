@@ -478,13 +478,33 @@ export default function AdminConsultationsPage() {
       );
     }
 
-    const travelDate = request.travel_window
-      ? new Date(request.travel_window)
-      : null;
-    const travelDisplay =
-      travelDate && !Number.isNaN(travelDate.getTime())
-        ? format(travelDate, "PPpp")
-        : (request.travel_window ?? "");
+    const formatTravelWindow = (value: string | null | undefined) => {
+      if (!value) return "";
+
+      const formatSingle = (input: string) => {
+        const date = new Date(input);
+        if (Number.isNaN(date.getTime())) {
+          return null;
+        }
+
+        return format(date, "PPpp");
+      };
+
+      if (value.includes(" - ")) {
+        const [from, to] = value.split(" - ");
+        if (from && to) {
+          const formattedFrom = formatSingle(from);
+          const formattedTo = formatSingle(to);
+
+          if (formattedFrom && formattedTo) {
+            return `${formattedFrom} - ${formattedTo}`;
+          }
+        }
+      }
+
+      return formatSingle(value) ?? value;
+    };
+    const travelDisplay = formatTravelWindow(request.travel_window);
 
     return (
       <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-4 text-sm">
