@@ -231,6 +231,41 @@ const formatDateTime = (value: string | null | undefined) => {
   }).format(date);
 };
 
+const formatTravelWindow = (value: string | null | undefined) => {
+  if (!value) return "Not provided";
+
+  const formatSingle = (input: string) => {
+    const date = new Date(input);
+    if (!Number.isFinite(date.getTime())) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  };
+
+  if (value.includes(" - ")) {
+    const [from, to] = value.split(" - ");
+    if (from && to) {
+      const formattedFrom = formatSingle(from);
+      const formattedTo = formatSingle(to);
+
+      if (formattedFrom && formattedTo) {
+        return `${formattedFrom} - ${formattedTo}`;
+      }
+    }
+  }
+
+  const formattedValue = formatSingle(value);
+  if (formattedValue) {
+    return formattedValue;
+  }
+
+  return value;
+};
+
 const formatFileSize = (bytes?: number | null) => {
   if (!Number.isFinite(bytes ?? NaN) || (bytes ?? 0) <= 0) {
     return "";
@@ -1186,7 +1221,7 @@ export default function AdminRequestsPage() {
                                 Travel window
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {formatDateTime(request.travel_window)}
+                                {formatTravelWindow(request.travel_window)}
                               </p>
                               {request.companions && (
                                 <p className="text-xs text-muted-foreground">
@@ -1529,7 +1564,7 @@ export default function AdminRequestsPage() {
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                   {request.travel_window
-                                    ? formatDateTime(request.travel_window)
+                                    ? formatTravelWindow(request.travel_window)
                                     : "Not provided"}
                                 </p>
                                 {request.companions && (
@@ -1809,7 +1844,7 @@ export default function AdminRequestsPage() {
                       </p>
                       <p>
                         Travel window:{" "}
-                        {formatDateTime(activeRequest.travel_window)}
+                        {formatTravelWindow(activeRequest.travel_window)}
                       </p>
                       {activeRequest.companions && (
                         <p>Companions: {activeRequest.companions}</p>
