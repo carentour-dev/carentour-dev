@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
+import type { Database } from "@/integrations/supabase/types";
+
+type DoctorReviewUpdate =
+  Database["public"]["Tables"]["doctor_reviews"]["Update"];
 
 const baseSchema = z.object({
   patient_name: z.string().min(2),
@@ -107,7 +111,7 @@ export const testimonialReviews = {
   async update(id: string, payload: unknown) {
     const parsed = updateSchema.parse(payload);
 
-    const updates: Record<string, unknown> = {};
+    const updates: DoctorReviewUpdate = {};
 
     if (parsed.patient_name !== undefined) {
       updates.patient_name = parsed.patient_name;
