@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
 
 type ProfileRecord = {
   id: string;
@@ -79,13 +80,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users });
   } catch (requestError) {
-    console.error(
-      "Unexpected error loading users for author linking:",
-      requestError,
-    );
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(requestError);
   }
 }
