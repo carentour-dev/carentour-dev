@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
+import type { Database } from "@/integrations/supabase/types";
 
 const baseSchema = z.object({
   patient_id: z.string().uuid().optional().nullable(),
@@ -20,6 +21,9 @@ const baseSchema = z.object({
 
 const createSchema = baseSchema;
 const updateSchema = baseSchema.partial();
+
+type PatientStoryUpdate =
+  Database["public"]["Tables"]["patient_stories"]["Update"];
 
 export const patientStories = {
   async list() {
@@ -81,7 +85,7 @@ export const patientStories = {
 
   async update(id: string, payload: unknown) {
     const parsed = updateSchema.parse(payload);
-    const updates: Record<string, unknown> = {};
+    const updates: PatientStoryUpdate = {};
 
     if (parsed.patient_id !== undefined) {
       updates.patient_id = parsed.patient_id ?? null;
