@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requireAdmin";
+import { revalidateSeoPaths } from "@/lib/seo";
 
 export async function POST(req: NextRequest) {
   await requirePermission("cms.write");
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "path is required" }, { status: 400 });
   }
   try {
-    revalidatePath(path);
+    revalidateSeoPaths([path]);
     return NextResponse.json({ revalidated: true, path });
   } catch (e: any) {
     return NextResponse.json(
