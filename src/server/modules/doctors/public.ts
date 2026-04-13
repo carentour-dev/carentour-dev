@@ -8,6 +8,7 @@ import {
 } from "@/lib/doctors";
 import { localizeCompanyName } from "@/lib/public/brand";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { isRecoverableUpstreamFailure } from "@/server/utils/upstream";
 
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type DoctorTranslationRow =
@@ -278,7 +279,17 @@ async function fetchDoctorRows(
 export async function fetchLocalizedPublicDoctors(
   input: FetchLocalizedDoctorsInput,
 ): Promise<LocalizedPublicDoctor[]> {
-  const rows = await fetchDoctorRows(input);
+  let rows: DoctorRow[];
+
+  try {
+    rows = await fetchDoctorRows(input);
+  } catch (error) {
+    if (!isRecoverableUpstreamFailure(error)) {
+      throw error;
+    }
+
+    return [];
+  }
 
   if (input.locale === "en") {
     return rows;
