@@ -26,6 +26,7 @@ import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (
@@ -331,7 +332,7 @@ export function FeaturedTreatmentsSection({
                     )}
                   </Card>
                 ))
-              : featuredTreatments.map((treatment) => {
+              : featuredTreatments.map((treatment, index) => {
                   const imageSrc = imageFallbackByTreatmentId[treatment.id]
                     ? treatment.fallbackImage
                     : treatment.image;
@@ -362,6 +363,9 @@ export function FeaturedTreatmentsSection({
                             alt={treatment.title}
                             fill
                             className="object-cover transition-transform duration-500 ease-out group-hover/featured:scale-[1.04]"
+                            loading={resolveGridImageLoading(index, {
+                              eagerCount: needsHorizontalScroll ? 1 : 3,
+                            })}
                             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
                             unoptimized={isRemoteImageUrl(imageSrc)}
                             onError={() =>
