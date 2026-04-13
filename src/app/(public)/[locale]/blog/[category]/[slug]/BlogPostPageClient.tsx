@@ -24,9 +24,14 @@ import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BlogPostPage() {
-  const params = useParams<{ category: string; slug: string }>();
+  const params = useParams<{
+    locale?: string;
+    category: string;
+    slug: string;
+  }>();
   const category = params?.category ?? "";
   const slug = params?.slug ?? "";
+  const locale = params?.locale === "ar" ? "ar" : "en";
   const router = useRouter();
 
   const { data: post, isLoading, error } = useBlogPost(category, slug);
@@ -196,7 +201,7 @@ export default function BlogPostPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-8">
                   {/* Main Content */}
                   <div className="max-w-4xl">
-                    <BlogContent content={post.content} />
+                    <BlogContent content={post.content} locale={locale} />
 
                     {/* Author Card */}
                     {post.author && (
