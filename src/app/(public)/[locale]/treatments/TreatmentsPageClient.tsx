@@ -23,6 +23,7 @@ import {
 } from "@/lib/treatments";
 import type { PublicLocale } from "@/i18n/routing";
 import { localizeCompanyNameDeep } from "@/lib/public/brand";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
 import {
   localizePublicPathname,
@@ -290,7 +291,7 @@ export default function Treatments() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredCards.map((category) => {
+                {filteredCards.map((category, index) => {
                   const Icon = category.icon;
                   const basePriceLabel =
                     category.basePrice !== null
@@ -315,6 +316,7 @@ export default function Treatments() {
                           alt={category.title}
                           fill
                           className="object-cover group-hover:scale-105 transition-spring"
+                          loading={resolveGridImageLoading(index)}
                           sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                           unoptimized={isRemoteImageUrl(imageSrc)}
                           onError={() =>
