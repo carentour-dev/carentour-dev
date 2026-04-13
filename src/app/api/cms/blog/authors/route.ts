@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { localizePublicPathname } from "@/lib/public/routing";
+import type { Database } from "@/integrations/supabase/types";
+
+type BlogAuthorUpdate = Database["public"]["Tables"]["blog_authors"]["Update"];
 
 const slugify = (value: string) =>
   value
@@ -118,11 +122,7 @@ export async function GET(request: NextRequest) {
       }),
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -175,11 +175,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ author }, { status: 201 });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -333,7 +329,7 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const updates: Record<string, any> = {
+    const updates: BlogAuthorUpdate = {
       user_id: user_id || null,
       name,
       bio,
@@ -394,11 +390,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ author });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -448,10 +440,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
