@@ -9,6 +9,7 @@ import {
 import { resolvePublicLocaleFromRequest } from "@/lib/public/requestLocale";
 
 export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 function parsePositiveInteger(value: string | null, fallback: number) {
   const parsed = Number.parseInt(value ?? "", 10);
