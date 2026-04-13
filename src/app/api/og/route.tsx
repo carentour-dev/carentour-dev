@@ -2,8 +2,6 @@ import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { normalizePath } from "@/lib/seo";
 
-export const runtime = "edge";
-
 const IMAGE_SIZE = {
   width: 1200,
   height: 630,
