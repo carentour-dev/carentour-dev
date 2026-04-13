@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { publicLocales, type PublicLocale } from "@/i18n/routing";
-import { BLOG_DISCOVERY_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import {
   getPublicLocaleAvailability,
   resolvePublicLocaleSwitchHref,
@@ -13,7 +12,7 @@ import {
   normalizePath,
 } from "@/lib/seo";
 
-export const revalidate = BLOG_DISCOVERY_REVALIDATE_SECONDS;
+export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 async function buildLocaleRoutes(locale: PublicLocale) {
