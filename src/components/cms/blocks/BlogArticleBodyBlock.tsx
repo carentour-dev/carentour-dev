@@ -24,7 +24,7 @@ function ArticleBodyContent({
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px]">
       <div className="space-y-10">
-        <BlogContent content={post.content as any} />
+        <BlogContent content={post.content as any} locale={locale} />
       </div>
       {block.showTableOfContents ? (
         <aside className="hidden lg:block">
