@@ -1,7 +1,10 @@
+import { Children, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import type { PublicLocale } from "@/i18n/routing";
+import { localizeDigits } from "@/lib/public/numbers";
 
 const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
 
@@ -41,7 +44,35 @@ function containsHtmlMarkup(content: string): boolean {
   return HTML_TAG_PATTERN.test(content);
 }
 
-function renderMarkdown(markdown: string) {
+function localizeRenderableText(
+  children: ReactNode,
+  locale: PublicLocale,
+): ReactNode {
+  return Children.map(children, (child) => {
+    if (typeof child === "string") {
+      return localizeDigits(child, locale);
+    }
+
+    return child;
+  });
+}
+
+function localizeHtmlTextContent(html: string, locale: PublicLocale) {
+  if (locale !== "ar") {
+    return html;
+  }
+
+  return html
+    .split(/(<[^>]+>)/g)
+    .map((segment) =>
+      segment.startsWith("<") && segment.endsWith(">")
+        ? segment
+        : localizeDigits(segment, locale),
+    )
+    .join("");
+}
+
+function renderMarkdown(markdown: string, locale: PublicLocale) {
   const buildHeadingId = (
     node: { position?: { start?: { line?: number } } } | undefined,
     text: string,
@@ -63,13 +94,13 @@ function renderMarkdown(markdown: string) {
               className="text-3xl font-semibold tracking-tight text-foreground mt-10 mb-6"
               {...props}
             >
-              {children}
+              {localizeRenderableText(children, locale)}
             </h1>
           );
         },
         p: ({ children, ...props }) => (
           <p className="leading-relaxed text-muted-foreground mb-4" {...props}>
-            {children}
+            {localizeRenderableText(children, locale)}
           </p>
         ),
         ul: ({ children, ...props }) => (
@@ -90,7 +121,7 @@ function renderMarkdown(markdown: string) {
         ),
         li: ({ children, ...props }) => (
           <li className="leading-relaxed text-muted-foreground" {...props}>
-            {children}
+            {localizeRenderableText(children, locale)}
           </li>
         ),
         h2: ({ children, node, ...props }) => {
@@ -102,7 +133,7 @@ function renderMarkdown(markdown: string) {
               className="text-2xl font-semibold tracking-tight text-foreground mt-8 mb-4"
               {...props}
             >
-              {children}
+              {localizeRenderableText(children, locale)}
             </h2>
           );
         },
@@ -115,7 +146,7 @@ function renderMarkdown(markdown: string) {
               className="text-xl font-semibold tracking-tight text-foreground mt-6 mb-3"
               {...props}
             >
-              {children}
+              {localizeRenderableText(children, locale)}
             </h3>
           );
         },
@@ -128,7 +159,7 @@ function renderMarkdown(markdown: string) {
               className="text-lg font-semibold tracking-tight text-foreground mt-4 mb-2"
               {...props}
             >
-              {children}
+              {localizeRenderableText(children, locale)}
             </h4>
           );
         },
@@ -137,17 +168,17 @@ function renderMarkdown(markdown: string) {
             className="border-l-4 border-primary/40 pl-4 italic text-muted-foreground my-6"
             {...props}
           >
-            {children}
+            {localizeRenderableText(children, locale)}
           </blockquote>
         ),
         strong: ({ children, ...props }) => (
           <strong className="font-semibold text-foreground" {...props}>
-            {children}
+            {localizeRenderableText(children, locale)}
           </strong>
         ),
         em: ({ children, ...props }) => (
           <em className="italic text-muted-foreground" {...props}>
-            {children}
+            {localizeRenderableText(children, locale)}
           </em>
         ),
         hr: (props) => (
@@ -158,7 +189,7 @@ function renderMarkdown(markdown: string) {
             className="text-primary underline-offset-4 hover:underline font-medium"
             {...props}
           >
-            {children}
+            {localizeRenderableText(children, locale)}
           </a>
         ),
         code({ node, inline, className, children, ...props }: any) {
@@ -200,7 +231,7 @@ function stripMarkdown(markdown: string): string {
 /**
  * Render blog post content based on its format type
  */
-export function renderBlogContent(content: any) {
+export function renderBlogContent(content: any, locale: PublicLocale = "en") {
   if (!content) return null;
 
   const { type, data } = content;
@@ -210,19 +241,27 @@ export function renderBlogContent(content: any) {
     case "richtext":
     case "html":
       return containsHtmlMarkup(stringData) ? (
-        <div dangerouslySetInnerHTML={{ __html: addHeadingIds(stringData) }} />
+        <div
+          dangerouslySetInnerHTML={{
+            __html: localizeHtmlTextContent(addHeadingIds(stringData), locale),
+          }}
+        />
       ) : (
-        renderMarkdown(stringData)
+        renderMarkdown(stringData, locale)
       );
 
     case "markdown":
-      return renderMarkdown(stringData);
+      return renderMarkdown(stringData, locale);
 
     default:
       return containsHtmlMarkup(stringData) ? (
-        <div dangerouslySetInnerHTML={{ __html: addHeadingIds(stringData) }} />
+        <div
+          dangerouslySetInnerHTML={{
+            __html: localizeHtmlTextContent(addHeadingIds(stringData), locale),
+          }}
+        />
       ) : (
-        renderMarkdown(stringData)
+        renderMarkdown(stringData, locale)
       );
   }
 }
