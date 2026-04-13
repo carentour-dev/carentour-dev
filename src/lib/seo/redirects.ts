@@ -37,7 +37,9 @@ export async function maybeRedirectFromLegacyPath(pathname: string) {
       return false;
     }
   } catch {
-    // Ignore non-request contexts and fall back to direct lookup.
+    // Static generation has no request context, so redirect-table lookups
+    // are not useful there and can make builds depend on live upstream data.
+    return false;
   }
 
   const match = await resolveRouteRedirect(pathname);
