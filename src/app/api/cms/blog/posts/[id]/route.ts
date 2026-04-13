@@ -1,27 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
+import {
+  buildLocalizedBlogCategoryPath,
+  buildLocalizedBlogLandingPath,
+  buildLocalizedBlogPostPath,
+} from "@/lib/blog/paths";
 import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
+import { resolveBlogPostPublicationState } from "@/lib/blog/publication";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
-import { localizePublicPathname } from "@/lib/public/routing";
 
 const BLOG_POST_TRANSLATION_COLUMNS =
   "blog_post_id, locale, slug, title, excerpt, content, seo_title, seo_description, seo_keywords, og_image, status, updated_at";
 const EMPTY_TRANSLATED_CONTENT = { type: "richtext", data: "" } as const;
 
-const toBlogPostPath = (
-  categorySlug: string,
-  postSlug: string,
-  locale: "en" | "ar" = "en",
-) =>
-  localizePublicPathname(
-    `/blog/${categorySlug.replace(/^\/+/, "")}/${postSlug.replace(/^\/+/, "")}`,
-    locale,
-  );
-
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function buildBlogPostRevalidationPaths(input: {
+  locale: "en" | "ar";
+  categorySlug?: string | null;
+  postSlug?: string | null;
+  oldPostSlug?: string | null;
+}) {
+  const categorySlug = normalizeText(input.categorySlug);
+  const currentPostSlug = normalizeText(input.postSlug);
+  const oldPostSlug = normalizeText(input.oldPostSlug);
+
+  return [
+    buildLocalizedBlogLandingPath(input.locale),
+    ...(categorySlug
+      ? [buildLocalizedBlogCategoryPath(categorySlug, input.locale)]
+      : []),
+    ...(categorySlug && oldPostSlug
+      ? [buildLocalizedBlogPostPath(categorySlug, oldPostSlug, input.locale)]
+      : []),
+    ...(categorySlug && currentPostSlug
+      ? [
+          buildLocalizedBlogPostPath(
+            categorySlug,
+            currentPostSlug,
+            input.locale,
+          ),
+        ]
+      : []),
+  ];
 }
 
 export async function GET(
@@ -177,7 +203,13 @@ export async function GET(
           : post.seo_keywords,
       og_image:
         locale === "ar" ? normalizeText(translation?.og_image) : post.og_image,
-      status: locale === "ar" ? translation?.status || "draft" : post.status,
+      status:
+        locale === "ar"
+          ? translation?.status || "draft"
+          : resolveBlogPostPublicationState({
+              status: post.status,
+              publishDate: post.publish_date,
+            }),
       updated_at: translation?.updated_at || post.updated_at,
       base_slug: post.slug,
       base_title: post.title,
@@ -226,11 +258,7 @@ export async function GET(
 
     return NextResponse.json({ post: transformedPost });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -332,7 +360,10 @@ export async function PUT(
       const localizedCategorySlug =
         normalizeText(categoryTranslationRes.data?.slug) ||
         (existingPost as any)?.category?.slug;
-      const nextStatus = status ?? existingTranslation?.status ?? "draft";
+      const nextStatus =
+        status === "scheduled"
+          ? "published"
+          : (status ?? existingTranslation?.status ?? "draft");
 
       if (
         nextStatus === "published" &&
@@ -388,8 +419,16 @@ export async function PUT(
       const oldSlug = existingTranslation?.slug;
       const newSlug = translation?.slug;
       if (localizedCategorySlug && oldSlug && newSlug) {
-        const oldPath = toBlogPostPath(localizedCategorySlug, oldSlug, "ar");
-        const newPath = toBlogPostPath(localizedCategorySlug, newSlug, "ar");
+        const oldPath = buildLocalizedBlogPostPath(
+          localizedCategorySlug,
+          oldSlug,
+          "ar",
+        );
+        const newPath = buildLocalizedBlogPostPath(
+          localizedCategorySlug,
+          newSlug,
+          "ar",
+        );
 
         if (oldPath !== newPath) {
           try {
@@ -408,15 +447,17 @@ export async function PUT(
               redirectError,
             });
           }
-          revalidateSeoPaths([
-            localizePublicPathname("/blog", "ar"),
-            oldPath,
-            newPath,
-          ]);
-        } else {
-          revalidateSeoPaths([newPath]);
         }
       }
+
+      revalidateSeoPaths(
+        buildBlogPostRevalidationPaths({
+          locale: "ar",
+          categorySlug: localizedCategorySlug,
+          postSlug: newSlug,
+          oldPostSlug: oldSlug,
+        }),
+      );
 
       return NextResponse.json({
         post: {
@@ -448,7 +489,7 @@ export async function PUT(
         featured_image,
         category_id,
         author_id,
-        status,
+        status: status === "scheduled" ? "published" : status,
         publish_date,
         reading_time,
         seo_title,
@@ -483,7 +524,7 @@ export async function PUT(
           seo_description,
           seo_keywords,
           og_image,
-          status,
+          status: status === "scheduled" ? "published" : status,
         },
         { onConflict: "blog_post_id,locale" },
       );
@@ -536,8 +577,16 @@ export async function PUT(
       const newPostSlug = updatedPostPath.slug;
 
       if (oldCategorySlug && newCategorySlug && oldPostSlug && newPostSlug) {
-        const oldPath = toBlogPostPath(oldCategorySlug, oldPostSlug);
-        const newPath = toBlogPostPath(newCategorySlug, newPostSlug);
+        const oldPath = buildLocalizedBlogPostPath(
+          oldCategorySlug,
+          oldPostSlug,
+          "en",
+        );
+        const newPath = buildLocalizedBlogPostPath(
+          newCategorySlug,
+          newPostSlug,
+          "en",
+        );
 
         if (oldPath !== newPath) {
           try {
@@ -559,9 +608,9 @@ export async function PUT(
         }
 
         revalidateSeoPaths([
-          "/blog",
-          `/blog/${oldCategorySlug}`,
-          `/blog/${newCategorySlug}`,
+          buildLocalizedBlogLandingPath("en"),
+          buildLocalizedBlogCategoryPath(oldCategorySlug, "en"),
+          buildLocalizedBlogCategoryPath(newCategorySlug, "en"),
           oldPath,
           newPath,
         ]);
@@ -576,11 +625,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -594,7 +639,60 @@ export async function DELETE(
     const supabase = getSupabaseAdmin();
     const { id } = await params;
 
+    const { data: existingPost, error: existingPostError } = await supabase
+      .from("blog_posts")
+      .select("slug, category_id, category:blog_categories(slug)")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingPostError) {
+      console.error(
+        "Error loading blog post before delete:",
+        existingPostError,
+      );
+      return NextResponse.json(
+        { error: "Failed to load blog post before delete" },
+        { status: 500 },
+      );
+    }
+
     if (locale === "ar") {
+      const [existingTranslationRes, categoryTranslationRes] =
+        await Promise.all([
+          (supabase as any)
+            .from("blog_post_translations")
+            .select("slug")
+            .eq("blog_post_id", id)
+            .eq("locale", "ar")
+            .maybeSingle(),
+          existingPost?.category_id
+            ? (supabase as any)
+                .from("blog_category_translations")
+                .select("slug")
+                .eq("blog_category_id", existingPost.category_id)
+                .eq("locale", "ar")
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+        ]);
+
+      if (existingTranslationRes.error || categoryTranslationRes.error) {
+        console.error("Error loading Arabic blog post delete context:", {
+          translationError: existingTranslationRes.error,
+          categoryTranslationError: categoryTranslationRes.error,
+        });
+        return NextResponse.json(
+          { error: "Failed to load Arabic blog post delete context" },
+          { status: 500 },
+        );
+      }
+
+      const localizedCategorySlug =
+        normalizeText(categoryTranslationRes.data?.slug) ||
+        normalizeText((existingPost as any)?.category?.slug);
+      const localizedPostSlug = normalizeText(
+        existingTranslationRes.data?.slug,
+      );
+
       const { error } = await (supabase as any)
         .from("blog_post_translations")
         .delete()
@@ -609,9 +707,21 @@ export async function DELETE(
         );
       }
 
+      revalidateSeoPaths(
+        buildBlogPostRevalidationPaths({
+          locale: "ar",
+          categorySlug: localizedCategorySlug,
+          postSlug: localizedPostSlug,
+        }),
+      );
+
       return NextResponse.json({ success: true });
     }
 
+    const englishCategorySlug = normalizeText(
+      (existingPost as any)?.category?.slug,
+    );
+    const englishPostSlug = normalizeText(existingPost?.slug);
     const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
     if (error) {
@@ -622,12 +732,16 @@ export async function DELETE(
       );
     }
 
+    revalidateSeoPaths(
+      buildBlogPostRevalidationPaths({
+        locale: "en",
+        categorySlug: englishCategorySlug,
+        postSlug: englishPostSlug,
+      }),
+    );
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
