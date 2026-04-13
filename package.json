@@ -113,9 +113,6 @@
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
       "eslint --max-warnings=0"
     ],
-    "src/**/*.{ts,tsx,js,jsx}": [
-      "eslint --max-warnings=0"
-    ],
     "supabase/functions/**/*.ts": [
       "./scripts/check-deno.sh"
     ],
