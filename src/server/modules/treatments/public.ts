@@ -6,6 +6,7 @@ import {
   type TreatmentProcedure,
 } from "@/lib/treatments";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { isRecoverableUpstreamFailure } from "@/server/utils/upstream";
 
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
 type TreatmentProcedureRow =
@@ -283,7 +284,9 @@ export async function getLocalizedPublicTreatments(input: {
     .limit(limit);
 
   if (error) {
-    console.error("Failed to load localized public treatments", error);
+    if (!isRecoverableUpstreamFailure(error)) {
+      console.error("Failed to load localized public treatments", error);
+    }
     return [] as NormalizedTreatment[];
   }
 
@@ -428,7 +431,9 @@ export async function getLocalizedPublicTreatmentIndexItems(
     .limit(limit);
 
   if (error) {
-    console.error("Failed to load treatment index items", error);
+    if (!isRecoverableUpstreamFailure(error)) {
+      console.error("Failed to load treatment index items", error);
+    }
     return [];
   }
 
