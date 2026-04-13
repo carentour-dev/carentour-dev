@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -431,6 +432,12 @@ function CategoryDialog({
     }
   };
 
+  const dialogDescription = category
+    ? isArabicLocale
+      ? "Update the Arabic translation, public slug, and publication status for this category."
+      : "Update the category name, slug, description, and color used across blog posts."
+    : "Create a new English blog category with its name, slug, description, and color.";
+
   return (
     <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
@@ -441,6 +448,7 @@ function CategoryDialog({
               : "Edit Category"
             : "Create Category"}
         </DialogTitle>
+        <DialogDescription>{dialogDescription}</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
