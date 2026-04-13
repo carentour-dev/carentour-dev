@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/integrations/supabase/server";
+import { getLocalizedBlogAuthorBySlug } from "@/lib/blog/server";
+import { resolvePublicLocaleFromRequest } from "@/lib/public/requestLocale";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const { slug } = await params;
-    const supabase = await createClient();
+    const locale = resolvePublicLocaleFromRequest(request);
+    const author = await getLocalizedBlogAuthorBySlug({
+      slug,
+      locale,
+      publishedOnly: true,
+    });
 
-    const { data: author, error } = await supabase
-      .from("blog_authors")
-      .select("id, slug, name, bio, avatar, website, social_links")
-      .eq("slug", slug)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (error || !author) {
+    if (!author) {
       return NextResponse.json({ error: "Author not found" }, { status: 404 });
     }
 
