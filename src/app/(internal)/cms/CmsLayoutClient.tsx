@@ -177,10 +177,10 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
   const hasMetadataStaffAccess = useMemo(
     () =>
       metadataIndicatesStaffAccount(
-        ((user?.user_metadata ?? {}) as Record<string, unknown>) ?? {},
+        (user?.user_metadata ?? {}) as Record<string, unknown>,
       ) ||
       metadataIndicatesStaffAccount(
-        ((user?.app_metadata ?? {}) as Record<string, unknown>) ?? {},
+        (user?.app_metadata ?? {}) as Record<string, unknown>,
       ),
     [user],
   );
