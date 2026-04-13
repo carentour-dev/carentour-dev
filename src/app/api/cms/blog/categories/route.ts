@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
+import {
+  buildLocalizedBlogCategoryPath,
+  buildLocalizedBlogLandingPath,
+  buildLocalizedBlogPostPath,
+} from "@/lib/blog/paths";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
-import { localizePublicPathname } from "@/lib/public/routing";
-
-const toBlogCategoryPath = (slug: string, locale: "en" | "ar" = "en") =>
-  localizePublicPathname(`/blog/${slug.replace(/^\/+/, "")}`, locale);
-
-const toBlogPostPath = (
-  categorySlug: string,
-  postSlug: string,
-  locale: "en" | "ar" = "en",
-) =>
-  localizePublicPathname(
-    `/blog/${categorySlug.replace(/^\/+/, "")}/${postSlug.replace(/^\/+/, "")}`,
-    locale,
-  );
 
 export async function GET(request: NextRequest) {
   try {
@@ -90,11 +82,7 @@ export async function GET(request: NextRequest) {
       }),
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -137,11 +125,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ category }, { status: 201 });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -230,8 +214,8 @@ export async function PUT(request: NextRequest) {
       const newSlug = translation?.slug;
 
       if (oldSlug && newSlug && oldSlug !== newSlug) {
-        const oldCategoryPath = toBlogCategoryPath(oldSlug, "ar");
-        const newCategoryPath = toBlogCategoryPath(newSlug, "ar");
+        const oldCategoryPath = buildLocalizedBlogCategoryPath(oldSlug, "ar");
+        const newCategoryPath = buildLocalizedBlogCategoryPath(newSlug, "ar");
 
         try {
           await recordPathRedirect({
@@ -285,12 +269,12 @@ export async function PUT(request: NextRequest) {
 
         for (const translationRow of localizedPosts ?? []) {
           if (!translationRow.slug) continue;
-          const oldPostPath = toBlogPostPath(
+          const oldPostPath = buildLocalizedBlogPostPath(
             oldSlug,
             translationRow.slug,
             "ar",
           );
-          const newPostPath = toBlogPostPath(
+          const newPostPath = buildLocalizedBlogPostPath(
             newSlug,
             translationRow.slug,
             "ar",
@@ -320,9 +304,32 @@ export async function PUT(request: NextRequest) {
           }
         }
 
-        revalidateSeoPaths([oldCategoryPath, newCategoryPath]);
+        revalidateSeoPaths([
+          buildLocalizedBlogLandingPath("ar"),
+          oldCategoryPath,
+          newCategoryPath,
+          ...(localizedPosts ?? []).flatMap((translationRow: any) =>
+            translationRow.slug
+              ? [
+                  buildLocalizedBlogPostPath(
+                    oldSlug,
+                    translationRow.slug,
+                    "ar",
+                  ),
+                  buildLocalizedBlogPostPath(
+                    newSlug,
+                    translationRow.slug,
+                    "ar",
+                  ),
+                ]
+              : [],
+          ),
+        ]);
       } else if (newSlug) {
-        revalidateSeoPaths([toBlogCategoryPath(newSlug, "ar")]);
+        revalidateSeoPaths([
+          buildLocalizedBlogLandingPath("ar"),
+          buildLocalizedBlogCategoryPath(newSlug, "ar"),
+        ]);
       }
 
       return NextResponse.json({
@@ -360,8 +367,8 @@ export async function PUT(request: NextRequest) {
     const newSlug = category.slug;
 
     if (oldSlug && newSlug && oldSlug !== newSlug) {
-      const oldCategoryPath = toBlogCategoryPath(oldSlug);
-      const newCategoryPath = toBlogCategoryPath(newSlug);
+      const oldCategoryPath = buildLocalizedBlogCategoryPath(oldSlug, "en");
+      const newCategoryPath = buildLocalizedBlogCategoryPath(newSlug, "en");
 
       try {
         await recordPathRedirect({
@@ -394,8 +401,16 @@ export async function PUT(request: NextRequest) {
       } else {
         for (const post of postsInCategory ?? []) {
           if (!post.slug) continue;
-          const oldPostPath = toBlogPostPath(oldSlug, post.slug);
-          const newPostPath = toBlogPostPath(newSlug, post.slug);
+          const oldPostPath = buildLocalizedBlogPostPath(
+            oldSlug,
+            post.slug,
+            "en",
+          );
+          const newPostPath = buildLocalizedBlogPostPath(
+            newSlug,
+            post.slug,
+            "en",
+          );
           if (oldPostPath === newPostPath) continue;
 
           try {
@@ -419,30 +434,29 @@ export async function PUT(request: NextRequest) {
       }
 
       const revalidatePaths = [
-        "/blog",
+        buildLocalizedBlogLandingPath("en"),
         oldCategoryPath,
         newCategoryPath,
         ...(postsInCategory ?? []).flatMap((post) =>
           post.slug
             ? [
-                toBlogPostPath(oldSlug, post.slug),
-                toBlogPostPath(newSlug, post.slug),
+                buildLocalizedBlogPostPath(oldSlug, post.slug, "en"),
+                buildLocalizedBlogPostPath(newSlug, post.slug, "en"),
               ]
             : [],
         ),
       ];
       revalidateSeoPaths(revalidatePaths);
     } else if (newSlug) {
-      revalidateSeoPaths(["/blog", toBlogCategoryPath(newSlug)]);
+      revalidateSeoPaths([
+        buildLocalizedBlogLandingPath("en"),
+        buildLocalizedBlogCategoryPath(newSlug, "en"),
+      ]);
     }
 
     return NextResponse.json({ category });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -495,10 +509,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
