@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0 --ignore-pattern .next --ignore-pattern dist --ignore-pattern supabase/functions",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typegen": "next typegen",
+    "typecheck": "npm run typegen && tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "node --experimental-strip-types --import ./scripts/test-register.mjs --test tests/*.test.ts",
     "prepare": "husky",
     "format": "prettier --check --cache .",
     "format:write": "prettier --write .",
