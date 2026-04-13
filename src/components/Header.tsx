@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
@@ -60,8 +60,10 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
   const phoneNumberDirection = getPhoneNumberDisplayDirection(locale);
 
   const initialNavigationLinks = useInitialNavigationLinks();
-  const visibleInitialNavigationLinks =
-    initialNavigationLinks.filter(isNavigationVisible);
+  const visibleInitialNavigationLinks = useMemo(
+    () => initialNavigationLinks.filter(isNavigationVisible),
+    [initialNavigationLinks],
+  );
   const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>(
     () => visibleInitialNavigationLinks,
   );
@@ -74,11 +76,9 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
   }, []);
 
   useLayoutEffect(() => {
-    const nextNavigationLinks =
-      initialNavigationLinks.filter(isNavigationVisible);
-    setNavigationLinks(nextNavigationLinks);
-    setLoadingNavigation(nextNavigationLinks.length === 0);
-  }, [initialNavigationLinks]);
+    setNavigationLinks(visibleInitialNavigationLinks);
+    setLoadingNavigation(visibleInitialNavigationLinks.length === 0);
+  }, [visibleInitialNavigationLinks]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -102,7 +102,7 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
     return () => {
       isSubscribed = false;
     };
-  }, [locale, visibleInitialNavigationLinks.length]);
+  }, [locale, visibleInitialNavigationLinks]);
 
   const displayedNavigationLinks =
     navigationLinks.length > 0
@@ -188,9 +188,9 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
               <Image
                 src={logoSrc}
                 alt="Care N Tour"
-                width={160}
+                width={252}
                 height={56}
-                className="h-14 w-auto"
+                className="h-14 w-[252px]"
                 priority
               />
             </Link>
@@ -241,9 +241,9 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
                         <Image
                           src={logoSrc}
                           alt="Care N Tour"
-                          width={140}
+                          width={216}
                           height={48}
-                          className="h-12 w-auto"
+                          className="h-12 w-[216px]"
                         />
                       </Link>
                     </DrawerClose>
