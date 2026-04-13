@@ -7,6 +7,7 @@ import {
   getPublicNumberLocale,
   localizeOptionalDigits,
 } from "@/lib/public/numbers";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
 import { resolveIcon } from "./utils";
@@ -130,6 +131,9 @@ export function HotelShowcaseBlock({
                           alt={`${item.title} showcase image`}
                           fill
                           className="object-cover"
+                          loading={resolveGridImageLoading(index, {
+                            eagerCount: block.layout === "carousel" ? 1 : 3,
+                          })}
                           sizes="(max-width: 1024px) 100vw, 33vw"
                         />
                       </div>
