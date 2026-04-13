@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { getLocalizedBlogTagBySlug } from "@/lib/blog/server";
+import { resolvePublicLocaleFromRequest } from "@/lib/public/requestLocale";
 
 export async function GET(
   request: NextRequest,
@@ -12,14 +8,14 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const locale = resolvePublicLocaleFromRequest(request);
+    const tag = await getLocalizedBlogTagBySlug({
+      slug,
+      locale,
+      publishedOnly: true,
+    });
 
-    const { data: tag, error } = await supabase
-      .from("blog_tags")
-      .select("*")
-      .eq("slug", slug)
-      .single();
-
-    if (error || !tag) {
+    if (!tag) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
