@@ -39,6 +39,7 @@ import {
   buildAdminLocaleHref,
   resolveAdminLocale,
 } from "@/lib/public/adminLocale";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 
 export default function BlogPostsPage() {
   const searchParams = useSearchParams();
@@ -206,11 +207,12 @@ export default function BlogPostsPage() {
         </div>
       ) : filteredPosts.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredPosts.map((post: any) => (
+          {filteredPosts.map((post: any, index: number) => (
             <PostCard
               key={post.id}
               post={post}
               locale={locale}
+              eagerImage={resolveGridImageLoading(index) === "eager"}
               onDelete={() => handleDelete(post.id, post.title)}
             />
           ))}
@@ -246,10 +248,12 @@ function PostCard({
   post,
   onDelete,
   locale,
+  eagerImage = false,
 }: {
   post: any;
   onDelete: () => void;
   locale: "en" | "ar";
+  eagerImage?: boolean;
 }) {
   const [deleting, setDeleting] = useState(false);
 
@@ -268,6 +272,7 @@ function PostCard({
             alt={post.title || post.base_title || "Blog post"}
             fill
             className="object-cover"
+            loading={eagerImage ? "eager" : "lazy"}
             sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
           />
         </div>
