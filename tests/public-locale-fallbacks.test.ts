@@ -23,9 +23,10 @@ test("keeps unsupported Arabic public routes on their English fallback paths", (
   );
   assert.match(routingSource, /isPublicPathStaticallySupported/);
   assert.match(localizationSource, /normalized\.startsWith\("\/doctors\/"\)/);
+  assert.match(localizationSource, /hasPublishedArabicDoctorTranslation/);
   assert.match(
     localizationSource,
-    /getLocalizedCmsPageBySlug\("doctors", locale\)/,
+    /hasPublishedArabicDoctorTranslation\(doctorId\)/,
   );
 });
 
