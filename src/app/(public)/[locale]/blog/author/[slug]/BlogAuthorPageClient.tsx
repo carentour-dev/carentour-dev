@@ -19,6 +19,7 @@ import {
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 import { BlogPostCard } from "@/components/blog/BlogPostCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 
 export default function AuthorArchive() {
   const params = useParams<{ slug: string }>();
@@ -205,8 +206,12 @@ export default function AuthorArchive() {
             ) : posts.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {posts.map((post: any) => (
-                    <BlogPostCard key={post.id} post={post} />
+                  {posts.map((post: any, index: number) => (
+                    <BlogPostCard
+                      key={post.id}
+                      post={post}
+                      imageLoading={resolveGridImageLoading(index)}
+                    />
                   ))}
                 </div>
 
