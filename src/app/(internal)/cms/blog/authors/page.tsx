@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -200,6 +201,7 @@ function AuthorCard({
   onEdit: () => void;
   locale: "en" | "ar";
 }) {
+  const isArabicLocale = locale === "ar";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -263,16 +265,24 @@ function AuthorCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground truncate">
+            <h3
+              className={`font-semibold text-lg text-foreground truncate ${
+                isArabicLocale ? "text-right" : ""
+              }`}
+            >
               {author.name}
             </h3>
             {author.user_id && author.user_email && (
-              <p className="text-xs text-muted-foreground truncate">
+              <p
+                className={`text-xs text-muted-foreground truncate ${
+                  isArabicLocale ? "text-right" : ""
+                }`}
+              >
                 <LinkIcon className="inline h-3 w-3 mr-1" />
                 Linked to {author.user_email}
               </p>
             )}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant={author.active ? "default" : "secondary"}>
                 {author.active ? "Active" : "Inactive"}
               </Badge>
@@ -291,7 +301,11 @@ function AuthorCard({
         </div>
 
         {author.bio && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p
+            className={`text-sm text-muted-foreground line-clamp-2 ${
+              isArabicLocale ? "text-right" : ""
+            }`}
+          >
             {author.bio}
           </p>
         )}
@@ -441,6 +455,37 @@ function AuthorDialog({
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    setAuthorType(initialAuthorType);
+    setUserId(initialUserId);
+    setName(initialName);
+    setSlug(initialSlug);
+    setEmail(initialEmail);
+    setBio(initialBio);
+    setAvatar(initialAvatar);
+    setWebsite(initialWebsite);
+    setTwitter(initialTwitter);
+    setLinkedin(initialLinkedin);
+    setGithub(initialGithub);
+    setActive(initialActive);
+    setStatus(initialStatus);
+  }, [
+    author?.id,
+    initialActive,
+    initialAuthorType,
+    initialAvatar,
+    initialBio,
+    initialEmail,
+    initialGithub,
+    initialLinkedin,
+    initialName,
+    initialSlug,
+    initialStatus,
+    initialTwitter,
+    initialUserId,
+    initialWebsite,
+  ]);
+
   // Fetch users for linking
   const {
     data: users = [],
@@ -577,6 +622,14 @@ function AuthorDialog({
     }
   };
 
+  const dialogDescription = author
+    ? isArabicLocale
+      ? "Update the Arabic author profile, biography, public slug, and publication status for this archive page."
+      : "Update the author profile, linked account details, biography, and public profile metadata."
+    : authorType === "linked"
+      ? "Create a new English author profile linked to an existing user account."
+      : "Create a standalone English author profile with custom biography and profile details.";
+
   return (
     <DialogContent
       className="max-w-2xl max-h-[90vh] overflow-y-auto"
@@ -590,6 +643,7 @@ function AuthorDialog({
               : "Edit Author"
             : "Create Author"}
         </DialogTitle>
+        <DialogDescription>{dialogDescription}</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
