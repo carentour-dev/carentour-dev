@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { BlogPostEditor } from "@/components/cms/BlogPostEditor";
+import { ArrowLeft } from "lucide-react";
+import {
+  BlogPostEditor,
+  type BlogPostEditorAction,
+} from "@/components/cms/BlogPostEditor";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateReadingTime } from "@/lib/blog/reading-time";
@@ -32,6 +35,59 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
   const isArabicLocale = locale === "ar";
   const postsHref = buildAdminLocaleHref("/cms/blog/posts", locale);
 
+  const toIsoPublishDate = (value: unknown) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+
+  const resolvePublishingPayload = (
+    postData: any,
+    action: BlogPostEditorAction,
+  ) => {
+    if (isArabicLocale) {
+      return {
+        status:
+          action === "publish" ? ("published" as const) : ("draft" as const),
+        publish_date: post?.publish_date ?? null,
+      };
+    }
+
+    const selectedPublishDate = toIsoPublishDate(postData.publish_date);
+
+    if (action === "draft") {
+      return {
+        status: "draft" as const,
+        publish_date: selectedPublishDate,
+      };
+    }
+
+    if (action === "schedule") {
+      if (!selectedPublishDate) {
+        throw new Error(
+          "Select a publish date and time to schedule this post.",
+        );
+      }
+
+      if (Date.parse(selectedPublishDate) <= Date.now()) {
+        throw new Error("Scheduled publish date must be in the future.");
+      }
+
+      return {
+        status: "published" as const,
+        publish_date: selectedPublishDate,
+      };
+    }
+
+    return {
+      status: "published" as const,
+      publish_date: selectedPublishDate ?? new Date().toISOString(),
+    };
+  };
+
   // Fetch post data
   const { data: post, isLoading } = useQuery({
     queryKey: ["blog-post-edit", id, locale],
@@ -54,7 +110,7 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
     },
   });
 
-  const handleSave = async (postData: any, status: "draft" | "published") => {
+  const handleSave = async (postData: any, action: BlogPostEditorAction) => {
     try {
       const {
         data: { session },
@@ -71,15 +127,13 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
         contentText = postData.content.data.replace(/<[^>]*>/g, "");
       }
       const readingTime = calculateReadingTime(contentText);
+      const publication = resolvePublishingPayload(postData, action);
 
       const payload = {
         ...postData,
-        status,
+        status: publication.status,
         reading_time: readingTime,
-        publish_date:
-          status === "published" && !post.publish_date
-            ? new Date().toISOString()
-            : post.publish_date,
+        publish_date: publication.publish_date,
       };
 
       const res = await fetch(`/api/cms/blog/posts/${id}?locale=${locale}`, {
@@ -97,8 +151,22 @@ export default function EditBlogPostPage({ params }: EditBlogPostPageProps) {
       }
 
       toast({
-        title: status === "published" ? "Post published!" : "Changes saved!",
-        description: `Your blog post has been ${status === "published" ? "published" : "saved"}.`,
+        title:
+          action === "schedule"
+            ? "Post scheduled!"
+            : action === "publish"
+              ? isArabicLocale
+                ? "Translation published!"
+                : "Post published!"
+              : "Changes saved!",
+        description:
+          action === "schedule"
+            ? "Your blog post has been scheduled."
+            : action === "publish"
+              ? isArabicLocale
+                ? "Your Arabic translation has been published."
+                : "Your blog post has been published."
+              : "Your changes have been saved.",
       });
 
       // Optionally refresh the data
