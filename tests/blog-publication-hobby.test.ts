@@ -34,7 +34,7 @@ test("scheduled publication no longer depends on a Vercel cron config", () => {
   );
 });
 
-test("public blog surfaces use the shared short ISR window", () => {
+test("public blog surfaces inline the short ISR window for Next segment config", () => {
   const blogSurfaceFiles = [
     "src/app/(public)/[locale]/blog/page.tsx",
     "src/app/(public)/[locale]/blog/[category]/page.tsx",
@@ -59,18 +59,13 @@ test("public blog surfaces use the shared short ISR window", () => {
 
     assert.match(
       source,
-      /BLOG_SURFACE_REVALIDATE_SECONDS/,
-      `${relativePath} should import the shared blog surface revalidation window`,
-    );
-    assert.match(
-      source,
-      /export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;/,
-      `${relativePath} should use the shared blog surface revalidation window`,
+      /export const revalidate = 60;/,
+      `${relativePath} should inline the blog surface revalidation window`,
     );
   }
 });
 
-test("discovery artifacts use the shared discovery revalidation window", () => {
+test("discovery artifacts inline the discovery revalidation window for Next segment config", () => {
   const discoveryFiles = ["src/app/sitemap.ts", "src/app/llms.txt/route.ts"];
 
   for (const relativePath of discoveryFiles) {
@@ -78,13 +73,8 @@ test("discovery artifacts use the shared discovery revalidation window", () => {
 
     assert.match(
       source,
-      /BLOG_DISCOVERY_REVALIDATE_SECONDS/,
-      `${relativePath} should import the shared discovery revalidation window`,
-    );
-    assert.match(
-      source,
-      /export const revalidate = BLOG_DISCOVERY_REVALIDATE_SECONDS;/,
-      `${relativePath} should use the shared discovery revalidation window`,
+      /export const revalidate = 300;/,
+      `${relativePath} should inline the discovery revalidation window`,
     );
   }
 });
