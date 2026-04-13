@@ -16,6 +16,7 @@ import {
   getLocalizedPublicTreatments,
 } from "@/server/modules/treatments/public";
 import { fetchLocalizedPublicDoctors } from "@/server/modules/doctors/public";
+import { isRecoverableUpstreamFailure } from "@/server/utils/upstream";
 
 export type CmsPage = {
   id: string;
@@ -120,7 +121,9 @@ export async function getDoctorsForBlock(
       is_active: doctor.is_active,
     })) as DoctorRow[];
   } catch (error) {
-    console.error("Failed to load doctors for block", error);
+    if (!isRecoverableUpstreamFailure(error)) {
+      console.error("Failed to load doctors for block", error);
+    }
     return [];
   }
 }
