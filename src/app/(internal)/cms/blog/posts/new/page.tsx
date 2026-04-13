@@ -4,8 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Eye, Loader2 } from "lucide-react";
-import { BlogPostEditor } from "@/components/cms/BlogPostEditor";
+import { ArrowLeft } from "lucide-react";
+import {
+  BlogPostEditor,
+  type BlogPostEditorAction,
+} from "@/components/cms/BlogPostEditor";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateReadingTime } from "@/lib/blog/reading-time";
@@ -26,7 +29,52 @@ export default function NewBlogPostPage() {
   const isArabicLocale = locale === "ar";
   const postsHref = buildAdminLocaleHref("/cms/blog/posts", locale);
 
-  const handleSave = async (postData: any, status: "draft" | "published") => {
+  const toIsoPublishDate = (value: unknown) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+
+  const resolvePublishingPayload = (
+    postData: any,
+    action: BlogPostEditorAction,
+  ) => {
+    const selectedPublishDate = toIsoPublishDate(postData.publish_date);
+
+    if (action === "draft") {
+      return {
+        status: "draft" as const,
+        publish_date: selectedPublishDate,
+      };
+    }
+
+    if (action === "schedule") {
+      if (!selectedPublishDate) {
+        throw new Error(
+          "Select a publish date and time to schedule this post.",
+        );
+      }
+
+      if (Date.parse(selectedPublishDate) <= Date.now()) {
+        throw new Error("Scheduled publish date must be in the future.");
+      }
+
+      return {
+        status: "published" as const,
+        publish_date: selectedPublishDate,
+      };
+    }
+
+    return {
+      status: "published" as const,
+      publish_date: selectedPublishDate ?? new Date().toISOString(),
+    };
+  };
+
+  const handleSave = async (postData: any, action: BlogPostEditorAction) => {
     setSaving(true);
     try {
       const {
@@ -44,12 +92,13 @@ export default function NewBlogPostPage() {
         contentText = postData.content.data.replace(/<[^>]*>/g, "");
       }
       const readingTime = calculateReadingTime(contentText);
+      const publication = resolvePublishingPayload(postData, action);
 
       const payload = {
         ...postData,
-        status,
+        status: publication.status,
         reading_time: readingTime,
-        publish_date: status === "published" ? new Date().toISOString() : null,
+        publish_date: publication.publish_date,
       };
 
       const res = await fetch(`/api/cms/blog/posts?locale=${locale}`, {
@@ -69,8 +118,18 @@ export default function NewBlogPostPage() {
       const data = await res.json();
 
       toast({
-        title: status === "published" ? "Post published!" : "Draft saved!",
-        description: `Your blog post has been ${status === "published" ? "published" : "saved as a draft"}.`,
+        title:
+          action === "schedule"
+            ? "Post scheduled!"
+            : action === "publish"
+              ? "Post published!"
+              : "Draft saved!",
+        description:
+          action === "schedule"
+            ? "Your blog post has been scheduled."
+            : action === "publish"
+              ? "Your blog post has been published."
+              : "Your blog post has been saved as a draft.",
       });
 
       // Redirect to posts list or edit page
