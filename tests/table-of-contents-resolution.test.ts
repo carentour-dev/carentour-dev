@@ -41,3 +41,28 @@ test("resolveTocItems remaps TOC ids to matching rendered heading ids by text", 
     },
   ]);
 });
+
+test("resolveTocItems adopts rendered heading text after Arabic digit localization", () => {
+  const items = [
+    {
+      id: "heading-step-1-start-with-medical-fit-0",
+      text: "الخطوة 1: ابدأ بالملاءمة الطبية",
+      level: 2,
+    },
+  ];
+
+  const resolved = resolveTocItems(items, [
+    {
+      id: "heading-step-1-start-with-medical-fit-0",
+      text: "الخطوة ١: ابدأ بالملاءمة الطبية",
+    },
+  ]);
+
+  assert.deepEqual(resolved, [
+    {
+      id: "heading-step-1-start-with-medical-fit-0",
+      text: "الخطوة ١: ابدأ بالملاءمة الطبية",
+      level: 2,
+    },
+  ]);
+});
