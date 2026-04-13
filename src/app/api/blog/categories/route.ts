@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { BLOG_SURFACE_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import { createClient } from "@/integrations/supabase/server";
 
-export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;
+export const revalidate = 60;
 
 export async function GET() {
   try {
