@@ -27,7 +27,10 @@ export function resolveTocItems(
 
     if (directMatchIndex !== -1) {
       matchedHeadingIndexes.add(directMatchIndex);
-      return item;
+      return {
+        ...item,
+        text: headings[directMatchIndex].text,
+      };
     }
 
     const normalizedItemText = normalizeHeadingText(item.text);
@@ -45,6 +48,7 @@ export function resolveTocItems(
     return {
       ...item,
       id: headings[textMatchIndex].id,
+      text: headings[textMatchIndex].text,
     };
   });
 }
