@@ -6,6 +6,7 @@ import {
   extractBlogAiSummary,
   resolveBlogPageBlocks,
 } from "@/lib/blog/page-helpers";
+import { preferNonEmptyBlogText } from "@/lib/blog/seo-fields";
 import { getLocalizedBlogPostByPath } from "@/lib/blog/server";
 import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
@@ -49,9 +50,14 @@ async function getSeo(categorySlug: string, slug: string, locale: "en" | "ar") {
   const pathname =
     post?.path ??
     getLocalizedPublicPagePathname(`/blog/${categorySlug}/${slug}`, locale);
-  const title = post?.seo_title ?? post?.title ?? "Blog Article | Care N Tour";
+  const title =
+    preferNonEmptyBlogText(post?.seo_title, post?.title) ??
+    "Blog Article | Care N Tour";
   const description =
-    post?.seo_description ?? post?.excerpt ?? "Read the latest blog article.";
+    preferNonEmptyBlogText(post?.seo_description, post?.excerpt) ??
+    "Read the latest blog article.";
+  const ogImage = preferNonEmptyBlogText(post?.og_image, post?.featured_image);
+  const seoKeywords = preferNonEmptyBlogText(post?.seo_keywords);
 
   return {
     post,
@@ -68,8 +74,8 @@ async function getSeo(categorySlug: string, slug: string, locale: "en" | "ar") {
         ? {
             title,
             description,
-            keywords: parseSeoKeywords(post.seo_keywords) ?? null,
-            ogImageUrl: post.og_image ?? post.featured_image,
+            keywords: parseSeoKeywords(seoKeywords) ?? null,
+            ogImageUrl: ogImage,
             aiSummary: extractBlogAiSummary(blocks, [
               post.excerpt,
               post.author?.bio,
@@ -97,11 +103,11 @@ async function getSeo(categorySlug: string, slug: string, locale: "en" | "ar") {
               title: post.title,
               description,
               path: pathname,
-              imageUrl: post.og_image ?? post.featured_image,
+              imageUrl: ogImage,
               publishedTime: post.publish_date,
               modifiedTime: post.updated_at,
               authorName: post.author?.name,
-              keywords: parseSeoKeywords(post.seo_keywords),
+              keywords: parseSeoKeywords(seoKeywords),
             }),
           ]
         : webPageSchema({
@@ -111,7 +117,7 @@ async function getSeo(categorySlug: string, slug: string, locale: "en" | "ar") {
           }),
       indexable: Boolean(post),
       openGraphType: "article",
-      imageUrl: post?.og_image ?? post?.featured_image,
+      imageUrl: ogImage,
       publishedTime: post?.publish_date ?? undefined,
       modifiedTime: post?.updated_at ?? undefined,
     }),
