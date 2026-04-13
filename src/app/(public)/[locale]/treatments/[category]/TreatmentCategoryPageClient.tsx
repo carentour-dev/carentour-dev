@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 import { localizeCompanyNameDeep } from "@/lib/public/brand";
+import { resolveHeroImageLoading } from "@/lib/images/loading";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
 
 const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
@@ -335,6 +336,7 @@ export default function TreatmentDetails({
                   alt={copy.heroImageAlt(treatment.title)}
                   fill
                   className="object-cover"
+                  loading={resolveHeroImageLoading()}
                   sizes="(min-width: 1280px) 1200px, (min-width: 768px) 90vw, 100vw"
                   unoptimized={isRemoteImageUrl(treatment.heroImage)}
                 />
