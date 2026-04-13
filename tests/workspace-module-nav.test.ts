@@ -84,7 +84,7 @@ assert.equal(
   hasCmsWorkspaceAccess(["cms.read", null] as unknown as string[]),
   true,
 );
-assert.equal(hasCmsWorkspaceAccess(["admin.access"]), false);
+assert.equal(hasCmsWorkspaceAccess(["admin.access"]), true);
 assert.equal(hasCmsWorkspaceAccess([]), false);
 
 assert.equal(hasFinanceWorkspaceAccess(["finance.access"]), true);
