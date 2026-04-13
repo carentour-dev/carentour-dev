@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { sanitizeContentPayload } from "@/lib/blog/sanitize-content";
+import { resolveBlogPostPublicationState } from "@/lib/blog/publication";
+import {
+  buildLocalizedBlogCategoryPath,
+  buildLocalizedBlogLandingPath,
+  buildLocalizedBlogPostPath,
+} from "@/lib/blog/paths";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 
 const BLOG_POST_TRANSLATION_COLUMNS =
@@ -10,6 +18,36 @@ const EMPTY_TRANSLATED_CONTENT = { type: "richtext", data: "" } as const;
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+async function loadEnglishBlogPostPaths(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  input: {
+    categoryId?: string | null;
+    categorySlug?: string | null;
+    postSlug?: string | null;
+  },
+) {
+  let categorySlug = normalizeText(input.categorySlug);
+
+  if (!categorySlug && input.categoryId) {
+    const { data: category } = await supabase
+      .from("blog_categories")
+      .select("slug")
+      .eq("id", input.categoryId)
+      .maybeSingle();
+    categorySlug = normalizeText(category?.slug);
+  }
+
+  return [
+    buildLocalizedBlogLandingPath("en"),
+    ...(categorySlug
+      ? [buildLocalizedBlogCategoryPath(categorySlug, "en")]
+      : []),
+    ...(categorySlug && input.postSlug
+      ? [buildLocalizedBlogPostPath(categorySlug, input.postSlug, "en")]
+      : []),
+  ];
 }
 
 export async function GET(request: NextRequest) {
@@ -39,14 +77,6 @@ export async function GET(request: NextRequest) {
       )
       .order("created_at", { ascending: false });
 
-    if (locale === "en") {
-      query = query.range(offset, offset + limit - 1);
-    }
-
-    if (status && status !== "all" && locale === "en") {
-      query = query.eq("status", status);
-    }
-
     if (category) {
       query = query.eq("category_id", category);
     }
@@ -55,7 +85,7 @@ export async function GET(request: NextRequest) {
       query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
     }
 
-    const { data: posts, error, count } = await query;
+    const { data: posts, error } = await query;
 
     if (error) {
       console.error("Error fetching blog posts:", error);
@@ -238,7 +268,13 @@ export async function GET(request: NextRequest) {
           locale === "ar"
             ? normalizeText(translation?.og_image)
             : post.og_image,
-        status: locale === "ar" ? translation?.status || "draft" : post.status,
+        status:
+          locale === "ar"
+            ? translation?.status || "draft"
+            : resolveBlogPostPublicationState({
+                status: post.status,
+                publishDate: post.publish_date,
+              }),
         updated_at: translation?.updated_at || post.updated_at,
         base_slug: post.slug,
         base_title: post.title,
@@ -284,35 +320,28 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    if (locale === "ar") {
-      if (status && status !== "all") {
-        localizedPosts = localizedPosts.filter(
-          (post) => post.status === status,
-        );
-      }
-
-      if (search) {
-        const needle = search.toLowerCase();
-        localizedPosts = localizedPosts.filter((post) => {
-          const haystack = [
-            post.title,
-            post.excerpt,
-            post.category?.name,
-            post.author?.name,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return haystack.includes(needle);
-        });
-      }
+    if (status && status !== "all") {
+      localizedPosts = localizedPosts.filter((post) => post.status === status);
     }
 
-    const totalCount = locale === "ar" ? localizedPosts.length : count || 0;
-    const paginatedPosts =
-      locale === "ar"
-        ? localizedPosts.slice(offset, offset + limit)
-        : localizedPosts;
+    if (search && locale === "ar") {
+      const needle = search.toLowerCase();
+      localizedPosts = localizedPosts.filter((post) => {
+        const haystack = [
+          post.title,
+          post.excerpt,
+          post.category?.name,
+          post.author?.name,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(needle);
+      });
+    }
+
+    const totalCount = localizedPosts.length;
+    const paginatedPosts = localizedPosts.slice(offset, offset + limit);
 
     return NextResponse.json({
       posts: paginatedPosts,
@@ -324,11 +353,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -364,6 +389,8 @@ export async function POST(request: NextRequest) {
       featured = false,
       tags = [],
     } = body;
+    const normalizedStatus =
+      status === "scheduled" ? "published" : (status ?? "draft");
 
     if (!title || !slug) {
       return NextResponse.json(
@@ -385,7 +412,7 @@ export async function POST(request: NextRequest) {
         category_id,
         author_id,
         author_user_id: context.user.id,
-        status,
+        status: normalizedStatus,
         publish_date,
         reading_time,
         seo_title,
@@ -419,7 +446,7 @@ export async function POST(request: NextRequest) {
           seo_description,
           seo_keywords,
           og_image,
-          status,
+          status: normalizedStatus,
         },
         { onConflict: "blog_post_id,locale" },
       );
@@ -454,12 +481,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    revalidateSeoPaths(
+      await loadEnglishBlogPostPaths(supabase, {
+        categoryId: category_id,
+        postSlug: post.slug,
+      }),
+    );
+
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
