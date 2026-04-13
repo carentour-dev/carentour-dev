@@ -22,6 +22,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import type { PublicLocale } from "@/i18n/routing";
+import {
+  resolveGridImageLoading,
+  resolveHeroImageLoading,
+} from "@/lib/images/loading";
 import { getLocalizedSafeManagedHref } from "@/lib/managedHrefs";
 import { resolveSectionKey } from "./tabbedGuideUtils";
 
@@ -199,14 +203,9 @@ export function TabbedGuideContent({
     () => block.tabs.map((tab, index) => tab.id ?? `tab-${index}`),
     [block.tabs],
   );
+  const fallbackValue = tabValues[0] ?? "tab-fallback";
 
-  const fallbackValueRef = useRef(
-    tabValues[0] ?? `tab-${Math.random().toString(36).slice(2, 8)}`,
-  );
-
-  const [activeValue, setActiveValue] = useState(
-    tabValues[0] ?? fallbackValueRef.current,
-  );
+  const [activeValue, setActiveValue] = useState(fallbackValue);
 
   useEffect(() => {
     if (!tabValues.length) return;
@@ -235,7 +234,7 @@ export function TabbedGuideContent({
     scrollTabsIntoView();
   };
 
-  const resolvedValue = activeValue ?? tabValues[0] ?? fallbackValueRef.current;
+  const resolvedValue = activeValue ?? fallbackValue;
   const tabsLayoutClassName =
     guideTabsLayoutClassName[Math.min(Math.max(block.tabs.length, 1), 5)] ??
     guideTabsLayoutClassName[5];
@@ -734,6 +733,7 @@ function SectionRenderer({
               alt={section.image.alt ?? section.title}
               fill
               className="object-cover"
+              loading={resolveHeroImageLoading()}
               sizes="(min-width: 1024px) 50vw, 100vw"
             />
           </div>
@@ -978,6 +978,9 @@ function SectionRenderer({
                           alt={`${hotel.title} showcase image`}
                           fill
                           className="object-cover"
+                          loading={resolveGridImageLoading(index, {
+                            eagerCount: section.layout === "carousel" ? 1 : 2,
+                          })}
                           sizes="(max-width: 768px) 100vw, 50vw"
                         />
                       </div>
