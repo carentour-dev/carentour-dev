@@ -25,13 +25,13 @@ test("routes CMS blog blocks through localized fallback labels on arabic pages",
     "src/components/cms/blocks/BlogArticleHeroBlock.tsx",
   );
   const feedSource = readSource(
-    "src/components/cms/blocks/BlogPostFeedBlock.tsx",
+    "src/components/cms/blocks/BlogPostFeedSection.tsx",
   );
   const bodySource = readSource(
     "src/components/cms/blocks/BlogArticleBodyBlock.tsx",
   );
   const taxonomySource = readSource(
-    "src/components/cms/blocks/BlogTaxonomyGridBlock.tsx",
+    "src/components/cms/blocks/BlogTaxonomyGridBlockContent.tsx",
   );
   const summarySource = readSource(
     "src/components/cms/blocks/BlogAuthorSummaryBlock.tsx",
@@ -48,9 +48,10 @@ test("routes CMS blog blocks through localized fallback labels on arabic pages",
     /formatBlogReadingTime\(post\.reading_time, locale\)/,
   );
   assert.match(feedSource, /resolveBlogUiText\(\s*"featuredBadge"/);
+  assert.match(feedSource, /resolveBlogUiText\(\s*"listCtaLabel"/);
   assert.match(
     feedSource,
-    /<BlogPostCard key=\{post\.id\} post=\{post\} locale=\{locale\} \/>/,
+    /<BlogPostCard[\s\S]*post=\{post\}[\s\S]*locale=\{locale\}/,
   );
   assert.match(
     bodySource,
