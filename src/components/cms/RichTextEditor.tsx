@@ -15,7 +15,6 @@ import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
-import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { Button } from "@/components/ui/button";
@@ -180,7 +179,6 @@ export function RichTextEditor({
       Highlight,
       TextStyle,
       Color,
-      Underline,
       Placeholder.configure({
         placeholder,
       }),
