@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import {
   normalizeRoles,
   pickPrimaryRole,
@@ -32,6 +33,8 @@ export type UserProfile = ProfileState & {
   hasPermission: (permission: string) => boolean;
 };
 
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
 export const useUserProfile = () => {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -41,11 +44,15 @@ export const useUserProfile = () => {
   const hydratedUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (userId && inFlightUserIdRef.current === userId) {
+    const requestedUser = user;
+    const requestedUserId = requestedUser?.id ?? null;
+    const isActiveRequest = () => inFlightUserIdRef.current === requestedUserId;
+
+    if (requestedUserId && inFlightUserIdRef.current === requestedUserId) {
       return;
     }
 
-    if (!userId) {
+    if (!requestedUserId) {
       inFlightUserIdRef.current = null;
       hydratedUserIdRef.current = null;
       setProfileState(null);
@@ -53,8 +60,9 @@ export const useUserProfile = () => {
       return;
     }
 
-    inFlightUserIdRef.current = userId;
-    const isFirstHydrationForUser = hydratedUserIdRef.current !== userId;
+    inFlightUserIdRef.current = requestedUserId;
+    const isFirstHydrationForUser =
+      hydratedUserIdRef.current !== requestedUserId;
     if (isFirstHydrationForUser) {
       setLoading(true);
     }
@@ -65,7 +73,7 @@ export const useUserProfile = () => {
           .select(
             "username, avatar_url, date_of_birth, sex, nationality, phone, job_title, language",
           )
-          .eq("user_id", userId)
+          .eq("user_id", requestedUserId)
           .maybeSingle(),
         supabase.rpc("current_user_roles"),
         supabase.rpc("current_user_permissions"),
@@ -78,6 +86,10 @@ export const useUserProfile = () => {
       });
       const [profileResult, rolesResult, permissionsResult] =
         await Promise.race([profilePromise, timeoutPromise]);
+
+      if (!isActiveRequest()) {
+        return;
+      }
 
       if (profileResult.error && profileResult.error.code !== "PGRST116") {
         console.error("Error fetching profile:", profileResult.error);
@@ -104,9 +116,9 @@ export const useUserProfile = () => {
           !profile.nationality ||
           !profile.phone);
 
-      if (hasIncompleteProfile && user.user_metadata) {
-        const metadata = user.user_metadata;
-        const updatePayload: Record<string, string | null> = {};
+      if (hasIncompleteProfile && requestedUser?.user_metadata) {
+        const metadata = requestedUser.user_metadata;
+        const updatePayload: ProfileUpdate = {};
 
         if (!profile.date_of_birth && metadata.date_of_birth) {
           updatePayload.date_of_birth = metadata.date_of_birth;
@@ -125,7 +137,11 @@ export const useUserProfile = () => {
           const { error: updateError } = await supabase
             .from("profiles")
             .update(updatePayload)
-            .eq("user_id", userId);
+            .eq("user_id", requestedUserId);
+
+          if (!isActiveRequest()) {
+            return;
+          }
 
           if (updateError) {
             console.error("Error syncing metadata to profile:", updateError);
@@ -153,7 +169,7 @@ export const useUserProfile = () => {
         : [];
 
       const username =
-        profileResult.data?.username || user.user_metadata?.username;
+        profileResult.data?.username || requestedUser?.user_metadata?.username;
       const displayName = username || "User";
       const initials = displayName.charAt(0).toUpperCase();
 
@@ -172,8 +188,11 @@ export const useUserProfile = () => {
         displayName,
         initials,
       });
-      hydratedUserIdRef.current = userId;
+      hydratedUserIdRef.current = requestedUserId;
     } catch (error) {
+      if (!isActiveRequest()) {
+        return;
+      }
       if (
         !(error instanceof Error && error.message === "PROFILE_FETCH_TIMEOUT")
       ) {
@@ -181,12 +200,12 @@ export const useUserProfile = () => {
       }
       setProfileState(null);
     } finally {
-      if (inFlightUserIdRef.current === userId) {
+      if (inFlightUserIdRef.current === requestedUserId) {
         inFlightUserIdRef.current = null;
+        setLoading(false);
       }
-      setLoading(false);
     }
-  }, [user, userId]);
+  }, [user]);
 
   useEffect(() => {
     // Keep authenticated users in loading state until their first profile fetch settles.
