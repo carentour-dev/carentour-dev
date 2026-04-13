@@ -31,7 +31,23 @@ function resolveFrequency(
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const inventory = await getPublicRouteInventory("en");
+  let inventory: Awaited<ReturnType<typeof getPublicRouteInventory>>;
+
+  try {
+    inventory = await getPublicRouteInventory("en");
+  } catch (error) {
+    console.error("Failed to build dynamic sitemap inventory", error);
+
+    // Keep deployments alive if CMS/DB dependencies are temporarily unavailable.
+    return [
+      {
+        url: `${CANONICAL_ORIGIN}/`,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 1,
+      },
+    ];
+  }
 
   const unique = new Map<string, (typeof inventory)[number]>();
   for (const entry of inventory) {
