@@ -16,6 +16,7 @@ import { localizePublicPathname } from "@/lib/public/routing";
 import { normalizePath } from "@/lib/seo/utils";
 import { getLocalizedTreatmentSeoInventory } from "@/server/modules/treatments/public";
 import { ApiError } from "@/server/utils/errors";
+import { isRecoverableUpstreamFailure } from "@/server/utils/upstream";
 import type {
   PublicInventoryEntry,
   RouteRedirectRow,
@@ -164,12 +165,14 @@ export async function fetchSeoOverrideForRoute(options: {
     .in("locale", [locale, DEFAULT_SEO_LOCALE]);
 
   if (error) {
-    console.error("Failed to fetch SEO override for route", {
-      routeKey,
-      pathname,
-      locale,
-      error,
-    });
+    if (!isRecoverableUpstreamFailure(error)) {
+      console.error("Failed to fetch SEO override for route", {
+        routeKey,
+        pathname,
+        locale,
+        error,
+      });
+    }
     return null;
   }
 
@@ -390,10 +393,12 @@ export async function resolveRouteRedirect(
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to resolve route redirect", {
-      pathname: normalizedPath,
-      error,
-    });
+    if (!isRecoverableUpstreamFailure(error)) {
+      console.error("Failed to resolve route redirect", {
+        pathname: normalizedPath,
+        error,
+      });
+    }
     return null;
   }
 
