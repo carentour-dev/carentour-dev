@@ -11,10 +11,8 @@ import { AnimationController } from "./AnimationController";
 import { BlogArticleBodyBlock } from "./blocks/BlogArticleBodyBlock";
 import { BlogArticleHeroBlock } from "./blocks/BlogArticleHeroBlock";
 import { BlogAuthorSummaryBlock } from "./blocks/BlogAuthorSummaryBlock";
-import {
-  BlogPostFeedContent,
-  selectPreviewBlogPostFeedItems,
-} from "./blocks/BlogPostFeedBlockContent";
+import { selectPreviewBlogPostFeedItems } from "./blocks/BlogPostFeedBlockContent";
+import { BlogPostFeedSection } from "./blocks/BlogPostFeedSection";
 import {
   BlogTaxonomyGridContent,
   selectPreviewBlogTaxonomyItems,
@@ -485,7 +483,7 @@ export function BlockPreviewRenderer({
               }
 
               return (
-                <BlogPostFeedContent
+                <BlogPostFeedSection
                   key={blockKey}
                   block={block}
                   posts={selectPreviewBlogPostFeedItems({
