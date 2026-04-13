@@ -20,6 +20,7 @@ import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { isRemoteImageUrl } from "@/lib/treatments";
 
 type TreatmentSpecialtyCard = {
@@ -182,7 +183,7 @@ export function TreatmentSpecialtiesCatalog({
         </div>
       ) : (
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-2">
-          {visibleCards.map((card) => {
+          {visibleCards.map((card, index) => {
             const basePriceLabel =
               card.basePrice !== null
                 ? new Intl.NumberFormat(isArabicLocale ? "ar-EG" : "en-US", {
@@ -210,6 +211,7 @@ export function TreatmentSpecialtiesCatalog({
                     alt={card.title}
                     fill
                     className="object-cover transition duration-500 group-hover:scale-105"
+                    loading={resolveGridImageLoading(index, { eagerCount: 2 })}
                     sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
                     unoptimized={isRemoteImageUrl(imageSrc)}
                     onError={() =>
