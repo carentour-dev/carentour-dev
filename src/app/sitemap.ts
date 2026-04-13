@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { BLOG_DISCOVERY_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import {
   CANONICAL_ORIGIN,
   getPublicRouteInventory,
@@ -8,7 +7,7 @@ import {
 import { getPublicLocaleAvailability } from "@/lib/public/localization";
 import { localizePublicPathname } from "@/lib/public/routing";
 
-export const revalidate = BLOG_DISCOVERY_REVALIDATE_SECONDS;
+export const revalidate = 300;
 
 function resolvePriority(pathname: string) {
   if (pathname === "/") return 1;
