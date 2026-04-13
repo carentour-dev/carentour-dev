@@ -26,7 +26,10 @@ test("blog article body block renders only article content and toc", () => {
   assert.doesNotMatch(source, /NestedBlocks/);
   assert.doesNotMatch(source, /pre_body_blocks/);
   assert.doesNotMatch(source, /post_body_blocks/);
-  assert.match(source, /<BlogContent content=\{post\.content as any\} \/>/);
+  assert.match(
+    source,
+    /<BlogContent content=\{post\.content as any\} locale=\{locale\} \/>/,
+  );
 });
 
 test("blog post APIs stop selecting translation block zones", () => {
