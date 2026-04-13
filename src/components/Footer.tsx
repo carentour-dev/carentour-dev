@@ -129,9 +129,9 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
                   : "/carentour-logo-dark.png"
               }
               alt="Care N Tour"
-              width={260}
-              height={94}
-              className="mb-4 h-[72px] w-auto max-w-[280px] object-contain"
+              width={280}
+              height={62}
+              className="mb-4 max-w-full object-contain"
             />
             <p className="mb-6 text-muted-foreground">{t("description")}</p>
             <div className="flex gap-4">
