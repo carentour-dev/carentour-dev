@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   Select,
   SelectContent,
@@ -38,10 +39,12 @@ const RichTextEditor = dynamic(
 
 interface BlogPostEditorProps {
   initialData?: any;
-  onSave: (data: any, status: "draft" | "published") => Promise<void>;
+  onSave: (data: any, action: BlogPostEditorAction) => Promise<void>;
   saving?: boolean;
   locale?: PublicLocale;
 }
+
+export type BlogPostEditorAction = "draft" | "publish" | "schedule";
 
 export function BlogPostEditor({
   initialData,
@@ -105,9 +108,26 @@ export function BlogPostEditor({
     initialData?.seo_keywords || "",
   );
   const [ogImage, setOgImage] = useState(initialData?.og_image || "");
+  const [publishDate, setPublishDate] = useState(
+    initialData?.publish_date || "",
+  );
 
   // Settings
   const [featured, setFeatured] = useState(initialData?.featured || false);
+  const publishDateValue = publishDate.trim();
+  const selectedPublishDate = publishDateValue
+    ? new Date(publishDateValue)
+    : null;
+  const publishDateIsValid = Boolean(
+    selectedPublishDate && !Number.isNaN(selectedPublishDate.getTime()),
+  );
+  const canSchedule =
+    !isArabicLocale &&
+    publishDateIsValid &&
+    Boolean(selectedPublishDate) &&
+    selectedPublishDate.getTime() > Date.now();
+  const browserTimeZone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -214,7 +234,7 @@ export function BlogPostEditor({
     setSelectedTags(selectedTags.filter((id) => id !== tagId));
   };
 
-  const handleSave = (status: "draft" | "published") => {
+  const handleSave = (action: BlogPostEditorAction) => {
     const postData = {
       id: initialData?.id,
       title: title.trim(),
@@ -232,10 +252,11 @@ export function BlogPostEditor({
       seo_description: seoDescription.trim(),
       seo_keywords: seoKeywords.trim(),
       og_image: ogImage.trim() || featuredImage.trim(),
+      publish_date: publishDateValue || null,
       featured,
     };
 
-    onSave(postData, status);
+    onSave(postData, action);
   };
 
   return (
@@ -413,8 +434,24 @@ export function BlogPostEditor({
         {/* Publish Actions */}
         <Card>
           <CardContent className="pt-6 space-y-3">
+            {!isArabicLocale && (
+              <div className="space-y-2">
+                <Label htmlFor="publish-date">Publish At</Label>
+                <DateTimePicker
+                  id="publish-date"
+                  value={publishDate}
+                  onChange={setPublishDate}
+                  allowClear
+                  minuteStep={15}
+                  placeholder="Select publish date and time"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Scheduling uses your browser time zone: {browserTimeZone}.
+                </p>
+              </div>
+            )}
             <Button
-              onClick={() => handleSave("published")}
+              onClick={() => handleSave("publish")}
               disabled={saving || !title || !slug}
               className="w-full"
             >
@@ -426,10 +463,27 @@ export function BlogPostEditor({
               ) : (
                 <>
                   <Eye className="mr-2 h-4 w-4" />
-                  Publish
+                  {isArabicLocale ? "Publish Translation" : "Publish Now"}
                 </>
               )}
             </Button>
+            {!isArabicLocale && (
+              <Button
+                onClick={() => handleSave("schedule")}
+                disabled={saving || !title || !slug || !canSchedule}
+                variant="secondary"
+                className="w-full"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  "Schedule"
+                )}
+              </Button>
+            )}
             <Button
               onClick={() => handleSave("draft")}
               disabled={saving || !title || !slug}
@@ -582,6 +636,8 @@ export function BlogPostEditor({
                   alt="Preview"
                   fill
                   className="object-cover rounded"
+                  loading="eager"
+                  sizes="100vw"
                 />
               </div>
             )}
