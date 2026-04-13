@@ -1,5 +1,6 @@
 "use client";
 
+import type { PublicLocale } from "@/i18n/routing";
 import { renderBlogContent } from "@/lib/blog/content-renderers";
 import { cn } from "@/lib/utils";
 
@@ -8,10 +9,15 @@ interface BlogContentProps {
     type: "richtext" | "markdown" | "html";
     data: string;
   };
+  locale?: PublicLocale;
   className?: string;
 }
 
-export function BlogContent({ content, className }: BlogContentProps) {
+export function BlogContent({
+  content,
+  locale = "en",
+  className,
+}: BlogContentProps) {
   return (
     <div
       data-toc-root
@@ -33,7 +39,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
         className,
       )}
     >
-      {renderBlogContent(content)}
+      {renderBlogContent(content, locale)}
     </div>
   );
 }
