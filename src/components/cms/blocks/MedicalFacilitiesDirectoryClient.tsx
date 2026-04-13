@@ -21,6 +21,7 @@ import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -502,7 +503,7 @@ export function MedicalFacilitiesDirectoryClient({
 
         {!isLoading && providers.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {providers.map((provider) => {
+            {providers.map((provider, index) => {
               const location = formatFacilityLocation(provider);
               const image = pickFacilityImage(provider);
               const procedures = getProceduresForProvider(
@@ -528,6 +529,9 @@ export function MedicalFacilitiesDirectoryClient({
                         src={image}
                         alt={provider.name}
                         fill
+                        loading={resolveGridImageLoading(index, {
+                          eagerCount: 2,
+                        })}
                         sizes="(min-width: 1024px) 50vw, 100vw"
                         className="object-cover"
                       />
