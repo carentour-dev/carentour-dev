@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/integrations/supabase/server";
 
-export async function GET(
-  _request: NextRequest,
-  context: RouteContext<"/api/patients/[id]">,
-) {
+type PatientRouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function GET(_request: NextRequest, context: PatientRouteContext) {
   try {
     const supabase = await createClient();
     const { id } = await context.params;
