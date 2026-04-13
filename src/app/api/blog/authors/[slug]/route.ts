@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BLOG_SURFACE_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import { getLocalizedBlogAuthorBySlug } from "@/lib/blog/server";
 import { resolvePublicLocaleFromRequest } from "@/lib/public/requestLocale";
+
+export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;
 
 export async function GET(
   request: NextRequest,
