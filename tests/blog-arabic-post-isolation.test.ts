@@ -34,7 +34,10 @@ test("Arabic CMS blog post responses no longer fall back to English post fields"
 test("Arabic public blog posts render translation content without English copy fallback", () => {
   const source = readSource("src/lib/blog/server.ts");
 
-  assert.match(source, /\? cleanText\(entry\.translation\?\.title\) \?\? ""/);
+  assert.match(
+    source,
+    /\?\s*\(?cleanText\(entry\.translation\?\.title\)\s*\?\?\s*""\)?/,
+  );
   assert.doesNotMatch(
     source,
     /\? cleanText\(entry\.translation\?\.title\) \?\? entry\.base\.title/,
@@ -54,6 +57,6 @@ test("Arabic blog translations require their own title and slug before publishin
   );
   assert.match(
     source,
-    /if \(nextStatus === "published" && \(!normalizeText\(title\) \|\| !normalizeText\(slug\)\)\)/,
+    /if\s*\(\s*nextStatus === "published"\s*&&\s*\(!normalizeText\(title\)\s*\|\|\s*!normalizeText\(slug\)\)\s*\)/,
   );
 });
