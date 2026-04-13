@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,15 @@ export function NewsletterSubscribe({
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const { subscribe, loading } = useNewsletter();
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +47,12 @@ export function NewsletterSubscribe({
       setEmail("");
 
       // Reset after 5 seconds
-      setTimeout(() => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = setTimeout(() => {
         setSubmitted(false);
+        resetTimerRef.current = null;
       }, 5000);
     }
   };
