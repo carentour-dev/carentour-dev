@@ -35,9 +35,14 @@ interface BlogPostCardProps {
     view_count?: number;
   };
   locale?: PublicLocale;
+  imageLoading?: "eager" | "lazy";
 }
 
-export function BlogPostCard({ post, locale = "en" }: BlogPostCardProps) {
+export function BlogPostCard({
+  post,
+  locale = "en",
+  imageLoading = "lazy",
+}: BlogPostCardProps) {
   const postUrl =
     post.path ??
     (post.category
@@ -68,6 +73,7 @@ export function BlogPostCard({ post, locale = "en" }: BlogPostCardProps) {
               alt={post.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              loading={imageLoading}
               sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
             />
           </div>
