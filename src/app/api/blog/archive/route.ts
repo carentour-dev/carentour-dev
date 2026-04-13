@@ -6,10 +6,9 @@ import {
   getLocalizedBlogTagBySlug,
   listLocalizedBlogPosts,
 } from "@/lib/blog/server";
-import { BLOG_SURFACE_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import { resolvePublicLocaleFromRequest } from "@/lib/public/requestLocale";
 
-export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;
+export const revalidate = 60;
 
 function parsePositiveInteger(value: string | null, fallback: number) {
   const parsed = Number.parseInt(value ?? "", 10);
