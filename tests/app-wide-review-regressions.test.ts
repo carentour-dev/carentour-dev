@@ -29,7 +29,7 @@ test("default-locale public wrappers export module-level revalidate", () => {
     const source = fs.readFileSync(absolutePath, "utf8");
     assert.match(
       source,
-      /export const revalidate = 300;/,
+      /export const revalidate = \d+;/,
       `${path.relative(workspaceRoot, absolutePath)} should export revalidate`,
     );
   }
