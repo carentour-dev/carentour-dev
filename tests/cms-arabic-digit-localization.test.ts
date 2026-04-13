@@ -180,3 +180,33 @@ test("renders Arabic contact details with localized digits and rtl phone directi
   );
   assert.match(contactBlockSource, /isTelephone[\s\S]*phoneNumberDirection/);
 });
+
+test("threads Arabic digit localization through blog article rendering", () => {
+  const contentRendererSource = readSource(
+    "src/lib/blog/content-renderers.tsx",
+  );
+  const blogContentSource = readSource("src/components/blog/BlogContent.tsx");
+  const articleBodySource = readSource(
+    "src/components/cms/blocks/BlogArticleBodyBlock.tsx",
+  );
+
+  assert.match(contentRendererSource, /import \{ localizeDigits \}/);
+  assert.match(
+    contentRendererSource,
+    /function localizeHtmlTextContent\(html: string, locale: PublicLocale\)/,
+  );
+  assert.match(
+    contentRendererSource,
+    /export function renderBlogContent\(\s*content: any,\s*locale: PublicLocale = "en"\s*\)/,
+  );
+  assert.match(
+    contentRendererSource,
+    /localizeHtmlTextContent\(addHeadingIds\(stringData\), locale\)/,
+  );
+  assert.match(blogContentSource, /locale\?: PublicLocale/);
+  assert.match(blogContentSource, /renderBlogContent\(content, locale\)/);
+  assert.match(
+    articleBodySource,
+    /<BlogContent content=\{post\.content as any\} locale=\{locale\} \/>/,
+  );
+});
