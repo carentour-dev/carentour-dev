@@ -6,7 +6,6 @@ import {
   extractBlogAiSummary,
   resolveBlogPageBlocks,
 } from "@/lib/blog/page-helpers";
-import { BLOG_SURFACE_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
   assertPublicPageAvailable,
@@ -21,7 +20,7 @@ import {
   websiteSchema,
 } from "@/lib/seo";
 
-export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;
+export const revalidate = 60;
 
 const PATHNAME = "/blog";
 
