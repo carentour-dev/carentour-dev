@@ -20,6 +20,7 @@ import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -329,7 +330,7 @@ export function DoctorDirectoryClient({
 
         {!loading && doctors.length > 0 ? (
           <div className="grid gap-6 xl:grid-cols-2">
-            {doctors.map((doctor) => {
+            {doctors.map((doctor, index) => {
               const image = pickDoctorImage(doctor);
               const trimmedBio = truncateText(doctor.bio, 180);
               const hasFeaturedBadge = (doctor.patient_rating ?? 0) >= 4.8;
@@ -346,6 +347,9 @@ export function DoctorDirectoryClient({
                           src={image}
                           alt={doctor.name}
                           fill
+                          loading={resolveGridImageLoading(index, {
+                            eagerCount: 2,
+                          })}
                           sizes="(min-width: 1280px) 190px, 100vw"
                           className="object-cover transition duration-500 group-hover:scale-105"
                         />
