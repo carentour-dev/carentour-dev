@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { handleRouteError } from "@/server/utils/http";
 import { recordPathRedirect, revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
 import { localizePublicPathname } from "@/lib/public/routing";
@@ -79,11 +80,7 @@ export async function GET(request: NextRequest) {
       }),
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -126,11 +123,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ tag }, { status: 201 });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -292,11 +285,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ tag });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
 
@@ -346,10 +335,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleRouteError(error);
   }
 }
