@@ -81,6 +81,7 @@ export const patientService = patientServiceInstance;
 type PatientInsert = Database["public"]["Tables"]["patients"]["Insert"];
 type PatientUpdate = Database["public"]["Tables"]["patients"]["Update"];
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type ProfileSummary = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "id" | "username" | "email" | "avatar_url" | "phone" | "job_title"
@@ -665,7 +666,7 @@ const syncProfileWithPatient = async (
 ) => {
   if (!userId) return;
 
-  const updatePayload: Record<string, unknown> = {};
+  const updatePayload: ProfileUpdate = {};
 
   const normalizedFullName = normalizeProfileField(fullName);
   if (normalizedFullName !== undefined) {
