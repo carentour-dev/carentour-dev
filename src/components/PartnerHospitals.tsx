@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useServiceProviders } from "@/hooks/useServiceProviders";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
@@ -85,7 +86,7 @@ export default function PartnerHospitals() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-          {serviceProviders.slice(0, 2).map((provider) => {
+          {serviceProviders.slice(0, 2).map((provider, index) => {
             const address = (provider.address ?? {}) as Record<string, unknown>;
             const location = [address?.["city"], address?.["country"]]
               .filter(Boolean)
@@ -108,6 +109,7 @@ export default function PartnerHospitals() {
                     alt={provider.name}
                     fill
                     className="object-cover"
+                    loading={resolveGridImageLoading(index, { eagerCount: 2 })}
                     sizes="(min-width: 1024px) 45vw, 100vw"
                   />
                   <div className="absolute top-4 left-4">
