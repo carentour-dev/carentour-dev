@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -416,6 +417,12 @@ function TagDialog({
     }
   };
 
+  const dialogDescription = tag
+    ? isArabicLocale
+      ? "Update the Arabic tag label, public slug, and publication status for this tag."
+      : "Update the tag name and slug used to organize blog posts."
+    : "Create a new English blog tag with its name and public slug.";
+
   return (
     <DialogContent className="max-w-md" unsaved={hasUnsavedChanges}>
       <DialogHeader>
@@ -426,6 +433,7 @@ function TagDialog({
               : "Edit Tag"
             : "Create Tag"}
         </DialogTitle>
+        <DialogDescription>{dialogDescription}</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
