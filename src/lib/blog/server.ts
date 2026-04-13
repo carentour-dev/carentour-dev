@@ -7,6 +7,10 @@ import {
   buildLocalizedBlogPostPath,
   buildLocalizedBlogTagPath,
 } from "@/lib/blog/paths";
+import {
+  isBlogPostPubliclyVisible,
+  resolveBlogPostPublicationState,
+} from "@/lib/blog/publication";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 
 type BlogCategoryBaseRow = {
@@ -782,7 +786,10 @@ function localizePostEntry(input: {
       locale === "ar"
         ? cleanText(entry.translation?.og_image)
         : entry.base.og_image,
-    status: entry.base.status as "draft" | "published" | "scheduled",
+    status: resolveBlogPostPublicationState({
+      status: entry.base.status,
+      publishDate: entry.base.publish_date,
+    }),
     updated_at:
       locale === "ar"
         ? (entry.translation?.updated_at ?? entry.base.updated_at)
@@ -1149,12 +1156,11 @@ export async function getLocalizedBlogPostByPath(input: {
   }
 
   if (publishedOnly) {
-    if (postEntry.base.status !== "published") {
-      return null;
-    }
     if (
-      postEntry.base.publish_date &&
-      Date.parse(postEntry.base.publish_date) > Date.now()
+      !isBlogPostPubliclyVisible({
+        status: postEntry.base.status,
+        publishDate: postEntry.base.publish_date,
+      })
     ) {
       return null;
     }
