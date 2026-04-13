@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PublicLocale } from "@/i18n/routing";
 import { resolveBlogUiText } from "@/lib/blog/localization";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ export function SocialShare({
   const [copied, setCopied] = useState(false);
   const [fullUrl, setFullUrl] = useState(url);
   const { toast } = useToast();
+  const copiedResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const shareLabel = resolveBlogUiText("shareLabel", locale, label);
   const twitterLabel = resolveBlogUiText("shareOnTwitter", locale);
   const facebookLabel = resolveBlogUiText("shareOnFacebook", locale);
@@ -45,6 +48,14 @@ export function SocialShare({
 
     setFullUrl(`${window.location.origin}${url}`);
   }, [url]);
+
+  useEffect(() => {
+    return () => {
+      if (copiedResetTimerRef.current) {
+        clearTimeout(copiedResetTimerRef.current);
+      }
+    };
+  }, []);
 
   const shareLinks = {
     twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(
@@ -66,7 +77,13 @@ export function SocialShare({
         title: resolveBlogUiText("copySuccessTitle", locale),
         description: resolveBlogUiText("copySuccessDescription", locale),
       });
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedResetTimerRef.current) {
+        clearTimeout(copiedResetTimerRef.current);
+      }
+      copiedResetTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copiedResetTimerRef.current = null;
+      }, 2000);
     } catch (err) {
       toast({
         title: resolveBlogUiText("copyErrorTitle", locale),
