@@ -1,11 +1,13 @@
 import type { NextRequest } from "next/server";
 import type { PublicLocale } from "@/i18n/routing";
 
+type SearchParamsLike = Pick<URLSearchParams, "get" | "toString">;
+
 export function resolveAdminLocale(
-  request: NextRequest | URLSearchParams,
+  request: NextRequest | SearchParamsLike,
 ): PublicLocale {
   const searchParams =
-    request instanceof URLSearchParams ? request : request.nextUrl.searchParams;
+    "nextUrl" in request ? request.nextUrl.searchParams : request;
 
   return searchParams.get("locale") === "ar" ? "ar" : "en";
 }
@@ -13,7 +15,7 @@ export function resolveAdminLocale(
 export function buildAdminLocaleHref(
   pathname: string,
   locale: PublicLocale,
-  searchParams?: URLSearchParams | string | null,
+  searchParams?: SearchParamsLike | string | null,
 ) {
   const [basePath, existingQuery = ""] = pathname.split("?");
   const params = new URLSearchParams(existingQuery);
