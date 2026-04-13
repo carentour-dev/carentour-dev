@@ -7,7 +7,7 @@ import {
 import { getPublicLocaleAvailability } from "@/lib/public/localization";
 import { localizePublicPathname } from "@/lib/public/routing";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 function resolvePriority(pathname: string) {
   if (pathname === "/") return 1;
