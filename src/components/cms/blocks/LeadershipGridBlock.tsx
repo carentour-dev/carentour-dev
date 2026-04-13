@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
+import { resolveGridImageLoading } from "@/lib/images/loading";
 import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 
@@ -53,6 +54,7 @@ export function LeadershipGridBlock({
                       alt={person.name}
                       fill
                       className="object-cover"
+                      loading={resolveGridImageLoading(index)}
                       sizes="(min-width: 1280px) 28vw, (min-width: 768px) 42vw, 100vw"
                       unoptimized={person.image.startsWith("http")}
                     />
