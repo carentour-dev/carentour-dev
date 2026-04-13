@@ -6,6 +6,7 @@ import {
   extractBlogAiSummary,
   resolveBlogPageBlocks,
 } from "@/lib/blog/page-helpers";
+import { BLOG_SURFACE_REVALIDATE_SECONDS } from "@/lib/blog/revalidation";
 import { getLocalizedBlogCategoryBySlug } from "@/lib/blog/server";
 import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
@@ -20,7 +21,7 @@ import {
   resolveSeo,
 } from "@/lib/seo";
 
-export const revalidate = 300;
+export const revalidate = BLOG_SURFACE_REVALIDATE_SECONDS;
 
 type PageProps = {
   params: Promise<{ locale: string; category: string }>;
