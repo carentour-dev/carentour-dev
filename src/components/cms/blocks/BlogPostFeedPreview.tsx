@@ -4,10 +4,8 @@ import type { BlockInstance } from "@/lib/cms/blocks";
 import type { CmsBlogPreviewData } from "@/lib/cms/previewData";
 
 import { BlockSurface } from "./BlockSurface";
-import {
-  BlogPostFeedContent,
-  selectPreviewBlogPostFeedItems,
-} from "./BlogPostFeedBlockContent";
+import { selectPreviewBlogPostFeedItems } from "./BlogPostFeedBlockContent";
+import { BlogPostFeedSection } from "./BlogPostFeedSection";
 
 function PreviewState({
   block,
@@ -87,7 +85,7 @@ export function BlogPostFeedPreview({
   });
 
   return (
-    <BlogPostFeedContent
+    <BlogPostFeedSection
       block={block}
       posts={posts}
       context={context}
