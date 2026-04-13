@@ -20,11 +20,11 @@ test("publishes Arabic translations for all active doctors while preserving cura
   );
   assert.match(migrationSource, /d\.is_active = TRUE/);
   assert.doesNotMatch(migrationSource, /d\.name IN \(/);
-  assert.match(migrationSource, /'published' AS status/);
+  assert.match(migrationSource, /'published' AS translation_status/);
   assert.match(
     migrationSource,
     /LEFT JOIN doctor_translation_overrides AS src[\s\S]*ON d\.name = src\.english_name/,
   );
-  assert.match(migrationSource, /COALESCE\(src\.name, d\.name\)/);
+  assert.match(migrationSource, /COALESCE\(src\.translated_name, d\.name\)/);
   assert.match(migrationSource, /ON CONFLICT \(doctor_id, locale\) DO UPDATE/);
 });
