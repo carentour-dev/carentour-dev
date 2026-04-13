@@ -12,7 +12,10 @@ type ResolvedRouteContext = {
   [key: string]: unknown;
 };
 
-type IncomingRouteContext = RouteContext<any>;
+type IncomingRouteContext = {
+  params: Promise<Record<string, string | string[] | undefined>>;
+  [key: string]: unknown;
+};
 
 type ResolvedHandlerContext = ResolvedRouteContext & {
   auth?: AuthorizationContext;
