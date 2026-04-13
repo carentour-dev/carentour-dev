@@ -5,6 +5,7 @@ import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { ApiError } from "@/server/utils/errors";
 import { normalizeRoles, pickPrimaryRole } from "@/lib/auth/roles";
+import type { Database } from "@/integrations/supabase/types";
 
 const createAccountSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -34,6 +35,8 @@ type RoleRecord = {
 type ProfileRoleRecord = {
   role?: RoleRecord | null;
 };
+
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 function resolveInviteRedirectUrl(): string | null {
   const explicit = process.env.TEAM_ACCOUNT_INVITE_REDIRECT_URL?.trim() ?? "";
@@ -564,7 +567,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const profileUpdates: Record<string, unknown> = {
+    const profileUpdates: ProfileUpdate = {
       email: payload.email,
     };
 
