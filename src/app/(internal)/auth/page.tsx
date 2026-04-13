@@ -327,17 +327,17 @@ function AuthContent() {
                 <Image
                   src="/carentour-logo-dark.png"
                   alt="Care N Tour logo"
-                  width={176}
-                  height={40}
-                  className="mx-auto h-12 w-auto dark:hidden"
+                  width={216}
+                  height={48}
+                  className="mx-auto dark:hidden"
                   priority
                 />
                 <Image
                   src="/carentour-logo-light.png"
                   alt="Care N Tour logo"
-                  width={176}
-                  height={40}
-                  className="mx-auto hidden h-12 w-auto dark:block"
+                  width={216}
+                  height={48}
+                  className="mx-auto hidden dark:block"
                   priority
                 />
               </div>
@@ -401,17 +401,17 @@ function AuthContent() {
               <Image
                 src="/carentour-logo-dark.png"
                 alt="Care N Tour logo"
-                width={176}
-                height={40}
-                className="mx-auto h-12 w-auto dark:hidden"
+                width={216}
+                height={48}
+                className="mx-auto dark:hidden"
                 priority
               />
               <Image
                 src="/carentour-logo-light.png"
                 alt="Care N Tour logo"
-                width={176}
-                height={40}
-                className="mx-auto hidden h-12 w-auto dark:block"
+                width={216}
+                height={48}
+                className="mx-auto hidden dark:block"
                 priority
               />
             </div>
