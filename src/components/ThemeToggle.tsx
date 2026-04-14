@@ -2,6 +2,7 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,11 +21,12 @@ export function ThemeToggle({
   variant = "default",
   className,
 }: ThemeToggleProps) {
-  const { resolvedTheme, setTheme } = useTheme();
-  const activeTheme =
-    resolvedTheme === "light" || resolvedTheme === "dark"
-      ? resolvedTheme
-      : null;
+  const { setTheme, theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleThemeChange = (newTheme: "light" | "dark") => {
     setTheme(newTheme);
@@ -42,6 +44,26 @@ export function ThemeToggle({
       document.body.removeChild(ariaLiveRegion);
     }, 1000);
   };
+
+  if (!mounted) {
+    return (
+      <Button
+        variant="outline"
+        size="icon"
+        className={cn(
+          variant === "workspace"
+            ? "h-10 w-10 rounded-xl border-border bg-background/80 text-foreground shadow-none backdrop-blur-sm"
+            : "border-border bg-background",
+          "animate-pulse",
+          className,
+        )}
+        disabled
+        aria-label="Loading theme toggle"
+      >
+        <div className="h-[1.2rem] w-[1.2rem] rounded bg-muted" />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
@@ -70,28 +92,26 @@ export function ThemeToggle({
         <DropdownMenuItem
           onClick={() => handleThemeChange("light")}
           className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
-            activeTheme === "light" ? "bg-muted text-primary font-medium" : ""
+            theme === "light" ? "bg-muted text-primary font-medium" : ""
           }`}
           role="menuitem"
           aria-label="Switch to light theme"
         >
           <Sun className="h-4 w-4" />
           <span>Light</span>
-          {activeTheme === "light" && (
-            <span className="sr-only">(current)</span>
-          )}
+          {theme === "light" && <span className="sr-only">(current)</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleThemeChange("dark")}
           className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 hover:text-foreground focus:bg-muted/50 focus:text-foreground ${
-            activeTheme === "dark" ? "bg-muted text-primary font-medium" : ""
+            theme === "dark" ? "bg-muted text-primary font-medium" : ""
           }`}
           role="menuitem"
           aria-label="Switch to dark theme"
         >
           <Moon className="h-4 w-4" />
           <span>Dark</span>
-          {activeTheme === "dark" && <span className="sr-only">(current)</span>}
+          {theme === "dark" && <span className="sr-only">(current)</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
