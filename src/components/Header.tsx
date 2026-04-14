@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
@@ -74,6 +74,14 @@ function HeaderLogo({
 
 const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
   const shellOwned = usePublicShellOwner();
+  if (shellOwned && !forceRender) {
+    return null;
+  }
+
+  return <HeaderContent />;
+};
+
+function HeaderContent() {
   const t = useTranslations("Header");
   const locale = useLocale() as PublicLocale;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -90,25 +98,23 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
     () => initialNavigationLinks.filter(isNavigationVisible),
     [initialNavigationLinks],
   );
-  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>(
-    () => visibleInitialNavigationLinks,
-  );
+  const hasPreloadedNavigation = visibleInitialNavigationLinks.length > 0;
+  const [navigationLinks, setNavigationLinks] = useState<NavigationLink[]>([]);
   const [loadingNavigation, setLoadingNavigation] = useState(
-    () => visibleInitialNavigationLinks.length === 0,
+    () => !hasPreloadedNavigation,
   );
-
-  useLayoutEffect(() => {
-    setNavigationLinks(visibleInitialNavigationLinks);
-    setLoadingNavigation(visibleInitialNavigationLinks.length === 0);
-  }, [visibleInitialNavigationLinks]);
 
   useEffect(() => {
+    if (hasPreloadedNavigation) {
+      setNavigationLinks([]);
+      setLoadingNavigation(false);
+      return;
+    }
+
     let isSubscribed = true;
-    const hasInitialNavigation = visibleInitialNavigationLinks.length > 0;
+
     const loadNavigation = async () => {
-      if (!hasInitialNavigation) {
-        setLoadingNavigation(true);
-      }
+      setLoadingNavigation(true);
       const result = await fetchNavigationLinks(locale);
       if (!isSubscribed) return;
       const merged =
@@ -124,20 +130,17 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
     return () => {
       isSubscribed = false;
     };
-  }, [locale, visibleInitialNavigationLinks]);
+  }, [hasPreloadedNavigation, locale]);
 
-  const displayedNavigationLinks =
-    navigationLinks.length > 0
+  const displayedNavigationLinks = hasPreloadedNavigation
+    ? visibleInitialNavigationLinks
+    : navigationLinks.length > 0
       ? navigationLinks
       : loadingNavigation
         ? []
         : locale === defaultPublicLocale
           ? getFallbackNavigationLinks()
           : [];
-
-  if (shellOwned && !forceRender) {
-    return null;
-  }
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -359,6 +362,6 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
       </div>
     </header>
   );
-};
+}
 
 export default Header;
