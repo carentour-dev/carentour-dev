@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -33,19 +33,35 @@ type OperationsShellProps = {
 export function OperationsShell({ children }: OperationsShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
+  const { user, loading: authLoading, signOut, workspaceAccess } = useAuth();
+  const { profile } = useUserProfile();
+  const permissions = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.permissions
+        : (profile?.permissions ?? []),
+    [
+      profile?.permissions,
+      user?.id,
+      workspaceAccess.permissions,
+      workspaceAccess.userId,
+    ],
+  );
+  const roles = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.roles
+        : (profile?.roles ?? []),
+    [profile?.roles, user?.id, workspaceAccess.roles, workspaceAccess.userId],
+  );
 
   const entitlements = useMemo(
     () =>
-      profile
-        ? createEntitlementContext({
-            permissions: profile.permissions,
-            roles: profile.roles,
-          })
-        : createEntitlementContext(),
-    [profile],
+      createEntitlementContext({
+        permissions,
+        roles,
+      }),
+    [permissions, roles],
   );
 
   const navSections = useMemo(
@@ -56,8 +72,6 @@ export function OperationsShell({ children }: OperationsShellProps) {
   const assignedSections = hasAnyOperationsSection(entitlements);
   const baseAccess = hasOperationsEntry(entitlements);
   const isAuthorized = baseAccess || assignedSections;
-  const permissions = profile?.permissions ?? [];
-  const roles = profile?.roles ?? [];
   const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
   const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
@@ -92,37 +106,27 @@ export function OperationsShell({ children }: OperationsShellProps) {
     [navSections, pathname],
   );
 
-  const isLoading = authLoading || profileLoading;
-
-  useEffect(() => {
-    if (!isLoading) {
-      setInitialAccessResolved(true);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (initialAccessResolved && !authLoading && !user) {
-      router.replace("/auth");
-    }
-  }, [authLoading, initialAccessResolved, router, user]);
+  const isLoading =
+    authLoading ||
+    (Boolean(user) &&
+      (workspaceAccess.userId !== user.id ||
+        workspaceAccess.loading ||
+        !workspaceAccess.resolved));
 
   const handleSignOut = async () => {
     await signOut();
     router.replace("/auth");
   };
 
-  if (!initialAccessResolved) {
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Loading operations workspace…
-        </p>
       </div>
     );
   }
 
-  if (!authLoading && !user) {
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -180,13 +184,13 @@ export function OperationsShell({ children }: OperationsShellProps) {
       headerSubtitle="Role-aware queues and casework for Care N Tour staff."
       headerActions={<ThemeToggle variant="workspace" />}
       profile={{
-        displayName: profile?.displayName ?? "Team member",
-        roles: profile?.roles ?? [],
+        displayName: profile?.displayName ?? user.email ?? "Team member",
+        roles,
         icon: Users,
       }}
       onSignOut={handleSignOut}
-      loading={isLoading}
-      loadingMessage="Refreshing operations access..."
+      loading={false}
+      loadingMessage={null}
       contentWidth="dashboard"
       contentClassName="max-w-[1520px] print:max-w-none"
       mainClassName="print:px-0 print:pb-0 print:pt-0"
