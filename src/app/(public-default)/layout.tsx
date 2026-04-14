@@ -2,11 +2,12 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import AppProviders from "@/components/AppProviders";
+import SharedUiProviders from "@/components/SharedUiProviders";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
+import { PublicAuthBoundary } from "@/components/public/PublicInteractiveProviders";
 import { defaultPublicLocale } from "@/i18n/routing";
 import { isNavigationVisible } from "@/lib/navigation";
 import { getPublicDirection } from "@/lib/public/routing";
@@ -27,7 +28,7 @@ export default async function DefaultPublicLayout({
     navigationResult.links.filter(isNavigationVisible);
 
   return (
-    <AppProviders>
+    <SharedUiProviders>
       <NextIntlClientProvider locale={defaultPublicLocale} messages={messages}>
         <PublicShellProvider>
           <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
@@ -37,7 +38,9 @@ export default async function DefaultPublicLayout({
               dir={getPublicDirection(defaultPublicLocale)}
               className="flex min-h-screen flex-col"
             >
-              <Header forceRender />
+              <PublicAuthBoundary>
+                <Header forceRender />
+              </PublicAuthBoundary>
               <main className="flex-1">{children}</main>
               <Footer forceRender />
             </div>
@@ -45,6 +48,6 @@ export default async function DefaultPublicLayout({
           </NavigationProvider>
         </PublicShellProvider>
       </NextIntlClientProvider>
-    </AppProviders>
+    </SharedUiProviders>
   );
 }
