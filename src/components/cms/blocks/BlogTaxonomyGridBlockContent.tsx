@@ -3,6 +3,10 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  getAuthorAvatarInitials,
+  getAuthorAvatarPresentation,
+} from "@/lib/blog/authorAvatar";
 import { resolveBlogUiText } from "@/lib/blog/localization";
 import type {
   LocalizedBlogAuthor,
@@ -102,6 +106,8 @@ export function BlogTaxonomyGridContent({
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => {
                 const isAuthor = block.taxonomy === "authors";
+                const avatarPresentation = getAuthorAvatarPresentation("grid");
+                const avatarInitials = getAuthorAvatarInitials(item.name);
                 const bodyText =
                   "bio" in item
                     ? item.bio
@@ -114,14 +120,22 @@ export function BlogTaxonomyGridContent({
                     className="overflow-hidden rounded-[1.75rem] border border-border/60 bg-card p-6 shadow-sm"
                   >
                     <div className="flex items-start gap-4">
-                      {isAuthor && "avatar" in item && item.avatar ? (
-                        <Image
-                          src={item.avatar}
-                          alt={item.name}
-                          width={72}
-                          height={72}
-                          className="rounded-2xl object-cover"
-                        />
+                      {isAuthor &&
+                      "avatar" in item &&
+                      item.avatar ? (
+                        <div className={avatarPresentation.frameClassName}>
+                          <Image
+                            src={item.avatar}
+                            alt={item.name}
+                            fill
+                            sizes="72px"
+                            className={avatarPresentation.imageClassName}
+                          />
+                        </div>
+                      ) : isAuthor ? (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold tracking-[-0.04em] text-primary">
+                          {avatarInitials}
+                        </div>
                       ) : (
                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-lg font-semibold text-foreground">
                           {item.name.charAt(0)}
