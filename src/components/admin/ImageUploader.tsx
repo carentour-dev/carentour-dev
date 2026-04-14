@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +48,6 @@ export function ImageUploader({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isRemoteAsset = typeof value === "string" && /^https?:\/\//.test(value);
 
   const readImageDimensions = (file: File) =>
     new Promise<{ width: number; height: number }>((resolve, reject) => {
@@ -259,7 +258,6 @@ export function ImageUploader({
                 alt="Uploaded preview"
                 fill
                 className="object-cover"
-                unoptimized={isRemoteAsset}
                 onError={() => {
                   setError(
                     (current) =>
