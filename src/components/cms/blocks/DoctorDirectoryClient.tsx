@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
