@@ -1,3 +1,4 @@
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { ArrowRight, Shield } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
@@ -11,8 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { HomeAction, HomeHeroContent } from "./content";
 
-const DEFAULT_HERO_IMAGE_URL =
-  "https://cmnwwchipysvwvijqjcu.supabase.co/storage/v1/object/public/media/cms/home-hero/90bc8c9d-bab8-45e6-9975-c7308001f4dd/cnt_hero.png";
+const DEFAULT_HERO_IMAGE_URL = "/hero-medical-facility.jpg";
 
 type HomeHeroSectionProps = {
   content: HomeHeroContent;
@@ -44,11 +44,12 @@ export function HomeHeroSection({
   contentColumnClassName,
   locale = "en",
 }: HomeHeroSectionProps) {
-  const resolvedBackgroundImageUrl =
+  const requestedBackgroundImageUrl =
     typeof content.backgroundImageUrl === "string" &&
     content.backgroundImageUrl.trim().length > 0
       ? content.backgroundImageUrl.trim()
       : DEFAULT_HERO_IMAGE_URL;
+  const resolvedBackgroundImageUrl = requestedBackgroundImageUrl;
   const overlayGradient = buildHeroOverlayGradient(content.overlay);
   const highlights = content.highlights ?? [];
   const resolveActionHref = (href: string) => {
@@ -68,11 +69,15 @@ export function HomeHeroSection({
         className,
       )}
     >
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${resolvedBackgroundImageUrl})` }}
-        aria-hidden="true"
-      >
+      <div className="absolute inset-0" aria-hidden="true">
+        <Image
+          src={resolvedBackgroundImageUrl}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
         <div
           className="absolute inset-0"
           style={{ backgroundImage: overlayGradient }}
