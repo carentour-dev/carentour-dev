@@ -12,12 +12,19 @@
     "typegen": "next typegen",
     "typecheck": "npm run typegen && tsc --noEmit -p tsconfig.typecheck.json",
     "test": "node --experimental-strip-types --import ./scripts/test-register.mjs --test tests/*.test.ts",
+    "smoke": "node tests/live-smoke.mjs",
+    "verify:baseline": "npm run lint && npm run typecheck && npm test",
+    "verify:release": "npm run verify:baseline && npm run build:webpack",
     "prepare": "husky",
     "format": "prettier --check --cache .",
     "format:write": "prettier --write .",
     "blog:publish-ar": "node ./scripts/publish-arabic-blog-translations.mjs",
     "price-list:template-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs",
     "price-list:example-xlsx": "node ./scripts/generate-price-list-template-xlsx.mjs --example"
+  },
+  "engines": {
+    "node": "22.x",
+    "npm": "11.x"
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",
