@@ -147,17 +147,20 @@ export function InternalWorkspaceShell({
               </SidebarGroup>
             ))}
           </SidebarContent>
-          <SidebarFooter className="mt-auto px-4 pb-4 pt-5">
+          <SidebarFooter className="mt-auto px-4 pb-4 pt-5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2">
             <InternalWorkspaceProfileCard profile={profile} />
             {onSignOut ? (
               <Button
                 variant="ghost"
                 size="sm"
-                className="group/sign-out h-10 w-full justify-start gap-2 rounded-xl border border-transparent px-3 text-sidebar-foreground/70 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                aria-label={signOutLabel}
+                className="group/sign-out h-10 w-full justify-start gap-2 rounded-xl border border-transparent px-3 text-sidebar-foreground/70 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                 onClick={onSignOut}
               >
                 <LogOut className="h-4 w-4" />
-                <span>{signOutLabel}</span>
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {signOutLabel}
+                </span>
               </Button>
             ) : null}
           </SidebarFooter>
@@ -326,13 +329,13 @@ function InternalWorkspaceProfileCard({
   return (
     <div
       data-workspace-surface="subtle"
-      className="rounded-[1.15rem] border border-sidebar-border bg-sidebar-accent/45 p-3"
+      className="rounded-[1.15rem] border border-sidebar-border bg-sidebar-accent/45 p-3 transition-[padding,border-radius] duration-200 ease-smooth group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-2"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 group-data-[collapsible=icon]:justify-center">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-background text-sidebar-foreground ring-1 ring-sidebar-border">
           <ProfileIcon className="h-4 w-4" />
         </div>
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-2 group-data-[collapsible=icon]:hidden">
           <p className="truncate text-sm font-medium text-sidebar-foreground">
             {profile.displayName}
           </p>
