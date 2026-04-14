@@ -182,6 +182,8 @@ export function TreatmentsBlockContent({
                 typeof priceCandidate === "number"
                   ? `From ${formatCurrency(priceCandidate, treatment.currency)}`
                   : "Custom pricing";
+              const treatmentContextSuffix =
+                locale === "ar" ? `: ${treatment.name}` : `: ${treatment.name}`;
 
               return (
                 <Card
@@ -235,6 +237,9 @@ export function TreatmentsBlockContent({
                           )}
                         >
                           View treatment
+                          <span className="sr-only">
+                            {treatmentContextSuffix}
+                          </span>
                         </Link>
                       </Button>
                       <Button
