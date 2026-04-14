@@ -73,6 +73,8 @@ export function TreatmentSpecialtiesCatalog({
     "/start-journey",
     locale,
   );
+  const viewTreatmentLabel = isArabicLocale ? "عرض العلاج" : "View treatment";
+  const planJourneyLabel = isArabicLocale ? "خطط رحلتك" : "Plan journey";
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(getPublicNumberLocale(locale)),
     [locale],
@@ -262,6 +264,7 @@ export function TreatmentSpecialtiesCatalog({
                             `/treatments/${card.slug}`,
                             locale,
                           )}
+                          aria-label={`${viewTreatmentLabel}: ${card.title}`}
                         >
                           {primaryActionLabel}
                         </Link>
@@ -269,6 +272,7 @@ export function TreatmentSpecialtiesCatalog({
                       <Button asChild className="w-full">
                         <Link
                           href={`${startJourneyHref}?treatment=${card.slug}`}
+                          aria-label={`${planJourneyLabel}: ${card.title}`}
                         >
                           {secondaryActionLabel}
                         </Link>
