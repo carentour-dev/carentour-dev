@@ -10,6 +10,7 @@ import { PublicShellProvider } from "@/components/public/PublicShellContext";
 import { defaultPublicLocale } from "@/i18n/routing";
 import { isNavigationVisible } from "@/lib/navigation";
 import { getPublicDirection } from "@/lib/public/routing";
+import { loadInitialSession } from "@/server/auth/loadInitialSession";
 import { loadPublicNavigationLinks } from "@/server/navigation";
 
 export default async function DefaultPublicLayout({
@@ -19,15 +20,16 @@ export default async function DefaultPublicLayout({
 }>) {
   setRequestLocale(defaultPublicLocale);
 
-  const [messages, navigationResult] = await Promise.all([
+  const [messages, navigationResult, initialSession] = await Promise.all([
     getMessages(),
     loadPublicNavigationLinks(defaultPublicLocale),
+    loadInitialSession(),
   ]);
   const initialNavigationLinks =
     navigationResult.links.filter(isNavigationVisible);
 
   return (
-    <AppProviders>
+    <AppProviders initialSession={initialSession}>
       <NextIntlClientProvider locale={defaultPublicLocale} messages={messages}>
         <PublicShellProvider>
           <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
