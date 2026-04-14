@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/server/auth/requireAdmin";
+import { adminRoute } from "@/server/utils/adminRoute";
 
 const PREVIEW_COOKIE_NAME = "cms-preview-access-token";
 const PREVIEW_COOKIE_MAX_AGE_SECONDS = 60 * 5;
+const CMS_READ_ACCESS = {
+  allPermissions: ["cms.read"],
+} as const;
 
-export async function POST(req: NextRequest) {
-  await requirePermission("cms.read");
-
+export const POST = adminRoute(async (req: NextRequest) => {
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return NextResponse.json(
@@ -35,4 +36,4 @@ export async function POST(req: NextRequest) {
   });
 
   return response;
-}
+}, CMS_READ_ACCESS);
