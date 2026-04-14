@@ -9,7 +9,6 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTheme } from "next-themes";
 import {
   Drawer,
   DrawerClose,
@@ -40,19 +39,46 @@ import {
 import LanguageSwitcher from "@/components/public/LanguageSwitcher";
 import { usePublicShellOwner } from "@/components/public/PublicShellContext";
 
+function HeaderLogo({
+  width,
+  height,
+  className,
+  priority = false,
+}: {
+  width: number;
+  height: number;
+  className: string;
+  priority?: boolean;
+}) {
+  return (
+    <>
+      <Image
+        src="/carentour-logo-dark.png"
+        alt="Care N Tour"
+        width={width}
+        height={height}
+        className={`${className} dark:hidden`}
+        priority={priority}
+      />
+      <Image
+        src="/carentour-logo-light.png"
+        alt="Care N Tour"
+        width={width}
+        height={height}
+        className={`${className} hidden dark:block`}
+        priority={priority}
+      />
+    </>
+  );
+}
+
 const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
   const shellOwned = usePublicShellOwner();
   const t = useTranslations("Header");
   const locale = useLocale() as PublicLocale;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
-  const { resolvedTheme } = useTheme();
-  const logoSrc =
-    mounted && resolvedTheme === "dark"
-      ? "/carentour-logo-light.png"
-      : "/carentour-logo-dark.png";
   const phoneNumber = formatPhoneNumberForDisplay(
     PUBLIC_CONTACT_PHONE_DISPLAY,
     locale,
@@ -70,10 +96,6 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
   const [loadingNavigation, setLoadingNavigation] = useState(
     () => visibleInitialNavigationLinks.length === 0,
   );
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useLayoutEffect(() => {
     setNavigationLinks(visibleInitialNavigationLinks);
@@ -185,9 +207,7 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
               href={localizePublicPathname("/", locale)}
               className="flex items-center"
             >
-              <Image
-                src={logoSrc}
-                alt="Care N Tour"
+              <HeaderLogo
                 width={252}
                 height={56}
                 className="h-14 w-[252px]"
@@ -238,9 +258,7 @@ const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
                   <div className="flex items-center justify-between px-5 pb-3 pt-5">
                     <DrawerClose asChild>
                       <Link href={localizePublicPathname("/", locale)}>
-                        <Image
-                          src={logoSrc}
-                          alt="Care N Tour"
+                        <HeaderLogo
                           width={216}
                           height={48}
                           className="h-12 w-[216px]"
