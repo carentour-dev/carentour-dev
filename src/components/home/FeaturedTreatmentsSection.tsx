@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { ArrowRight } from "lucide-react";
@@ -367,7 +367,6 @@ export function FeaturedTreatmentsSection({
                               eagerCount: needsHorizontalScroll ? 1 : 3,
                             })}
                             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                            unoptimized={isRemoteImageUrl(imageSrc)}
                             onError={() =>
                               handleCardImageError(
                                 treatment.id,
