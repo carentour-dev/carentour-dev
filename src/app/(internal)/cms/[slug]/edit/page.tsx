@@ -755,7 +755,8 @@ export default function CmsEditPage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       This image is used only when the static homepage layout
-                      toggle above is on.
+                      toggle above is on and no Home Hero block background image
+                      is available.
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Upload validation enforces the same file type, size, and
