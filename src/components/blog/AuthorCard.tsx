@@ -1,8 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Globe, Twitter, Linkedin, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  getAuthorAvatarInitials,
+  getAuthorAvatarPresentation,
+} from "@/lib/blog/authorAvatar";
 
 interface AuthorCardProps {
   author: {
@@ -23,22 +27,27 @@ interface AuthorCardProps {
 }
 
 export function AuthorCard({ author, className }: AuthorCardProps) {
+  const avatarPresentation = getAuthorAvatarPresentation("compact");
+  const avatarInitials = getAuthorAvatarInitials(author.name);
+
   return (
     <Card className={className}>
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
           {author.avatar ? (
-            <Image
-              src={author.avatar}
-              alt={author.name}
-              width={64}
-              height={64}
-              className="rounded-full"
-            />
+            <div className={avatarPresentation.frameClassName}>
+              <Image
+                src={author.avatar}
+                alt={author.name}
+                fill
+                sizes="64px"
+                className={avatarPresentation.imageClassName}
+              />
+            </div>
           ) : (
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl font-semibold text-primary">
-                {author.name.charAt(0)}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="text-xl font-semibold tracking-[-0.04em]">
+                {avatarInitials}
               </span>
             </div>
           )}
