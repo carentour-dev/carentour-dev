@@ -3,9 +3,8 @@ import createNextIntlPlugin from "next-intl/plugin";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Supabase media can be user-managed and occasionally point at removed objects.
-    // Use direct image URLs to avoid optimizer upstream failures during runtime.
-    unoptimized: true,
+    // CMS media URLs are versioned, so optimizer responses can be cached aggressively.
+    minimumCacheTTL: 60 * 60 * 24 * 365,
     remotePatterns: [
       {
         protocol: "https",
@@ -20,7 +19,12 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "cmnwwchipysvwvijqjcu.supabase.co",
-        pathname: "/storage/v1/object/public/media/**",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cmnwwchipysvwvijqjcu.supabase.co",
+        pathname: "/storage/v1/render/image/public/**",
       },
     ],
   },
