@@ -11,6 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getAuthorAvatarInitials,
+  getAuthorAvatarPresentation,
+} from "@/lib/blog/authorAvatar";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -205,6 +209,8 @@ function AuthorCard({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
+  const avatarPresentation = getAuthorAvatarPresentation("compact");
+  const avatarInitials = getAuthorAvatarInitials(author.name);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -252,16 +258,20 @@ function AuthorCard({
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start gap-4">
           {author.avatar ? (
-            <Image
-              src={author.avatar}
-              alt={author.name}
-              width={64}
-              height={64}
-              className="rounded-full"
-            />
+            <div className={avatarPresentation.frameClassName}>
+              <Image
+                src={author.avatar}
+                alt={author.name}
+                fill
+                sizes="64px"
+                className={avatarPresentation.imageClassName}
+              />
+            </div>
           ) : (
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-8 w-8 text-primary" />
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="text-xl font-semibold tracking-[-0.04em]">
+                {avatarInitials}
+              </span>
             </div>
           )}
           <div className="flex-1 min-w-0">
