@@ -4,15 +4,18 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useLayoutEffect,
   useState,
   useCallback,
   useRef,
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeRoles, type RoleSlug } from "@/lib/auth/roles";
 import { isPasswordRecoveryCurrentUrl } from "@/lib/auth/password-recovery";
-import { resolveAccessibleWorkspaceRoute } from "@/lib/workspaces/access-policies";
+import {
+  resolveAccessibleWorkspaceRoute,
+  type WorkspaceLandingPath,
+} from "@/lib/workspaces/access-policies";
 import { canAutoRedirectToWorkspaceFromPath } from "@/lib/workspaces/auth-redirect";
 import { useSecurity } from "@/hooks/useSecurity";
 
@@ -36,6 +39,15 @@ type SignInResult = {
   error: AuthError | null;
 };
 
+export type WorkspaceAccessState = {
+  userId: string | null;
+  permissions: string[];
+  roles: RoleSlug[];
+  route: WorkspaceLandingPath | null;
+  loading: boolean;
+  resolved: boolean;
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -44,10 +56,20 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
+  workspaceAccess: WorkspaceAccessState;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const WORKSPACE_ACCESS_STORAGE_KEY = "carentour:workspace-access";
+const EMPTY_WORKSPACE_ACCESS: WorkspaceAccessState = {
+  userId: null,
+  permissions: [],
+  roles: [],
+  route: null,
+  loading: false,
+  resolved: false,
+};
 
 const STAFF_ROLE_KEYS = new Set([
   "admin",
@@ -232,12 +254,189 @@ const normalizeRpcStringArray = (value: unknown): string[] => {
     .filter((entry) => entry.length > 0);
 };
 
-const resolveSessionRedirectTarget = async (
-  session: Session | null,
-): Promise<string> => {
-  if (!session?.user?.id) {
-    return "/dashboard";
+const normalizePermissionSlugs = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
   }
+
+  return Array.from(
+    new Set(
+      value
+        .map((entry) =>
+          typeof entry === "string" ? entry.trim().toLowerCase() : "",
+        )
+        .filter((entry) => entry.length > 0),
+    ),
+  );
+};
+
+const METADATA_ROLE_KEYS = [
+  "staff_roles",
+  "roles",
+  "role",
+  "primary_role",
+  "primaryRole",
+  "primary_role_slug",
+] as const;
+
+const METADATA_PERMISSION_KEYS = [
+  "permissions",
+  "permission_slugs",
+  "permissionSlugs",
+] as const;
+
+const getMetadataRecords = (
+  user: Pick<User, "user_metadata" | "app_metadata"> | null,
+): Record<string, unknown>[] =>
+  [user?.user_metadata, user?.app_metadata].filter(
+    (value): value is Record<string, unknown> =>
+      Boolean(value) && typeof value === "object",
+  );
+
+const extractMetadataRoles = (
+  user: Pick<User, "user_metadata" | "app_metadata"> | null,
+): RoleSlug[] => {
+  const roles = getMetadataRecords(user).flatMap((metadata) =>
+    METADATA_ROLE_KEYS.flatMap((key) =>
+      metadata[key] === undefined ? [] : normalizeRoleCandidates(metadata[key]),
+    ),
+  );
+
+  return normalizeRoles(roles);
+};
+
+const extractMetadataPermissions = (
+  user: Pick<User, "user_metadata" | "app_metadata"> | null,
+): string[] => {
+  const permissions = getMetadataRecords(user).flatMap((metadata) =>
+    METADATA_PERMISSION_KEYS.flatMap((key) => {
+      const value = metadata[key];
+      if (value === undefined) {
+        return [];
+      }
+
+      if (typeof value === "string") {
+        return value.includes(",")
+          ? value.split(",").map((entry) => entry.trim())
+          : [value.trim()];
+      }
+
+      if (Array.isArray(value)) {
+        return value.filter(
+          (entry): entry is string => typeof entry === "string",
+        );
+      }
+
+      return [];
+    }),
+  );
+
+  return normalizePermissionSlugs(permissions);
+};
+
+const buildWorkspaceAccessState = ({
+  userId,
+  permissions,
+  roles,
+}: {
+  userId: string;
+  permissions: string[];
+  roles: string[];
+}): WorkspaceAccessState => ({
+  userId,
+  permissions: normalizePermissionSlugs(permissions),
+  roles: normalizeRoles(roles),
+  route: resolveAccessibleWorkspaceRoute({
+    permissions,
+    roles,
+  }),
+  loading: false,
+  resolved: true,
+});
+
+const readStoredWorkspaceAccess = (
+  userId: string | null,
+): WorkspaceAccessState | null => {
+  if (typeof window === "undefined" || !userId) {
+    return null;
+  }
+
+  try {
+    const rawValue = window.sessionStorage.getItem(
+      WORKSPACE_ACCESS_STORAGE_KEY,
+    );
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<WorkspaceAccessState> | null;
+    if (
+      !parsed ||
+      parsed.userId !== userId ||
+      !Array.isArray(parsed.permissions) ||
+      !Array.isArray(parsed.roles) ||
+      typeof parsed.route !== "string"
+    ) {
+      return null;
+    }
+
+    return buildWorkspaceAccessState({
+      userId,
+      permissions: parsed.permissions,
+      roles: parsed.roles.filter(
+        (role): role is string => typeof role === "string",
+      ),
+    });
+  } catch {
+    return null;
+  }
+};
+
+const persistWorkspaceAccess = (workspaceAccess: WorkspaceAccessState) => {
+  if (
+    typeof window === "undefined" ||
+    !workspaceAccess.userId ||
+    !workspaceAccess.resolved
+  ) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      WORKSPACE_ACCESS_STORAGE_KEY,
+      JSON.stringify({
+        userId: workspaceAccess.userId,
+        permissions: workspaceAccess.permissions,
+        roles: workspaceAccess.roles,
+        route: workspaceAccess.route,
+      }),
+    );
+  } catch (storageError) {
+    console.error("Failed to persist workspace access:", storageError);
+  }
+};
+
+const clearStoredWorkspaceAccess = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(WORKSPACE_ACCESS_STORAGE_KEY);
+  } catch (storageError) {
+    console.error("Failed to clear workspace access storage:", storageError);
+  }
+};
+
+const resolveSessionWorkspaceAccess = async (
+  session: Session | null,
+): Promise<WorkspaceAccessState> => {
+  if (!session?.user?.id) {
+    return EMPTY_WORKSPACE_ACCESS;
+  }
+
+  let permissions: string[] = [];
+  let roles: string[] = [];
 
   try {
     const [permissionsResult, rolesResult] = await Promise.all([
@@ -258,15 +457,25 @@ const resolveSessionRedirectTarget = async (
       );
     }
 
-    const permissions = normalizeRpcStringArray(permissionsResult.data);
-    const roles = normalizeRpcStringArray(rolesResult.data);
-
-    if (permissions.length || roles.length) {
-      return resolveAccessibleWorkspaceRoute({ permissions, roles });
-    }
+    permissions = normalizeRpcStringArray(permissionsResult.data);
+    roles = normalizeRpcStringArray(rolesResult.data);
   } catch (rpcError) {
     console.debug("Unable to resolve sign-in redirect entitlements:", rpcError);
   }
+
+  const metadataRoles = extractMetadataRoles(session.user);
+  const metadataPermissions = extractMetadataPermissions(session.user);
+  const mergedRoles = normalizeRoles([...roles, ...metadataRoles]);
+  const mergedPermissions = normalizePermissionSlugs([
+    ...permissions,
+    ...metadataPermissions,
+  ]);
+
+  const resolvedWorkspaceAccess = buildWorkspaceAccessState({
+    userId: session.user.id,
+    permissions: mergedPermissions,
+    roles: mergedRoles,
+  });
 
   const userMetadata = (session.user.user_metadata ?? {}) as Record<
     string,
@@ -280,10 +489,16 @@ const resolveSessionRedirectTarget = async (
     metadataIndicatesStaffAccount(userMetadata) ||
     metadataIndicatesStaffAccount(appMetadata)
   ) {
-    return "/admin";
+    return {
+      ...resolvedWorkspaceAccess,
+      route:
+        resolvedWorkspaceAccess.route === "/dashboard"
+          ? "/admin"
+          : resolvedWorkspaceAccess.route,
+    };
   }
 
-  return "/dashboard";
+  return resolvedWorkspaceAccess;
 };
 
 const clearSupabaseAuthStorage = () => {
@@ -314,77 +529,144 @@ export const useAuth = () => {
   return context;
 };
 
-const readStoredSession = (): Session | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const authClient = supabase.auth as unknown as { storageKey?: string };
-  const storageKey = authClient?.storageKey;
-
-  if (!storageKey) {
-    return null;
-  }
-
-  try {
-    const rawSession = window.localStorage.getItem(storageKey);
-    if (!rawSession) {
-      return null;
-    }
-
-    const parsedSession = JSON.parse(rawSession) as Partial<Session> | null;
-    if (
-      !parsedSession ||
-      typeof parsedSession !== "object" ||
-      typeof parsedSession.access_token !== "string" ||
-      typeof parsedSession.refresh_token !== "string"
-    ) {
-      return null;
-    }
-
-    const rawUser = window.localStorage.getItem(`${storageKey}-user`);
-    const parsedUser = rawUser ? JSON.parse(rawUser) : null;
-    const user =
-      parsedUser &&
-      typeof parsedUser === "object" &&
-      parsedUser.user &&
-      typeof parsedUser.user === "object" &&
-      typeof parsedUser.user.id === "string"
-        ? (parsedUser.user as User)
-        : null;
-
-    if (!user) {
-      return null;
-    }
-
-    return {
-      ...parsedSession,
-      user,
-    } as Session;
-  } catch {
-    return null;
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [workspaceAccess, setWorkspaceAccess] = useState<WorkspaceAccessState>({
+    ...EMPTY_WORKSPACE_ACCESS,
+    loading: true,
+  });
   const lastKnownUserId = useRef<string | null>(null);
   const redirectedForCurrentUser = useRef(false);
+  const workspaceAccessRequestUserId = useRef<string | null>(null);
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
     useSecurity();
 
-  useLayoutEffect(() => {
-    const storedSession = readStoredSession();
-    setSession(storedSession);
-    setUser(storedSession?.user ?? null);
-    setLoading(false);
-    lastKnownUserId.current = storedSession?.user?.id ?? null;
-    redirectedForCurrentUser.current = false;
+  const resolveAndStoreWorkspaceAccess = useCallback(
+    async (sourceSession: Session | null) => {
+      const currentUserId = sourceSession?.user?.id ?? null;
+      if (!currentUserId) {
+        clearStoredWorkspaceAccess();
+        setWorkspaceAccess(EMPTY_WORKSPACE_ACCESS);
+        return EMPTY_WORKSPACE_ACCESS;
+      }
+
+      if (workspaceAccessRequestUserId.current === currentUserId) {
+        return null;
+      }
+
+      workspaceAccessRequestUserId.current = currentUserId;
+      setWorkspaceAccess((current) => ({
+        userId: currentUserId,
+        permissions:
+          current.userId === currentUserId ? current.permissions : [],
+        roles: current.userId === currentUserId ? current.roles : [],
+        route: current.userId === currentUserId ? current.route : null,
+        resolved: current.userId === currentUserId ? current.resolved : false,
+        loading: true,
+      }));
+
+      try {
+        const resolvedWorkspaceAccess =
+          await resolveSessionWorkspaceAccess(sourceSession);
+
+        if (lastKnownUserId.current !== currentUserId) {
+          return null;
+        }
+
+        persistWorkspaceAccess(resolvedWorkspaceAccess);
+        setWorkspaceAccess(resolvedWorkspaceAccess);
+        return resolvedWorkspaceAccess;
+      } finally {
+        if (workspaceAccessRequestUserId.current === currentUserId) {
+          workspaceAccessRequestUserId.current = null;
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let isActive = true;
+
+    void (async () => {
+      try {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+
+        if (!isActive) {
+          return;
+        }
+
+        const currentUserId = currentSession?.user?.id ?? null;
+        const storedWorkspaceAccess = readStoredWorkspaceAccess(currentUserId);
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        lastKnownUserId.current = currentUserId;
+        redirectedForCurrentUser.current = false;
+        setWorkspaceAccess(
+          storedWorkspaceAccess ??
+            (currentUserId
+              ? {
+                  userId: currentUserId,
+                  permissions: [],
+                  roles: [],
+                  route: null,
+                  loading: true,
+                  resolved: false,
+                }
+              : EMPTY_WORKSPACE_ACCESS),
+        );
+      } catch (sessionError) {
+        if (!isActive) {
+          return;
+        }
+
+        console.error("Failed to restore auth session:", sessionError);
+        setSession(null);
+        setUser(null);
+        setWorkspaceAccess(EMPTY_WORKSPACE_ACCESS);
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
+
+  useEffect(() => {
+    const currentUserId = session?.user?.id ?? null;
+
+    if (!currentUserId) {
+      setWorkspaceAccess(EMPTY_WORKSPACE_ACCESS);
+      clearStoredWorkspaceAccess();
+      return;
+    }
+
+    if (
+      workspaceAccess.userId === currentUserId &&
+      (workspaceAccess.resolved || workspaceAccess.loading)
+    ) {
+      return;
+    }
+
+    void resolveAndStoreWorkspaceAccess(session);
+  }, [
+    resolveAndStoreWorkspaceAccess,
+    session,
+    workspaceAccess.loading,
+    workspaceAccess.resolved,
+    workspaceAccess.userId,
+  ]);
 
   useEffect(() => {
     const canAutoRedirectFromCurrentPath = () => {
@@ -407,7 +689,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       void (async () => {
-        const target = await resolveSessionRedirectTarget(session);
+        const resolvedWorkspaceAccess =
+          (await resolveAndStoreWorkspaceAccess(session)) ?? workspaceAccess;
+        const target = resolvedWorkspaceAccess.route ?? "/dashboard";
 
         if (
           typeof window === "undefined" ||
@@ -457,15 +741,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      if (event === "SIGNED_IN" && !isRecoveryFlowInUrl) {
+      if (
+        (event === "SIGNED_IN" || authEvent === "INITIAL_SESSION") &&
+        !isRecoveryFlowInUrl
+      ) {
         if (canAutoRedirectFromCurrentPath()) {
           // Allow manual re-auth on /auth even when Supabase already has
           // the same user id in local state.
           redirectedForCurrentUser.current = false;
         }
 
-        if (!redirectedForCurrentUser.current) {
+        if (event === "SIGNED_IN" && !redirectedForCurrentUser.current) {
           maybeRedirectToAccessibleWorkspace(session ?? null, currentUserId);
+        } else if (
+          authEvent === "INITIAL_SESSION" &&
+          currentUserId &&
+          workspaceAccess.userId !== currentUserId &&
+          !workspaceAccess.loading
+        ) {
+          void resolveAndStoreWorkspaceAccess(session ?? null);
         }
       }
 
@@ -475,7 +769,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [
+    resolveAndStoreWorkspaceAccess,
+    workspaceAccess,
+    workspaceAccess.loading,
+    workspaceAccess.userId,
+  ]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -790,6 +1089,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setSession(null);
       setUser(null);
+      setWorkspaceAccess(EMPTY_WORKSPACE_ACCESS);
+      clearStoredWorkspaceAccess();
     }
   }, [user, logSecurityEvent]);
 
@@ -832,6 +1133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signOut,
     resetPassword,
     updatePassword,
+    workspaceAccess,
     loading,
   };
 
