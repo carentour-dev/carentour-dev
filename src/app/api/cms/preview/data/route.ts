@@ -11,15 +11,17 @@ import {
   listLocalizedBlogPosts,
   listLocalizedBlogTaxonomy,
 } from "@/lib/blog/server";
-import { requirePermission } from "@/server/auth/requireAdmin";
+import { adminRoute } from "@/server/utils/adminRoute";
+
+const CMS_READ_ACCESS = {
+  allPermissions: ["cms.read"],
+} as const;
 
 function resolvePreviewLocale(value: string | null): PublicLocale {
   return value === "ar" ? "ar" : "en";
 }
 
-export async function GET(req: NextRequest) {
-  await requirePermission("cms.read");
-
+export const GET = adminRoute(async (req: NextRequest) => {
   const pageSlug = req.nextUrl.searchParams.get("pageSlug")?.trim();
   if (!pageSlug) {
     return NextResponse.json(
@@ -103,4 +105,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json(payload);
-}
+}, CMS_READ_ACCESS);
