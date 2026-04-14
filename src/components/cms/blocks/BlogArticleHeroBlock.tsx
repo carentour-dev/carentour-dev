@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import { ArrowLeft, Clock } from "lucide-react";
 import { CategoryBadge } from "@/components/blog/CategoryBadge";
 import { SocialShare } from "@/components/blog/SocialShare";
