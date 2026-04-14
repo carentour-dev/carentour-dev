@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import type { PublicLocale } from "@/i18n/routing";
 import {
