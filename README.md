@@ -83,9 +83,9 @@ Care N Tour is a Next.js-based medical tourism platform designed to facilitate i
 
 ### Core Framework
 
-- **[Next.js 14](https://nextjs.org/)** - React framework with App Router
-- **[React 18](https://react.dev/)** - UI library
-- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+- **[Next.js 16](https://nextjs.org/)** - React framework with App Router
+- **[React 19](https://react.dev/)** - UI library
+- **[TypeScript 6](https://www.typescriptlang.org/)** - Type safety
 
 ### Backend & Database
 
@@ -221,7 +221,7 @@ carentour-dev/
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm/yarn/pnpm
+- **Node.js 22.x** and npm 11.x
 - **Supabase account** (for database and authentication)
 
 ### Installation
@@ -259,7 +259,25 @@ carentour-dev/
    npm run dev
    ```
 
-5. **Open your browser**
+5. **Run the baseline verification checks**
+
+   ```bash
+   npm run verify:baseline
+   ```
+
+6. **Run live smoke checks for key routes**
+
+   ```bash
+   npm run smoke
+   ```
+
+   If you already have the app running locally, point the smoke suite at that server instead of starting a second `next dev` process:
+
+   ```bash
+   SMOKE_BASE_URL=http://localhost:3000 npm run smoke
+   ```
+
+7. **Open your browser**
 
    Navigate to [http://localhost:3000](http://localhost:3000)
 
@@ -268,6 +286,12 @@ carentour-dev/
 ```bash
 npm run build
 npm run start
+```
+
+Run the stricter pre-release verification before shipping:
+
+```bash
+npm run verify:release
 ```
 
 ---
