@@ -221,7 +221,7 @@ carentour-dev/
 
 ### Prerequisites
 
-- **Node.js 22.x** and npm 11.x
+- **Node.js 22.x** and npm 10.x or 11.x
 - **Supabase account** (for database and authentication)
 
 ### Installation
