@@ -36,17 +36,77 @@ export type UserProfile = ProfileState & {
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 export const useUserProfile = () => {
-  const { user } = useAuth();
+  const { user, workspaceAccess } = useAuth();
   const userId = user?.id ?? null;
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
   const inFlightUserIdRef = useRef<string | null>(null);
   const hydratedUserIdRef = useRef<string | null>(null);
+  const resolvedAccessRoles = useMemo(
+    () =>
+      workspaceAccess.userId === userId
+        ? normalizeRoles(workspaceAccess.roles)
+        : [],
+    [userId, workspaceAccess.roles, workspaceAccess.userId],
+  );
+  const resolvedAccessPermissions = useMemo(
+    () =>
+      workspaceAccess.userId === userId ? workspaceAccess.permissions : [],
+    [userId, workspaceAccess.permissions, workspaceAccess.userId],
+  );
+  const hasResolvedAccess =
+    workspaceAccess.userId === userId && workspaceAccess.resolved;
+
+  const buildAccessBackedProfileState = useCallback(
+    (requestedUser: typeof user): ProfileState | null => {
+      if (!requestedUser?.id || !hasResolvedAccess) {
+        return null;
+      }
+
+      const username =
+        typeof requestedUser.user_metadata?.username === "string"
+          ? requestedUser.user_metadata.username.trim()
+          : "";
+      const displayName =
+        username || requestedUser.email?.split("@")[0]?.trim() || "User";
+      const roles = resolvedAccessRoles.length ? resolvedAccessRoles : ["user"];
+
+      return {
+        username: username || null,
+        avatar_url: null,
+        date_of_birth:
+          typeof requestedUser.user_metadata?.date_of_birth === "string"
+            ? requestedUser.user_metadata.date_of_birth
+            : null,
+        sex:
+          typeof requestedUser.user_metadata?.sex === "string"
+            ? requestedUser.user_metadata.sex
+            : null,
+        nationality:
+          typeof requestedUser.user_metadata?.nationality === "string"
+            ? requestedUser.user_metadata.nationality
+            : null,
+        phone:
+          typeof requestedUser.user_metadata?.phone === "string"
+            ? requestedUser.user_metadata.phone
+            : null,
+        job_title: null,
+        language: null,
+        roles,
+        primaryRole: pickPrimaryRole(roles),
+        permissions: resolvedAccessPermissions,
+        displayName,
+        initials: displayName.charAt(0).toUpperCase(),
+      };
+    },
+    [hasResolvedAccess, resolvedAccessPermissions, resolvedAccessRoles],
+  );
 
   const fetchProfile = useCallback(async () => {
     const requestedUser = user;
     const requestedUserId = requestedUser?.id ?? null;
     const isActiveRequest = () => inFlightUserIdRef.current === requestedUserId;
+    const accessBackedProfile = buildAccessBackedProfileState(requestedUser);
 
     if (requestedUserId && inFlightUserIdRef.current === requestedUserId) {
       return;
@@ -66,25 +126,62 @@ export const useUserProfile = () => {
     if (isFirstHydrationForUser) {
       setLoading(true);
     }
+
+    if (accessBackedProfile) {
+      setProfileState((current) => {
+        if (!current || hydratedUserIdRef.current !== requestedUserId) {
+          return accessBackedProfile;
+        }
+
+        return {
+          ...current,
+          roles: accessBackedProfile.roles,
+          primaryRole: accessBackedProfile.primaryRole,
+          permissions: accessBackedProfile.permissions,
+          displayName: current.displayName || accessBackedProfile.displayName,
+          initials: current.initials || accessBackedProfile.initials,
+        };
+      });
+    }
+
     try {
-      const profilePromise = Promise.all([
-        supabase
+      const profilePromise = (async () => {
+        const profileResult = await supabase
           .from("profiles")
           .select(
             "username, avatar_url, date_of_birth, sex, nationality, phone, job_title, language",
           )
           .eq("user_id", requestedUserId)
-          .maybeSingle(),
-        supabase.rpc("current_user_roles"),
-        supabase.rpc("current_user_permissions"),
-      ]);
+          .maybeSingle();
+
+        if (hasResolvedAccess) {
+          return {
+            profileResult,
+            rolesResult: {
+              data: resolvedAccessRoles,
+              error: null,
+            },
+            permissionsResult: {
+              data: resolvedAccessPermissions,
+              error: null,
+            },
+          };
+        }
+
+        const [rolesResult, permissionsResult] = await Promise.all([
+          supabase.rpc("current_user_roles"),
+          supabase.rpc("current_user_permissions"),
+        ]);
+
+        return { profileResult, rolesResult, permissionsResult };
+      })();
       const timeoutPromise = new Promise<never>((_, reject) => {
         window.setTimeout(
           () => reject(new Error("PROFILE_FETCH_TIMEOUT")),
           3000,
         );
       });
-      const [profileResult, rolesResult, permissionsResult] =
+      const { profileResult, rolesResult, permissionsResult } =
         await Promise.race([profilePromise, timeoutPromise]);
 
       if (!isActiveRequest()) {
@@ -93,13 +190,13 @@ export const useUserProfile = () => {
 
       if (profileResult.error && profileResult.error.code !== "PGRST116") {
         console.error("Error fetching profile:", profileResult.error);
-        setProfileState(null);
+        setProfileState(accessBackedProfile);
         return;
       }
 
       if (rolesResult.error) {
         console.error("Error fetching roles:", rolesResult.error);
-        setProfileState(null);
+        setProfileState(accessBackedProfile);
         return;
       }
 
@@ -152,25 +249,30 @@ export const useUserProfile = () => {
         }
       }
 
-      const rawRoles = normalizeRoles(
-        Array.isArray(rolesResult.data) ? rolesResult.data : [],
-      );
+      const rawRoles = hasResolvedAccess
+        ? resolvedAccessRoles
+        : normalizeRoles(
+            Array.isArray(rolesResult.data) ? rolesResult.data : [],
+          );
       const roles = rawRoles.length ? rawRoles : ["user"];
-      const permissions = Array.isArray(permissionsResult.data)
-        ? Array.from(
-            new Set(
-              permissionsResult.data
-                .map((entry) =>
-                  typeof entry === "string" ? entry.trim().toLowerCase() : "",
-                )
-                .filter((entry) => entry.length > 0),
-            ),
-          )
-        : [];
+      const permissions: string[] = hasResolvedAccess
+        ? resolvedAccessPermissions
+        : Array.isArray(permissionsResult.data)
+          ? Array.from(
+              new Set(
+                permissionsResult.data
+                  .map((entry) =>
+                    typeof entry === "string" ? entry.trim().toLowerCase() : "",
+                  )
+                  .filter((entry) => entry.length > 0),
+              ),
+            )
+          : [];
 
       const username =
         profileResult.data?.username || requestedUser?.user_metadata?.username;
-      const displayName = username || "User";
+      const displayName =
+        username || requestedUser?.email?.split("@")[0] || "User";
       const initials = displayName.charAt(0).toUpperCase();
 
       setProfileState({
@@ -198,14 +300,20 @@ export const useUserProfile = () => {
       ) {
         console.error("Error in useUserProfile:", error);
       }
-      setProfileState(null);
+      setProfileState(accessBackedProfile);
     } finally {
       if (inFlightUserIdRef.current === requestedUserId) {
         inFlightUserIdRef.current = null;
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [
+    buildAccessBackedProfileState,
+    hasResolvedAccess,
+    resolvedAccessPermissions,
+    resolvedAccessRoles,
+    user,
+  ]);
 
   useEffect(() => {
     // Keep authenticated users in loading state until their first profile fetch settles.
