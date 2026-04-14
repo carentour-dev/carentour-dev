@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,6 @@ export function AboutHeroBlock({
             priority
             className="object-cover"
             sizes="100vw"
-            unoptimized={block.backgroundImageUrl.startsWith("http")}
           />
           <div
             className="absolute inset-0"
