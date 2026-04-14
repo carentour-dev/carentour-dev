@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { normalizeRoles, pickPrimaryRole } from "@/lib/auth/roles";
-import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
+import { adminRoute } from "@/server/utils/adminRoute";
 
 const createRoleSchema = z.object({
   name: z
@@ -39,9 +39,7 @@ const slugify = (value: string): string => {
     .replace(/-{2,}/g, "-");
 };
 
-export async function GET() {
-  await requirePermission("admin.access");
-
+export const GET = adminRoute(async () => {
   const supabaseAdmin = getSupabaseAdmin();
 
   const [rolesResult, permissionsResult, profilesResult] = await Promise.all([
@@ -176,11 +174,9 @@ export async function GET() {
   });
 
   return NextResponse.json({ roles, permissions: allPermissions, users });
-}
+});
 
-export async function POST(req: NextRequest) {
-  await requirePermission("admin.access");
-
+export const POST = adminRoute(async (req: NextRequest) => {
   const supabaseAdmin = getSupabaseAdmin();
 
   const payload = await req.json().catch(() => null);
@@ -360,11 +356,9 @@ export async function POST(req: NextRequest) {
     },
     { status: 201 },
   );
-}
+});
 
-export async function DELETE(req: NextRequest) {
-  await requirePermission("admin.access");
-
+export const DELETE = adminRoute(async (req: NextRequest) => {
   const supabaseAdmin = getSupabaseAdmin();
   const url = new URL(req.url);
   const roleId = url.searchParams.get("id");
@@ -456,4 +450,4 @@ export async function DELETE(req: NextRequest) {
       name: roleRecord.name,
     },
   });
-}
+});
