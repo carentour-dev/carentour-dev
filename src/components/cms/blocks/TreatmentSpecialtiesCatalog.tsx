@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useLocale } from "next-intl";
@@ -213,7 +213,6 @@ export function TreatmentSpecialtiesCatalog({
                     className="object-cover transition duration-500 group-hover:scale-105"
                     loading={resolveGridImageLoading(index, { eagerCount: 2 })}
                     sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    unoptimized={isRemoteImageUrl(imageSrc)}
                     onError={() =>
                       handleCardImageError(
                         card.id,
