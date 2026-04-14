@@ -1,3 +1,4 @@
+import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import type { MedicalFacilityDetail } from "@/lib/medical-facilities";
 import { fetchPublicServiceProviderBySlug } from "@/server/modules/serviceProviders/public";
@@ -43,11 +44,13 @@ export async function MedicalFacilityProfileBlock({
       defaultPadding={{ top: "0rem", bottom: "0rem" }}
     >
       {() => (
-        <MedicalFacilityProfileClient
-          block={block}
-          slug={slug}
-          initialData={detail}
-        />
+        <PublicQueryBoundary>
+          <MedicalFacilityProfileClient
+            block={block}
+            slug={slug}
+            initialData={detail}
+          />
+        </PublicQueryBoundary>
       )}
     </BlockSurface>
   );
