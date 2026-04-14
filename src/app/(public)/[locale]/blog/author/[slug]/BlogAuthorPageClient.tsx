@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
-  User,
   Globe,
   Twitter,
   Linkedin,
@@ -19,6 +18,10 @@ import {
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 import { BlogPostCard } from "@/components/blog/BlogPostCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getAuthorAvatarInitials,
+  getAuthorAvatarPresentation,
+} from "@/lib/blog/authorAvatar";
 import { resolveGridImageLoading } from "@/lib/images/loading";
 
 export default function AuthorArchive() {
@@ -47,6 +50,8 @@ export default function AuthorArchive() {
   const posts = postsData?.posts || [];
   const pagination = postsData?.pagination;
   const isLoading = authorLoading || postsLoading;
+  const avatarPresentation = getAuthorAvatarPresentation("feature");
+  const avatarInitials = getAuthorAvatarInitials(author?.name);
 
   if (!author && !isLoading) {
     return (
@@ -94,16 +99,20 @@ export default function AuthorArchive() {
                   {/* Avatar */}
                   <div className="flex-shrink-0">
                     {author.avatar ? (
-                      <Image
-                        src={author.avatar}
-                        alt={author.name}
-                        width={160}
-                        height={160}
-                        className="rounded-full"
-                      />
+                      <div className={avatarPresentation.frameClassName}>
+                        <Image
+                          src={author.avatar}
+                          alt={author.name}
+                          fill
+                          sizes="160px"
+                          className={avatarPresentation.imageClassName}
+                        />
+                      </div>
                     ) : (
-                      <div className="w-40 h-40 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-20 w-20 text-primary" />
+                      <div className="flex h-40 w-40 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <span className="text-5xl font-semibold tracking-[-0.05em]">
+                          {avatarInitials}
+                        </span>
                       </div>
                     )}
                   </div>
