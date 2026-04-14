@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { useCallback, useMemo, useState } from "react";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -318,7 +318,6 @@ export default function Treatments() {
                           className="object-cover group-hover:scale-105 transition-spring"
                           loading={resolveGridImageLoading(index)}
                           sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                          unoptimized={isRemoteImageUrl(imageSrc)}
                           onError={() =>
                             handleCardImageError(
                               category.id,
