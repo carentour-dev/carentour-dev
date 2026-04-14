@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/server/auth/requireAdmin";
 import { getTemplate } from "@/lib/cms/templates";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { adminRoute } from "@/server/utils/adminRoute";
 
-export async function POST(request: NextRequest) {
-  await requirePermission("cms.write");
+const CMS_WRITE_ACCESS = {
+  allPermissions: ["cms.write"],
+} as const;
+
+export const POST = adminRoute(async (request: NextRequest) => {
   const locale = resolveAdminLocale(request);
 
   if (locale !== "en") {
@@ -64,4 +67,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ page: insertResult.data, created: true });
-}
+}, CMS_WRITE_ACCESS);
