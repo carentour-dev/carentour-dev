@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { PublicLocale } from "@/i18n/routing";
@@ -222,7 +222,6 @@ export function HeroBlock({
                     height={900}
                     className="w-full object-cover"
                     priority
-                    unoptimized={Boolean(block.media?.src?.startsWith("http"))}
                   />
                   {block.media?.caption ? (
                     <span className="absolute bottom-3 left-3 text-sm text-white/80 drop-shadow-lg">
