@@ -34,7 +34,6 @@ import {
   webPageSchema,
   websiteSchema,
 } from "@/lib/seo";
-import { loadInitialSession } from "@/server/auth/loadInitialSession";
 import { loadPublicNavigationLinks } from "@/server/navigation";
 
 export const revalidate = 300;
@@ -117,13 +116,11 @@ export default async function RootHomePage() {
 
   await maybeRedirectFromLegacyPath(PATHNAME);
 
-  const [messages, navigationResult, cmsPage, initialSession] =
-    await Promise.all([
-      getMessages(),
-      loadPublicNavigationLinks(locale),
-      getLocalizedCmsPageBySlug("home", locale),
-      loadInitialSession(),
-    ]);
+  const [messages, navigationResult, cmsPage] = await Promise.all([
+    getMessages(),
+    loadPublicNavigationLinks(locale),
+    getLocalizedCmsPageBySlug("home", locale),
+  ]);
   const seo = await getSeo(cmsPage, locale);
   const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
   const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
@@ -137,7 +134,7 @@ export default async function RootHomePage() {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <AppProviders initialSession={initialSession}>
+      <AppProviders>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <PublicShellProvider>
             <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
