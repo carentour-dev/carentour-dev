@@ -10,16 +10,18 @@ import DoctorsSection from "@/components/DoctorsSection";
 import CTASection from "@/components/CTASection";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import AppProviders from "@/components/AppProviders";
+import SharedUiProviders from "@/components/SharedUiProviders";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
+import { PublicAuthBoundary } from "@/components/public/PublicInteractiveProviders";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
 import {
   resolveHomeHeroImageUrl,
+  resolveHomepageBlocks,
   shouldUseLegacyHomepageLayout,
 } from "@/lib/cms/pageSettings";
 import { type CmsPage } from "@/lib/cms/server";
@@ -122,7 +124,15 @@ export default async function RootHomePage() {
     getLocalizedCmsPageBySlug("home", locale),
   ]);
   const seo = await getSeo(cmsPage, locale);
-  const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
+  const homepageBlocks = resolveHomepageBlocks(
+    cmsPage?.content,
+    cmsPage?.updated_at,
+  );
+  const heroImageUrl = resolveHomeHeroImageUrl(
+    cmsPage?.settings,
+    cmsPage?.content,
+    cmsPage?.updated_at,
+  );
   const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
     cmsPage?.settings,
     cmsPage?.status,
@@ -134,7 +144,7 @@ export default async function RootHomePage() {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <AppProviders>
+      <SharedUiProviders>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <PublicShellProvider>
             <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
@@ -144,10 +154,12 @@ export default async function RootHomePage() {
                 dir={getPublicDirection(locale)}
                 className="flex min-h-screen flex-col"
               >
-                <Header forceRender />
+                <PublicAuthBoundary>
+                  <Header forceRender />
+                </PublicAuthBoundary>
                 <main className="flex-1">
-                  {cmsPage?.content?.length && !useLegacyHomepageLayout ? (
-                    <BlockRenderer blocks={cmsPage.content} />
+                  {homepageBlocks.length > 0 && !useLegacyHomepageLayout ? (
+                    <BlockRenderer blocks={homepageBlocks} />
                   ) : (
                     <>
                       <Hero backgroundImageUrl={heroImageUrl} />
@@ -166,7 +178,7 @@ export default async function RootHomePage() {
             </NavigationProvider>
           </PublicShellProvider>
         </NextIntlClientProvider>
-      </AppProviders>
+      </SharedUiProviders>
     </>
   );
 }
