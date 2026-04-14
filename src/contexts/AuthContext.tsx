@@ -652,10 +652,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    if (
-      workspaceAccess.userId === currentUserId &&
-      (workspaceAccess.resolved || workspaceAccess.loading)
-    ) {
+    if (workspaceAccess.userId === currentUserId && workspaceAccess.resolved) {
+      return;
+    }
+
+    if (workspaceAccessRequestUserId.current === currentUserId) {
       return;
     }
 
