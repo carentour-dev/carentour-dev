@@ -119,6 +119,20 @@ test("SEO revalidation helper also refreshes generated crawl artifacts", () => {
   assert.match(source, /revalidatePath\("\/llms\.txt"\);/);
 });
 
+test("sitemap resolves Arabic locale availability in parallel with timeouts", () => {
+  const source = readSource("src/app/sitemap.ts");
+
+  assert.match(source, /const INVENTORY_TIMEOUT_MS = \d+;/);
+  assert.match(source, /const LOCALE_AVAILABILITY_TIMEOUT_MS = \d+;/);
+  assert.match(source, /inventory = await withTimeout\(/);
+  assert.match(source, /const arabicAvailability = await Promise\.all\(/);
+  assert.match(source, /getPublicLocaleAvailability\(entry\.pathname, "ar"\)/);
+  assert.doesNotMatch(
+    source,
+    /if \(await getPublicLocaleAvailability\(entry\.pathname, "ar"\)\)/,
+  );
+});
+
 test("header navigation refresh tracks link data instead of only link count", () => {
   const source = readSource("src/components/Header.tsx");
 
