@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -150,6 +150,8 @@ export function MedicalFacilitiesDirectoryClient({
       }),
     enabled: !disableLiveFetch,
     initialData: disableLiveFetch ? undefined : initialData,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const data = disableLiveFetch ? localData : (query.data ?? initialData);
