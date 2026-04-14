@@ -1,3 +1,4 @@
+import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { Metadata } from "next";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import type { PublicLocale } from "@/i18n/routing";
@@ -60,7 +61,9 @@ export default async function StoriesPage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <StoriesPageClient />
+      <PublicQueryBoundary>
+        <StoriesPageClient />
+      </PublicQueryBoundary>
     </>
   );
 }
