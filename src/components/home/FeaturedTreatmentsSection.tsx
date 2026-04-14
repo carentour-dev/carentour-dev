@@ -402,6 +402,7 @@ export function FeaturedTreatmentsSection({
                               >
                                 <Link
                                   href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?treatment=${treatment.slug}`}
+                                  aria-label={`${planJourneyLabel}: ${treatment.title}`}
                                 >
                                   {primaryActionLabel}
                                   <ArrowRight
@@ -424,6 +425,7 @@ export function FeaturedTreatmentsSection({
                                     `/treatments/${treatment.slug}`,
                                     locale,
                                   )}
+                                  aria-label={`${viewTreatmentLabel}: ${treatment.title}`}
                                 >
                                   {secondaryActionLabel}
                                 </Link>
@@ -492,6 +494,7 @@ export function FeaturedTreatmentsSection({
                                 `/treatments/${treatment.slug}`,
                                 locale,
                               )}
+                              aria-label={`${viewTreatmentLabel}: ${treatment.title}`}
                             >
                               {viewTreatmentLabel}
                             </Link>
@@ -504,6 +507,7 @@ export function FeaturedTreatmentsSection({
                           >
                             <Link
                               href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?treatment=${treatment.slug}`}
+                              aria-label={`${planJourneyLabel}: ${treatment.title}`}
                             >
                               {planJourneyLabel}
                             </Link>
