@@ -1,3 +1,4 @@
+import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import type { MedicalFacilitiesDirectoryResponse } from "@/lib/medical-facilities";
 import { fetchPublicMedicalFacilitiesDirectory } from "@/server/modules/serviceProviders/public";
@@ -27,10 +28,12 @@ export async function MedicalFacilitiesDirectoryBlock({
       contentClassName="space-y-10"
     >
       {() => (
-        <MedicalFacilitiesDirectoryClient
-          block={block}
-          initialData={initialData}
-        />
+        <PublicQueryBoundary>
+          <MedicalFacilitiesDirectoryClient
+            block={block}
+            initialData={initialData}
+          />
+        </PublicQueryBoundary>
       )}
     </BlockSurface>
   );
