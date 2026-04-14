@@ -8,6 +8,19 @@ import { getPublicLocaleAvailability } from "@/lib/public/localization";
 import { localizePublicPathname } from "@/lib/public/routing";
 
 export const revalidate = 300;
+const INVENTORY_TIMEOUT_MS = 5000;
+const LOCALE_AVAILABILITY_TIMEOUT_MS = 1500;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
+  return Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+      }, timeoutMs).unref();
+    }),
+  ]);
+}
 
 function resolvePriority(pathname: string) {
   if (pathname === "/") return 1;
@@ -34,7 +47,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let inventory: Awaited<ReturnType<typeof getPublicRouteInventory>>;
 
   try {
-    inventory = await getPublicRouteInventory("en");
+    inventory = await withTimeout(
+      getPublicRouteInventory("en"),
+      INVENTORY_TIMEOUT_MS,
+      "SEO inventory",
+    );
   } catch (error) {
     console.error("Failed to build dynamic sitemap inventory", error);
 
@@ -58,8 +75,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const sitemapEntries: MetadataRoute.Sitemap = [];
+  const uniqueEntries = [...unique.values()];
+  const arabicAvailability = await Promise.all(
+    uniqueEntries.map(async (entry) => {
+      try {
+        return await withTimeout(
+          getPublicLocaleAvailability(entry.pathname, "ar"),
+          LOCALE_AVAILABILITY_TIMEOUT_MS,
+          `Arabic locale availability for ${entry.pathname}`,
+        );
+      } catch (error) {
+        console.warn(
+          "Failed to resolve Arabic locale availability for sitemap",
+          {
+            pathname: entry.pathname,
+            error,
+          },
+        );
+        return false;
+      }
+    }),
+  );
 
-  for (const entry of unique.values()) {
+  for (const [index, entry] of uniqueEntries.entries()) {
     sitemapEntries.push({
       url: `${CANONICAL_ORIGIN}${entry.pathname}`,
       lastModified: entry.updatedAt ? new Date(entry.updatedAt) : new Date(),
@@ -67,7 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: resolvePriority(entry.pathname),
     });
 
-    if (await getPublicLocaleAvailability(entry.pathname, "ar")) {
+    if (arabicAvailability[index]) {
       sitemapEntries.push({
         url: `${CANONICAL_ORIGIN}${localizePublicPathname(entry.pathname, "ar")}`,
         lastModified: entry.updatedAt ? new Date(entry.updatedAt) : new Date(),
