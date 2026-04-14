@@ -12,6 +12,7 @@ import { isNavigationVisible } from "@/lib/navigation";
 import { validatePublicLocale } from "@/lib/public/localization";
 import { publicLocales, type PublicLocale } from "@/i18n/routing";
 import { getPublicDirection } from "@/lib/public/routing";
+import { loadInitialSession } from "@/server/auth/loadInitialSession";
 import { loadPublicNavigationLinks } from "@/server/navigation";
 
 export const metadata: Metadata = {
@@ -53,15 +54,16 @@ export default async function PublicLocaleLayout({
 
   setRequestLocale(locale);
 
-  const [messages, navigationResult] = await Promise.all([
+  const [messages, navigationResult, initialSession] = await Promise.all([
     getMessages(),
     loadPublicNavigationLinks(locale),
+    loadInitialSession(),
   ]);
   const initialNavigationLinks =
     navigationResult.links.filter(isNavigationVisible);
 
   return (
-    <AppProviders>
+    <AppProviders initialSession={initialSession}>
       <NextIntlClientProvider locale={locale} messages={messages}>
         <PublicShellProvider>
           <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
