@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,6 +55,14 @@ const socialLinks = [
 
 const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
   const shellOwned = usePublicShellOwner();
+  if (shellOwned && !forceRender) {
+    return null;
+  }
+
+  return <FooterContent />;
+};
+
+function FooterContent() {
   const t = useTranslations("Footer");
   const locale = useLocale() as PublicLocale;
   const { resolvedTheme } = useTheme();
@@ -62,9 +70,12 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
   const [email, setEmail] = useState("");
   const { subscribe, loading } = useNewsletter();
   const initialNavigationLinks = useInitialNavigationLinks();
-  const [quickLinks, setQuickLinks] = useState<NavigationLink[]>(() =>
-    selectQuickLinks(initialNavigationLinks),
+  const initialQuickLinks = useMemo(
+    () => selectQuickLinks(initialNavigationLinks),
+    [initialNavigationLinks],
   );
+  const hasPreloadedNavigation = initialNavigationLinks.length > 0;
+  const [quickLinks, setQuickLinks] = useState<NavigationLink[]>([]);
   const currentYear = new Date().getFullYear();
   const phoneNumber = formatPhoneNumberForDisplay(
     PUBLIC_CONTACT_PHONE_DISPLAY,
@@ -77,17 +88,14 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
     setMounted(true);
   }, []);
 
-  useLayoutEffect(() => {
-    setQuickLinks(selectQuickLinks(initialNavigationLinks));
-  }, [initialNavigationLinks]);
-
   useEffect(() => {
-    let isSubscribed = true;
-    if (initialNavigationLinks.length > 0) {
-      return () => {
-        isSubscribed = false;
-      };
+    if (hasPreloadedNavigation) {
+      setQuickLinks([]);
+      return;
     }
+
+    let isSubscribed = true;
+
     const loadNavigation = async () => {
       const result = await fetchNavigationLinks(locale);
       if (!isSubscribed) return;
@@ -100,11 +108,7 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
     return () => {
       isSubscribed = false;
     };
-  }, [initialNavigationLinks, locale]);
-
-  if (shellOwned && !forceRender) {
-    return null;
-  }
+  }, [hasPreloadedNavigation, locale]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +119,10 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
       }
     }
   };
+
+  const displayedQuickLinks = hasPreloadedNavigation
+    ? initialQuickLinks
+    : quickLinks;
 
   return (
     <footer className="border-t border-border bg-background text-foreground">
@@ -156,7 +164,7 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
               {t("quickLinks")}
             </h4>
             <ul className="space-y-2">
-              {quickLinks.map((link) => (
+              {displayedQuickLinks.map((link) => (
                 <li key={link.id}>
                   <Link
                     href={link.href}
@@ -229,6 +237,6 @@ const Footer = ({ forceRender = false }: { forceRender?: boolean }) => {
       </div>
     </footer>
   );
-};
+}
 
 export default Footer;
