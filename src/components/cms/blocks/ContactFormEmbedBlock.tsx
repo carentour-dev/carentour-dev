@@ -1,3 +1,4 @@
+import { PublicAuthBoundary } from "@/components/public/PublicInteractiveProviders";
 import { type PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { ContactFormEmbedBlockContent } from "./ContactFormEmbedBlockContent";
@@ -9,5 +10,9 @@ export function ContactFormEmbedBlock({
   block: BlockInstance<"contactFormEmbed">;
   locale?: PublicLocale;
 }) {
-  return <ContactFormEmbedBlockContent block={block} locale={locale} />;
+  return (
+    <PublicAuthBoundary>
+      <ContactFormEmbedBlockContent block={block} locale={locale} />
+    </PublicAuthBoundary>
+  );
 }
