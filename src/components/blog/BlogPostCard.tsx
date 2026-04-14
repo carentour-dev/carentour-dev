@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, Eye, Calendar } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
