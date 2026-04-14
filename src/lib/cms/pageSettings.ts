@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
 
 export const HOME_HERO_IMAGE_REQUIREMENTS = {
   accept: "image/jpeg,image/png,image/webp",
@@ -27,6 +28,23 @@ export const cmsPageSettingsSchema = z
 export type CmsPageSettings = z.infer<typeof cmsPageSettingsSchema>;
 export type HomePageLayoutMode = "legacy" | "cms";
 
+function appendImageVersion(
+  imageUrl: string,
+  version: string | null | undefined,
+): string {
+  if (!version || !/^https?:\/\//.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  try {
+    const url = new URL(imageUrl);
+    url.searchParams.set("v", version);
+    return url.toString();
+  } catch {
+    return imageUrl;
+  }
+}
+
 export function sanitizeCmsPageSettings(input: unknown): CmsPageSettings {
   const parsed = cmsPageSettingsSchema.safeParse(input ?? {});
   return parsed.success ? parsed.data : {};
@@ -34,9 +52,46 @@ export function sanitizeCmsPageSettings(input: unknown): CmsPageSettings {
 
 export function resolveHomeHeroImageUrl(
   settings: CmsPageSettings | null | undefined,
+  content?: unknown,
+  version?: string | null,
 ): string | null {
+  const heroBlock = normalizeBlocks(content).find(
+    (block): block is BlockInstance<"homeHero"> =>
+      block.type === "homeHero" &&
+      typeof block.backgroundImageUrl === "string" &&
+      block.backgroundImageUrl.trim().length > 0,
+  );
+  const heroBlockImageUrl = heroBlock?.backgroundImageUrl;
+
+  if (typeof heroBlockImageUrl === "string" && heroBlockImageUrl.trim()) {
+    return appendImageVersion(heroBlockImageUrl.trim(), version);
+  }
+
   const imageUrl = settings?.homeHero?.imageUrl?.trim();
-  return imageUrl ? imageUrl : null;
+  return imageUrl ? appendImageVersion(imageUrl, version) : null;
+}
+
+export function resolveHomepageBlocks(
+  content: unknown,
+  version?: string | null,
+): BlockInstance[] {
+  return normalizeBlocks(content).map((block) => {
+    if (
+      block.type !== "homeHero" ||
+      typeof block.backgroundImageUrl !== "string" ||
+      block.backgroundImageUrl.trim().length === 0
+    ) {
+      return block;
+    }
+
+    return {
+      ...block,
+      backgroundImageUrl: appendImageVersion(
+        block.backgroundImageUrl.trim(),
+        version,
+      ),
+    };
+  });
 }
 
 export function resolveHomePageLayoutMode(
