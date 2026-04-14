@@ -84,7 +84,6 @@ export const useDoctors = (
     queryFn: () => fetchDoctors(locale, treatmentCategory),
     enabled: options?.enabled ?? true,
     initialData: options?.initialData,
-    initialDataUpdatedAt: options?.initialData ? 0 : undefined,
     staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
   });
