@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, type ComponentType } from "react";
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -38,8 +38,6 @@ import type { PublicLocale } from "@/i18n/routing";
 import { localizeCompanyNameDeep } from "@/lib/public/brand";
 import { resolveHeroImageLoading } from "@/lib/images/loading";
 import { getPublicNumberLocale } from "@/lib/public/numbers";
-
-const isRemoteImageUrl = (value: string) => /^https?:\/\//.test(value);
 
 export default function TreatmentDetails({
   treatment: normalizedTreatment,
@@ -338,7 +336,6 @@ export default function TreatmentDetails({
                   className="object-cover"
                   loading={resolveHeroImageLoading()}
                   sizes="(min-width: 1280px) 1200px, (min-width: 768px) 90vw, 100vw"
-                  unoptimized={isRemoteImageUrl(treatment.heroImage)}
                 />
               </div>
             </div>
