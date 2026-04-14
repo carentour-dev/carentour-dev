@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import type { PublicLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
@@ -157,7 +157,6 @@ export function ImageFeatureBlock({
                     imageRounded ? "rounded-2xl" : "",
                   )}
                   priority={false}
-                  unoptimized={imageSrc.startsWith("http")}
                 />
               </div>
             ) : null}
