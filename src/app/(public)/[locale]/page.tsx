@@ -12,6 +12,7 @@ import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import type { PublicLocale } from "@/i18n/routing";
 import {
   resolveHomeHeroImageUrl,
+  resolveHomepageBlocks,
   shouldUseLegacyHomepageLayout,
 } from "@/lib/cms/pageSettings";
 import { type CmsPage } from "@/lib/cms/server";
@@ -116,7 +117,15 @@ export default async function HomePage({ params }: PageProps) {
   await maybeRedirectFromLegacyPath(PATHNAME);
   const cmsPage = await getLocalizedCmsPageBySlug("home", locale);
   const seo = await getSeo(cmsPage, locale);
-  const heroImageUrl = resolveHomeHeroImageUrl(cmsPage?.settings);
+  const homepageBlocks = resolveHomepageBlocks(
+    cmsPage?.content,
+    cmsPage?.updated_at,
+  );
+  const heroImageUrl = resolveHomeHeroImageUrl(
+    cmsPage?.settings,
+    cmsPage?.content,
+    cmsPage?.updated_at,
+  );
   const useLegacyHomepageLayout = shouldUseLegacyHomepageLayout(
     cmsPage?.settings,
     cmsPage?.status,
@@ -127,11 +136,11 @@ export default async function HomePage({ params }: PageProps) {
     notFound();
   }
 
-  if (cmsPage?.content?.length && !useLegacyHomepageLayout) {
+  if (homepageBlocks.length > 0 && !useLegacyHomepageLayout) {
     return (
       <>
         <StructuredDataScripts payload={seo.jsonLd} />
-        <BlockRenderer blocks={cmsPage.content} locale={locale} />
+        <BlockRenderer blocks={homepageBlocks} locale={locale} />
       </>
     );
   }
