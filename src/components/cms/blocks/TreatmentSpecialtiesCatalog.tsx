@@ -201,6 +201,9 @@ export function TreatmentSpecialtiesCatalog({
               : card.image;
             const summary = card.summary?.trim() || undefined;
             const description = card.description?.trim() || undefined;
+            const treatmentContextSuffix = isArabicLocale
+              ? ` حول ${card.title}`
+              : ` about ${card.title}`;
 
             return (
               <Card
@@ -257,16 +260,18 @@ export function TreatmentSpecialtiesCatalog({
                       <Button
                         asChild
                         variant="outline"
-                        className="w-full border-[#1b2432] bg-[#1b2432] text-white hover:bg-[#111827] hover:text-white"
+                        className="h-10 w-full border-[#1b2432] bg-[#1b2432] text-white hover:bg-[#111827] hover:text-white"
                       >
                         <Link
                           href={localizePublicPathname(
                             `/treatments/${card.slug}`,
                             locale,
                           )}
-                          aria-label={`${viewTreatmentLabel}: ${card.title}`}
                         >
                           {primaryActionLabel}
+                          <span className="sr-only">
+                            {treatmentContextSuffix}
+                          </span>
                         </Link>
                       </Button>
                       <Button asChild className="w-full">
