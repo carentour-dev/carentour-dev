@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -137,43 +137,47 @@ const FINANCE_NAV_SECTIONS: Array<{
 export function FinanceShell({ children }: FinanceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
+  const { user, loading: authLoading, signOut, workspaceAccess } = useAuth();
+  const { profile } = useUserProfile();
   const permissions = useMemo(
-    () => profile?.permissions ?? [],
-    [profile?.permissions],
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.permissions
+        : (profile?.permissions ?? []),
+    [
+      profile?.permissions,
+      user?.id,
+      workspaceAccess.permissions,
+      workspaceAccess.userId,
+    ],
+  );
+  const roles = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.roles
+        : (profile?.roles ?? []),
+    [profile?.roles, user?.id, workspaceAccess.roles, workspaceAccess.userId],
   );
   const financeCapabilities = useMemo(
-    () => resolveFinanceCapabilities(permissions, profile?.roles),
-    [permissions, profile?.roles],
+    () => resolveFinanceCapabilities(permissions, roles),
+    [permissions, roles],
   );
 
-  const isLoading = authLoading || profileLoading;
+  const isLoading =
+    authLoading ||
+    (Boolean(user) &&
+      (workspaceAccess.userId !== user.id ||
+        workspaceAccess.loading ||
+        !workspaceAccess.resolved));
 
-  useEffect(() => {
-    if (!isLoading) {
-      setInitialAccessResolved(true);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (initialAccessResolved && !authLoading && !user) {
-      router.replace("/auth");
-    }
-  }, [initialAccessResolved, authLoading, router, user]);
-
-  const roles = profile?.roles ?? [];
   const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
   const operationsEntitlements = useMemo(
     () =>
-      profile
-        ? createEntitlementContext({
-            permissions: profile.permissions,
-            roles: profile.roles,
-          })
-        : createEntitlementContext(),
-    [profile],
+      createEntitlementContext({
+        permissions,
+        roles,
+      }),
+    [permissions, roles],
   );
   const hasOperationsAccess =
     hasOperationsEntry(operationsEntitlements) ||
@@ -225,18 +229,15 @@ export function FinanceShell({ children }: FinanceShellProps) {
     router.replace("/auth");
   };
 
-  if (!initialAccessResolved) {
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Loading finance workspace…
-        </p>
       </div>
     );
   }
 
-  if (!authLoading && !user) {
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -300,13 +301,13 @@ export function FinanceShell({ children }: FinanceShellProps) {
         </>
       }
       profile={{
-        displayName: profile?.displayName ?? "Team member",
-        roles: profile?.roles ?? [],
+        displayName: profile?.displayName ?? user.email ?? "Team member",
+        roles,
         icon: CircleDollarSign,
       }}
       onSignOut={handleSignOut}
-      loading={isLoading}
-      loadingMessage="Refreshing finance access..."
+      loading={false}
+      loadingMessage={null}
       contentWidth="dashboard"
       contentClassName="max-w-[1520px]"
     >
