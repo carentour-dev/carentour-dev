@@ -6,6 +6,7 @@ import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { InternalWorkspaceBodyScope } from "@/components/workspaces/InternalWorkspaceBodyScope";
 import { defaultPublicLocale } from "@/i18n/routing";
 import { isNavigationVisible } from "@/lib/navigation";
+import { loadInitialSession } from "@/server/auth/loadInitialSession";
 import { loadPublicNavigationLinks } from "@/server/navigation";
 
 export const metadata: Metadata = {
@@ -37,15 +38,16 @@ export default async function InternalRootLayout({
 }>) {
   setRequestLocale(defaultPublicLocale);
 
-  const [messages, navigationResult] = await Promise.all([
+  const [messages, navigationResult, initialSession] = await Promise.all([
     getMessages(),
     loadPublicNavigationLinks(defaultPublicLocale),
+    loadInitialSession(),
   ]);
   const initialNavigationLinks =
     navigationResult.links.filter(isNavigationVisible);
 
   return (
-    <AppProviders>
+    <AppProviders initialSession={initialSession}>
       <NextIntlClientProvider locale={defaultPublicLocale} messages={messages}>
         <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
           <InternalWorkspaceBodyScope />
