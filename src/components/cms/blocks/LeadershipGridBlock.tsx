@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { resolveGridImageLoading } from "@/lib/images/loading";
@@ -56,7 +56,6 @@ export function LeadershipGridBlock({
                       className="object-cover"
                       loading={resolveGridImageLoading(index)}
                       sizes="(min-width: 1280px) 28vw, (min-width: 768px) 42vw, 100vw"
-                      unoptimized={person.image.startsWith("http")}
                     />
                   ) : null}
                 </div>
