@@ -1,3 +1,4 @@
+import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import type { DoctorDirectoryResponse } from "@/lib/doctors";
 import type { PublicLocale } from "@/i18n/routing";
@@ -29,7 +30,11 @@ export async function DoctorDirectoryBlock({
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
       contentClassName="space-y-10"
     >
-      {() => <DoctorDirectoryClient block={block} initialData={initialData} />}
+      {() => (
+        <PublicQueryBoundary>
+          <DoctorDirectoryClient block={block} initialData={initialData} />
+        </PublicQueryBoundary>
+      )}
     </BlockSurface>
   );
 }
