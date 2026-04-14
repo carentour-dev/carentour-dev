@@ -336,6 +336,12 @@ export function FeaturedTreatmentsSection({
                   const imageSrc = imageFallbackByTreatmentId[treatment.id]
                     ? treatment.fallbackImage
                     : treatment.image;
+                  const learnMoreContextSuffix = isArabicLocale
+                    ? ` حول ${treatment.title}`
+                    : ` about ${treatment.title}`;
+                  const viewTreatmentContextSuffix = isArabicLocale
+                    ? `: ${treatment.title}`
+                    : `: ${treatment.title}`;
 
                   if (usesOriginalAppearance) {
                     return (
@@ -425,9 +431,11 @@ export function FeaturedTreatmentsSection({
                                     `/treatments/${treatment.slug}`,
                                     locale,
                                   )}
-                                  aria-label={`${viewTreatmentLabel}: ${treatment.title}`}
                                 >
                                   {secondaryActionLabel}
+                                  <span className="sr-only">
+                                    {learnMoreContextSuffix}
+                                  </span>
                                 </Link>
                               </Button>
                             </div>
@@ -494,9 +502,11 @@ export function FeaturedTreatmentsSection({
                                 `/treatments/${treatment.slug}`,
                                 locale,
                               )}
-                              aria-label={`${viewTreatmentLabel}: ${treatment.title}`}
                             >
                               {viewTreatmentLabel}
+                              <span className="sr-only">
+                                {viewTreatmentContextSuffix}
+                              </span>
                             </Link>
                           </Button>
                           <Button
