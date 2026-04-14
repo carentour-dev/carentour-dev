@@ -1,3 +1,4 @@
+import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
@@ -111,11 +112,13 @@ export default async function TreatmentCategoryPage({ params }: PageProps) {
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <TreatmentCategoryPageClient
-        locale={locale}
-        slug={category}
-        treatment={detail.treatment}
-      />
+      <PublicQueryBoundary>
+        <TreatmentCategoryPageClient
+          locale={locale}
+          slug={category}
+          treatment={detail.treatment}
+        />
+      </PublicQueryBoundary>
     </>
   );
 }
