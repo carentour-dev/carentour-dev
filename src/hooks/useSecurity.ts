@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface RateLimitResult {
@@ -19,17 +19,32 @@ interface SecurityEventData {
 
 export const useSecurity = () => {
   const [isChecking, setIsChecking] = useState(false);
+  const ipAddressPromiseRef = useRef<Promise<string | null> | null>(null);
 
   const getUserIP = useCallback(async (): Promise<string | null> => {
-    try {
-      // Use a public IP service to get the user's IP
-      const response = await fetch("https://api.ipify.org?format=json");
-      const data = await response.json();
-      return data.ip;
-    } catch (error) {
-      console.error("Failed to get user IP:", error);
-      return null;
+    if (!ipAddressPromiseRef.current) {
+      ipAddressPromiseRef.current = (async () => {
+        try {
+          // Keep the lookup from stalling auth flows when the IP service is slow.
+          const response = await Promise.race([
+            fetch("https://api.ipify.org?format=json"),
+            new Promise<never>((_, reject) => {
+              window.setTimeout(
+                () => reject(new Error("IP_LOOKUP_TIMEOUT")),
+                1500,
+              );
+            }),
+          ]);
+          const data = await response.json();
+          return typeof data.ip === "string" ? data.ip : null;
+        } catch (error) {
+          console.error("Failed to get user IP:", error);
+          return null;
+        }
+      })();
     }
+
+    return ipAddressPromiseRef.current;
   }, []);
 
   const checkRateLimit = useCallback(
