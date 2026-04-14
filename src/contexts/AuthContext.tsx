@@ -313,12 +313,20 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+type AuthProviderProps = {
+  children: React.ReactNode;
+  initialSession?: Session | null;
+};
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
+  initialSession,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(initialSession?.user ?? null);
+  const [session, setSession] = useState<Session | null>(
+    initialSession ?? null,
+  );
+  const [loading, setLoading] = useState(initialSession === undefined);
   const lastKnownUserId = useRef<string | null>(null);
   const redirectedForCurrentUser = useRef(false);
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
@@ -434,7 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initialSession]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
