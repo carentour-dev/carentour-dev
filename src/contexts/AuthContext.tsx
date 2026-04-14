@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   useCallback,
   useRef,
@@ -313,24 +314,77 @@ export const useAuth = () => {
   return context;
 };
 
-type AuthProviderProps = {
-  children: React.ReactNode;
-  initialSession?: Session | null;
+const readStoredSession = (): Session | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const authClient = supabase.auth as unknown as { storageKey?: string };
+  const storageKey = authClient?.storageKey;
+
+  if (!storageKey) {
+    return null;
+  }
+
+  try {
+    const rawSession = window.localStorage.getItem(storageKey);
+    if (!rawSession) {
+      return null;
+    }
+
+    const parsedSession = JSON.parse(rawSession) as Partial<Session> | null;
+    if (
+      !parsedSession ||
+      typeof parsedSession !== "object" ||
+      typeof parsedSession.access_token !== "string" ||
+      typeof parsedSession.refresh_token !== "string"
+    ) {
+      return null;
+    }
+
+    const rawUser = window.localStorage.getItem(`${storageKey}-user`);
+    const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+    const user =
+      parsedUser &&
+      typeof parsedUser === "object" &&
+      parsedUser.user &&
+      typeof parsedUser.user === "object" &&
+      typeof parsedUser.user.id === "string"
+        ? (parsedUser.user as User)
+        : null;
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...parsedSession,
+      user,
+    } as Session;
+  } catch {
+    return null;
+  }
 };
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
-  initialSession,
 }) => {
-  const [user, setUser] = useState<User | null>(initialSession?.user ?? null);
-  const [session, setSession] = useState<Session | null>(
-    initialSession ?? null,
-  );
-  const [loading, setLoading] = useState(initialSession === undefined);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const lastKnownUserId = useRef<string | null>(null);
   const redirectedForCurrentUser = useRef(false);
   const { checkRateLimit, recordLoginAttempt, logSecurityEvent } =
     useSecurity();
+
+  useLayoutEffect(() => {
+    const storedSession = readStoredSession();
+    setSession(storedSession);
+    setUser(storedSession?.user ?? null);
+    setLoading(false);
+    lastKnownUserId.current = storedSession?.user?.id ?? null;
+    redirectedForCurrentUser.current = false;
+  }, []);
 
   useEffect(() => {
     const canAutoRedirectFromCurrentPath = () => {
@@ -420,29 +474,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
     });
 
-    // Get initial session
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        lastKnownUserId.current = session?.user?.id ?? null;
-        redirectedForCurrentUser.current = false;
-
-        if (session?.user && !isPasswordRecoveryCurrentUrl()) {
-          maybeRedirectToAccessibleWorkspace(session, session.user.id);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to get initial session:", error);
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-      });
-
     return () => subscription.unsubscribe();
-  }, [initialSession]);
+  }, []);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -475,26 +508,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         password,
       });
 
-      // Record the login attempt
-      await recordLoginAttempt(email, !error);
+      void recordLoginAttempt(email, !error);
 
-      // Log additional security events
-      if (!error) {
-        await logSecurityEvent({
-          event_type: "successful_login",
-          event_data: { email },
-          risk_level: "low",
-        });
-      } else {
-        await logSecurityEvent({
-          event_type: "failed_login",
-          event_data: {
-            email,
-            error_message: error.message,
-          },
-          risk_level: "medium",
-        });
-      }
+      void logSecurityEvent(
+        !error
+          ? {
+              event_type: "successful_login",
+              event_data: { email },
+              risk_level: "low",
+            }
+          : {
+              event_type: "failed_login",
+              event_data: {
+                email,
+                error_message: error.message,
+              },
+              risk_level: "medium",
+            },
+      );
 
       const normalizedData: SignInData | null =
         data && (data.user ?? data.session)
