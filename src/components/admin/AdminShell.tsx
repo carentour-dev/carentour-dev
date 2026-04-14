@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -82,31 +82,44 @@ const NAV_SECTIONS: Array<{
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, signOut, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-
-  const isCheckingAccess = authLoading || profileLoading;
-  const [initialAccessResolved, setInitialAccessResolved] = useState(false);
-  useEffect(() => {
-    if (!isCheckingAccess) {
-      setInitialAccessResolved(true);
-    }
-  }, [isCheckingAccess]);
+  const { user, signOut, loading: authLoading, workspaceAccess } = useAuth();
+  const { profile } = useUserProfile();
+  const permissions = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.permissions
+        : (profile?.permissions ?? []),
+    [
+      profile?.permissions,
+      user?.id,
+      workspaceAccess.permissions,
+      workspaceAccess.userId,
+    ],
+  );
+  const roles = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.roles
+        : (profile?.roles ?? []),
+    [profile?.roles, user?.id, workspaceAccess.roles, workspaceAccess.userId],
+  );
+  const isCheckingAccess =
+    authLoading ||
+    (Boolean(user) &&
+      (workspaceAccess.userId !== user.id ||
+        workspaceAccess.loading ||
+        !workspaceAccess.resolved));
   const operationsEntitlements = useMemo(
     () =>
-      profile
-        ? createEntitlementContext({
-            permissions: profile.permissions,
-            roles: profile.roles,
-          })
-        : createEntitlementContext(),
-    [profile],
+      createEntitlementContext({
+        permissions,
+        roles,
+      }),
+    [permissions, roles],
   );
   const hasOperationsAccess =
     hasOperationsEntry(operationsEntitlements) ||
     hasAnyOperationsSection(operationsEntitlements);
-  const permissions = profile?.permissions ?? [];
-  const roles = profile?.roles ?? [];
   const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
   const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
@@ -158,16 +171,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
     router.replace("/auth");
   };
 
-  if (!initialAccessResolved) {
+  if (isCheckingAccess) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking admin access…</p>
       </div>
     );
   }
 
-  if (initialAccessResolved && !authLoading && !user) {
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -183,7 +195,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (initialAccessResolved && !profileLoading && hasAdminAccess === false) {
+  if (hasAdminAccess === false) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
         <div className="space-y-2">
@@ -227,13 +239,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
       headerSubtitle="Admin Console"
       headerActions={<ThemeToggle variant="workspace" />}
       profile={{
-        displayName: profile?.displayName ?? "Admin",
-        roles: profile?.roles ?? [],
+        displayName: profile?.displayName ?? user.email ?? "Admin",
+        roles,
         icon: Users,
       }}
       onSignOut={handleSignOut}
-      loading={isCheckingAccess}
-      loadingMessage="Refreshing admin access..."
+      loading={false}
+      loadingMessage={null}
       contentWidth="dashboard"
       contentClassName="max-w-[1520px]"
     >
