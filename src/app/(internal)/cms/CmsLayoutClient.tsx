@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   CircleHelp,
@@ -21,7 +21,7 @@ import {
   InternalWorkspaceShell,
   type InternalWorkspaceShellNavSection,
 } from "@/components/workspaces/InternalWorkspaceShell";
-import { metadataIndicatesStaffAccount, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   createEntitlementContext,
@@ -46,15 +46,6 @@ const NAV_ITEMS = [
   { href: "/cms/seo", label: "SEO", icon: Search },
 ];
 
-const CMS_FALLBACK_ROLE_SLUGS = new Set([
-  "admin",
-  "editor",
-  "cms",
-  "content",
-  "content_manager",
-  "content-editor",
-]);
-
 const isCmsNavItemActive = (itemHref: string, pathname: string | null) => {
   if (!pathname) {
     return false;
@@ -67,151 +58,38 @@ const isCmsNavItemActive = (itemHref: string, pathname: string | null) => {
   return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
 };
 
-const collectRoleCandidates = (value: unknown, bucket: Set<string>) => {
-  if (value === null || value === undefined) {
-    return;
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    if (trimmed.includes(",")) {
-      trimmed
-        .split(",")
-        .map((segment) => segment.trim().toLowerCase())
-        .filter((segment) => segment.length > 0)
-        .forEach((segment) => bucket.add(segment));
-      return;
-    }
-
-    bucket.add(trimmed.toLowerCase());
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((entry) => collectRoleCandidates(entry, bucket));
-    return;
-  }
-
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-
-    for (const key of ["value", "role", "slug", "name", "label", "primary"]) {
-      if (record[key] !== undefined) {
-        collectRoleCandidates(record[key], bucket);
-      }
-    }
-
-    if (Array.isArray(record.values)) {
-      collectRoleCandidates(record.values, bucket);
-    }
-  }
-};
-
-const hasCmsMetadataAccess = (
-  user: {
-    user_metadata?: Record<string, unknown> | null;
-    app_metadata?: Record<string, unknown> | null;
-  } | null,
-): boolean => {
-  if (!user) {
-    return false;
-  }
-
-  const metadataRecords = [user.user_metadata, user.app_metadata].filter(
-    (value): value is Record<string, unknown> =>
-      Boolean(value) && typeof value === "object",
-  );
-
-  for (const metadata of metadataRecords) {
-    const candidates = new Set<string>();
-
-    for (const key of [
-      "staff_roles",
-      "roles",
-      "role",
-      "primary_role",
-      "primaryRole",
-      "primary_role_slug",
-    ]) {
-      if (metadata[key] !== undefined) {
-        collectRoleCandidates(metadata[key], candidates);
-      }
-    }
-
-    if (
-      Array.from(candidates).some((role) => CMS_FALLBACK_ROLE_SLUGS.has(role))
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 export default function CmsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const [resolvingGuardExpired, setResolvingGuardExpired] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/auth");
-    }
-  }, [authLoading, router, user]);
+  const { user, loading: authLoading, signOut, workspaceAccess } = useAuth();
+  const { profile } = useUserProfile();
 
   const resolvedPermissions = useMemo(
-    () => profile?.permissions ?? [],
-    [profile?.permissions],
-  );
-  const resolvedRoles = useMemo(() => profile?.roles ?? [], [profile?.roles]);
-  const hasMetadataCmsAccess = useMemo(
-    () => hasCmsMetadataAccess(user),
-    [user],
-  );
-  const hasMetadataStaffAccess = useMemo(
     () =>
-      metadataIndicatesStaffAccount(
-        (user?.user_metadata ?? {}) as Record<string, unknown>,
-      ) ||
-      metadataIndicatesStaffAccount(
-        (user?.app_metadata ?? {}) as Record<string, unknown>,
-      ),
-    [user],
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.permissions
+        : (profile?.permissions ?? []),
+    [
+      profile?.permissions,
+      user?.id,
+      workspaceAccess.permissions,
+      workspaceAccess.userId,
+    ],
   );
-  const authorized =
-    hasCmsWorkspaceAccess(resolvedPermissions, resolvedRoles) ||
-    hasMetadataCmsAccess ||
-    hasMetadataStaffAccess;
-  const isAwaitingInitialProfileHydration =
-    Boolean(user) &&
-    !authorized &&
-    !profile &&
-    resolvedPermissions.length === 0 &&
-    resolvedRoles.length === 0;
-  const shouldResolveProfileGate =
-    !resolvingGuardExpired &&
-    !authorized &&
-    (profileLoading || isAwaitingInitialProfileHydration);
-  const isResolvingAccess = authLoading || shouldResolveProfileGate;
-
-  useEffect(() => {
-    if (authLoading || !profileLoading || authorized) {
-      setResolvingGuardExpired(false);
-      return;
-    }
-
-    const guardTimer = window.setTimeout(() => {
-      setResolvingGuardExpired(true);
-    }, 2000);
-
-    return () => window.clearTimeout(guardTimer);
-  }, [authLoading, authorized, pathname, profileLoading, user]);
+  const resolvedRoles = useMemo(
+    () =>
+      workspaceAccess.userId === user?.id
+        ? workspaceAccess.roles
+        : (profile?.roles ?? []),
+    [profile?.roles, user?.id, workspaceAccess.roles, workspaceAccess.userId],
+  );
+  const authorized = hasCmsWorkspaceAccess(resolvedPermissions, resolvedRoles);
+  const isResolvingAccess =
+    authLoading ||
+    (Boolean(user) &&
+      (workspaceAccess.userId !== user.id ||
+        workspaceAccess.loading ||
+        !workspaceAccess.resolved));
 
   const operationsEntitlements = useMemo(
     () =>
@@ -304,14 +182,13 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
 
   if (isResolvingAccess) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading CMS workspace…</p>
       </div>
     );
   }
 
-  if (!authLoading && !user) {
+  if (!user) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card>
@@ -378,8 +255,8 @@ export default function CmsLayout({ children }: { children: ReactNode }) {
         icon: FileText,
       }}
       onSignOut={handleSignOut}
-      loading={profileLoading}
-      loadingMessage="Refreshing CMS access..."
+      loading={false}
+      loadingMessage={null}
       contentWidth={isPreviewRoute ? "full" : isEditorRoute ? "editor" : "full"}
       contentClassName={cn(
         isPreviewRoute && "max-w-none",
