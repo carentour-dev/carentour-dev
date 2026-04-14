@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/server/auth/requireAdmin";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { blockArraySchema, sanitizeCmsBlocks } from "@/lib/cms/blocks";
 import {
@@ -9,9 +8,17 @@ import {
 } from "@/lib/cms/pageSlugs";
 import { cmsPageSettingsSchema } from "@/lib/cms/pageSettings";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { adminRoute } from "@/server/utils/adminRoute";
 
-export async function GET(request: NextRequest) {
-  await requirePermission("cms.read");
+const CMS_READ_ACCESS = {
+  allPermissions: ["cms.read"],
+} as const;
+
+const CMS_WRITE_ACCESS = {
+  allPermissions: ["cms.write"],
+} as const;
+
+export const GET = adminRoute(async (request: NextRequest) => {
   const locale = resolveAdminLocale(request);
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await (supabaseAdmin as any)
@@ -57,10 +64,9 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ pages });
-}
+}, CMS_READ_ACCESS);
 
-export async function POST(req: NextRequest) {
-  await requirePermission("cms.write");
+export const POST = adminRoute(async (req: NextRequest) => {
   const locale = resolveAdminLocale(req);
   const body = await req.json();
   const {
@@ -191,4 +197,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ page: data }, { status: 201 });
-}
+}, CMS_WRITE_ACCESS);
