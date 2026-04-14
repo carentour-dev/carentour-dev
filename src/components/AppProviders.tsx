@@ -1,6 +1,5 @@
 "use client";
 
-import type { Session } from "@supabase/supabase-js";
 import type { PropsWithChildren } from "react";
 import { useEffect } from "react";
 import QueryProvider from "@/components/QueryProvider";
@@ -86,15 +85,11 @@ function ChunkLoadRecovery() {
   return null;
 }
 
-type AppProvidersProps = PropsWithChildren<{
-  initialSession?: Session | null;
-}>;
-
-export function AppProviders({ children, initialSession }: AppProvidersProps) {
+export function AppProviders({ children }: PropsWithChildren) {
   return (
     <ThemeProvider defaultTheme="system" storageKey="care-n-tour-theme">
       <QueryProvider>
-        <AuthProvider initialSession={initialSession}>
+        <AuthProvider>
           <TooltipProvider>
             <ChunkLoadRecovery />
             <Toaster />
