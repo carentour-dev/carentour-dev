@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Quote, ExternalLink } from "lucide-react";
+import { Star, Quote } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
 
 interface DoctorReview {
@@ -41,7 +40,6 @@ export const DoctorReviews = ({
     international: isArabicLocale ? "دولي" : "International",
     verified: isArabicLocale ? "موثّق" : "Verified",
     recovery: isArabicLocale ? "التعافي" : "Recovery",
-    patientJourney: isArabicLocale ? "عرض رحلة المريض" : "View patient journey",
   };
 
   return (
@@ -109,18 +107,6 @@ export const DoctorReviews = ({
                     <span>
                       {copy.recovery}: {review.recovery_time}
                     </span>
-                  )}
-                  {review.patient_id && (
-                    <>
-                      <span>•</span>
-                      <Link
-                        href={`/patients/${review.patient_id}`}
-                        className="text-primary hover:underline inline-flex items-center gap-1"
-                      >
-                        {copy.patientJourney}
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </>
                   )}
                 </div>
                 <span>{new Date(review.created_at).toLocaleDateString()}</span>
