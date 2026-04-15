@@ -133,15 +133,52 @@ test("sitemap resolves Arabic locale availability in parallel with timeouts", ()
   );
 });
 
-test("header navigation refresh tracks link data instead of only link count", () => {
-  const source = readSource("src/components/Header.tsx");
+test("public SEO inventory excludes non-routable template and patient story URLs", () => {
+  const source = readSource("src/lib/seo/data.ts");
 
   assert.match(
     source,
-    /useLayoutEffect\(\(\) => \{\s*setNavigationLinks\(visibleInitialNavigationLinks\);/,
+    /const NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS = new Set\(\[/,
   );
-  assert.match(source, /\}, \[visibleInitialNavigationLinks\]\);/);
-  assert.match(source, /\}, \[locale, visibleInitialNavigationLinks\]\);/);
+  assert.match(source, /"medical-facilities-detail-template"/);
+  assert.match(
+    source,
+    /if \(NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS\.has\(page\.slug\)\) \{\s*continue;\s*\}/,
+  );
+  assert.doesNotMatch(source, /sourceType:\s*"patient-story"/);
+});
+
+test("public testimonials and story cards do not link to non-public patient pages", () => {
+  const sources = [
+    readSource("src/components/Testimonials.tsx"),
+    readSource("src/components/DoctorReviews.tsx"),
+    readSource("src/app/(public)/[locale]/stories/StoriesPageClient.tsx"),
+  ];
+
+  for (const source of sources) {
+    assert.doesNotMatch(source, /href=\{`\/patients\//);
+    assert.doesNotMatch(source, /href=\"\/patients\//);
+  }
+});
+
+test("header navigation refresh tracks link data instead of only link count", () => {
+  const source = readSource("src/components/Header.tsx");
+
+  assert.match(source, /const visibleInitialNavigationLinks = useMemo\(/);
+  assert.match(
+    source,
+    /const hasPreloadedNavigation = visibleInitialNavigationLinks\.length > 0;/,
+  );
+  assert.match(source, /useEffect\(\(\) => \{/);
+  assert.match(
+    source,
+    /if \(hasPreloadedNavigation\) \{\s*setNavigationLinks\(\[\]\);\s*setLoadingNavigation\(false\);\s*return;\s*\}/,
+  );
+  assert.match(source, /\}, \[hasPreloadedNavigation, locale\]\);/);
+  assert.match(
+    source,
+    /const displayedNavigationLinks = hasPreloadedNavigation\s+\? visibleInitialNavigationLinks/,
+  );
 });
 
 test("blog transient timers are cleared on unmount", () => {
