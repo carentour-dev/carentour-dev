@@ -1,4 +1,6 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
+
+import { CANONICAL_ORIGIN } from "@/lib/seo/constants";
 
 export interface BlogPostSEO {
   id: string;
@@ -24,14 +26,21 @@ export interface BlogPostSEO {
 /**
  * Generate SEO metadata for blog post
  */
+function resolveBaseUrl(
+  baseUrl: string = process.env.NEXT_PUBLIC_SITE_URL || CANONICAL_ORIGIN,
+) {
+  return baseUrl.replace(/\/+$/, "");
+}
+
 export function generateBlogPostMetadata(
   post: BlogPostSEO,
-  baseUrl: string = process.env.NEXT_PUBLIC_SITE_URL || "https://carentour.com",
+  baseUrl?: string,
 ): Metadata {
+  const resolvedBaseUrl = resolveBaseUrl(baseUrl);
   const title = post.seo_title || post.title;
   const description = post.seo_description || post.excerpt || "";
   const image = post.og_image || post.featured_image;
-  const url = `${baseUrl}/blog/${post.category?.slug}/${post.slug}`;
+  const url = `${resolvedBaseUrl}/blog/${post.category?.slug}/${post.slug}`;
 
   const metadata: Metadata = {
     title,
@@ -50,7 +59,9 @@ export function generateBlogPostMetadata(
       images: image
         ? [
             {
-              url: image.startsWith("http") ? image : `${baseUrl}${image}`,
+              url: image.startsWith("http")
+                ? image
+                : `${resolvedBaseUrl}${image}`,
               alt: title,
             },
           ]
@@ -61,7 +72,7 @@ export function generateBlogPostMetadata(
       title,
       description,
       images: image
-        ? [image.startsWith("http") ? image : `${baseUrl}${image}`]
+        ? [image.startsWith("http") ? image : `${resolvedBaseUrl}${image}`]
         : undefined,
     },
   };
@@ -74,9 +85,10 @@ export function generateBlogPostMetadata(
  */
 export function generateBlogPostStructuredData(
   post: BlogPostSEO,
-  baseUrl: string = process.env.NEXT_PUBLIC_SITE_URL || "https://carentour.com",
+  baseUrl?: string,
 ) {
-  const url = `${baseUrl}/blog/${post.category?.slug}/${post.slug}`;
+  const resolvedBaseUrl = resolveBaseUrl(baseUrl);
+  const url = `${resolvedBaseUrl}/blog/${post.category?.slug}/${post.slug}`;
   const image = post.og_image || post.featured_image;
 
   return {
@@ -87,7 +99,7 @@ export function generateBlogPostStructuredData(
     image: image
       ? image.startsWith("http")
         ? image
-        : `${baseUrl}${image}`
+        : `${resolvedBaseUrl}${image}`
       : undefined,
     datePublished: post.publish_date,
     dateModified: post.updated_at || post.publish_date,
@@ -102,7 +114,7 @@ export function generateBlogPostStructuredData(
       name: "Care N Tour",
       logo: {
         "@type": "ImageObject",
-        url: `${baseUrl}/carentour-logo-light.png`,
+        url: `${resolvedBaseUrl}/carentour-logo-light.png`,
       },
     },
     mainEntityOfPage: {
@@ -117,8 +129,9 @@ export function generateBlogPostStructuredData(
  */
 export function generateBlogListingMetadata(
   category?: { name: string; description?: string },
-  baseUrl: string = process.env.NEXT_PUBLIC_SITE_URL || "https://carentour.com",
+  baseUrl?: string,
 ): Metadata {
+  const resolvedBaseUrl = resolveBaseUrl(baseUrl);
   const title = category
     ? `${category.name} Articles | Care N Tour Blog`
     : "Health Insights & Travel Guides | Care N Tour Blog";
@@ -133,7 +146,7 @@ export function generateBlogListingMetadata(
       title,
       description,
       type: "website",
-      url: `${baseUrl}/blog`,
+      url: `${resolvedBaseUrl}/blog`,
     },
     twitter: {
       card: "summary_large_image",
