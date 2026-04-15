@@ -30,6 +30,11 @@ const asSupabase = () => getSupabaseAdmin() as any;
 
 const clampScore = (value: number) => Math.max(0, Math.min(100, value));
 
+const NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS = new Set([
+  "medical-facilities-detail-template",
+  ...BLOG_INTERNAL_TEMPLATE_SLUGS,
+]);
+
 type InventoryOverrideRow = Pick<
   SeoOverrideRow,
   | "route_key"
@@ -716,7 +721,6 @@ export async function getPublicRouteInventory(
     doctorsRes,
     doctorTranslationsRes,
     providersRes,
-    patientStoriesRes,
     overridesRes,
   ] = await Promise.all([
     localizedBlogAvailabilityPromise,
@@ -791,15 +795,6 @@ export async function getPublicRouteInventory(
       )
       .or("is_partner.is.null,is_partner.eq.true"),
     supabase
-      .from("patient_stories")
-      .select(
-        "patient_id, headline, excerpt, hero_image, published, updated_at",
-      )
-      .eq("published", true)
-      .not("patient_id", "is", null)
-      .order("updated_at", { ascending: false })
-      .order("patient_id", { ascending: true }),
-    supabase
       .from("seo_overrides")
       .select(
         "route_key, locale, title, description, og_image_url, robots_index",
@@ -821,7 +816,6 @@ export async function getPublicRouteInventory(
     ["doctors", doctorsRes.error],
     ["doctor_translations", doctorTranslationsRes.error],
     ["service_providers", providersRes.error],
-    ["patient_stories", patientStoriesRes.error],
     ["seo_overrides", overridesRes.error],
   ].filter(([, error]) => Boolean(error));
 
@@ -893,7 +887,7 @@ export async function getPublicRouteInventory(
     }
   >();
   for (const page of cmsPages) {
-    if (BLOG_INTERNAL_TEMPLATE_SLUGS.has(page.slug)) {
+    if (NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS.has(page.slug)) {
       continue;
     }
     const pathname = normalizePath(
@@ -955,6 +949,10 @@ export async function getPublicRouteInventory(
   );
 
   for (const page of cmsPages) {
+    if (NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS.has(page.slug)) {
+      continue;
+    }
+
     const pathname = normalizePath(
       page.slug === "home" ? "/" : `/${page.slug}`,
     );
@@ -1440,56 +1438,6 @@ export async function getPublicRouteInventory(
       sourceDescription,
       sourceOgImage: sourceImage,
       updatedAt: provider.updated_at,
-      needsSeoScore: computeNeedsSeoScore({
-        hasTitle: Boolean(scoringOverride?.title ?? sourceTitle),
-        hasDescription: Boolean(
-          scoringOverride?.description ?? sourceDescription,
-        ),
-        hasImage: Boolean(scoringOverride?.og_image_url ?? sourceImage),
-        hasOverride: Boolean(scoringOverride),
-      }),
-    });
-  }
-
-  const patientStories = (patientStoriesRes.data ?? []) as Array<{
-    patient_id: string;
-    headline?: string | null;
-    excerpt?: string | null;
-    hero_image?: string | null;
-    updated_at?: string | null;
-  }>;
-
-  const seenPatient = new Set<string>();
-  for (const story of patientStories) {
-    if (!story.patient_id || seenPatient.has(story.patient_id)) {
-      continue;
-    }
-
-    seenPatient.add(story.patient_id);
-
-    const pathname = normalizePath(`/patients/${story.patient_id}`);
-    const sourceTitle = story.headline
-      ? `${story.headline} | Patient Story | Care N Tour`
-      : "Patient Story | Care N Tour";
-    const sourceDescription = story.excerpt ?? null;
-    const sourceImage = story.hero_image ?? null;
-    const effectiveOverride = overrideLookup.get(pathname);
-    const scoringOverride =
-      locale === DEFAULT_SEO_LOCALE
-        ? effectiveOverride
-        : localeOverrideLookup.get(pathname);
-
-    entries.push({
-      routeKey: pathname,
-      pathname,
-      sourceType: "patient-story",
-      label: `Patient Story: ${story.patient_id}`,
-      indexable: effectiveOverride?.robots_index ?? true,
-      locale,
-      sourceTitle,
-      sourceDescription,
-      sourceOgImage: sourceImage,
-      updatedAt: story.updated_at,
       needsSeoScore: computeNeedsSeoScore({
         hasTitle: Boolean(scoringOverride?.title ?? sourceTitle),
         hasDescription: Boolean(
