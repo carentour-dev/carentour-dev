@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Quote, Loader2, ExternalLink } from "lucide-react";
+import { Star, Quote, Loader2 } from "lucide-react";
 import { usePatientReviews } from "@/hooks/useTestimonials";
 import { cn } from "@/lib/utils";
 
@@ -80,17 +80,11 @@ const Testimonials = () => {
                       {testimonial.patient_country ?? "International Patient"}
                     </p>
                     {testimonial.treatment_slug && (
-                      <p className="text-primary text-sm font-medium capitalize">
-                        {testimonial.treatment_slug.replace(/-/g, " ")}
-                      </p>
-                    )}
-                    {testimonial.patient_id && (
                       <Link
-                        href={`/patients/${testimonial.patient_id}`}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+                        href={`/treatments/${testimonial.treatment_slug}`}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2 capitalize"
                       >
-                        View full journey
-                        <ExternalLink className="h-3 w-3" />
+                        {testimonial.treatment_slug.replace(/-/g, " ")}
                       </Link>
                     )}
                   </div>
