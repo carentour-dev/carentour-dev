@@ -66,6 +66,20 @@ test("blog CMS mutations revalidate landing, category, and post paths", () => {
   );
 });
 
+test("CMS page creation revalidates localized public paths and discovery artifacts", () => {
+  const source = readSource("src/app/api/cms/pages/route.ts");
+
+  assert.match(source, /import \{ revalidateSeoPaths \} from "@\/lib\/seo";/);
+  assert.match(
+    source,
+    /revalidateSeoPaths\(\[\s*toCmsPath\(basePageResult\.data\.slug\),\s*localizePublicPathname\(toCmsPath\(basePageResult\.data\.slug\), "ar"\),\s*\]\);/,
+  );
+  assert.match(
+    source,
+    /revalidateSeoPaths\(\[\s*toCmsPath\(data\.slug\),\s*localizePublicPathname\(toCmsPath\(data\.slug\), "ar"\),\s*\]\);/,
+  );
+});
+
 test("localized blog APIs resolve slugs from the request locale", () => {
   const postApiSource = readSource(
     "src/app/api/blog/posts/[category]/[slug]/route.ts",
