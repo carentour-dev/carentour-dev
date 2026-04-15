@@ -7,7 +7,9 @@ import {
   normalizeCmsPageSlug,
 } from "@/lib/cms/pageSlugs";
 import { cmsPageSettingsSchema } from "@/lib/cms/pageSettings";
+import { revalidateSeoPaths } from "@/lib/seo";
 import { resolveAdminLocale } from "@/lib/public/adminLocale";
+import { localizePublicPathname } from "@/lib/public/routing";
 import { adminRoute } from "@/server/utils/adminRoute";
 
 const CMS_READ_ACCESS = {
@@ -17,6 +19,9 @@ const CMS_READ_ACCESS = {
 const CMS_WRITE_ACCESS = {
   allPermissions: ["cms.write"],
 } as const;
+
+const toCmsPath = (slug: string) =>
+  slug === "home" ? "/" : `/${slug.replace(/^\/+/, "")}`;
 
 export const GET = adminRoute(async (request: NextRequest) => {
   const locale = resolveAdminLocale(request);
@@ -166,6 +171,11 @@ export const POST = adminRoute(async (req: NextRequest) => {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    revalidateSeoPaths([
+      toCmsPath(basePageResult.data.slug),
+      localizePublicPathname(toCmsPath(basePageResult.data.slug), "ar"),
+    ]);
+
     return NextResponse.json(
       {
         page: {
@@ -196,5 +206,11 @@ export const POST = adminRoute(async (req: NextRequest) => {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  revalidateSeoPaths([
+    toCmsPath(data.slug),
+    localizePublicPathname(toCmsPath(data.slug), "ar"),
+  ]);
+
   return NextResponse.json({ page: data }, { status: 201 });
 }, CMS_WRITE_ACCESS);
