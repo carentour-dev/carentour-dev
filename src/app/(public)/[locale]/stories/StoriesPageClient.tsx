@@ -229,13 +229,6 @@ const StoriesPage = () => {
                                 : "Personal care from our team"}
                             </div>
                             <div className="flex flex-wrap gap-3">
-                              {story.patient_id && (
-                                <Button asChild size="sm">
-                                  <Link href={`/patients/${story.patient_id}`}>
-                                    Read full journey
-                                  </Link>
-                                </Button>
-                              )}
                               {story.treatment_slug && (
                                 <Button
                                   asChild
