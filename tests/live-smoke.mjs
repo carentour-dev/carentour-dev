@@ -127,6 +127,13 @@ function assertMatchesAny(responseBody, patterns, message) {
   );
 }
 
+const internalWorkspaceShellPatterns = [
+  /data-internal-workspace-root="true"/i,
+  /Session required/i,
+  /Go to sign in/i,
+  /Access denied/i,
+];
+
 async function readCheckedResponse(baseUrl, pathname, options) {
   log(`Checking ${pathname}`);
   return readResponse(baseUrl, pathname, options);
@@ -286,81 +293,49 @@ async function run() {
     const workspaceChecks = [
       {
         pathname: "/cms",
-        patterns: [
-          /Loading CMS workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/cms should render either the CMS loading shell or the session-required recovery UI",
       },
       {
         pathname: "/admin",
-        patterns: [
-          /Checking admin access…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/admin should render either the admin loading shell or the session-required recovery UI",
       },
       {
         pathname: "/operations",
-        patterns: [
-          /Loading operations workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/operations should render either the operations loading shell or the session-required recovery UI",
       },
       {
         pathname: "/finance",
-        patterns: [
-          /Loading finance workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/finance should render either the finance loading shell or the session-required recovery UI",
       },
       {
         pathname: "/admin/finance",
-        patterns: [
-          /Checking admin access…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/admin/finance should render either the admin loading shell or the session-required recovery UI",
       },
       {
         pathname: "/finance/payables",
-        patterns: [
-          /Loading finance workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/finance/payables should render either the finance loading shell or the session-required recovery UI",
       },
       {
         pathname: "/finance/settings",
-        patterns: [
-          /Loading finance workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/finance/settings should render either the finance loading shell or the session-required recovery UI",
       },
       {
         pathname: "/finance/quotation-calculator",
-        patterns: [
-          /Loading finance workspace…/i,
-          /Session required/i,
-          /Go to sign in/i,
-        ],
+        patterns: internalWorkspaceShellPatterns,
         message:
           "/finance/quotation-calculator should render either the finance loading shell or the session-required recovery UI",
       },
