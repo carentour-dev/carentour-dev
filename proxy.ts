@@ -82,6 +82,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const pathname = normalizePath(request.nextUrl.pathname);
+  const hasLocalePrefix = pathname === "/ar" || pathname.startsWith("/ar/");
   const isFrameworkAsset =
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
@@ -101,7 +102,7 @@ export async function proxy(request: NextRequest) {
 
   const redirectMatch = await lookupRouteRedirect(basePathname);
   if (!redirectMatch) {
-    return intlMiddleware(request);
+    return hasLocalePrefix ? intlMiddleware(request) : continueRequest(request);
   }
 
   const targetPath = normalizePath(redirectMatch.toPath);
