@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import GoogleTagManager from "@/components/analytics/GoogleTagManager";
 import DocumentRootAttributes from "@/components/public/DocumentRootAttributes";
 import "../index.css";
 
@@ -30,33 +30,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const googleTagId = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID ?? "G-RYJ3Q9HMVQ";
   const isProduction = process.env.NODE_ENV === "production";
 
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {isProduction ? (
-          <>
-            <Script
-              id="google-tag-script"
-              src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
-              strategy="beforeInteractive"
-            />
-            <Script
-              id="google-tag-init"
-              strategy="beforeInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${googleTagId}');
-                `,
-              }}
-            />
-          </>
-        ) : null}
+        {isProduction ? <GoogleTagManager /> : null}
         <DocumentRootAttributes />
         {children}
       </body>
