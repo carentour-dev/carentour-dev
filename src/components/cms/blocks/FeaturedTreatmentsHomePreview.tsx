@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale } from "next-intl";
 import { FeaturedTreatmentsSection } from "@/components/home";
 import { useTreatments } from "@/hooks/useTreatments";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { BlockSurface } from "./BlockSurface";
+import type { PublicLocale } from "@/i18n/routing";
 
 function selectPreviewTreatments(
   treatments: ReturnType<typeof useTreatments>["treatments"],
@@ -45,6 +47,7 @@ export function FeaturedTreatmentsHomePreview({
 }: {
   block: BlockInstance<"featuredTreatmentsHome">;
 }) {
+  const locale = useLocale() as PublicLocale;
   const { treatments, loading, error } = useTreatments();
 
   const selectedTreatments = useMemo(
@@ -63,6 +66,7 @@ export function FeaturedTreatmentsHomePreview({
         <FeaturedTreatmentsSection
           embedded
           treatments={selectedTreatments}
+          locale={locale}
           eyebrow={block.eyebrow}
           title={block.title}
           description={block.description}
