@@ -120,9 +120,7 @@ export function BlogTaxonomyGridContent({
                     className="overflow-hidden rounded-[1.75rem] border border-border/60 bg-card p-6 shadow-sm"
                   >
                     <div className="flex items-start gap-4">
-                      {isAuthor &&
-                      "avatar" in item &&
-                      item.avatar ? (
+                      {isAuthor && "avatar" in item && item.avatar ? (
                         <div className={avatarPresentation.frameClassName}>
                           <Image
                             src={item.avatar}
