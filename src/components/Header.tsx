@@ -43,12 +43,10 @@ function HeaderLogo({
   width,
   height,
   className,
-  priority = false,
 }: {
   width: number;
   height: number;
   className: string;
-  priority?: boolean;
 }) {
   return (
     <>
@@ -58,7 +56,6 @@ function HeaderLogo({
         width={width}
         height={height}
         className={`${className} dark:hidden`}
-        priority={priority}
       />
       <Image
         src="/carentour-logo-light.png"
@@ -66,7 +63,6 @@ function HeaderLogo({
         width={width}
         height={height}
         className={`${className} hidden dark:block`}
-        priority={priority}
       />
     </>
   );
@@ -210,12 +206,7 @@ function HeaderContent() {
               href={localizePublicPathname("/", locale)}
               className="flex items-center"
             >
-              <HeaderLogo
-                width={252}
-                height={56}
-                className="h-14 w-[252px]"
-                priority
-              />
+              <HeaderLogo width={252} height={56} className="h-14 w-[252px]" />
             </Link>
           </div>
 
