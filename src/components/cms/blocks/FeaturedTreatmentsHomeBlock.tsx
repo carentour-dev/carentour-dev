@@ -1,6 +1,7 @@
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { FeaturedTreatmentsSection } from "@/components/home";
+import { buildFeaturedTreatmentCards } from "@/components/home/featuredTreatmentCards";
 import { getTreatmentsForBlock } from "@/lib/cms/server";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
@@ -29,6 +30,7 @@ export async function FeaturedTreatmentsHomeBlock({
     },
     locale,
   );
+  const cards = buildFeaturedTreatmentCards(treatments, locale);
 
   return (
     <BlockSurface
@@ -40,7 +42,8 @@ export async function FeaturedTreatmentsHomeBlock({
       {() => (
         <FeaturedTreatmentsSection
           embedded
-          treatments={treatments}
+          cards={cards}
+          locale={locale}
           eyebrow={blockWithStyle.eyebrow}
           title={blockWithStyle.title}
           description={blockWithStyle.description}
