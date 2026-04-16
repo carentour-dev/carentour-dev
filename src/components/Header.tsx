@@ -295,16 +295,28 @@ function HeaderContent() {
                     </div>
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6">
                       {user ? (
-                        <DrawerClose asChild>
-                          <Button
-                            variant="ghost"
-                            className="justify-start"
-                            onClick={signOut}
-                          >
-                            <LogOut className="h-4 w-4 mr-2" />
-                            {t("signOut")}
-                          </Button>
-                        </DrawerClose>
+                        <>
+                          <DrawerClose asChild>
+                            <Link
+                              href="/dashboard"
+                              className="block text-sm text-muted-foreground hover:text-primary transition-smooth"
+                            >
+                              {t("dashboardGreeting", {
+                                name: profile?.displayName || t("userFallback"),
+                              })}
+                            </Link>
+                          </DrawerClose>
+                          <DrawerClose asChild>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={signOut}
+                            >
+                              <LogOut className="h-4 w-4 mr-2" />
+                              {t("signOut")}
+                            </Button>
+                          </DrawerClose>
+                        </>
                       ) : (
                         <DrawerClose asChild>
                           <Button
