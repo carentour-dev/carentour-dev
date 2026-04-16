@@ -9,10 +9,11 @@ export {
   type JourneyStep,
 } from "./content";
 export { DifferentiatorsSection } from "./DifferentiatorsSection";
+export { FeaturedTreatmentsSection } from "./FeaturedTreatmentsSection";
 export {
   buildFeaturedTreatmentCards,
-  FeaturedTreatmentsSection,
-} from "./FeaturedTreatmentsSection";
+  type FeaturedTreatmentCard,
+} from "./featuredTreatmentCards";
 export { HomeCtaSection } from "./HomeCtaSection";
 export { HomeHeroSection } from "./HomeHeroSection";
 export { JourneyStepsSection } from "./JourneyStepsSection";
