@@ -1,9 +1,5 @@
-"use client";
-
-import { useMemo, useState } from "react";
 import Image from "@/components/OptimizedImage";
 import Link from "next/link";
-import { useLocale } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,134 +10,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  isRemoteImageUrl,
-  resolveTreatmentCardImage,
-  selectPrimaryProcedure,
-  type NormalizedTreatment,
-} from "@/lib/treatments";
+import type { NormalizedTreatment } from "@/lib/treatments";
 import type { PublicLocale } from "@/i18n/routing";
-import { getPublicNumberLocale } from "@/lib/public/numbers";
 import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
 import { resolveGridImageLoading } from "@/lib/images/loading";
 import { cn } from "@/lib/utils";
-
-const formatCurrency = (
-  value: number,
-  locale: PublicLocale,
-  currency?: string | null,
-) => {
-  try {
-    return new Intl.NumberFormat(getPublicNumberLocale(locale), {
-      style: "currency",
-      currency: currency || "USD",
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch (error) {
-    return `$${new Intl.NumberFormat(getPublicNumberLocale(locale)).format(value)}`;
-  }
-};
-
-const formatDuration = (
-  duration: number | null | undefined,
-  locale: PublicLocale,
-) => {
-  if (typeof duration === "number" && Number.isFinite(duration)) {
-    const formattedDuration = new Intl.NumberFormat(
-      getPublicNumberLocale(locale),
-    ).format(duration);
-
-    return locale === "ar"
-      ? `${formattedDuration} يوم`
-      : `${formattedDuration} day${duration === 1 ? "" : "s"}`;
-  }
-  return null;
-};
-
-type FeaturedTreatmentCard = {
-  id: string;
-  slug: string;
-  title: string;
-  category?: string | null;
-  summary: string;
-  priceLabel: string;
-  durationLabel: string;
-  successRate?: string | null;
-  image: string;
-  fallbackImage: string;
-  isFeatured: boolean;
-};
-
-export function buildFeaturedTreatmentCards(
-  treatments: NormalizedTreatment[],
-  locale: PublicLocale,
-): FeaturedTreatmentCard[] {
-  return treatments.reduce<FeaturedTreatmentCard[]>((acc, treatment) => {
-    if (!treatment.slug) {
-      return acc;
-    }
-
-    const cardImage = resolveTreatmentCardImage({
-      slug: treatment.slug,
-      category: treatment.category,
-      cardImageUrl: treatment.cardImageUrl,
-    });
-    const primaryProcedure = selectPrimaryProcedure(treatment.procedures);
-    const stay = formatDuration(treatment.durationDays, locale);
-    const recovery = formatDuration(treatment.recoveryTimeDays, locale);
-
-    let durationLabel =
-      primaryProcedure?.duration ??
-      (locale === "ar" ? "خطة علاجية مخصصة" : "Personalized itinerary");
-    if (stay && recovery) {
-      durationLabel = `${stay} • ${recovery}`;
-    } else if (stay) {
-      durationLabel = stay;
-    } else if (recovery) {
-      durationLabel =
-        locale === "ar" ? `${recovery} للتعافي` : `${recovery} recovery`;
-    }
-
-    const priceCandidate =
-      typeof treatment.basePrice === "number"
-        ? treatment.basePrice
-        : (primaryProcedure?.egyptPrice ?? null);
-
-    acc.push({
-      id: treatment.id,
-      slug: treatment.slug,
-      title: treatment.name,
-      category: treatment.category,
-      summary:
-        treatment.summary ??
-        treatment.description ??
-        (locale === "ar"
-          ? "رعاية طبية عالمية مصممة خصيصاً للمرضى القادمين من الخارج."
-          : "World-class medical care tailored to international patients."),
-      priceLabel:
-        typeof priceCandidate === "number"
-          ? locale === "ar"
-            ? `ابتداءً من ${formatCurrency(priceCandidate, locale, treatment.currency)}`
-            : `From ${formatCurrency(priceCandidate, locale, treatment.currency)}`
-          : locale === "ar"
-            ? "سعر مخصص حسب الحالة"
-            : "Custom pricing",
-      durationLabel,
-      successRate: primaryProcedure?.successRate ?? null,
-      image: cardImage.image,
-      fallbackImage: cardImage.fallbackImage,
-      isFeatured: treatment.isFeatured === true,
-    });
-
-    return acc;
-  }, []);
-}
+import {
+  buildFeaturedTreatmentCards,
+  type FeaturedTreatmentCard,
+} from "./featuredTreatmentCards";
 
 export function FeaturedTreatmentsSection({
+  cards,
   treatments,
+  locale = "en",
   eyebrow,
   title,
   description,
@@ -150,7 +35,9 @@ export function FeaturedTreatmentsSection({
   error = null,
   embedded = false,
 }: {
-  treatments: NormalizedTreatment[];
+  cards?: FeaturedTreatmentCard[];
+  treatments?: NormalizedTreatment[];
+  locale?: PublicLocale;
   eyebrow?: string;
   title?: string;
   description?: string;
@@ -159,11 +46,7 @@ export function FeaturedTreatmentsSection({
   error?: string | null;
   embedded?: boolean;
 }) {
-  const locale = useLocale() as PublicLocale;
   const isArabicLocale = locale === "ar";
-  const [imageFallbackByTreatmentId, setImageFallbackByTreatmentId] = useState<
-    Record<string, true>
-  >({});
   const resolvedTitle =
     title ?? (isArabicLocale ? "العلاجات المميزة" : "Featured Treatments");
   const resolvedDescription =
@@ -188,34 +71,14 @@ export function FeaturedTreatmentsSection({
     ? "ستظهر العلاجات المميزة هنا بمجرد توفرها."
     : "Featured treatments will appear here once they are available.";
 
-  const featuredTreatments = useMemo(
-    () => buildFeaturedTreatmentCards(treatments, locale),
-    [locale, treatments],
-  );
+  const featuredTreatments =
+    cards ?? buildFeaturedTreatmentCards(treatments ?? [], locale);
   const showEmptyState = !loading && !error && featuredTreatments.length === 0;
   const usesOriginalAppearance = appearance === "original";
   const needsHorizontalScroll =
     !usesOriginalAppearance && featuredTreatments.length > 4;
   const needsWrappedDesktopLayout =
     usesOriginalAppearance && featuredTreatments.length > 4;
-
-  const handleCardImageError = (
-    treatmentId: string,
-    image: string,
-    fallbackImage: string,
-  ) => {
-    if (!isRemoteImageUrl(image) || image === fallbackImage) {
-      return;
-    }
-
-    setImageFallbackByTreatmentId((current) => {
-      if (current[treatmentId]) {
-        return current;
-      }
-
-      return { ...current, [treatmentId]: true };
-    });
-  };
 
   const content = (
     <>
@@ -333,9 +196,6 @@ export function FeaturedTreatmentsSection({
                   </Card>
                 ))
               : featuredTreatments.map((treatment, index) => {
-                  const imageSrc = imageFallbackByTreatmentId[treatment.id]
-                    ? treatment.fallbackImage
-                    : treatment.image;
                   const learnMoreContextSuffix = isArabicLocale
                     ? ` حول ${treatment.title}`
                     : ` about ${treatment.title}`;
@@ -365,21 +225,18 @@ export function FeaturedTreatmentsSection({
                             </div>
                           ) : null}
                           <Image
-                            src={imageSrc}
+                            src={treatment.image}
                             alt={treatment.title}
                             fill
                             className="object-cover transition-transform duration-500 ease-out group-hover/featured:scale-[1.04]"
                             loading={resolveGridImageLoading(index, {
-                              eagerCount: needsHorizontalScroll ? 1 : 3,
+                              eagerCount: embedded
+                                ? 0
+                                : needsHorizontalScroll
+                                  ? 1
+                                  : 3,
                             })}
                             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                            onError={() =>
-                              handleCardImageError(
-                                treatment.id,
-                                imageSrc,
-                                treatment.fallbackImage,
-                              )
-                            }
                           />
                         </div>
 
