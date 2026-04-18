@@ -42,6 +42,7 @@ export function AuthorCard({ author, className }: AuthorCardProps) {
                 fill
                 sizes="64px"
                 className={avatarPresentation.imageClassName}
+                unoptimized
               />
             </div>
           ) : (
