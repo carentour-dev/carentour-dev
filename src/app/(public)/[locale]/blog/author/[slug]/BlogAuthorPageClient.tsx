@@ -100,6 +100,7 @@ export default function AuthorArchive() {
                           fill
                           sizes="160px"
                           className={avatarPresentation.imageClassName}
+                          unoptimized
                         />
                       </div>
                     ) : (
