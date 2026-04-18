@@ -30,20 +30,20 @@ export function getAuthorAvatarPresentation(size: AuthorAvatarSize) {
       return {
         frameClassName:
           "relative h-40 w-40 overflow-hidden rounded-full bg-primary/5",
-        imageClassName: "object-cover",
+        imageClassName: "object-contain",
       };
     case "grid":
       return {
         frameClassName:
           "relative h-[72px] w-[72px] overflow-hidden rounded-2xl bg-primary/5",
-        imageClassName: "object-cover",
+        imageClassName: "object-contain",
       };
     case "compact":
     default:
       return {
         frameClassName:
           "relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-primary/5",
-        imageClassName: "object-cover",
+        imageClassName: "object-contain",
       };
   }
 }
