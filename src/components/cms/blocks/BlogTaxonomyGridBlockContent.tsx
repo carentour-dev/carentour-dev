@@ -128,6 +128,7 @@ export function BlogTaxonomyGridContent({
                             fill
                             sizes="72px"
                             className={avatarPresentation.imageClassName}
+                            unoptimized
                           />
                         </div>
                       ) : isAuthor ? (
