@@ -3,9 +3,10 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import { routing } from "@/i18n/routing";
 import {
-  localizePublicPathname,
-  stripPublicLocalePrefix,
-} from "@/lib/public/routing";
+  getLocalizedRedirectTargetPath,
+  getRedirectLookupPathCandidates,
+} from "@/lib/seo/redirect-paths";
+import { stripPublicLocalePrefix } from "@/lib/public/routing";
 import { isInternalNoindexPath, normalizePath } from "@/lib/seo/utils";
 
 type RedirectLookupRow = {
@@ -40,40 +41,44 @@ async function lookupRouteRedirect(
     return null;
   }
 
-  const url = new URL("/rest/v1/route_redirects", supabaseUrl);
-  url.searchParams.set("select", "to_path,code");
-  url.searchParams.set("from_path", `eq.${pathname}`);
-  url.searchParams.set("is_active", "eq.true");
-  url.searchParams.set("limit", "1");
+  for (const candidatePath of getRedirectLookupPathCandidates(pathname)) {
+    const url = new URL("/rest/v1/route_redirects", supabaseUrl);
+    url.searchParams.set("select", "to_path,code");
+    url.searchParams.set("from_path", `eq.${candidatePath}`);
+    url.searchParams.set("is_active", "eq.true");
+    url.searchParams.set("limit", "1");
 
-  try {
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        apikey: supabasePublicKey,
-        Authorization: `Bearer ${supabasePublicKey}`,
-      },
-      cache: "no-store",
-    });
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          apikey: supabasePublicKey,
+          Authorization: `Bearer ${supabasePublicKey}`,
+        },
+        cache: "no-store",
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        continue;
+      }
+
+      const rows = (await response.json()) as RedirectLookupRow[];
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (!row || typeof row.to_path !== "string") {
+        continue;
+      }
+
+      const code = isRedirectCode(row.code) ? row.code : 301;
+      return {
+        toPath: row.to_path,
+        code,
+      };
+    } catch {
       return null;
     }
-
-    const rows = (await response.json()) as RedirectLookupRow[];
-    const row = Array.isArray(rows) ? rows[0] : null;
-    if (!row || typeof row.to_path !== "string") {
-      return null;
-    }
-
-    const code = isRedirectCode(row.code) ? row.code : 301;
-    return {
-      toPath: row.to_path,
-      code,
-    };
-  } catch {
-    return null;
   }
+
+  return null;
 }
 
 export async function proxy(request: NextRequest) {
@@ -105,11 +110,10 @@ export async function proxy(request: NextRequest) {
     return hasLocalePrefix ? intlMiddleware(request) : continueRequest(request);
   }
 
-  const targetPath = normalizePath(redirectMatch.toPath);
-  const localizedTargetPath =
-    locale === "ar" && !isInternalNoindexPath(targetPath)
-      ? localizePublicPathname(targetPath, "ar")
-      : targetPath;
+  const localizedTargetPath = getLocalizedRedirectTargetPath(
+    pathname,
+    redirectMatch.toPath,
+  );
 
   if (localizedTargetPath === pathname) {
     return continueRequest(request);
