@@ -58,7 +58,6 @@ type MediaFilter = "all" | "image" | "video" | "file";
 
 const MEDIA_BUCKET = "media";
 const MEDIA_PREFIX = "";
-const LIST_LIMIT = 1000;
 const INITIAL_VISIBLE_ASSET_COUNT = 24;
 
 const MEDIA_FILTERS: Array<{ value: MediaFilter; label: string }> = [
@@ -140,50 +139,9 @@ export default function CmsMediaPage() {
     setLoadError(null);
 
     try {
-      const listFolder = async (prefix: string): Promise<FileItem[]> => {
-        const listPath = prefix || undefined;
-        const { data, error } = await supabase.storage
-          .from(MEDIA_BUCKET)
-          .list(listPath, {
-            limit: LIST_LIMIT,
-            sortBy: { column: "updated_at", order: "desc" },
-          });
-
-        if (error) {
-          if (error.message?.toLowerCase().includes("not found")) {
-            return [];
-          }
-
-          throw error;
-        }
-
-        const entries = data ?? [];
-        const filesInFolder: FileItem[] = [];
-        const nestedFolders: string[] = [];
-
-        for (const entry of entries) {
-          const fullPath = prefix ? `${prefix}/${entry.name}` : entry.name;
-          if (entry.id) {
-            filesInFolder.push({ ...entry, path: fullPath });
-          } else {
-            nestedFolders.push(fullPath);
-          }
-        }
-
-        if (nestedFolders.length) {
-          const nested = await Promise.all(
-            nestedFolders.map((folder) => listFolder(folder)),
-          );
-
-          for (const sub of nested) {
-            filesInFolder.push(...sub);
-          }
-        }
-
-        return filesInFolder;
-      };
-
-      const allFiles = await listFolder(MEDIA_PREFIX);
+      const allFiles = await adminFetch<FileItem[]>(
+        `/api/admin/storage/list?prefix=${encodeURIComponent(MEDIA_PREFIX)}`,
+      );
       const sorted = allFiles.sort((a, b) => {
         const dateA = new Date(getAssetTimestamp(a) ?? 0).getTime();
         const dateB = new Date(getAssetTimestamp(b) ?? 0).getTime();
