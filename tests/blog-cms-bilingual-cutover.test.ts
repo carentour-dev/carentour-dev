@@ -78,6 +78,10 @@ test("keeps internal blog templates out of the generic CMS route inventory", () 
   assert.match(seoInventorySource, /BLOG_INTERNAL_TEMPLATE_SLUGS/);
   assert.match(
     seoInventorySource,
-    /if \(BLOG_INTERNAL_TEMPLATE_SLUGS\.has\(page\.slug\)\)/,
+    /const NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS = new Set\(\[[\s\S]*?\.{3}BLOG_INTERNAL_TEMPLATE_SLUGS[\s\S]*?\]\)/,
+  );
+  assert.match(
+    seoInventorySource,
+    /if \(NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS\.has\(page\.slug\)\) \{\s*continue;\s*\}/,
   );
 });
