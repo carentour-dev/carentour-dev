@@ -265,6 +265,7 @@ function AuthorCard({
                 fill
                 sizes="64px"
                 className={avatarPresentation.imageClassName}
+                unoptimized
               />
             </div>
           ) : (
