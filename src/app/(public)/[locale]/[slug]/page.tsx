@@ -20,6 +20,7 @@ import {
 export const revalidate = 300;
 
 const INTERNAL_CMS_TEMPLATE_SLUGS = new Set([
+  "treatment-detail-template",
   "medical-facilities-detail-template",
   ...BLOG_INTERNAL_TEMPLATE_SLUGS,
 ]);
