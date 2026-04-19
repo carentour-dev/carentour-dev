@@ -1,43 +1,148 @@
-import { PublicQueryBoundary } from "@/components/public/PublicInteractiveProviders";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import type { PublicLocale } from "@/i18n/routing";
+import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
+import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
+import { getTemplate } from "@/lib/cms/templates";
+import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
 import {
   assertPublicPageAvailable,
   getLocalizedPublicPagePathname,
   getPublicLocaleFromParams,
 } from "@/lib/public/page";
 import {
+  collectionPageSchema,
+  faqPageSchema,
   maybeRedirectFromLegacyPath,
   medicalProcedureSchema,
   resolveSeo,
   webPageSchema,
 } from "@/lib/seo";
-import { getLocalizedPublicTreatmentDetail } from "@/server/modules/treatments/public";
-import TreatmentCategoryPageClient from "./TreatmentCategoryPageClient";
+import {
+  getLocalizedPublicTreatmentDetail,
+  getLocalizedPublicTreatments,
+} from "@/server/modules/treatments/public";
 
 export const revalidate = 300;
+
+const DETAIL_TEMPLATE_PAGE_SLUG = "treatment-detail-template";
+const fallbackTemplate = getTemplate("treatment-detail-global");
 
 type PageProps = {
   params: Promise<{ locale: string; category: string }>;
 };
 
-async function getSeo(category: string, locale: PublicLocale) {
-  const pathname = `/treatments/${category}`;
+type TreatmentDetailBlock = BlockInstance;
+
+async function getTreatmentCmsPage(locale: PublicLocale) {
+  const localized = await getLocalizedCmsPageBySlug(
+    DETAIL_TEMPLATE_PAGE_SLUG,
+    locale,
+  );
+
+  if (localized) {
+    return localized;
+  }
+
+  if (locale !== "en") {
+    return getPublishedPageBySlug(DETAIL_TEMPLATE_PAGE_SLUG);
+  }
+
+  return null;
+}
+
+function resolveBlocks(cmsPage: CmsPage | null) {
+  const sourceBlocks =
+    cmsPage?.content?.length && cmsPage.content.length > 0
+      ? cmsPage.content
+      : (fallbackTemplate?.blocks ?? []);
+
+  return normalizeBlocks(sourceBlocks);
+}
+
+function extractFaqs(blocks: TreatmentDetailBlock[]) {
+  return blocks.flatMap((block) =>
+    block.type === "faq"
+      ? block.items.map((item) => ({
+          question: item.question,
+          answer: item.answer,
+        }))
+      : [],
+  );
+}
+
+function extractAiSummary(
+  blocks: TreatmentDetailBlock[],
+  detail: NonNullable<
+    Awaited<ReturnType<typeof getLocalizedPublicTreatmentDetail>>
+  >,
+) {
+  const treatment = detail.treatment;
+  const summaryParts = blocks.flatMap((block) => {
+    switch (block.type) {
+      case "treatmentDetail":
+        return [
+          block.trustStatement,
+          block.sectionDescriptions.overview,
+          block.sectionDescriptions.procedures,
+          block.sectionDescriptions.specialists,
+          block.sectionDescriptions.patientStories,
+          block.states.resultsIntro,
+        ];
+      case "faq":
+        return block.items.flatMap((item) => [item.question, item.answer]);
+      case "callToAction":
+        return [block.heading, block.description];
+      default:
+        return [];
+    }
+  });
+
+  return [
+    treatment.name,
+    treatment.summary,
+    treatment.description,
+    treatment.overview,
+    ...treatment.idealCandidates,
+    ...treatment.procedures.flatMap((procedure) => [
+      procedure.name,
+      procedure.description,
+      procedure.recovery,
+      procedure.price,
+    ]),
+    ...summaryParts,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .trim();
+}
+
+async function getSeo(
+  slug: string,
+  detail: NonNullable<
+    Awaited<ReturnType<typeof getLocalizedPublicTreatmentDetail>>
+  >,
+  cmsPage: CmsPage | null,
+  blocks: TreatmentDetailBlock[],
+  locale: PublicLocale,
+) {
+  const pathname = `/treatments/${slug}`;
   const localizedPathname = getLocalizedPublicPagePathname(pathname, locale);
-  const detail = await getLocalizedPublicTreatmentDetail(locale, category);
-  const treatment = detail?.treatment ?? null;
-  const seo = detail?.seo ?? null;
+  const treatment = detail.treatment;
+  const seo = detail.seo ?? null;
+  const homeLabel = locale === "ar" ? "الرئيسية" : "Home";
   const treatmentsLabel = locale === "ar" ? "العلاجات" : "Treatments";
-  const defaultTitle = treatment
-    ? (seo?.title ?? `${treatment.name} | Treatments | Care N Tour`)
-    : "Treatment | Care N Tour";
+  const defaultTitle =
+    seo?.title?.trim() || `${treatment.name} | Treatments | Care N Tour`;
   const defaultDescription =
-    seo?.description ??
-    treatment?.summary ??
-    treatment?.description ??
+    seo?.description?.trim() ||
+    treatment.summary ||
+    treatment.description ||
     "Learn more about this treatment option available through Care N Tour.";
+  const faqs = extractFaqs(blocks);
+  const aiSummary = extractAiSummary(blocks, detail);
 
   return resolveSeo({
     routeKey: pathname,
@@ -47,40 +152,58 @@ async function getSeo(category: string, locale: PublicLocale) {
       title: defaultTitle,
       description: defaultDescription,
     },
-    source: treatment
-      ? {
-          title: defaultTitle,
-          description: defaultDescription,
-          ogImageUrl: treatment.heroImageUrl ?? treatment.cardImageUrl,
-        }
-      : undefined,
-    schema: treatment
-      ? [
-          webPageSchema({
-            urlPath: localizedPathname,
-            title: defaultTitle,
-            description: defaultDescription,
-            breadcrumbs: [
-              {
-                name: treatmentsLabel,
-                path: getLocalizedPublicPagePathname("/treatments", locale),
-              },
-              { name: treatment.name, path: localizedPathname },
-            ],
-          }),
-          medicalProcedureSchema({
-            path: localizedPathname,
-            name: treatment.name,
-            description: defaultDescription,
-          }),
-        ]
-      : webPageSchema({
-          urlPath: localizedPathname,
-          title: defaultTitle,
-          description: defaultDescription,
-        }),
-    indexable: Boolean(treatment),
-    modifiedTime: detail?.updatedAt ?? undefined,
+    source: {
+      title: defaultTitle,
+      description: defaultDescription,
+      ogImageUrl: treatment.heroImageUrl ?? treatment.cardImageUrl,
+      aiSummary,
+    },
+    schema: [
+      webPageSchema({
+        urlPath: localizedPathname,
+        title: defaultTitle,
+        description: defaultDescription,
+        breadcrumbs: [
+          {
+            name: homeLabel,
+            path: getLocalizedPublicPagePathname("/", locale),
+          },
+          {
+            name: treatmentsLabel,
+            path: getLocalizedPublicPagePathname("/treatments", locale),
+          },
+          { name: treatment.name, path: localizedPathname },
+        ],
+      }),
+      medicalProcedureSchema({
+        path: localizedPathname,
+        name: treatment.name,
+        description: defaultDescription,
+      }),
+      collectionPageSchema({
+        urlPath: localizedPathname,
+        title: `${treatment.name} procedures`,
+        description: treatment.overview ?? defaultDescription,
+        items: treatment.procedures.map((procedure) => ({
+          name: procedure.name,
+          path: localizedPathname,
+        })),
+      }),
+      ...treatment.procedures.map((procedure) => ({
+        "@context": "https://schema.org",
+        "@type": "MedicalProcedure",
+        name: procedure.name,
+        description:
+          procedure.description ?? procedure.recovery ?? defaultDescription,
+        url: localizedPathname,
+      })),
+      ...(faqs.length > 0
+        ? [faqPageSchema({ path: localizedPathname, faqs })]
+        : []),
+    ],
+    indexable: true,
+    imageUrl: treatment.heroImageUrl ?? treatment.cardImageUrl,
+    modifiedTime: detail.updatedAt ?? cmsPage?.updated_at ?? undefined,
   });
 }
 
@@ -90,7 +213,15 @@ export async function generateMetadata({
   const { category } = await params;
   const locale = await getPublicLocaleFromParams(params);
   await assertPublicPageAvailable(`/treatments/${category}`, locale);
-  const seo = await getSeo(category, locale);
+  const detail = await getLocalizedPublicTreatmentDetail(locale, category);
+
+  if (!detail) {
+    return {};
+  }
+
+  const cmsPage = await getTreatmentCmsPage(locale);
+  const blocks = resolveBlocks(cmsPage);
+  const seo = await getSeo(category, detail, cmsPage, blocks, locale);
   return seo.metadata;
 }
 
@@ -101,24 +232,35 @@ export default async function TreatmentCategoryPage({ params }: PageProps) {
 
   await assertPublicPageAvailable(pathname, locale);
   await maybeRedirectFromLegacyPath(pathname);
-  const detail = await getLocalizedPublicTreatmentDetail(locale, category);
+
+  const [detail, treatmentOptions] = await Promise.all([
+    getLocalizedPublicTreatmentDetail(locale, category),
+    getLocalizedPublicTreatments({ locale, limit: 100 }),
+  ]);
 
   if (!detail) {
     notFound();
   }
 
-  const seo = await getSeo(category, locale);
+  const cmsPage = await getTreatmentCmsPage(locale);
+  const blocks = resolveBlocks(cmsPage);
+  const seo = await getSeo(category, detail, cmsPage, blocks, locale);
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <PublicQueryBoundary>
-        <TreatmentCategoryPageClient
-          locale={locale}
-          slug={category}
-          treatment={detail.treatment}
-        />
-      </PublicQueryBoundary>
+      <BlockRenderer
+        blocks={blocks}
+        locale={locale}
+        context={{
+          treatmentDetail: detail,
+          treatmentSlug: category,
+          treatmentOptions: treatmentOptions.map((treatment) => ({
+            slug: treatment.slug,
+            name: treatment.name,
+          })),
+        }}
+      />
     </>
   );
 }
