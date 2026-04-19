@@ -10,6 +10,7 @@ import type {
   MedicalFacilityDetail,
   ServiceProviderRow,
 } from "@/lib/medical-facilities";
+import type { NormalizedTreatment } from "@/lib/treatments";
 
 export const previewFaqs: FaqEntry[] = getFallbackFaqs().slice(0, 10);
 export const previewFaqCategories: FaqCategory[] = getDefaultCategories();
@@ -330,6 +331,130 @@ export const previewMedicalFacilityDetail: MedicalFacilityDetail = {
       id: "preview-procedure-3",
       name: "Cardiac catheterization",
       treatmentName: "Cardiology",
+    },
+  ],
+};
+
+export const previewTreatmentDetail: NormalizedTreatment = {
+  id: "preview-treatment-1",
+  name: "Cardiac Surgery",
+  slug: "cardiac-surgery",
+  category: "Cardiac Surgery",
+  summary:
+    "Structured cardiac treatment planning in Egypt with specialist review, provider coordination, and recovery-focused travel support.",
+  description:
+    "Care N Tour helps international patients compare cardiac procedures, understand practical next steps, and move toward treatment with clearer planning support.",
+  overview:
+    "This treatment pathway is designed for patients exploring surgical cardiac care who need clearer visibility into procedures, timing, pricing context, and recovery planning before they travel.",
+  basePrice: 14500,
+  currency: "USD",
+  durationDays: 7,
+  recoveryTimeDays: 21,
+  successRate: 94,
+  isFeatured: true,
+  isActive: true,
+  isListedPublic: true,
+  downloadUrl: "/heart-procedure.jpg",
+  cardImageUrl: "/hero-medical-facility.webp",
+  heroImageUrl: "/heart-procedure.jpg",
+  idealCandidates: [
+    "Patients who need specialist review before confirming a cardiac surgery pathway.",
+    "Patients comparing hospitals, surgeon fit, and recovery expectations across available procedures.",
+    "International patients who need coordinated travel and post-procedure planning around complex care.",
+  ],
+  procedures: [
+    {
+      id: "preview-treatment-procedure-1",
+      name: "Coronary Artery Bypass Graft",
+      description:
+        "A surgical pathway for restoring blood flow around blocked coronary arteries.",
+      duration: "5-7 days in hospital",
+      recovery: "6-8 weeks",
+      price: "Case-dependent after specialist review",
+      egyptPrice: 14500,
+      successRate: "94%",
+      pdfUrl: "/heart-procedure.jpg",
+      additionalNotes:
+        "Patients usually need current imaging, a cardiology review, and a documented medication list before travel planning is finalized.",
+      candidateRequirements: [
+        "Recent angiography or relevant cardiac imaging",
+        "Cardiology consultation notes",
+        "Medication and medical history summary",
+      ],
+      recoveryStages: [
+        {
+          stage: "Week 1",
+          description:
+            "Inpatient monitoring and supervised early mobilization.",
+        },
+        {
+          stage: "Week 2-4",
+          description:
+            "Follow-up review, incision monitoring, and gradual return to activity.",
+        },
+      ],
+      internationalPrices: [
+        { country: "United States", flag: "🇺🇸", price: 42000, currency: "USD" },
+        {
+          country: "United Kingdom",
+          flag: "🇬🇧",
+          price: 29000,
+          currency: "USD",
+        },
+      ],
+      displayOrder: 1,
+      createdByProviderId: null,
+      isPublic: true,
+    },
+    {
+      id: "preview-treatment-procedure-2",
+      name: "Heart Valve Repair",
+      description:
+        "Repair-focused cardiac procedure for selected valve conditions, with individualized planning around anatomy and recovery.",
+      duration: "4-6 days in hospital",
+      recovery: "4-6 weeks",
+      price: "Quoted after records review",
+      egyptPrice: 11800,
+      successRate: "92%",
+      pdfUrl: undefined,
+      additionalNotes: undefined,
+      candidateRequirements: [
+        "Echocardiography within the last 3 months",
+        "Recent cardiology assessment",
+      ],
+      recoveryStages: [
+        {
+          stage: "First 72 hours",
+          description:
+            "Post-operative monitoring, pain management, and discharge planning.",
+        },
+      ],
+      internationalPrices: [],
+      displayOrder: 2,
+      createdByProviderId: null,
+      isPublic: true,
+    },
+    {
+      id: "preview-treatment-procedure-3",
+      name: "Cardiac Catheterization",
+      description:
+        "Minimally invasive diagnostic and interventional cardiac procedure with shorter recovery expectations.",
+      duration: "Day procedure or overnight stay",
+      recovery: "2-5 days",
+      price: "From USD 3,500",
+      egyptPrice: 3500,
+      successRate: "95%",
+      pdfUrl: "/heart-procedure.jpg",
+      additionalNotes:
+        "Actual pricing depends on whether diagnostics only or interventional treatment is required.",
+      candidateRequirements: [],
+      recoveryStages: [],
+      internationalPrices: [
+        { country: "Germany", flag: "🇩🇪", price: 9000, currency: "USD" },
+      ],
+      displayOrder: 3,
+      createdByProviderId: null,
+      isPublic: true,
     },
   ],
 };
