@@ -85,9 +85,11 @@ export function DoctorShowcaseCard({
   const hasFeaturedBadge = (doctor.patient_rating ?? 0) >= 4.8;
   const titleLength = doctor.title?.trim().length ?? 0;
   const titleClassName =
-    titleLength > 22
-      ? "text-[10px] leading-snug tracking-[0.08em]"
-      : "text-xs tracking-[0.18em]";
+    titleLength > 24
+      ? "text-[8px] leading-none tracking-[0.04em]"
+      : titleLength > 18
+        ? "text-[9px] leading-none tracking-[0.06em]"
+        : "text-xs leading-none tracking-[0.14em]";
 
   return (
     <article
@@ -131,7 +133,7 @@ export function DoctorShowcaseCard({
             ) : null}
             <p
               className={cn(
-                "max-w-full uppercase text-white/70",
+                "max-w-full overflow-hidden text-ellipsis whitespace-nowrap uppercase text-white/70",
                 titleClassName,
               )}
             >
@@ -180,36 +182,36 @@ export function DoctorShowcaseCard({
           ) : null}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="flex min-w-0 min-h-[6.75rem] flex-col rounded-2xl bg-muted/45 p-4">
+            <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-muted/45 p-4">
               <p className="w-full text-left text-sm font-medium leading-none text-muted-foreground">
                 {copy.experience}
               </p>
-              <p className="mt-auto text-left text-base font-semibold text-foreground">
+              <p className="text-left text-base font-semibold text-foreground">
                 {integerFormatter.format(doctor.experience_years)}{" "}
                 {copy.experienceSuffix}
               </p>
             </div>
-            <div className="flex min-w-0 min-h-[6.75rem] flex-col rounded-2xl bg-muted/45 p-4">
+            <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-muted/45 p-4">
               <p className="w-full text-left text-sm font-medium leading-none text-muted-foreground">
                 {copy.procedures}
               </p>
-              <p className="mt-auto text-left text-base font-semibold text-foreground">
+              <p className="text-left text-base font-semibold text-foreground">
                 {integerFormatter.format(doctor.successful_procedures ?? 0)}
               </p>
             </div>
-            <div className="flex min-w-0 min-h-[6.75rem] flex-col rounded-2xl bg-muted/45 p-4">
+            <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-muted/45 p-4">
               <p className="w-full text-left text-sm font-medium leading-none text-muted-foreground">
                 {copy.publications}
               </p>
-              <p className="mt-auto text-left text-base font-semibold text-foreground">
+              <p className="text-left text-base font-semibold text-foreground">
                 {integerFormatter.format(doctor.research_publications ?? 0)}
               </p>
             </div>
-            <div className="flex min-w-0 min-h-[6.75rem] flex-col rounded-2xl bg-muted/45 p-4">
+            <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-muted/45 p-4">
               <p className="w-full text-left text-sm font-medium leading-none text-muted-foreground">
                 {copy.languages}
               </p>
-              <p className="mt-auto text-left text-base font-semibold text-foreground">
+              <p className="text-left text-base font-semibold text-foreground">
                 {integerFormatter.format((doctor.languages ?? []).length)}
               </p>
             </div>
