@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import Image from "@/components/OptimizedImage";
-import { DoctorProfile } from "@/components/DoctorProfile";
 import { DoctorReviews } from "@/components/DoctorReviews";
 import PriceComparison from "@/components/PriceComparison";
 import { Badge } from "@/components/ui/badge";
@@ -30,13 +29,17 @@ import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
 } from "@/lib/public/routing";
-import { localizeCompanyNameDeep } from "@/lib/public/brand";
+import {
+  getLocalizedCompanyName,
+  localizeCompanyNameDeep,
+} from "@/lib/public/brand";
 import { buildTreatmentProcedureDirectoryState } from "@/lib/treatment-procedure-directory";
 import {
   selectPrimaryProcedure,
   type NormalizedTreatment,
   type TreatmentProcedure,
 } from "@/lib/treatments";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   ArrowRight,
@@ -53,6 +56,7 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
+import { DoctorShowcaseCard } from "./DoctorShowcaseCard";
 
 type Props = {
   block: BlockInstance<"treatmentDetail">;
@@ -67,6 +71,19 @@ type Props = {
 };
 
 const ALL_OPTION_VALUE = "__all__";
+
+const truncateText = (value: string | null | undefined, limit = 180) => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length <= limit) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, limit).trimEnd()}...`;
+};
 
 const buildFilterOptions = (
   entries: Array<{ value: string; label: string }>,
@@ -372,6 +389,7 @@ export function TreatmentDetailClient({
     "/consultation",
     locale,
   );
+  const companyName = getLocalizedCompanyName(locale);
   const localizedTreatment = useMemo(
     () => localizeCompanyNameDeep(normalizedTreatment, locale),
     [locale, normalizedTreatment],
@@ -876,7 +894,7 @@ export function TreatmentDetailClient({
             </div>
 
             {doctorsLoading ? (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-6 xl:grid-cols-2">
                 {Array.from({ length: 2 }).map((_, index) => (
                   <div
                     key={index}
@@ -885,12 +903,27 @@ export function TreatmentDetailClient({
                 ))}
               </div>
             ) : doctors.length > 0 ? (
-              <div className="grid gap-8 lg:grid-cols-2">
-                {doctors.map((doctor) => (
-                  <DoctorProfile
+              <div
+                className={cn(
+                  "grid gap-8",
+                  doctors.length > 1 && "xl:grid-cols-2",
+                )}
+              >
+                {doctors.map((doctor, index) => (
+                  <DoctorShowcaseCard
                     key={doctor.id}
-                    doctor={doctor}
+                    doctor={{
+                      ...doctor,
+                      bio: truncateText(doctor.bio, 180) ?? undefined,
+                    }}
                     locale={locale}
+                    index={index}
+                    companyName={companyName}
+                    className={
+                      doctors.length === 1
+                        ? "mx-auto w-full max-w-4xl"
+                        : undefined
+                    }
                   />
                 ))}
               </div>
