@@ -12856,6 +12856,316 @@ function TreatmentsBlockFields({
   );
 }
 
+function TreatmentDetailBlockFields({
+  form,
+}: {
+  form: UseFormReturn<BlockValue<"treatmentDetail">>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <FormField
+          control={form.control}
+          name="eyebrow"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eyebrow</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Care N Tour Treatment Guide"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="trustStatement"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trust statement</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Explain how Care N Tour helps patients evaluate procedures and plan next steps."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="searchPlaceholder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Treatment and procedure search placeholder</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Search treatments or procedures by name..."
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Section titles
+          </h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="sectionTitles.quickFacts"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quick facts</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.overview"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Overview</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.idealCandidates"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Ideal candidates</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.specialists"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialists</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionTitles.patientStories"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Patient stories</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Section descriptions
+          </h4>
+        </div>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.overview"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Overview description</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.procedures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedures description</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.specialists"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specialists description</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sectionDescriptions.patientStories"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Patient stories description</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/60 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Treatment and procedure filters
+          </h4>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="filterLabels.search"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Search label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.treatment"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Treatment label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="filterLabels.procedure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedure label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="clearButtonLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Clear button label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.resultsCountLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results count label</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="mt-4 grid gap-4">
+          <FormField
+            control={form.control}
+            name="states.resultsIntro"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Results intro</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyHeading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty heading</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="states.emptyDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Empty description</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} {...field} value={field.value ?? ""} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TreatmentSpecialtiesBlockFields({
   form,
 }: {
@@ -14766,6 +15076,7 @@ const blockEditors: Record<
   medicalFacilityProfile: (form) => (
     <MedicalFacilityProfileBlockFields form={form} />
   ),
+  treatmentDetail: (form) => <TreatmentDetailBlockFields form={form} />,
   treatmentSpecialties: (form) => (
     <TreatmentSpecialtiesBlockFields form={form} />
   ),
