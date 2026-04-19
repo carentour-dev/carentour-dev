@@ -31,6 +31,7 @@ const asSupabase = () => getSupabaseAdmin() as any;
 const clampScore = (value: number) => Math.max(0, Math.min(100, value));
 
 const NON_ROUTABLE_PUBLIC_CMS_PAGE_SLUGS = new Set([
+  "treatment-detail-template",
   "medical-facilities-detail-template",
   ...BLOG_INTERNAL_TEMPLATE_SLUGS,
 ]);
