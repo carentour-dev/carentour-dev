@@ -43,7 +43,7 @@ test("uses localized server-side treatment readers for public Arabic SEO and ren
   );
   assert.match(
     detailPageSource,
-    /<TreatmentCategoryPageClient[\s\S]*treatment=\{detail\.treatment\}/,
+    /<BlockRenderer[\s\S]*treatmentDetail:\s*detail[\s\S]*treatmentSlug:\s*category/,
   );
   assert.match(
     cmsServerSource,
@@ -59,7 +59,7 @@ test("keeps Arabic treatment cards and detail views on localized public routes",
     "src/components/cms/blocks/TreatmentSpecialtiesCatalog.tsx",
   );
   const detailClientSource = readSource(
-    "src/app/(public)/[locale]/treatments/[category]/TreatmentCategoryPageClient.tsx",
+    "src/components/cms/blocks/TreatmentDetailClient.tsx",
   );
 
   assert.match(featuredCardsSource, /localizePublicPathnameWithFallback/);
@@ -72,12 +72,12 @@ test("keeps Arabic treatment cards and detail views on localized public routes",
     /localizePublicPathname\(\s*`\/treatments\/\$\{card\.slug\}`,\s*locale,\s*\)/,
   );
   assert.match(detailClientSource, /const isArabicLocale = locale === "ar"/);
-  assert.match(detailClientSource, /backToAllTreatments/);
+  assert.match(detailClientSource, /block\.labels\.backLink/);
 });
 
 test("localizes Arabic treatment payload copy and price comparison country labels", () => {
   const detailClientSource = readSource(
-    "src/app/(public)/[locale]/treatments/[category]/TreatmentCategoryPageClient.tsx",
+    "src/components/cms/blocks/TreatmentDetailClient.tsx",
   );
   const listingClientSource = readSource(
     "src/app/(public)/[locale]/treatments/TreatmentsPageClient.tsx",
