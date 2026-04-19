@@ -103,21 +103,21 @@ VALUES (
     {
       "type": "faq",
       "eyebrow": "Treatment Planning FAQ",
-      "heading": "Questions patients ask before moving from treatment research to case review",
-      "description": "The answers below strengthen treatment-page clarity for patients, search engines, and AI systems evaluating how Care N Tour supports decision-making.",
+      "heading": "What international patients want to know about treatment in Egypt",
+      "description": "These answers explain how Care N Tour helps patients evaluate treatment options, understand likely timelines and costs, and plan care in Egypt with greater confidence.",
       "layout": "twoColumn",
       "items": [
         {
-          "question": "Can I compare procedures within the same treatment before I travel?",
-          "answer": "Yes. Care N Tour presents the live procedures available within each treatment pathway so patients can compare recovery visibility, pricing guidance, and planning resources before requesting case review."
+          "question": "How does Care N Tour help me choose the right treatment pathway in Egypt?",
+          "answer": "Care N Tour helps patients understand their treatment options, coordinate specialist review, and narrow the most suitable pathway based on medical goals, recovery priorities, and travel considerations."
         },
         {
-          "question": "Are the procedure prices on this page final treatment quotes?",
-          "answer": "No. Pricing shown on treatment pages is directional guidance only. Final pricing depends on the clinical case, diagnostics, provider selection, and the confirmed treatment plan."
+          "question": "What is included when I plan treatment through Care N Tour?",
+          "answer": "Depending on the case, Care N Tour can support specialist matching, provider coordination, preliminary treatment guidance, travel planning, accommodation support, and next-step coordination before arrival in Egypt."
         },
         {
-          "question": "What happens after I shortlist a procedure or treatment option?",
-          "answer": "The next step is to start your journey or request a consultation so Care N Tour can review the medical case, confirm suitability, and structure the most practical treatment pathway."
+          "question": "How are treatment costs and timelines confirmed?",
+          "answer": "Published pricing and timelines are guidance only. Final recommendations, costs, and scheduling are confirmed after medical records are reviewed and the provider defines the recommended treatment plan."
         }
       ]
     },
