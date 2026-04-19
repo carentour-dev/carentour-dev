@@ -145,6 +145,7 @@ type ReviewHookParams = {
   treatmentSlug?: string;
   highlightOnly?: boolean;
   limit?: number;
+  enabled?: boolean;
 };
 
 export const usePatientReviews = (params?: ReviewHookParams) => {
@@ -152,6 +153,7 @@ export const usePatientReviews = (params?: ReviewHookParams) => {
   const treatmentSlug = params?.treatmentSlug;
   const highlightOnly = params?.highlightOnly ?? false;
   const limit = params?.limit;
+  const enabled = params?.enabled ?? true;
 
   const {
     data: reviews = [],
@@ -172,6 +174,7 @@ export const usePatientReviews = (params?: ReviewHookParams) => {
         highlightOnly,
         limit,
       }),
+    enabled,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -188,6 +191,7 @@ type StoryHookParams = {
   treatmentSlug?: string;
   featuredOnly?: boolean;
   limit?: number;
+  enabled?: boolean;
 };
 
 export const usePatientStories = (params?: StoryHookParams) => {
@@ -195,6 +199,7 @@ export const usePatientStories = (params?: StoryHookParams) => {
   const treatmentSlug = params?.treatmentSlug;
   const featuredOnly = params?.featuredOnly ?? false;
   const limit = params?.limit;
+  const enabled = params?.enabled ?? true;
 
   const {
     data: stories = [],
@@ -215,6 +220,7 @@ export const usePatientStories = (params?: StoryHookParams) => {
         featuredOnly,
         limit,
       }),
+    enabled,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
