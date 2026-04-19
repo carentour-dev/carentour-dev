@@ -90,3 +90,30 @@ test("drops internal blog template navigation rows even when the CMS pages exist
 
   assert.deepEqual(filterOrphanedNavigationRows(rows, cmsPages), [rows[1]]);
 });
+
+test("drops linked internal CMS template rows even when the navigation slug is custom", () => {
+  const rows = [
+    createNavigationRow({
+      id: "nav-treatment-template",
+      slug: "treatment-detail-shell",
+      href: "/treatment-detail-template",
+      label: "Treatment Detail Shell",
+      kind: "cms",
+      cms_page_id: "page-treatment-template",
+    }),
+    createNavigationRow({
+      id: "nav-about",
+      slug: "about",
+      href: "/about",
+      label: "About",
+      kind: "cms",
+      cms_page_id: "page-about",
+    }),
+  ];
+  const cmsPages: CmsPageReference[] = [
+    { id: "page-treatment-template", slug: "treatment-detail-template" },
+    { id: "page-about", slug: "about" },
+  ];
+
+  assert.deepEqual(filterOrphanedNavigationRows(rows, cmsPages), [rows[1]]);
+});
