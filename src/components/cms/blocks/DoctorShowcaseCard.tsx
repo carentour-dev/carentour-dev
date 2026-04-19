@@ -86,10 +86,10 @@ export function DoctorShowcaseCard({
   const titleLength = doctor.title?.trim().length ?? 0;
   const titleClassName =
     titleLength > 24
-      ? "text-[8px] leading-none tracking-[0.04em]"
+      ? "text-[9px] leading-[1.3] tracking-[0.06em]"
       : titleLength > 18
-        ? "text-[9px] leading-none tracking-[0.06em]"
-        : "text-xs leading-none tracking-[0.14em]";
+        ? "text-[10px] leading-[1.25] tracking-[0.08em]"
+        : "text-xs leading-snug tracking-[0.14em]";
 
   return (
     <article
@@ -133,7 +133,7 @@ export function DoctorShowcaseCard({
             ) : null}
             <p
               className={cn(
-                "max-w-full overflow-hidden text-ellipsis whitespace-nowrap uppercase text-white/70",
+                "max-w-full text-balance uppercase text-white/70",
                 titleClassName,
               )}
             >
