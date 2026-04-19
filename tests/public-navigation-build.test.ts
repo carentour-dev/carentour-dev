@@ -111,3 +111,28 @@ test("does not auto-add internal blog template CMS pages", () => {
 
   assert.deepEqual(buildPublicNavigationLinks([], cmsPages), []);
 });
+
+test("drops linked internal treatment template rows even with a custom navigation slug", () => {
+  const rows = [
+    createNavigationRow({
+      id: "nav-treatment-template",
+      label: "Treatment Detail Shell",
+      slug: "treatment-detail-shell",
+      href: "/treatment-detail-template",
+      status: "published",
+      kind: "cms",
+      cms_page_id: "page-treatment-template",
+    }),
+  ];
+
+  const cmsPages = [
+    createCmsPage({
+      id: "page-treatment-template",
+      slug: "treatment-detail-template",
+      title: "Treatment Detail Shell",
+      status: "published",
+    }),
+  ];
+
+  assert.deepEqual(buildPublicNavigationLinks(rows, cmsPages), []);
+});
