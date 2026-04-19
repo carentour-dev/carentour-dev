@@ -1011,6 +1011,153 @@ const doctorDirectoryCardLabelsSchema = z.object({
   primaryCta: z.string().default("Start your journey"),
 });
 
+const treatmentDetailSectionTitlesSchema = z.object({
+  quickFacts: z.string().default("Key treatment facts"),
+  overview: z.string().default("Treatment overview"),
+  idealCandidates: z.string().default("Who this treatment is designed for"),
+  procedures: z.string().default("Procedures within this treatment pathway"),
+  specialists: z.string().default("Specialist doctors for this treatment"),
+  patientReviews: z.string().default("Patient reviews"),
+  patientStories: z.string().default("Patient stories"),
+});
+
+const treatmentDetailSectionDescriptionsSchema = z.object({
+  overview: z
+    .string()
+    .default(
+      "Review the treatment profile, planning context, and patient suitability factors before you move into procedure comparison.",
+    ),
+  procedures: z
+    .string()
+    .default(
+      "Search and filter the live procedures below to compare recovery visibility, pricing guidance, and downloadable planning resources within this treatment pathway.",
+    ),
+  specialists: z
+    .string()
+    .default(
+      "Meet the doctors most closely associated with this treatment category before you start case review or travel planning.",
+    ),
+  patientStories: z
+    .string()
+    .default(
+      "Read outcome-focused patient stories that help future patients understand timelines, recovery expectations, and decision context.",
+    ),
+});
+
+const treatmentDetailQuickFactLabelsSchema = z.object({
+  duration: z.string().default("Treatment duration"),
+  recovery: z.string().default("Recovery timeline"),
+  estimatedCost: z.string().default("Estimated cost"),
+  successRate: z.string().default("Success rate"),
+  treatmentPdf: z.string().default("Treatment PDF"),
+  downloadOverview: z.string().default("Download overview"),
+  personalizedConsultation: z.string().default("Personalized consultation"),
+  personalizedConsultationDescription: z
+    .string()
+    .default(
+      "Care N Tour refines pricing, timeline, and procedure planning against the medical case before any travel is confirmed.",
+    ),
+});
+
+const treatmentDetailProcedureLabelsSchema = z.object({
+  duration: z.string().default("Duration"),
+  recovery: z.string().default("Recovery"),
+  price: z.string().default("Price"),
+  successRate: z.string().default("Success rate"),
+  procedurePdf: z.string().default("Procedure PDF"),
+  procedurePdfDescription: z
+    .string()
+    .default(
+      "Download a detailed overview when a patient-ready procedure guide is available.",
+    ),
+  download: z.string().default("Download"),
+  candidateRequirements: z.string().default("Candidate requirements"),
+  additionalNotes: z.string().default("Additional notes"),
+  recoveryTimeline: z.string().default("Recovery timeline"),
+  startJourney: z.string().default("Start your journey"),
+  priceComparisonToggle: z.string().default("International price comparison"),
+  priceComparisonShow: z.string().default("Show price comparison"),
+  priceComparisonHide: z.string().default("Hide price comparison"),
+});
+
+const treatmentDetailFilterLabelsSchema = z.object({
+  search: z.string().default("Search"),
+  treatment: z.string().default("Treatment"),
+  procedure: z.string().default("Procedure"),
+});
+
+const treatmentDetailFilterPlaceholdersSchema = z.object({
+  treatment: z.string().default("All treatments"),
+  procedure: z.string().default("All procedures"),
+});
+
+const treatmentDetailFilterSearchSchema = z.object({
+  treatment: z.string().default("Search treatments..."),
+  procedure: z.string().default("Search procedures..."),
+});
+
+const treatmentDetailFilterEmptySchema = z.object({
+  treatment: z.string().default("No treatments found."),
+  procedure: z.string().default("No procedures found."),
+});
+
+const treatmentDetailFilterOptionLabelsSchema = z.object({
+  pricingGuidance: z.string().default("Has pricing guidance"),
+  pricingComparison: z.string().default("Has international comparison"),
+  recoveryGuidance: z.string().default("Has recovery guidance"),
+  recoveryTimeline: z.string().default("Has recovery timeline"),
+  resourcesGuide: z.string().default("Has downloadable guide"),
+  resourcesRequirements: z.string().default("Has candidacy guidance"),
+});
+
+const treatmentDetailStateCopySchema = z.object({
+  resultsIntro: z
+    .string()
+    .default(
+      "Search treatments and procedures, then compare the live procedure options available within the selected treatment pathway before speaking with Care N Tour about next steps.",
+    ),
+  resultsCountLabel: z.string().default("procedures available"),
+  emptyHeading: z.string().default("No procedures found"),
+  emptyDescription: z
+    .string()
+    .default(
+      "Adjust your search or filters to explore more procedure options.",
+    ),
+});
+
+const treatmentDetailLabelsSchema = z.object({
+  backLink: z.string().default("Back to all treatments"),
+  fallbackDescription: z
+    .string()
+    .default("Learn more about this treatment pathway through Care N Tour."),
+  fallbackOverview: z
+    .string()
+    .default(
+      "Care N Tour structures treatment planning around specialist access, provider fit, travel coordination, and recovery clarity.",
+    ),
+  candidateSuitability: z
+    .string()
+    .default(
+      "Case suitability is confirmed during consultation so the treatment pathway aligns with the patient's goals and medical profile.",
+    ),
+  noSpecialists: z
+    .string()
+    .default("No specialists are currently available for this treatment."),
+  internationalLabel: z.string().default("International"),
+  patientReviewsEmpty: z
+    .string()
+    .default(
+      "Published patient reviews for this treatment will appear here once they are available.",
+    ),
+  noPatientStories: z
+    .string()
+    .default(
+      "No patient stories are published yet. Check back for outcome-focused journeys and recovery context.",
+    ),
+  featuredSuccess: z.string().default("Featured success"),
+  requestConsultation: z.string().default("Request consultation"),
+});
+
 const medicalFacilitiesDirectoryBlockSchema = z
   .object({
     type: z.literal("medicalFacilitiesDirectory"),
@@ -1272,6 +1419,116 @@ const medicalFacilityProfileBlockSchema = z
         "The facility you are looking for may have been removed or is not available to view.",
       noOverview:
         "Care N Tour can provide more context on this facility during your planning conversation.",
+    }),
+  })
+  .extend(blockMetaShape);
+
+const treatmentDetailBlockSchema = z
+  .object({
+    type: z.literal("treatmentDetail"),
+    eyebrow: z.string().optional(),
+    trustStatement: z.string().optional(),
+    searchPlaceholder: z
+      .string()
+      .default("Search treatments or procedures by name..."),
+    sectionTitles: treatmentDetailSectionTitlesSchema.default({
+      quickFacts: "Key treatment facts",
+      overview: "Treatment overview",
+      idealCandidates: "Who this treatment is designed for",
+      procedures: "Procedures within this treatment pathway",
+      specialists: "Specialist doctors for this treatment",
+      patientReviews: "Patient reviews",
+      patientStories: "Patient stories",
+    }),
+    sectionDescriptions: treatmentDetailSectionDescriptionsSchema.default({
+      overview:
+        "Review the treatment profile, planning context, and patient suitability factors before you move into procedure comparison.",
+      procedures:
+        "Use treatment and procedure search to move between pathways quickly, then compare the live procedures shown for the current treatment in greater detail.",
+      specialists:
+        "Meet the doctors most closely associated with this treatment category before you start case review or travel planning.",
+      patientStories:
+        "Read outcome-focused patient stories that help future patients understand timelines, recovery expectations, and decision context.",
+    }),
+    quickFactLabels: treatmentDetailQuickFactLabelsSchema.default({
+      duration: "Treatment duration",
+      recovery: "Recovery timeline",
+      estimatedCost: "Estimated cost",
+      successRate: "Success rate",
+      treatmentPdf: "Treatment PDF",
+      downloadOverview: "Download overview",
+      personalizedConsultation: "Personalized consultation",
+      personalizedConsultationDescription:
+        "Care N Tour refines pricing, timeline, and procedure planning against the medical case before any travel is confirmed.",
+    }),
+    procedureLabels: treatmentDetailProcedureLabelsSchema.default({
+      duration: "Duration",
+      recovery: "Recovery",
+      price: "Price",
+      successRate: "Success rate",
+      procedurePdf: "Procedure PDF",
+      procedurePdfDescription:
+        "Download a detailed overview when a patient-ready procedure guide is available.",
+      download: "Download",
+      candidateRequirements: "Candidate requirements",
+      additionalNotes: "Additional notes",
+      recoveryTimeline: "Recovery timeline",
+      startJourney: "Start your journey",
+      priceComparisonToggle: "International price comparison",
+      priceComparisonShow: "Show price comparison",
+      priceComparisonHide: "Hide price comparison",
+    }),
+    filterLabels: treatmentDetailFilterLabelsSchema.default({
+      search: "Search",
+      treatment: "Treatment",
+      procedure: "Procedure",
+    }),
+    filterPlaceholders: treatmentDetailFilterPlaceholdersSchema.default({
+      treatment: "All treatments",
+      procedure: "All procedures",
+    }),
+    filterSearchPlaceholders: treatmentDetailFilterSearchSchema.default({
+      treatment: "Search treatments...",
+      procedure: "Search procedures...",
+    }),
+    filterEmptyCopy: treatmentDetailFilterEmptySchema.default({
+      treatment: "No treatments found.",
+      procedure: "No procedures found.",
+    }),
+    filterOptionLabels: treatmentDetailFilterOptionLabelsSchema.default({
+      pricingGuidance: "Has pricing guidance",
+      pricingComparison: "Has international comparison",
+      recoveryGuidance: "Has recovery guidance",
+      recoveryTimeline: "Has recovery timeline",
+      resourcesGuide: "Has downloadable guide",
+      resourcesRequirements: "Has candidacy guidance",
+    }),
+    clearButtonLabel: z.string().default("Clear filters"),
+    states: treatmentDetailStateCopySchema.default({
+      resultsIntro:
+        "Search treatments and procedures, then compare the live procedure options available within the selected treatment pathway before speaking with Care N Tour about next steps.",
+      resultsCountLabel: "procedures available",
+      emptyHeading: "No procedures found",
+      emptyDescription:
+        "Adjust your treatment search or procedure filter to explore more options.",
+    }),
+    labels: treatmentDetailLabelsSchema.default({
+      backLink: "Back to all treatments",
+      fallbackDescription:
+        "Learn more about this treatment pathway through Care N Tour.",
+      fallbackOverview:
+        "Care N Tour structures treatment planning around specialist access, provider fit, travel coordination, and recovery clarity.",
+      candidateSuitability:
+        "Case suitability is confirmed during consultation so the treatment pathway aligns with the patient's goals and medical profile.",
+      noSpecialists:
+        "No specialists are currently available for this treatment.",
+      internationalLabel: "International",
+      patientReviewsEmpty:
+        "Published patient reviews for this treatment will appear here once they are available.",
+      noPatientStories:
+        "No patient stories are published yet. Check back for outcome-focused journeys and recovery context.",
+      featuredSuccess: "Featured success",
+      requestConsultation: "Request consultation",
     }),
   })
   .extend(blockMetaShape);
@@ -1633,6 +1890,7 @@ const blockSchemas = [
   doctorDirectoryBlockSchema,
   quoteBlockSchema,
   medicalFacilityProfileBlockSchema,
+  treatmentDetailBlockSchema,
   treatmentSpecialtiesBlockSchema,
   treatmentsBlockSchema,
   doctorsBlockSchema,
@@ -2694,6 +2952,120 @@ export const blockRegistry = {
       },
     },
   } satisfies BlockDefinition<typeof medicalFacilityProfileBlockSchema>,
+  treatmentDetail: {
+    type: "treatmentDetail",
+    label: "Treatment Detail",
+    description:
+      "Live treatment detail shell with CMS-managed framing, procedure filters, and patient-support copy.",
+    category: "content",
+    schema: treatmentDetailBlockSchema,
+    defaultItem: {
+      type: "treatmentDetail",
+      eyebrow: "Care N Tour Treatment Guide",
+      trustStatement:
+        "Care N Tour helps patients evaluate procedures, compare recovery and pricing visibility, and move from exploration to a structured treatment-planning conversation.",
+      searchPlaceholder: "Search treatments or procedures by name...",
+      sectionTitles: {
+        quickFacts: "Key treatment facts",
+        overview: "Treatment overview",
+        idealCandidates: "Who this treatment is designed for",
+        procedures: "Procedures within this treatment pathway",
+        specialists: "Specialist doctors for this treatment",
+        patientReviews: "Patient reviews",
+        patientStories: "Patient stories",
+      },
+      sectionDescriptions: {
+        overview:
+          "Review the treatment profile, planning context, and patient suitability factors before you move into procedure comparison.",
+        procedures:
+          "Use treatment and procedure search to move between pathways quickly, then compare the live procedures shown for the current treatment in greater detail.",
+        specialists:
+          "Meet the doctors most closely associated with this treatment category before you start case review or travel planning.",
+        patientStories:
+          "Read outcome-focused patient stories that help future patients understand timelines, recovery expectations, and decision context.",
+      },
+      quickFactLabels: {
+        duration: "Treatment duration",
+        recovery: "Recovery timeline",
+        estimatedCost: "Estimated cost",
+        successRate: "Success rate",
+        treatmentPdf: "Treatment PDF",
+        downloadOverview: "Download overview",
+        personalizedConsultation: "Personalized consultation",
+        personalizedConsultationDescription:
+          "Care N Tour refines pricing, timeline, and procedure planning against the medical case before any travel is confirmed.",
+      },
+      procedureLabels: {
+        duration: "Duration",
+        recovery: "Recovery",
+        price: "Price",
+        successRate: "Success rate",
+        procedurePdf: "Procedure PDF",
+        procedurePdfDescription:
+          "Download a detailed overview when a patient-ready procedure guide is available.",
+        download: "Download",
+        candidateRequirements: "Candidate requirements",
+        additionalNotes: "Additional notes",
+        recoveryTimeline: "Recovery timeline",
+        startJourney: "Start your journey",
+        priceComparisonToggle: "International price comparison",
+        priceComparisonShow: "Show price comparison",
+        priceComparisonHide: "Hide price comparison",
+      },
+      filterLabels: {
+        search: "Search",
+        treatment: "Treatment",
+        procedure: "Procedure",
+      },
+      filterPlaceholders: {
+        treatment: "All treatments",
+        procedure: "All procedures",
+      },
+      filterSearchPlaceholders: {
+        treatment: "Search treatments...",
+        procedure: "Search procedures...",
+      },
+      filterEmptyCopy: {
+        treatment: "No treatments found.",
+        procedure: "No procedures found.",
+      },
+      filterOptionLabels: {
+        pricingGuidance: "Has pricing guidance",
+        pricingComparison: "Has international comparison",
+        recoveryGuidance: "Has recovery guidance",
+        recoveryTimeline: "Has recovery timeline",
+        resourcesGuide: "Has downloadable guide",
+        resourcesRequirements: "Has candidacy guidance",
+      },
+      clearButtonLabel: "Clear filters",
+      states: {
+        resultsIntro:
+          "Search treatments and procedures, then compare the live procedure options available within the selected treatment pathway before speaking with Care N Tour about next steps.",
+        resultsCountLabel: "procedures available",
+        emptyHeading: "No procedures found",
+        emptyDescription:
+          "Adjust your treatment search or procedure filter to explore more options.",
+      },
+      labels: {
+        backLink: "Back to all treatments",
+        fallbackDescription:
+          "Learn more about this treatment pathway through Care N Tour.",
+        fallbackOverview:
+          "Care N Tour structures treatment planning around specialist access, provider fit, travel coordination, and recovery clarity.",
+        candidateSuitability:
+          "Case suitability is confirmed during consultation so the treatment pathway aligns with the patient's goals and medical profile.",
+        noSpecialists:
+          "No specialists are currently available for this treatment.",
+        internationalLabel: "International",
+        patientReviewsEmpty:
+          "Published patient reviews for this treatment will appear here once they are available.",
+        noPatientStories:
+          "No patient stories are published yet. Check back for outcome-focused journeys and recovery context.",
+        featuredSuccess: "Featured success",
+        requestConsultation: "Request consultation",
+      },
+    },
+  } satisfies BlockDefinition<typeof treatmentDetailBlockSchema>,
   treatmentSpecialties: {
     type: "treatmentSpecialties",
     label: "Treatment Specialties",
