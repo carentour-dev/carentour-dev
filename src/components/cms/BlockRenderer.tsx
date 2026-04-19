@@ -7,6 +7,7 @@ import type {
   MedicalFacilitiesDirectoryResponse,
   MedicalFacilityDetail,
 } from "@/lib/medical-facilities";
+import type { LocalizedPublicTreatmentDetail } from "@/server/modules/treatments/public";
 import { cn } from "@/lib/utils";
 import { AnimationController } from "./AnimationController";
 import {
@@ -40,6 +41,7 @@ import {
   DoctorDirectoryBlock,
   QuoteBlock,
   MedicalFacilityProfileBlock,
+  TreatmentDetailBlock,
   TreatmentSpecialtiesBlock,
   TreatmentsBlock,
   DoctorsBlock,
@@ -56,6 +58,12 @@ export type CmsBlockRenderContext = {
   doctorDirectoryData?: DoctorDirectoryResponse | null;
   medicalFacility?: MedicalFacilityDetail | null;
   medicalFacilitySlug?: string;
+  treatmentDetail?: LocalizedPublicTreatmentDetail | null;
+  treatmentSlug?: string;
+  treatmentOptions?: Array<{
+    slug: string;
+    name: string;
+  }>;
   blog?: BlogBlockContextEntity | null;
 };
 
@@ -195,6 +203,15 @@ export function BlockRenderer({
                   key={key}
                   block={block}
                   context={context}
+                />
+              );
+            case "treatmentDetail":
+              return (
+                <TreatmentDetailBlock
+                  key={key}
+                  block={block}
+                  context={context}
+                  locale={locale}
                 />
               );
             case "treatmentSpecialties":
