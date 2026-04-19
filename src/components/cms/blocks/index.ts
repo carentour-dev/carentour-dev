@@ -32,6 +32,7 @@ export { DoctorDirectoryBlock } from "./DoctorDirectoryBlock";
 export { QuoteBlock } from "./QuoteBlock";
 export { MedicalFacilityProfileBlock } from "./MedicalFacilityProfileBlock";
 export { MedicalFacilityProfilePreview } from "./MedicalFacilityProfilePreview";
+export { TreatmentDetailBlock } from "./TreatmentDetailBlock";
 export { TreatmentSpecialtiesBlock } from "./TreatmentSpecialtiesBlock";
 export { TreatmentsBlock } from "./TreatmentsBlock";
 export { DoctorsBlock } from "./DoctorsBlock";
