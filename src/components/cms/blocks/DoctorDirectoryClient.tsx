@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
@@ -10,9 +9,7 @@ import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import {
   buildDoctorDirectoryState,
-  getDoctorInitials,
   normalizeDoctorForClient,
-  pickDoctorImage,
   type DoctorDirectoryResponse,
 } from "@/lib/doctors";
 import { getLocalizedCompanyName } from "@/lib/public/brand";
@@ -30,6 +27,7 @@ import {
 } from "@/components/ui/filter-combobox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { DoctorShowcaseCard } from "./DoctorShowcaseCard";
 
 type Props = {
   block: BlockInstance<"doctorDirectory">;
@@ -330,188 +328,19 @@ export function DoctorDirectoryClient({
 
         {!loading && doctors.length > 0 ? (
           <div className="grid gap-6 xl:grid-cols-2">
-            {doctors.map((doctor, index) => {
-              const image = pickDoctorImage(doctor);
-              const trimmedBio = truncateText(doctor.bio, 180);
-              const hasFeaturedBadge = (doctor.patient_rating ?? 0) >= 4.8;
-
-              return (
-                <article
-                  key={doctor.id}
-                  className="group overflow-hidden rounded-[30px] border border-border/60 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className="grid md:grid-cols-[190px_1fr]">
-                    <div className="relative min-h-[250px] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700">
-                      {image ? (
-                        <Image
-                          src={image}
-                          alt={doctor.name}
-                          fill
-                          loading={resolveGridImageLoading(index, {
-                            eagerCount: 2,
-                          })}
-                          sizes="(min-width: 1280px) 190px, 100vw"
-                          className="object-cover transition duration-500 group-hover:scale-105"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent" />
-                      <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                        {hasFeaturedBadge ? (
-                          <Badge className="border-0 bg-background/90 text-foreground">
-                            {block.cardLabels.featuredBadge}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div
-                        className={cn(
-                          "absolute inset-x-4 bottom-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-5 text-white backdrop-blur",
-                          image && "shadow-lg",
-                        )}
-                      >
-                        {!image ? (
-                          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg font-semibold">
-                            {getDoctorInitials(doctor.name)}
-                          </div>
-                        ) : null}
-                        <p className="text-xs uppercase tracking-[0.18em] text-white/70">
-                          {doctor.title}
-                        </p>
-                        <h3 className="mt-2 text-2xl font-semibold leading-tight">
-                          {doctor.name}
-                        </h3>
-                        <p className="mt-2 text-sm text-white/80">
-                          {doctor.specialization}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex min-w-0 flex-col p-6 sm:p-7">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex flex-wrap gap-2">
-                          {(doctor.patient_rating ?? 0) > 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="border-amber-300/60 bg-amber-50 text-amber-900"
-                            >
-                              <Star className="mr-1 h-3.5 w-3.5 fill-current" />
-                              {ratingFormatter.format(
-                                doctor.patient_rating,
-                              )}{" "}
-                              {block.cardLabels.ratingLabel}
-                            </Badge>
-                          ) : null}
-                          {(doctor.total_reviews ?? 0) > 0 ? (
-                            <Badge variant="outline">
-                              {integerFormatter.format(doctor.total_reviews)}{" "}
-                              {block.cardLabels.reviewsSuffix}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          {companyName}
-                        </p>
-                      </div>
-
-                      {trimmedBio ? (
-                        <p className="mt-5 text-sm leading-6 text-muted-foreground">
-                          {trimmedBio}
-                        </p>
-                      ) : null}
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-                        <div className="min-w-0 rounded-2xl bg-muted/45 p-4">
-                          <p className="text-[11px] uppercase leading-snug tracking-[0.14em] text-muted-foreground [overflow-wrap:anywhere]">
-                            {block.cardLabels.experience}
-                          </p>
-                          <p className="mt-2 text-base font-semibold text-foreground">
-                            {integerFormatter.format(doctor.experience_years)}{" "}
-                            {block.cardLabels.experienceSuffix}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-2xl bg-muted/45 p-4">
-                          <p className="text-[11px] uppercase leading-snug tracking-[0.14em] text-muted-foreground [overflow-wrap:anywhere]">
-                            {block.cardLabels.procedures}
-                          </p>
-                          <p className="mt-2 text-base font-semibold text-foreground">
-                            {integerFormatter.format(
-                              doctor.successful_procedures ?? 0,
-                            )}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-2xl bg-muted/45 p-4">
-                          <p className="text-[11px] uppercase leading-snug tracking-[0.14em] text-muted-foreground [overflow-wrap:anywhere]">
-                            {block.cardLabels.publications}
-                          </p>
-                          <p className="mt-2 text-base font-semibold text-foreground">
-                            {integerFormatter.format(
-                              doctor.research_publications ?? 0,
-                            )}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-2xl bg-muted/45 p-4">
-                          <p className="text-[11px] uppercase leading-snug tracking-[0.14em] text-muted-foreground [overflow-wrap:anywhere]">
-                            {block.cardLabels.languages}
-                          </p>
-                          <p className="mt-2 text-base font-semibold text-foreground">
-                            {integerFormatter.format(
-                              (doctor.languages ?? []).length,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-                        <div className="space-y-2">
-                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                            {block.cardLabels.education}
-                          </p>
-                          <p className="text-sm leading-6 text-foreground">
-                            {doctor.education}
-                          </p>
-                        </div>
-
-                        {(doctor.languages ?? []).length > 0 ? (
-                          <div className="space-y-2">
-                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                              {block.cardLabels.languages}
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {(doctor.languages ?? [])
-                                .slice(0, 6)
-                                .map((entry) => (
-                                  <Badge key={entry} variant="secondary">
-                                    {entry}
-                                  </Badge>
-                                ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                        <Button asChild className="sm:flex-1">
-                          <Link
-                            href={localizePublicPathname(
-                              `/doctors/${doctor.id}`,
-                              locale,
-                            )}
-                          >
-                            {block.cardLabels.viewProfile}
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="sm:flex-1">
-                          <Link
-                            href={`${localizePublicPathnameWithFallback("/start-journey", locale)}?doctor=${doctor.id}`}
-                          >
-                            {block.cardLabels.primaryCta}
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {doctors.map((doctor, index) => (
+              <DoctorShowcaseCard
+                key={doctor.id}
+                doctor={{
+                  ...doctor,
+                  bio: truncateText(doctor.bio, 180) ?? undefined,
+                }}
+                locale={locale}
+                index={index}
+                companyName={companyName}
+                labels={block.cardLabels}
+              />
+            ))}
           </div>
         ) : null}
 
