@@ -83,6 +83,11 @@ export function DoctorShowcaseCard({
     maximumFractionDigits: 1,
   });
   const hasFeaturedBadge = (doctor.patient_rating ?? 0) >= 4.8;
+  const titleLength = doctor.title?.trim().length ?? 0;
+  const titleClassName =
+    titleLength > 22
+      ? "text-[10px] leading-snug tracking-[0.08em]"
+      : "text-xs tracking-[0.18em]";
 
   return (
     <article
@@ -124,7 +129,12 @@ export function DoctorShowcaseCard({
                 {getDoctorInitials(doctor.name)}
               </div>
             ) : null}
-            <p className="max-w-full text-[11px] uppercase leading-snug tracking-[0.14em] text-white/70 [overflow-wrap:anywhere]">
+            <p
+              className={cn(
+                "max-w-full uppercase text-white/70",
+                titleClassName,
+              )}
+            >
               {doctor.title}
             </p>
             <h3 className="mt-2 text-2xl font-semibold leading-tight">
