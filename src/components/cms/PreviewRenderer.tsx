@@ -38,6 +38,7 @@ import { AboutHeroBlock } from "./blocks/AboutHeroBlock";
 import { MedicalFacilitiesDirectoryClient } from "./blocks/MedicalFacilitiesDirectoryClient";
 import { DoctorDirectoryClient } from "./blocks/DoctorDirectoryClient";
 import { MedicalFacilityProfileClient } from "./blocks/MedicalFacilityProfileClient";
+import { TreatmentDetailClient } from "./blocks/TreatmentDetailClient";
 import { MissionVisionValuesBlock } from "./blocks/MissionVisionValuesBlock";
 import { QuoteBlock } from "./blocks/QuoteBlock";
 import {
@@ -46,6 +47,7 @@ import {
   previewDoctorDirectoryData,
   previewMedicalFacilitiesDirectoryData,
   previewMedicalFacilityDetail,
+  previewTreatmentDetail,
 } from "./blocks/previewFixtures";
 import { RichTextBlock } from "./blocks/RichTextBlock";
 import { HotelShowcaseBlock } from "./blocks/HotelShowcaseBlock";
@@ -230,6 +232,39 @@ function MedicalFacilityProfileEditorPreview({
           slug={previewMedicalFacilityDetail.provider.slug}
           initialData={previewMedicalFacilityDetail}
           disableLiveFetch
+        />
+      )}
+    </BlockSurface>
+  );
+}
+
+function TreatmentDetailEditorPreview({
+  block,
+  locale,
+}: {
+  block: BlockInstance<"treatmentDetail">;
+  locale: PublicLocale;
+}) {
+  return (
+    <BlockSurface
+      block={block}
+      container={false}
+      className="overflow-visible bg-background"
+      defaultPadding={{ top: "0rem", bottom: "0rem" }}
+    >
+      {() => (
+        <TreatmentDetailClient
+          block={block}
+          treatment={previewTreatmentDetail}
+          slug={previewTreatmentDetail.slug}
+          locale={locale}
+          treatmentOptions={[
+            {
+              slug: previewTreatmentDetail.slug,
+              name: previewTreatmentDetail.name,
+            },
+          ]}
+          disableAncillaryFetch
         />
       )}
     </BlockSurface>
@@ -440,6 +475,14 @@ export function BlockPreviewRenderer({
                 <MedicalFacilityProfileEditorPreview
                   key={blockKey}
                   block={block}
+                />
+              );
+            case "treatmentDetail":
+              return (
+                <TreatmentDetailEditorPreview
+                  key={blockKey}
+                  block={block}
+                  locale={locale}
                 />
               );
             case "treatmentSpecialties":
