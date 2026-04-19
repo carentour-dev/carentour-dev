@@ -49,6 +49,7 @@ export type PublicNavigationCmsPage = Pick<
 >;
 
 const INTERNAL_NAVIGATION_CMS_SLUGS = new Set([
+  "treatment-detail-template",
   "medical-facilities-detail-template",
   "blog-category-template",
   "blog-tag-template",
@@ -62,6 +63,20 @@ function isInternalNavigationCmsSlug(slug: string | null | undefined): boolean {
   }
 
   return INTERNAL_NAVIGATION_CMS_SLUGS.has(slug);
+}
+
+function isInternalNavigationHref(href: string | null | undefined): boolean {
+  if (!href) {
+    return false;
+  }
+
+  const normalizedHref = href.trim().replace(/\/+$/, "");
+  if (!normalizedHref.startsWith("/")) {
+    return false;
+  }
+
+  const slug = normalizedHref.slice(1);
+  return isInternalNavigationCmsSlug(slug);
 }
 
 // Documented snapshot of the hardcoded routes that previously lived in Header.tsx.
@@ -135,17 +150,28 @@ export function mapNavigationRow(row: NavigationRowInput): NavigationLink {
 }
 
 export function filterOrphanedNavigationRows<
-  T extends Pick<NavigationRow, "kind" | "slug" | "cms_page_id">,
+  T extends Pick<NavigationRow, "kind" | "slug" | "href" | "cms_page_id">,
 >(rows: T[], cmsPages: CmsPageReference[]): T[] {
   const cmsPageIds = new Set(cmsPages.map((page) => page.id));
   const cmsPageSlugs = new Set(cmsPages.map((page) => page.slug));
+  const internalCmsPageIds = new Set(
+    cmsPages
+      .filter((page) => isInternalNavigationCmsSlug(page.slug))
+      .map((page) => page.id),
+  );
 
   return rows.filter((row) => {
-    if (isInternalNavigationCmsSlug(row.slug)) {
+    if (
+      isInternalNavigationCmsSlug(row.slug) ||
+      isInternalNavigationHref(row.href)
+    ) {
       return false;
     }
 
     if (row.cms_page_id) {
+      if (internalCmsPageIds.has(row.cms_page_id)) {
+        return false;
+      }
       return cmsPageIds.has(row.cms_page_id);
     }
 
