@@ -7,6 +7,7 @@ import { normalizeBlocks, type BlockInstance } from "@/lib/cms/blocks";
 import { getPublishedPageBySlug, type CmsPage } from "@/lib/cms/server";
 import { getTemplate } from "@/lib/cms/templates";
 import { getLocalizedCmsPageBySlug } from "@/lib/public/localization";
+import { localizeTreatmentDetailCmsFallback } from "@/lib/public/treatmentDetailCmsFallback";
 import {
   assertPublicPageAvailable,
   getLocalizedPublicPagePathname,
@@ -43,23 +44,44 @@ async function getTreatmentCmsPage(locale: PublicLocale) {
   );
 
   if (localized) {
-    return localized;
+    return {
+      page: localized,
+      hasLocalizedTranslation: true,
+    };
   }
 
   if (locale !== "en") {
-    return getPublishedPageBySlug(DETAIL_TEMPLATE_PAGE_SLUG);
+    return {
+      page: await getPublishedPageBySlug(DETAIL_TEMPLATE_PAGE_SLUG),
+      hasLocalizedTranslation: false,
+    };
   }
 
-  return null;
+  return {
+    page: null,
+    hasLocalizedTranslation: false,
+  };
 }
 
-function resolveBlocks(cmsPage: CmsPage | null) {
+function resolveBlocks({
+  cmsPage,
+  locale,
+  hasLocalizedTranslation,
+}: {
+  cmsPage: CmsPage | null;
+  locale: PublicLocale;
+  hasLocalizedTranslation: boolean;
+}) {
   const sourceBlocks =
     cmsPage?.content?.length && cmsPage.content.length > 0
       ? cmsPage.content
-      : (fallbackTemplate?.blocks ?? []);
+      : normalizeBlocks(fallbackTemplate?.blocks ?? []);
 
-  return normalizeBlocks(sourceBlocks);
+  if (locale === "ar" && !hasLocalizedTranslation) {
+    return localizeTreatmentDetailCmsFallback(sourceBlocks, locale);
+  }
+
+  return sourceBlocks;
 }
 
 function extractFaqs(blocks: TreatmentDetailBlock[]) {
@@ -219,9 +241,19 @@ export async function generateMetadata({
     return {};
   }
 
-  const cmsPage = await getTreatmentCmsPage(locale);
-  const blocks = resolveBlocks(cmsPage);
-  const seo = await getSeo(category, detail, cmsPage, blocks, locale);
+  const cmsPageResult = await getTreatmentCmsPage(locale);
+  const blocks = resolveBlocks({
+    cmsPage: cmsPageResult.page,
+    locale,
+    hasLocalizedTranslation: cmsPageResult.hasLocalizedTranslation,
+  });
+  const seo = await getSeo(
+    category,
+    detail,
+    cmsPageResult.page,
+    blocks,
+    locale,
+  );
   return seo.metadata;
 }
 
@@ -242,9 +274,19 @@ export default async function TreatmentCategoryPage({ params }: PageProps) {
     notFound();
   }
 
-  const cmsPage = await getTreatmentCmsPage(locale);
-  const blocks = resolveBlocks(cmsPage);
-  const seo = await getSeo(category, detail, cmsPage, blocks, locale);
+  const cmsPageResult = await getTreatmentCmsPage(locale);
+  const blocks = resolveBlocks({
+    cmsPage: cmsPageResult.page,
+    locale,
+    hasLocalizedTranslation: cmsPageResult.hasLocalizedTranslation,
+  });
+  const seo = await getSeo(
+    category,
+    detail,
+    cmsPageResult.page,
+    blocks,
+    locale,
+  );
 
   return (
     <>
