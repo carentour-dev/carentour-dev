@@ -897,6 +897,12 @@ export const cmsTemplates: CmsTemplate[] = [
             answer:
               "Published pricing and timelines are guidance only. Final recommendations, costs, and scheduling are confirmed after medical records are reviewed and the provider defines the recommended treatment plan.",
           },
+          {
+            question:
+              "What medical records should I share before treatment planning or travel?",
+            answer:
+              "Patients should usually share recent medical reports, imaging, laboratory results, diagnoses, and any previous procedure summaries that help the provider review the case properly. Care N Tour can confirm which records are most useful before the next planning step.",
+          },
         ],
       },
       {
