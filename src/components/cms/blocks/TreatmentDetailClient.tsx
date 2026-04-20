@@ -24,7 +24,10 @@ import { usePatientReviews, usePatientStories } from "@/hooks/useTestimonials";
 import type { PublicLocale } from "@/i18n/routing";
 import type { BlockInstance } from "@/lib/cms/blocks";
 import { resolveHeroImageLoading } from "@/lib/images/loading";
-import { getPublicNumberLocale } from "@/lib/public/numbers";
+import {
+  getPublicNumberLocale,
+  localizeOptionalDigits,
+} from "@/lib/public/numbers";
 import {
   localizePublicPathname,
   localizePublicPathnameWithFallback,
@@ -101,6 +104,11 @@ const buildFilterOptions = (
   })),
 ];
 
+const getLocalizedText = (
+  value: string | null | undefined,
+  locale: PublicLocale,
+) => localizeOptionalDigits(value, locale) ?? value ?? "";
+
 function TreatmentProcedureCard({
   procedure,
   block,
@@ -121,26 +129,31 @@ function TreatmentProcedureCard({
     "/start-journey",
     locale,
   );
+  const localizedProcedureName = getLocalizedText(procedure.name, locale);
+  const localizedProcedureDescription = localizeOptionalDigits(
+    procedure.description,
+    locale,
+  );
 
   const detailItems = [
     {
       label: block.procedureLabels.duration,
-      value: procedure.duration?.trim(),
+      value: localizeOptionalDigits(procedure.duration?.trim(), locale),
       icon: Clock,
     },
     {
       label: block.procedureLabels.recovery,
-      value: procedure.recovery?.trim(),
+      value: localizeOptionalDigits(procedure.recovery?.trim(), locale),
       icon: Heart,
     },
     {
       label: block.procedureLabels.price,
-      value: procedure.price?.trim(),
+      value: localizeOptionalDigits(procedure.price?.trim(), locale),
       icon: DollarSign,
     },
     {
       label: block.procedureLabels.successRate,
-      value: procedure.successRate?.trim(),
+      value: localizeOptionalDigits(procedure.successRate?.trim(), locale),
       icon: Star,
     },
   ].filter(
@@ -170,11 +183,11 @@ function TreatmentProcedureCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <CardTitle className="text-2xl text-foreground">
-              {procedure.name}
+              {localizedProcedureName}
             </CardTitle>
-            {procedure.description ? (
+            {localizedProcedureDescription ? (
               <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                {procedure.description}
+                {localizedProcedureDescription}
               </p>
             ) : null}
           </div>
@@ -289,7 +302,7 @@ function TreatmentProcedureCard({
 
             <CollapsibleContent className="pt-4">
               <PriceComparison
-                treatment={procedure.name}
+                treatment={localizedProcedureName}
                 egyptPrice={procedure.egyptPrice!}
                 egyptCurrency={currency ?? "USD"}
                 internationalPrices={procedure.internationalPrices}
@@ -310,7 +323,7 @@ function TreatmentProcedureCard({
                   <li key={requirement} className="flex items-start gap-2">
                     <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
                     <span className="text-sm leading-6 text-muted-foreground">
-                      {requirement}
+                      {getLocalizedText(requirement, locale)}
                     </span>
                   </li>
                 ))}
@@ -328,7 +341,7 @@ function TreatmentProcedureCard({
                 {block.procedureLabels.additionalNotes}
               </h4>
               <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
-                {procedure.additionalNotes}
+                {localizeOptionalDigits(procedure.additionalNotes, locale)}
               </p>
             </div>
           ) : null}
@@ -347,10 +360,10 @@ function TreatmentProcedureCard({
                   className="rounded-2xl border border-border/60 bg-card/80 p-4"
                 >
                   <p className="text-sm font-semibold text-primary">
-                    {stage.stage}
+                    {getLocalizedText(stage.stage, locale)}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {stage.description}
+                    {getLocalizedText(stage.description, locale)}
                   </p>
                 </div>
               ))}
@@ -384,6 +397,10 @@ export function TreatmentDetailClient({
   const deferredSearch = useDeferredValue(search);
   const isArabicLocale = locale === "ar";
   const numberLocale = getPublicNumberLocale(locale);
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(numberLocale),
+    [numberLocale],
+  );
   const treatmentsHref = localizePublicPathname("/treatments", locale);
   const consultationHref = localizePublicPathnameWithFallback(
     "/consultation",
@@ -415,22 +432,22 @@ export function TreatmentDetailClient({
       buildFilterOptions(
         resolvedTreatmentOptions.map((option) => ({
           value: option.slug,
-          label: option.name,
+          label: getLocalizedText(option.name, locale),
         })),
         block.filterPlaceholders.treatment,
       ),
-    [block.filterPlaceholders.treatment, resolvedTreatmentOptions],
+    [block.filterPlaceholders.treatment, locale, resolvedTreatmentOptions],
   );
   const procedureOptions = useMemo(
     () =>
       buildFilterOptions(
         localizedTreatment.procedures.map((procedure) => ({
           value: procedure.id,
-          label: procedure.name,
+          label: getLocalizedText(procedure.name, locale),
         })),
         block.filterPlaceholders.procedure,
       ),
-    [block.filterPlaceholders.procedure, localizedTreatment.procedures],
+    [block.filterPlaceholders.procedure, locale, localizedTreatment.procedures],
   );
 
   const procedureDirectoryState = useMemo(
@@ -480,12 +497,15 @@ export function TreatmentDetailClient({
   };
 
   const formatDayCount = (value: number) => {
-    const formattedValue = new Intl.NumberFormat(numberLocale).format(value);
+    const formattedValue = numberFormatter.format(value);
 
     return isArabicLocale
       ? `${formattedValue} يوم`
       : `${formattedValue} day${value === 1 ? "" : "s"}`;
   };
+
+  const formatPercentage = (value: number) =>
+    `${numberFormatter.format(value)}%`;
 
   const primaryProcedure = selectPrimaryProcedure(
     localizedTreatment.procedures,
@@ -505,18 +525,18 @@ export function TreatmentDetailClient({
   const quickFacts = {
     durationLabel: localizedTreatment.durationDays
       ? formatDayCount(localizedTreatment.durationDays)
-      : fallbackDuration || undefined,
+      : localizeOptionalDigits(fallbackDuration, locale) || undefined,
     recoveryLabel: localizedTreatment.recoveryTimeDays
       ? formatDayCount(localizedTreatment.recoveryTimeDays)
-      : fallbackRecovery || undefined,
+      : localizeOptionalDigits(fallbackRecovery, locale) || undefined,
     priceValue:
       localizedTreatment.basePrice ?? primaryProcedure?.egyptPrice ?? undefined,
     currency: localizedTreatment.currency ?? "USD",
     successRateLabel:
       localizedTreatment.successRate !== undefined &&
       localizedTreatment.successRate !== null
-        ? `${localizedTreatment.successRate}%`
-        : fallbackSuccess || undefined,
+        ? formatPercentage(localizedTreatment.successRate)
+        : localizeOptionalDigits(fallbackSuccess, locale) || undefined,
   };
 
   const hasQuickFacts = Boolean(
@@ -573,12 +593,15 @@ export function TreatmentDetailClient({
                 ) : null}
                 <div className="space-y-4">
                   <h1 className="text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
-                    {localizedTreatment.name}
+                    {getLocalizedText(localizedTreatment.name, locale)}
                   </h1>
                   <p className="max-w-3xl text-lg leading-8 text-muted-foreground">
-                    {localizedTreatment.summary ||
-                      localizedTreatment.description ||
-                      block.labels.fallbackDescription}
+                    {localizeOptionalDigits(
+                      localizedTreatment.summary ||
+                        localizedTreatment.description ||
+                        block.labels.fallbackDescription,
+                      locale,
+                    )}
                   </p>
                 </div>
 
@@ -589,7 +612,7 @@ export function TreatmentDetailClient({
                         <ShieldCheck className="h-5 w-5" />
                       </div>
                       <p className="text-sm leading-7 text-muted-foreground sm:text-base">
-                        {block.trustStatement}
+                        {localizeOptionalDigits(block.trustStatement, locale)}
                       </p>
                     </div>
                   </div>
@@ -732,9 +755,12 @@ export function TreatmentDetailClient({
                 </p>
               </div>
               <p className="text-base leading-8 text-muted-foreground sm:text-lg">
-                {localizedTreatment.overview ||
-                  localizedTreatment.description ||
-                  block.labels.fallbackOverview}
+                {localizeOptionalDigits(
+                  localizedTreatment.overview ||
+                    localizedTreatment.description ||
+                    block.labels.fallbackOverview,
+                  locale,
+                )}
               </p>
             </div>
 
@@ -751,7 +777,7 @@ export function TreatmentDetailClient({
                       <li key={candidate} className="flex items-start gap-3">
                         <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
                         <span className="text-sm leading-6 text-muted-foreground">
-                          {candidate}
+                          {getLocalizedText(candidate, locale)}
                         </span>
                       </li>
                     ))}
@@ -848,8 +874,9 @@ export function TreatmentDetailClient({
                 {block.states.resultsIntro}
               </p>
               <Badge variant="outline" className="w-fit">
-                {procedureDirectoryState.filtered} /{" "}
-                {procedureDirectoryState.total} {block.states.resultsCountLabel}
+                {numberFormatter.format(procedureDirectoryState.filtered)} /{" "}
+                {numberFormatter.format(procedureDirectoryState.total)}{" "}
+                {block.states.resultsCountLabel}
               </Badge>
             </div>
 
@@ -953,6 +980,7 @@ export function TreatmentDetailClient({
                   recovery_time: review.recovery_time ?? "",
                   is_verified: true,
                 }))}
+                locale={locale}
               />
             ) : (
               <div className="rounded-[2rem] border border-border/60 bg-muted/20 p-10 text-center">
@@ -1003,17 +1031,20 @@ export function TreatmentDetailClient({
                         ) : null}
                       </div>
                       <CardTitle className="text-2xl text-foreground">
-                        {story.headline}
+                        {getLocalizedText(story.headline, locale)}
                       </CardTitle>
                       {story.excerpt ? (
                         <p className="text-sm leading-7 text-muted-foreground">
-                          {story.excerpt}
+                          {localizeOptionalDigits(story.excerpt, locale)}
                         </p>
                       ) : null}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <p className="line-clamp-6 text-sm leading-7 text-muted-foreground">
-                        {story.body_markdown.replace(/[#*_`>/]/g, "")}
+                        {localizeOptionalDigits(
+                          story.body_markdown.replace(/[#*_`>/]/g, ""),
+                          locale,
+                        )}
                       </p>
                       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                         <span>
