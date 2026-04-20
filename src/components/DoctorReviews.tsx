@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, Quote } from "lucide-react";
 import type { PublicLocale } from "@/i18n/routing";
+import { localizeOptionalDigits } from "@/lib/public/numbers";
 
 interface DoctorReview {
   id: string;
@@ -58,7 +59,7 @@ export const DoctorReviews = ({
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg">
-                    {review.patient_name}
+                    {localizeOptionalDigits(review.patient_name, locale)}
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
@@ -90,7 +91,7 @@ export const DoctorReviews = ({
                 <span className="text-muted-foreground">•</span>
                 {review.procedure_name && (
                   <span className="text-muted-foreground">
-                    {review.procedure_name}
+                    {localizeOptionalDigits(review.procedure_name, locale)}
                   </span>
                 )}
               </div>
@@ -98,18 +99,24 @@ export const DoctorReviews = ({
 
             <CardContent>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                &ldquo;{review.review_text}&rdquo;
+                &ldquo;{localizeOptionalDigits(review.review_text, locale)}
+                &rdquo;
               </p>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   {review.recovery_time && (
                     <span>
-                      {copy.recovery}: {review.recovery_time}
+                      {copy.recovery}:{" "}
+                      {localizeOptionalDigits(review.recovery_time, locale)}
                     </span>
                   )}
                 </div>
-                <span>{new Date(review.created_at).toLocaleDateString()}</span>
+                <span>
+                  {new Date(review.created_at).toLocaleDateString(
+                    isArabicLocale ? "ar-EG" : "en-US",
+                  )}
+                </span>
               </div>
             </CardContent>
           </Card>
