@@ -41,7 +41,7 @@ test("seeds the treatment detail CMS template with a published Arabic translatio
 
   assert.match(migrationSource, /INSERT INTO public\.cms_page_translations/);
   assert.match(migrationSource, /'treatment-detail-template'/);
-  assert.match(migrationSource, /'ar' AS locale/);
+  assert.match(migrationSource, /'ar' AS translation_locale/);
   assert.match(migrationSource, /"حقائق أساسية عن العلاج"/);
   assert.match(migrationSource, /"الرجوع إلى جميع العلاجات"/);
   assert.match(migrationSource, /"ابدأ رحلتك"/);
