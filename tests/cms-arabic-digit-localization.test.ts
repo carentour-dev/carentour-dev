@@ -210,3 +210,47 @@ test("threads Arabic digit localization through blog article rendering", () => {
     /<BlogContent content=\{post\.content as any\} locale=\{locale\} \/>/,
   );
 });
+
+test("localizes digit-bearing treatment detail strings and review metadata", () => {
+  const detailClientSource = readSource(
+    "src/components/cms/blocks/TreatmentDetailClient.tsx",
+  );
+  const doctorReviewsSource = readSource("src/components/DoctorReviews.tsx");
+
+  assert.match(
+    detailClientSource,
+    /import \{[\s\S]*localizeOptionalDigits[\s\S]*\} from "@\/lib\/public\/numbers"/,
+  );
+  assert.match(
+    detailClientSource,
+    /label: getLocalizedText\(option\.name, locale\)/,
+  );
+  assert.match(
+    detailClientSource,
+    /label: getLocalizedText\(procedure\.name, locale\)/,
+  );
+  assert.match(
+    detailClientSource,
+    /value: localizeOptionalDigits\(procedure\.price\?\.trim\(\), locale\)/,
+  );
+  assert.match(
+    detailClientSource,
+    /value: localizeOptionalDigits\(procedure\.successRate\?\.trim\(\), locale\)/,
+  );
+  assert.match(
+    detailClientSource,
+    /numberFormatter\.format\(procedureDirectoryState\.filtered\)/,
+  );
+  assert.match(
+    detailClientSource,
+    /localizeOptionalDigits\([\s\S]*story\.body_markdown\.replace/,
+  );
+  assert.match(
+    doctorReviewsSource,
+    /localizeOptionalDigits\(review\.recovery_time, locale\)/,
+  );
+  assert.match(
+    doctorReviewsSource,
+    /toLocaleDateString\(\s*isArabicLocale \? "ar-EG" : "en-US"/,
+  );
+});
