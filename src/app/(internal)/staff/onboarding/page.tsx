@@ -29,6 +29,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
+import {
+  hasCompleteStaffInviteSessionTokens,
+  hasStaffInviteLoginInformation,
+  isAllowedStaffInviteFlowType,
+  parseStaffInviteHref,
+} from "@/lib/auth/staff-invite";
 
 const passwordSchema = z
   .string()
@@ -116,26 +122,12 @@ type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 type StatusState = "checking" | "ready" | "saving" | "success" | "error";
 
 const STAFF_ACCOUNT_TYPE = "staff";
-const ALLOWED_FLOW_TYPES = new Set(["invite", "magiclink"]);
 const sexOptionLabels: Record<(typeof sexOptions)[number], string> = {
   female: "Female",
   male: "Male",
   "non-binary": "Non-binary",
   prefer_not_to_say: "Prefer not to say",
 };
-
-function parseHashParams(): URLSearchParams | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const hash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  if (!hash) {
-    return null;
-  }
-  return new URLSearchParams(hash);
-}
 
 export default function StaffOnboardingPage() {
   const router = useRouter();
@@ -166,21 +158,9 @@ export default function StaffOnboardingPage() {
         return;
       }
 
-      const params =
-        parseHashParams() ?? new URLSearchParams(window.location.search);
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-      const flowType = params.get("type");
+      const inviteParams = parseStaffInviteHref(window.location.href);
 
-      if (!accessToken || !refreshToken) {
-        setErrorMessage(
-          "This invitation link is missing login information. Request a fresh invite from your administrator.",
-        );
-        setStatus("error");
-        return;
-      }
-
-      if (flowType && !ALLOWED_FLOW_TYPES.has(flowType)) {
+      if (!isAllowedStaffInviteFlowType(inviteParams.flowType)) {
         setErrorMessage(
           "This link is not a staff invitation. Please use the invitation email we sent you.",
         );
@@ -188,22 +168,62 @@ export default function StaffOnboardingPage() {
         return;
       }
 
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+      if (inviteParams.errorDescription) {
+        setErrorMessage(inviteParams.errorDescription);
+        setStatus("error");
+        return;
+      }
 
-      if (sessionError) {
+      if (inviteParams.code) {
+        const { error: sessionError } =
+          await supabase.auth.exchangeCodeForSession(inviteParams.code);
+
+        if (sessionError) {
+          setErrorMessage(
+            sessionError.message ??
+              "Unable to authenticate your session. Request a new invitation.",
+          );
+          setStatus("error");
+          return;
+        }
+      } else if (hasCompleteStaffInviteSessionTokens(inviteParams)) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: inviteParams.accessToken!,
+          refresh_token: inviteParams.refreshToken!,
+        });
+
+        if (sessionError) {
+          setErrorMessage(
+            sessionError.message ??
+              "Unable to authenticate your session. Request a new invitation.",
+          );
+          setStatus("error");
+          return;
+        }
+      }
+
+      const {
+        data: { session: activeSession },
+      } = await supabase.auth.getSession();
+
+      if (!activeSession) {
         setErrorMessage(
-          sessionError.message ??
-            "Unable to authenticate your session. Request a new invitation.",
+          hasStaffInviteLoginInformation(inviteParams)
+            ? "Unable to authenticate your session. Request a new invitation."
+            : "This invitation link is missing login information. Request a fresh invite from your administrator.",
         );
         setStatus("error");
         return;
       }
 
-      // Remove tokens from the URL once session is set.
-      window.history.replaceState({}, document.title, window.location.pathname);
+      if (hasStaffInviteLoginInformation(inviteParams)) {
+        // Remove auth credentials from the URL once the session is active.
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      }
 
       const { data: userResult, error: userError } =
         await supabase.auth.getUser();
