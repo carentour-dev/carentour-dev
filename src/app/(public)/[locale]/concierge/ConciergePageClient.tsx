@@ -1,8 +1,6 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import Image from "@/components/OptimizedImage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -227,8 +225,6 @@ export default function ConciergeServices() {
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Hero Section */}
         <section className="bg-surface-subtle py-20">
@@ -561,8 +557,6 @@ export default function ConciergeServices() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
