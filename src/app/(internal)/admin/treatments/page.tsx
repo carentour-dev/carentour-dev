@@ -19,6 +19,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -1813,15 +1824,55 @@ export default function AdminTreatmentsPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      disabled={deleteTreatment.isPending}
-                      onClick={() => deleteTreatment.mutate(treatment.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          disabled={deleteTreatment.isPending}
+                          aria-label={
+                            isArabicLocale
+                              ? `Delete Arabic translation for ${treatment.name}`
+                              : `Delete ${treatment.name}`
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {isArabicLocale
+                              ? "Delete Arabic translation?"
+                              : "Delete this treatment?"}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {isArabicLocale
+                              ? `This will remove the Arabic public-facing content for ${treatment.name}. The base English treatment will remain available.`
+                              : `This will permanently delete ${treatment.name} and its treatment details. This action cannot be undone.`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel
+                            disabled={deleteTreatment.isPending}
+                          >
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deleteTreatment.isPending}
+                            onClick={() => deleteTreatment.mutate(treatment.id)}
+                          >
+                            {deleteTreatment.isPending
+                              ? "Deleting..."
+                              : isArabicLocale
+                                ? "Delete translation"
+                                : "Delete treatment"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
