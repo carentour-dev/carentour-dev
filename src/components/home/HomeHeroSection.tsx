@@ -74,7 +74,8 @@ export function HomeHeroSection({
           src={resolvedBackgroundImageUrl}
           alt=""
           fill
-          priority
+          preload
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover object-center"
         />
