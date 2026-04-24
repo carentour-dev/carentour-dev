@@ -286,6 +286,7 @@ function HeaderContent() {
             <Drawer
               open={isMenuOpen}
               onOpenChange={setIsMenuOpen}
+              direction="top"
               shouldScaleBackground={false}
             >
               <DrawerTrigger asChild>
@@ -297,7 +298,7 @@ function HeaderContent() {
                   )}
                 </button>
               </DrawerTrigger>
-              <DrawerContent className="md:hidden h-[96vh] max-h-[96vh] overflow-hidden border-t border-border bg-background">
+              <DrawerContent className="h-dvh max-h-dvh overflow-hidden rounded-none border-b border-border bg-background md:hidden [&>div:first-child]:hidden">
                 <DrawerTitle className="sr-only">{t("toggleMenu")}</DrawerTitle>
                 <DrawerDescription className="sr-only">
                   {t("consultationCta")}
