@@ -116,7 +116,10 @@ export function HeroBlock({
   return (
     <BlockSurface
       block={block}
-      className={useDefaultBackground ? backgroundPreset?.className : undefined}
+      className={cn(
+        "min-h-[var(--public-standard-hero-min-height)]",
+        useDefaultBackground ? backgroundPreset?.className : undefined,
+      )}
       style={surfaceStyle}
       defaultPadding={{ top: "5rem", bottom: "5rem" }}
       contentClassName={cn(
