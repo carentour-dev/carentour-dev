@@ -9,7 +9,7 @@ import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
-const HERO_MIN_HEIGHT_CLASS = "min-h-[calc(100svh-4.5rem)]";
+const HERO_FIXED_HEIGHT_CLASS = "h-[var(--public-immersive-hero-min-height)]";
 
 export function AboutHeroBlock({
   block,
@@ -41,7 +41,7 @@ export function AboutHeroBlock({
       defaultPadding={{ top: "0rem", bottom: "0rem" }}
     >
       {() => (
-        <div className={["relative", HERO_MIN_HEIGHT_CLASS].join(" ")}>
+        <div className={["relative", HERO_FIXED_HEIGHT_CLASS].join(" ")}>
           <Image
             src={block.backgroundImageUrl}
             alt={block.heading}
@@ -59,7 +59,7 @@ export function AboutHeroBlock({
           <div
             className={[
               "relative z-10 flex flex-col justify-between",
-              HERO_MIN_HEIGHT_CLASS,
+              HERO_FIXED_HEIGHT_CLASS,
             ].join(" ")}
           >
             <div className="container mx-auto flex flex-1 items-center px-4">
