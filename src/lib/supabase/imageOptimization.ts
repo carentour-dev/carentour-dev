@@ -113,7 +113,8 @@ export function getOptimizedImageProps(src: string | null | undefined) {
   const isRemoteUrl = typeof src === "string" && /^https?:\/\//.test(src);
 
   return {
-    loader: optimizeWithSupabase ? supabaseImageLoader : undefined,
+    // Keep this object serializable so OptimizedImage can render from Server Components.
+    // Supabase images are covered by next.config.js remotePatterns and optimized by Next.
     unoptimized: isRemoteUrl && !optimizeWithSupabase,
   };
 }
