@@ -1,18 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, User, LogOut } from "lucide-react";
+import { Menu, X, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Drawer,
   DrawerClose,
   DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import {
@@ -38,6 +39,11 @@ import {
 } from "@/lib/public/routing";
 import LanguageSwitcher from "@/components/public/LanguageSwitcher";
 import { usePublicShellOwner } from "@/components/public/PublicShellContext";
+
+const HeaderAuthActions = dynamic(
+  () => import("@/components/public/HeaderAuthActions"),
+  { ssr: false },
+);
 
 function HeaderLogo({
   width,
@@ -81,8 +87,7 @@ function HeaderContent() {
   const t = useTranslations("Header");
   const locale = useLocale() as PublicLocale;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
-  const { profile } = useUserProfile();
+  const [renderAuthActions, setRenderAuthActions] = useState(false);
   const phoneNumber = formatPhoneNumberForDisplay(
     PUBLIC_CONTACT_PHONE_DISPLAY,
     locale,
@@ -99,6 +104,49 @@ function HeaderContent() {
   const [loadingNavigation, setLoadingNavigation] = useState(
     () => !hasPreloadedNavigation,
   );
+
+  useEffect(() => {
+    if (renderAuthActions) {
+      return;
+    }
+
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
+    let idleId: number | undefined;
+
+    const revealAuthActions = () => setRenderAuthActions(true);
+    const scheduleReveal = () => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(revealAuthActions, {
+          timeout: 2500,
+        });
+        return;
+      }
+
+      timeoutId = globalThis.setTimeout(revealAuthActions, 1800);
+    };
+
+    if (document.readyState === "complete") {
+      scheduleReveal();
+    } else {
+      window.addEventListener("load", scheduleReveal, { once: true });
+    }
+
+    return () => {
+      window.removeEventListener("load", scheduleReveal);
+      if (idleId !== undefined) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
+  }, [renderAuthActions]);
+
+  useEffect(() => {
+    if (isMenuOpen) {
+      setRenderAuthActions(true);
+    }
+  }, [isMenuOpen]);
 
   useEffect(() => {
     if (hasPreloadedNavigation) {
@@ -163,29 +211,7 @@ function HeaderContent() {
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
-            {user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-muted-foreground hidden lg:inline hover:text-primary transition-smooth"
-                >
-                  {t("dashboardGreeting", {
-                    name: profile?.displayName || t("userFallback"),
-                  })}
-                </Link>
-                <Button variant="ghost" size="sm" onClick={signOut}>
-                  <LogOut className="h-4 w-4 mr-1" />
-                  {t("signOut")}
-                </Button>
-              </>
-            ) : (
-              <Link href="/auth">
-                <Button variant="ghost" size="sm">
-                  <User className="h-4 w-4 mr-1" />
-                  {t("signIn")}
-                </Button>
-              </Link>
-            )}
+            {renderAuthActions ? <HeaderAuthActions variant="desktop" /> : null}
             <Button variant="premium" size="sm" asChild>
               <Link
                 href={localizePublicPathnameWithFallback(
@@ -243,6 +269,10 @@ function HeaderContent() {
                 </button>
               </DrawerTrigger>
               <DrawerContent className="md:hidden h-[96vh] max-h-[96vh] overflow-hidden border-t border-border bg-background">
+                <DrawerTitle className="sr-only">{t("toggleMenu")}</DrawerTitle>
+                <DrawerDescription className="sr-only">
+                  {t("consultationCta")}
+                </DrawerDescription>
                 <div
                   className="flex h-full flex-col"
                   style={{
@@ -285,43 +315,9 @@ function HeaderContent() {
                       <LanguageSwitcher />
                     </div>
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6">
-                      {user ? (
-                        <>
-                          <DrawerClose asChild>
-                            <Link
-                              href="/dashboard"
-                              className="block text-sm text-muted-foreground hover:text-primary transition-smooth"
-                            >
-                              {t("dashboardGreeting", {
-                                name: profile?.displayName || t("userFallback"),
-                              })}
-                            </Link>
-                          </DrawerClose>
-                          <DrawerClose asChild>
-                            <Button
-                              variant="ghost"
-                              className="justify-start"
-                              onClick={signOut}
-                            >
-                              <LogOut className="h-4 w-4 mr-2" />
-                              {t("signOut")}
-                            </Button>
-                          </DrawerClose>
-                        </>
-                      ) : (
-                        <DrawerClose asChild>
-                          <Button
-                            variant="ghost"
-                            className="justify-start"
-                            asChild
-                          >
-                            <Link href="/auth">
-                              <User className="h-4 w-4 mr-2" />
-                              {t("signIn")}
-                            </Link>
-                          </Button>
-                        </DrawerClose>
-                      )}
+                      {renderAuthActions ? (
+                        <HeaderAuthActions variant="mobile" />
+                      ) : null}
                       <DrawerClose asChild>
                         <Button variant="premium" className="w-full" asChild>
                           <Link
