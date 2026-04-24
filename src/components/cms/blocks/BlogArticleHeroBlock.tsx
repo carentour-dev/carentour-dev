@@ -136,7 +136,8 @@ export function BlogArticleHeroBlock({
                   fill
                   className="object-cover"
                   sizes="(min-width: 1280px) 72vw, 100vw"
-                  priority
+                  preload
+                  fetchPriority="high"
                 />
               </div>
             </div>
