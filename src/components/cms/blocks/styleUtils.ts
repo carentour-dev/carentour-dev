@@ -398,10 +398,12 @@ export function buildBackgroundStyles(
     full?: number;
   } | null;
   backgroundVideo?: BlockVideo;
+  backgroundImage?: ResponsiveValue<BlockMedia>;
 } {
   const inlineStyle: React.CSSProperties = {};
   const cssParts: string[] = [];
   let backgroundVideo: BlockVideo | undefined;
+  let backgroundImage: ResponsiveValue<BlockMedia> | undefined;
 
   if (!background) {
     return { inlineStyle, cssText: "", overlayOpacity: null };
@@ -413,18 +415,6 @@ export function buildBackgroundStyles(
   const setBaseBackgroundColor = (value?: string) => {
     if (value) {
       inlineStyle.backgroundColor = value;
-    }
-  };
-
-  const setBaseBackgroundImage = (value?: string) => {
-    if (value) {
-      inlineStyle.backgroundImage = value.startsWith("url(")
-        ? value
-        : `url(${value})`;
-      inlineStyle.backgroundSize = inlineStyle.backgroundSize ?? "cover";
-      inlineStyle.backgroundRepeat = "no-repeat";
-      inlineStyle.backgroundPosition =
-        inlineStyle.backgroundPosition ?? "center";
     }
   };
 
@@ -454,33 +444,7 @@ export function buildBackgroundStyles(
       break;
     }
     case "image": {
-      const baseMedia =
-        resolveMediaForBreakpoint(background.image, "base") ??
-        resolveMediaForBreakpoint(background.image, "mobile") ??
-        resolveMediaForBreakpoint(background.image, "tablet") ??
-        resolveMediaForBreakpoint(background.image, "desktop") ??
-        resolveMediaForBreakpoint(background.image, "full");
-      if (baseMedia?.src) {
-        setBaseBackgroundImage(baseMedia.src);
-        const { focalPoint, fit } = baseMedia;
-        if (focalPoint) {
-          inlineStyle.backgroundPosition = `${focalPoint.x}% ${focalPoint.y}%`;
-        }
-        if (fit) {
-          inlineStyle.backgroundSize = fit === "contain" ? "contain" : "cover";
-        }
-      }
-      responsiveBreakpoints.forEach((bp) => {
-        const media = background.image?.[bp];
-        if (!media?.src) return;
-        const position = media.focalPoint
-          ? `${media.focalPoint.x}% ${media.focalPoint.y}%`
-          : undefined;
-        const size = media.fit === "contain" ? "contain" : "cover";
-        cssParts.push(
-          `${breakpointMediaQuery[bp]}{#${domId}{background-image:url(${media.src});background-position:${position ?? "center"};background-size:${size};}}`,
-        );
-      });
+      backgroundImage = background.image;
       break;
     }
     case "video": {
@@ -514,6 +478,7 @@ export function buildBackgroundStyles(
     cssText: cssParts.join("\n"),
     overlayOpacity: overlayValues,
     backgroundVideo,
+    backgroundImage,
   };
 }
 
