@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Tag } from "lucide-react";
@@ -42,7 +40,6 @@ export default function TagArchive() {
   if (!tag && !isLoading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-bold mb-4 text-foreground">
@@ -57,15 +54,12 @@ export default function TagArchive() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Header */}
         <section className="bg-surface-subtle py-20">
@@ -164,8 +158,6 @@ export default function TagArchive() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
