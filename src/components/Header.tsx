@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail } from "lucide-react";
+import { Menu, X, Phone, Mail, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,6 +45,36 @@ const HeaderAuthActions = dynamic(
   { ssr: false },
 );
 
+const SUPABASE_AUTH_STORAGE_KEY_PATTERN = /^sb-[a-z0-9]+-auth-token$/i;
+
+function isSupabaseAuthStorageKey(key: string) {
+  return SUPABASE_AUTH_STORAGE_KEY_PATTERN.test(key);
+}
+
+function hasStoredSupabaseSession() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key || !isSupabaseAuthStorageKey(key)) {
+        continue;
+      }
+
+      const value = window.localStorage.getItem(key);
+      if (value && value !== "null") {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 function HeaderLogo({
   width,
   height,
@@ -72,6 +102,25 @@ function HeaderLogo({
       />
     </>
   );
+}
+
+function StaticSignInButton({ mobile }: { mobile: boolean }) {
+  const t = useTranslations("Header");
+  const button = (
+    <Button
+      variant="ghost"
+      size={mobile ? "default" : "sm"}
+      className={mobile ? "justify-start" : undefined}
+      asChild
+    >
+      <Link href="/auth">
+        <User className={mobile ? "mr-2 h-4 w-4" : "mr-1 h-4 w-4"} />
+        {t("signIn")}
+      </Link>
+    </Button>
+  );
+
+  return mobile ? <DrawerClose asChild>{button}</DrawerClose> : button;
 }
 
 const Header = ({ forceRender = false }: { forceRender?: boolean }) => {
@@ -106,47 +155,23 @@ function HeaderContent() {
   );
 
   useEffect(() => {
-    if (renderAuthActions) {
-      return;
-    }
-
-    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
-    let idleId: number | undefined;
-
-    const revealAuthActions = () => setRenderAuthActions(true);
-    const scheduleReveal = () => {
-      if ("requestIdleCallback" in window) {
-        idleId = window.requestIdleCallback(revealAuthActions, {
-          timeout: 2500,
-        });
-        return;
-      }
-
-      timeoutId = globalThis.setTimeout(revealAuthActions, 1800);
+    const syncAuthActions = () => {
+      setRenderAuthActions(hasStoredSupabaseSession());
     };
 
-    if (document.readyState === "complete") {
-      scheduleReveal();
-    } else {
-      window.addEventListener("load", scheduleReveal, { once: true });
-    }
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || isSupabaseAuthStorageKey(event.key)) {
+        syncAuthActions();
+      }
+    };
+
+    syncAuthActions();
+    window.addEventListener("storage", handleStorage);
 
     return () => {
-      window.removeEventListener("load", scheduleReveal);
-      if (idleId !== undefined) {
-        window.cancelIdleCallback(idleId);
-      }
-      if (timeoutId !== undefined) {
-        globalThis.clearTimeout(timeoutId);
-      }
+      window.removeEventListener("storage", handleStorage);
     };
-  }, [renderAuthActions]);
-
-  useEffect(() => {
-    if (isMenuOpen) {
-      setRenderAuthActions(true);
-    }
-  }, [isMenuOpen]);
+  }, []);
 
   useEffect(() => {
     if (hasPreloadedNavigation) {
@@ -211,7 +236,11 @@ function HeaderContent() {
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
-            {renderAuthActions ? <HeaderAuthActions variant="desktop" /> : null}
+            {renderAuthActions ? (
+              <HeaderAuthActions variant="desktop" />
+            ) : (
+              <StaticSignInButton mobile={false} />
+            )}
             <Button variant="premium" size="sm" asChild>
               <Link
                 href={localizePublicPathnameWithFallback(
@@ -317,7 +346,9 @@ function HeaderContent() {
                     <div className="space-y-3 border-t border-border/50 pt-4 mt-6">
                       {renderAuthActions ? (
                         <HeaderAuthActions variant="mobile" />
-                      ) : null}
+                      ) : (
+                        <StaticSignInButton mobile />
+                      )}
                       <DrawerClose asChild>
                         <Button variant="premium" className="w-full" asChild>
                           <Link
