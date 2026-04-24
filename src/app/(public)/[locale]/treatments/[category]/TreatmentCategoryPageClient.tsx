@@ -3,8 +3,6 @@
 import { useCallback, useMemo, type ComponentType } from "react";
 import Image from "@/components/OptimizedImage";
 import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -292,8 +290,6 @@ export default function TreatmentDetails({
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Breadcrumb Navigation */}
         <section className="py-8 bg-muted/30">
@@ -887,8 +883,6 @@ export default function TreatmentDetails({
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
