@@ -5,6 +5,9 @@ const nextConfig = {
   images: {
     // CMS media URLs are versioned, so optimizer responses can be cached aggressively.
     minimumCacheTTL: 60 * 60 * 24 * 365,
+    formats: ["image/webp"],
+    deviceSizes: [390, 640, 768, 1024, 1280, 1536, 1920],
+    imageSizes: [32, 48, 64, 96, 128, 160, 256, 384],
     remotePatterns: [
       {
         protocol: "https",
