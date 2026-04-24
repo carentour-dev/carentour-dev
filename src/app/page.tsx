@@ -5,8 +5,6 @@ import Hero from "@/components/Hero";
 import FeaturedTreatments from "@/components/FeaturedTreatments";
 import ProcessSection from "@/components/ProcessSection";
 import USPSection from "@/components/USPSection";
-import Testimonials from "@/components/Testimonials";
-import DoctorsSection from "@/components/DoctorsSection";
 import CTASection from "@/components/CTASection";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -15,7 +13,6 @@ import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { BlockRenderer } from "@/components/cms/BlockRenderer";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
-import { PublicAuthBoundary } from "@/components/public/PublicInteractiveProviders";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
@@ -154,9 +151,7 @@ export default async function RootHomePage() {
                 dir={getPublicDirection(locale)}
                 className="flex min-h-screen flex-col"
               >
-                <PublicAuthBoundary>
-                  <Header forceRender />
-                </PublicAuthBoundary>
+                <Header forceRender />
                 <main className="flex-1">
                   {homepageBlocks.length > 0 && !useLegacyHomepageLayout ? (
                     <BlockRenderer blocks={homepageBlocks} />
@@ -166,8 +161,6 @@ export default async function RootHomePage() {
                       <FeaturedTreatments />
                       <ProcessSection />
                       <USPSection />
-                      <DoctorsSection />
-                      <Testimonials />
                       <CTASection />
                     </>
                   )}
