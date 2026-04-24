@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import type { BlockInstance, BlockValue } from "@/lib/cms/blocks";
 import { cn } from "@/lib/utils";
 import { BlockSurface } from "./BlockSurface";
