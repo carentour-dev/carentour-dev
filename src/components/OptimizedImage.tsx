@@ -1,5 +1,3 @@
-"use client";
-
 import NextImage, { type ImageProps } from "next/image";
 import { getOptimizedImageProps } from "@/lib/supabase/imageOptimization";
 
