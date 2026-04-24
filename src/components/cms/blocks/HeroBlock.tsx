@@ -221,7 +221,9 @@ export function HeroBlock({
                     width={1200}
                     height={900}
                     className="w-full object-cover"
-                    priority
+                    preload
+                    fetchPriority="high"
+                    sizes="(min-width: 1024px) 50vw, 100vw"
                   />
                   {block.media?.caption ? (
                     <span className="absolute bottom-3 left-3 text-sm text-white/80 drop-shadow-lg">
