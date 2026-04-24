@@ -19,6 +19,8 @@ export function LanguageSwitcher() {
 
   useEffect(() => {
     let isSubscribed = true;
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
+    let idleId: number | undefined;
 
     const loadLocalizedHrefs = async () => {
       const [englishResponse, arabicResponse] = await Promise.all([
@@ -57,10 +59,34 @@ export function LanguageSwitcher() {
       setHrefs(nextHrefs);
     };
 
-    loadLocalizedHrefs();
+    const scheduleLoad = () => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(() => {
+          void loadLocalizedHrefs();
+        });
+        return;
+      }
+
+      timeoutId = globalThis.setTimeout(() => {
+        void loadLocalizedHrefs();
+      }, 1200);
+    };
+
+    if (document.readyState === "complete") {
+      scheduleLoad();
+    } else {
+      window.addEventListener("load", scheduleLoad, { once: true });
+    }
 
     return () => {
       isSubscribed = false;
+      window.removeEventListener("load", scheduleLoad);
+      if (idleId !== undefined) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
     };
   }, [pathname]);
 
