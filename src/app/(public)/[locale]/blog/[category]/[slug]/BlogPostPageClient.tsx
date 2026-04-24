@@ -3,8 +3,6 @@
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "@/components/OptimizedImage";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, Clock, User, Eye } from "lucide-react";
 import { useBlogPost } from "@/hooks/useBlogPost";
@@ -43,7 +41,6 @@ export default function BlogPostPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <main className="py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto space-y-8">
@@ -59,7 +56,6 @@ export default function BlogPostPage() {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -67,7 +63,6 @@ export default function BlogPostPage() {
   if (error || !post) {
     return (
       <div className="min-h-screen">
-        <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-bold mb-4 text-foreground">
@@ -83,7 +78,6 @@ export default function BlogPostPage() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -93,8 +87,6 @@ export default function BlogPostPage() {
       <ReadingProgress />
 
       <div className="min-h-screen">
-        <Header />
-
         <main>
           {/* Article Header */}
           <section className="bg-surface-subtle py-12 md:py-20">
@@ -262,8 +254,6 @@ export default function BlogPostPage() {
             </div>
           </section>
         </main>
-
-        <Footer />
       </div>
     </>
   );
