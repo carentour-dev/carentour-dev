@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
-import Hero from "@/components/Hero";
-import FeaturedTreatments from "@/components/FeaturedTreatments";
-import ProcessSection from "@/components/ProcessSection";
-import USPSection from "@/components/USPSection";
-import CTASection from "@/components/CTASection";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import SharedUiProviders from "@/components/SharedUiProviders";
+import PublicFooter from "@/components/public/PublicFooter";
+import PublicHeader from "@/components/public/PublicHeader";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
-import { BlockRenderer } from "@/components/cms/BlockRenderer";
+import {
+  HomeBlockRenderer,
+  supportsOptimizedHomeBlocks,
+} from "@/components/cms/HomeBlockRenderer";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
+import PublicUiProviders from "@/components/public/PublicUiProviders";
 import { StructuredDataScripts } from "@/components/seo/StructuredDataScripts";
 import { defaultPublicLocale, type PublicLocale } from "@/i18n/routing";
 import {
@@ -137,11 +135,30 @@ export default async function RootHomePage() {
   );
   const initialNavigationLinks =
     navigationResult.links.filter(isNavigationVisible);
+  const canUseOptimizedHomeRenderer =
+    homepageBlocks.length > 0 &&
+    !useLegacyHomepageLayout &&
+    supportsOptimizedHomeBlocks(homepageBlocks);
+  const legacyHomepage = useLegacyHomepageLayout
+    ? await import("@/components/home/LegacyHomepage").then(
+        ({ default: LegacyHomepage }) => (
+          <LegacyHomepage heroImageUrl={heroImageUrl} />
+        ),
+      )
+    : null;
+  const genericCmsHomepage =
+    homepageBlocks.length > 0 &&
+    !useLegacyHomepageLayout &&
+    !canUseOptimizedHomeRenderer
+      ? await import("@/components/cms/BlockRenderer").then(
+          ({ BlockRenderer }) => <BlockRenderer blocks={homepageBlocks} />,
+        )
+      : null;
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
-      <SharedUiProviders>
+      <PublicUiProviders>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <PublicShellProvider>
             <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
@@ -151,27 +168,30 @@ export default async function RootHomePage() {
                 dir={getPublicDirection(locale)}
                 className="flex min-h-screen flex-col"
               >
-                <Header forceRender />
+                <PublicHeader
+                  locale={locale}
+                  navigationLinks={initialNavigationLinks}
+                />
                 <main className="flex-1">
-                  {homepageBlocks.length > 0 && !useLegacyHomepageLayout ? (
-                    <BlockRenderer blocks={homepageBlocks} />
+                  {canUseOptimizedHomeRenderer ? (
+                    <HomeBlockRenderer
+                      blocks={homepageBlocks}
+                      locale={locale}
+                    />
                   ) : (
-                    <>
-                      <Hero backgroundImageUrl={heroImageUrl} />
-                      <FeaturedTreatments />
-                      <ProcessSection />
-                      <USPSection />
-                      <CTASection />
-                    </>
+                    (genericCmsHomepage ?? legacyHomepage)
                   )}
                 </main>
-                <Footer forceRender />
+                <PublicFooter
+                  locale={locale}
+                  navigationLinks={initialNavigationLinks}
+                />
               </div>
               <WhatsAppCtaGate />
             </NavigationProvider>
           </PublicShellProvider>
         </NextIntlClientProvider>
-      </SharedUiProviders>
+      </PublicUiProviders>
     </>
   );
 }
