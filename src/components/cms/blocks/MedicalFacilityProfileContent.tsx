@@ -167,7 +167,8 @@ export function MedicalFacilityProfileContent({
             fill
             sizes="100vw"
             className="object-cover opacity-40"
-            priority
+            preload
+            fetchPriority="high"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/50" />
         </div>
