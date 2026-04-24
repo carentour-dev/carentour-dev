@@ -6,8 +6,6 @@ import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { useTreatments } from "@/hooks/useTreatments";
 import { useDoctors } from "@/hooks/useDoctors";
 import PriceComparison from "@/components/PriceComparison";
@@ -185,14 +183,12 @@ export default function Treatments() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">{t("loading")}</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -200,7 +196,6 @@ export default function Treatments() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <p className="text-destructive mb-4">
@@ -211,15 +206,12 @@ export default function Treatments() {
             </Button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
@@ -568,8 +560,6 @@ export default function Treatments() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
