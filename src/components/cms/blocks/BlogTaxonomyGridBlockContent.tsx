@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/OptimizedImage";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
