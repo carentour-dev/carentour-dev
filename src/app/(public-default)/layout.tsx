@@ -7,7 +7,6 @@ import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
-import { PublicAuthBoundary } from "@/components/public/PublicInteractiveProviders";
 import { defaultPublicLocale } from "@/i18n/routing";
 import { isNavigationVisible } from "@/lib/navigation";
 import { getPublicDirection } from "@/lib/public/routing";
@@ -38,9 +37,7 @@ export default async function DefaultPublicLayout({
               dir={getPublicDirection(defaultPublicLocale)}
               className="flex min-h-screen flex-col"
             >
-              <PublicAuthBoundary>
-                <Header forceRender />
-              </PublicAuthBoundary>
+              <Header forceRender />
               <main className="flex-1">{children}</main>
               <Footer forceRender />
             </div>
