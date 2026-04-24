@@ -1,6 +1,3 @@
-"use client";
-
-import * as React from "react";
 import { clsx } from "clsx";
 
 export type WhatsAppCtaProps = {
@@ -28,28 +25,9 @@ export function WhatsAppCta({
   label = "Chat on WhatsApp",
   className,
 }: WhatsAppCtaProps) {
-  const cleanedPhone = React.useMemo(
-    () => cleanPhoneNumber(phoneNumber),
-    [phoneNumber],
-  );
-
-  const prefilledMessage = React.useMemo(
-    () => message.trim() || DEFAULT_MESSAGE,
-    [message],
-  );
-
-  const link = React.useMemo(
-    () => buildWhatsAppLink(cleanedPhone, prefilledMessage),
-    [cleanedPhone, prefilledMessage],
-  );
-
-  const handleClick = React.useCallback(() => {
-    window.open(link, "_blank", "noopener,noreferrer");
-    console.info("[WhatsAppCTA] click", {
-      timestamp: new Date().toISOString(),
-      link,
-    });
-  }, [link]);
+  const cleanedPhone = cleanPhoneNumber(phoneNumber);
+  const prefilledMessage = message.trim() || DEFAULT_MESSAGE;
+  const link = buildWhatsAppLink(cleanedPhone, prefilledMessage);
 
   return (
     <div
@@ -58,9 +36,10 @@ export function WhatsAppCta({
         className,
       )}
     >
-      <button
-        type="button"
-        onClick={handleClick}
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
         className="flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-700/20 transition hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-200"
         aria-label={label}
       >
@@ -75,7 +54,7 @@ export function WhatsAppCta({
           </svg>
         </span>
         <span>{label}</span>
-      </button>
+      </a>
     </div>
   );
 }
