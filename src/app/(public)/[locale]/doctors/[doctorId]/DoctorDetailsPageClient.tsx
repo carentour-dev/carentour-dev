@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { DoctorReviews } from "@/components/DoctorReviews";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,8 +83,6 @@ export default function DoctorDetail({ doctor, reviews, locale }: Props) {
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         <section className="border-b border-border bg-background py-4">
           <div className="container mx-auto px-4">
@@ -347,8 +343,6 @@ export default function DoctorDetail({ doctor, reviews, locale }: Props) {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
