@@ -65,7 +65,7 @@ export function HomeHeroSection({
   return (
     <section
       className={cn(
-        "relative flex min-h-[70vh] flex-col overflow-hidden",
+        "relative flex h-[var(--public-immersive-hero-min-height)] flex-col overflow-hidden",
         className,
       )}
     >
