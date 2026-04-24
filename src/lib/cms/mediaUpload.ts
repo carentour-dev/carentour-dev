@@ -1,4 +1,10 @@
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const OPTIMIZABLE_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -23,6 +29,10 @@ export const CMS_MEDIA_UPLOAD_ERROR_MESSAGES = {
 
 export function isAllowedCmsMediaMimeType(value: string) {
   return ALLOWED_MIME_TYPES.has(value);
+}
+
+export function isOptimizableCmsImageMimeType(value: string) {
+  return OPTIMIZABLE_IMAGE_MIME_TYPES.has(value);
 }
 
 export function isAllowedCmsMediaUploadSize(size: number) {
