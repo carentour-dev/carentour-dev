@@ -1,5 +1,3 @@
-"use client";
-
 import { DEFAULT_HOME_CTA_CONTENT, HomeCtaSection } from "@/components/home";
 
 const CTASection = () => {
