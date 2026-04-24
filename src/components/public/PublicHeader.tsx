@@ -102,7 +102,7 @@ export default async function PublicHeader({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 py-4 sm:justify-between">
+        <div className="flex items-center justify-between gap-4 py-4">
           <div className="flex min-w-0 items-center">
             <Link
               href={localizePublicPathname("/", locale)}
