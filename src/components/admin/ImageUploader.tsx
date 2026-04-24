@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import { uploadCmsMediaViaApi } from "@/lib/cms/mediaUploadClient";
+import { isOptimizableCmsImageMimeType } from "@/lib/cms/mediaUpload";
 import { cn } from "@/lib/utils";
 import { FileText, Loader2, UploadCloud, X } from "lucide-react";
 
@@ -207,6 +209,24 @@ export function ImageUploader({
             : "";
         return `file-${Date.now()}${inferredExtension}`;
       })();
+
+      if (
+        mode === "image" &&
+        bucket === "media" &&
+        isOptimizableCmsImageMimeType(file.type)
+      ) {
+        const uploaded = await uploadCmsMediaViaApi({
+          file,
+          bucket,
+          folder,
+        });
+        onChange(uploaded.publicUrl);
+        if (previousValue) {
+          void deleteFromStorage(previousValue, { suppressError: true });
+        }
+        return;
+      }
+
       const randomSegment =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
