@@ -120,6 +120,12 @@
     --workspace-surface-topline: rgb(255 255 255 / 0.78);
     --workspace-overlay-backdrop: rgb(17 24 39 / 0.32);
 
+    --public-header-height: 5.5rem;
+    --public-immersive-hero-min-height: calc(
+      100svh - var(--public-header-height)
+    );
+    --public-standard-hero-min-height: clamp(26rem, 56svh, 40rem);
+
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
@@ -137,6 +143,12 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --public-header-height: 9rem;
+    }
   }
 
   .dark {
