@@ -46,7 +46,8 @@ export function AboutHeroBlock({
             src={block.backgroundImageUrl}
             alt={block.heading}
             fill
-            priority
+            preload
+            fetchPriority="high"
             className="object-cover"
             sizes="100vw"
           />
