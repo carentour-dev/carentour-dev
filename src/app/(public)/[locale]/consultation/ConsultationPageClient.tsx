@@ -6,8 +6,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -445,7 +443,6 @@ export default function ConsultationPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main>
         <section className="bg-surface-subtle py-16 md:py-24">
           <div className="container mx-auto px-4">
@@ -959,7 +956,6 @@ export default function ConsultationPage() {
           </div>
         </section>
       </main>
-      <Footer />
     </div>
   );
 }
