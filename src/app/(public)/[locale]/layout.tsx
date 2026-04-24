@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import SharedUiProviders from "@/components/SharedUiProviders";
+import PublicFooter from "@/components/public/PublicFooter";
+import PublicHeader from "@/components/public/PublicHeader";
 import MicrosoftClarity from "@/components/analytics/MicrosoftClarity";
 import WhatsAppCtaGate from "@/components/WhatsAppCtaGate";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { PublicShellProvider } from "@/components/public/PublicShellContext";
+import PublicUiProviders from "@/components/public/PublicUiProviders";
 import { isNavigationVisible } from "@/lib/navigation";
 import { validatePublicLocale } from "@/lib/public/localization";
 import { publicLocales, type PublicLocale } from "@/i18n/routing";
@@ -61,7 +61,7 @@ export default async function PublicLocaleLayout({
     navigationResult.links.filter(isNavigationVisible);
 
   return (
-    <SharedUiProviders>
+    <PublicUiProviders>
       <NextIntlClientProvider locale={locale} messages={messages}>
         <PublicShellProvider>
           <NavigationProvider initialNavigationLinks={initialNavigationLinks}>
@@ -71,14 +71,20 @@ export default async function PublicLocaleLayout({
               dir={getPublicDirection(locale)}
               className="flex min-h-screen flex-col"
             >
-              <Header forceRender />
+              <PublicHeader
+                locale={locale}
+                navigationLinks={initialNavigationLinks}
+              />
               <div className="flex-1">{children}</div>
-              <Footer forceRender />
+              <PublicFooter
+                locale={locale}
+                navigationLinks={initialNavigationLinks}
+              />
             </div>
             <WhatsAppCtaGate />
           </NavigationProvider>
         </PublicShellProvider>
       </NextIntlClientProvider>
-    </SharedUiProviders>
+    </PublicUiProviders>
   );
 }
