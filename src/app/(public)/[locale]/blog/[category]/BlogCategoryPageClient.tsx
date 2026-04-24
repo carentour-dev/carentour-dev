@@ -1,8 +1,6 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -34,7 +32,6 @@ export default function CategoryArchive() {
   if (!category && !isLoading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-bold mb-4 text-foreground">
@@ -49,15 +46,12 @@ export default function CategoryArchive() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Header */}
         <section className="bg-surface-subtle py-20">
@@ -160,8 +154,6 @@ export default function CategoryArchive() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
