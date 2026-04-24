@@ -1,7 +1,5 @@
 "use client";
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +26,6 @@ const StoriesPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         <section className="bg-surface-subtle py-20">
           <div className="container mx-auto px-4">
@@ -297,8 +293,6 @@ const StoriesPage = () => {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 };
