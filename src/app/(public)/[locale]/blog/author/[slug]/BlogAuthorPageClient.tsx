@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "@/components/OptimizedImage";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Globe, Twitter, Linkedin, Github } from "lucide-react";
@@ -50,7 +48,6 @@ export default function AuthorArchive() {
   if (!author && !isLoading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <main className="py-20">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-bold mb-4 text-foreground">
@@ -65,15 +62,12 @@ export default function AuthorArchive() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Author Profile Header */}
         <section className="bg-surface-subtle py-20">
@@ -261,8 +255,6 @@ export default function AuthorArchive() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
