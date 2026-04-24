@@ -1,7 +1,5 @@
 "use client";
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { DoctorProfile } from "@/components/DoctorProfile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,14 +50,12 @@ export default function Doctors() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading doctors...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -67,7 +63,6 @@ export default function Doctors() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <Header />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <p className="text-destructive mb-4">
@@ -76,15 +71,12 @@ export default function Doctors() {
             <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Hero Section */}
         <section className="bg-surface-subtle py-20">
@@ -231,8 +223,6 @@ export default function Doctors() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
