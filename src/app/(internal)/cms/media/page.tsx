@@ -38,11 +38,13 @@ import {
 } from "@/components/workspaces/WorkspacePrimitives";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadCmsMediaViaApi } from "@/lib/cms/mediaUploadClient";
 import {
   buildCmsMediaStoragePath,
   CMS_MEDIA_UPLOAD_ERROR_MESSAGES,
   isAllowedCmsMediaMimeType,
   isAllowedCmsMediaUploadSize,
+  isOptimizableCmsImageMimeType,
 } from "@/lib/cms/mediaUpload";
 
 type FileItem = {
@@ -203,16 +205,24 @@ export default function CmsMediaPage() {
         throw new Error(CMS_MEDIA_UPLOAD_ERROR_MESSAGES.invalidName);
       }
 
-      const storagePath = buildCmsMediaStoragePath(originalFileName);
-      const { error } = await supabase.storage
-        .from(MEDIA_BUCKET)
-        .upload(storagePath, file, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
+      if (isOptimizableCmsImageMimeType(file.type)) {
+        await uploadCmsMediaViaApi({
+          file,
+          bucket: MEDIA_BUCKET,
+          folder: "cms",
         });
+      } else {
+        const storagePath = buildCmsMediaStoragePath(originalFileName);
+        const { error } = await supabase.storage
+          .from(MEDIA_BUCKET)
+          .upload(storagePath, file, {
+            contentType: file.type || "application/octet-stream",
+            upsert: false,
+          });
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          throw new Error(error.message);
+        }
       }
 
       toast({
