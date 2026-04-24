@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -122,8 +120,6 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main>
         {/* Hero Section */}
         <section className="bg-surface-subtle py-20">
@@ -314,8 +310,6 @@ export default function Blog() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
