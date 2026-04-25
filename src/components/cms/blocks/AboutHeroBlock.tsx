@@ -11,7 +11,6 @@ import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
 const HERO_HEIGHT_CLASS =
   "min-h-[58rem] lg:h-[var(--public-immersive-hero-min-height)] lg:min-h-[var(--public-immersive-hero-min-height)]";
-const HERO_BACKGROUND_HEIGHT_CLASS = "h-[58rem] lg:h-full";
 
 export function AboutHeroBlock({
   block,
@@ -49,13 +48,7 @@ export function AboutHeroBlock({
             HERO_HEIGHT_CLASS,
           ].join(" ")}
         >
-          <div
-            className={[
-              "absolute inset-x-0 top-0",
-              HERO_BACKGROUND_HEIGHT_CLASS,
-            ].join(" ")}
-            aria-hidden="true"
-          >
+          <div className="absolute inset-0" aria-hidden="true">
             <Image
               src={block.backgroundImageUrl}
               alt=""
