@@ -3,7 +3,8 @@ import type { BlockInstance } from "@/lib/cms/blocks";
 import { HomeHeroSection } from "@/components/home";
 import { BlockSurface } from "./BlockSurface";
 
-const HERO_MIN_HEIGHT_CLASS = "min-h-[var(--public-immersive-hero-min-height)]";
+const HERO_MIN_HEIGHT_CLASS =
+  "min-h-[58rem] lg:min-h-[var(--public-immersive-hero-min-height)]";
 
 export function HomeHeroBlock({
   block,
