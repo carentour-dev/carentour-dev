@@ -65,7 +65,7 @@ export function HomeHeroSection({
   return (
     <section
       className={cn(
-        "relative flex h-[var(--public-immersive-hero-min-height)] flex-col overflow-hidden",
+        "relative flex min-h-[58rem] flex-col overflow-hidden lg:h-[var(--public-immersive-hero-min-height)] lg:min-h-[var(--public-immersive-hero-min-height)]",
         className,
       )}
     >
@@ -92,7 +92,7 @@ export function HomeHeroSection({
             containerClassName,
           )}
         >
-          <div className={cn("w-full py-16 lg:py-20", contentColumnClassName)}>
+          <div className={cn("w-full py-12 lg:py-14", contentColumnClassName)}>
             <div className="space-y-6">
               <div className="flex items-center space-x-2">
                 <Shield className="h-6 w-6 text-premium" />
@@ -101,7 +101,7 @@ export function HomeHeroSection({
                 </span>
               </div>
 
-              <h1 className="text-5xl font-bold leading-tight text-primary-foreground md:text-7xl">
+              <h1 className="text-5xl font-bold leading-tight text-primary-foreground md:text-6xl">
                 {localizeOptionalDigits(content.headingPrefix, locale)}
                 <span className="block text-premium [text-shadow:0_4px_18px_rgba(0,0,0,0.35)]">
                   {localizeOptionalDigits(content.headingHighlight, locale)}
@@ -109,7 +109,7 @@ export function HomeHeroSection({
                 {localizeOptionalDigits(content.headingSuffix, locale)}
               </h1>
 
-              <p className="max-w-3xl whitespace-pre-line text-xl leading-relaxed text-primary-foreground/90 md:text-2xl">
+              <p className="max-w-3xl whitespace-pre-line text-lg leading-relaxed text-primary-foreground/90 md:text-xl">
                 {localizeOptionalDigits(content.description, locale)}
               </p>
 
