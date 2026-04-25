@@ -9,7 +9,8 @@ import { localizeOptionalDigits } from "@/lib/public/numbers";
 import { BlockSurface } from "./BlockSurface";
 import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
-const HERO_FIXED_HEIGHT_CLASS = "h-[var(--public-immersive-hero-min-height)]";
+const HERO_HEIGHT_CLASS =
+  "min-h-[58rem] lg:h-[var(--public-immersive-hero-min-height)] lg:min-h-[var(--public-immersive-hero-min-height)]";
 
 export function AboutHeroBlock({
   block,
@@ -41,7 +42,9 @@ export function AboutHeroBlock({
       defaultPadding={{ top: "0rem", bottom: "0rem" }}
     >
       {() => (
-        <div className={["relative", HERO_FIXED_HEIGHT_CLASS].join(" ")}>
+        <div
+          className={["relative overflow-hidden", HERO_HEIGHT_CLASS].join(" ")}
+        >
           <Image
             src={block.backgroundImageUrl}
             alt={block.heading}
@@ -59,11 +62,11 @@ export function AboutHeroBlock({
           <div
             className={[
               "relative z-10 flex flex-col justify-between",
-              HERO_FIXED_HEIGHT_CLASS,
+              HERO_HEIGHT_CLASS,
             ].join(" ")}
           >
             <div className="container mx-auto flex flex-1 items-center px-4">
-              <div className="w-full max-w-3xl py-16 lg:py-20">
+              <div className="w-full max-w-5xl py-12 lg:py-14">
                 <div className="space-y-6">
                   {block.eyebrow ? (
                     <span className="inline-flex items-center rounded-full border border-[hsl(var(--editorial-ink-foreground)/0.2)] bg-[hsl(var(--editorial-ink-foreground)/0.08)] px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-[hsl(var(--editorial-accent))]">
@@ -71,7 +74,7 @@ export function AboutHeroBlock({
                     </span>
                   ) : null}
 
-                  <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-white md:text-6xl md:leading-[1.02]">
+                  <h1 className="max-w-5xl text-4xl font-semibold leading-tight text-white md:text-5xl md:leading-[1.04]">
                     {localizeOptionalDigits(block.heading, locale)}
                   </h1>
 
