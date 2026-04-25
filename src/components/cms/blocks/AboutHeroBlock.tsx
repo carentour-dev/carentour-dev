@@ -11,6 +11,7 @@ import { withBlockStyleDefaults } from "./blockStyleDefaults";
 
 const HERO_HEIGHT_CLASS =
   "min-h-[58rem] lg:h-[var(--public-immersive-hero-min-height)] lg:min-h-[var(--public-immersive-hero-min-height)]";
+const HERO_BACKGROUND_HEIGHT_CLASS = "h-[58rem] lg:h-full";
 
 export function AboutHeroBlock({
   block,
@@ -43,21 +44,32 @@ export function AboutHeroBlock({
     >
       {() => (
         <div
-          className={["relative overflow-hidden", HERO_HEIGHT_CLASS].join(" ")}
+          className={[
+            "relative overflow-hidden bg-[hsl(var(--editorial-ink))]",
+            HERO_HEIGHT_CLASS,
+          ].join(" ")}
         >
-          <Image
-            src={block.backgroundImageUrl}
-            alt={block.heading}
-            fill
-            preload
-            fetchPriority="high"
-            className="object-cover"
-            sizes="100vw"
-          />
           <div
-            className="absolute inset-0"
-            style={{ backgroundImage: overlayGradient }}
-          />
+            className={[
+              "absolute inset-x-0 top-0",
+              HERO_BACKGROUND_HEIGHT_CLASS,
+            ].join(" ")}
+            aria-hidden="true"
+          >
+            <Image
+              src={block.backgroundImageUrl}
+              alt=""
+              fill
+              preload
+              fetchPriority="high"
+              className="object-cover"
+              sizes="100vw"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ backgroundImage: overlayGradient }}
+            />
+          </div>
 
           <div
             className={[
