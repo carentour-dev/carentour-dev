@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import type { HomeAction, HomeHeroContent } from "./content";
 
 const DEFAULT_HERO_IMAGE_URL = "/hero-medical-facility.jpg";
-const HERO_BACKGROUND_HEIGHT_CLASS = "h-[58rem] lg:h-auto";
 
 type HomeHeroSectionProps = {
   content: HomeHeroContent;
@@ -70,13 +69,7 @@ export function HomeHeroSection({
         className,
       )}
     >
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 lg:inset-0",
-          HERO_BACKGROUND_HEIGHT_CLASS,
-        )}
-        aria-hidden="true"
-      >
+      <div className="absolute inset-0" aria-hidden="true">
         <Image
           src={resolvedBackgroundImageUrl}
           alt=""
