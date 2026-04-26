@@ -67,6 +67,7 @@ bun.lockb
 gitleaks-report.json
 .husky/
 scripts/*
+!scripts/optimize-cms-media.mjs
 !scripts/test-loader.mjs
 !scripts/test-register.mjs
 
