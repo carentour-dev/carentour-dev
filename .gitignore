@@ -20,9 +20,11 @@ dist-ssr
 # misc
 .DS_Store
 /tmp/
+/local-tools/send-test-lead/
 *.pem
 WEBSITE_FLOW.md
 CLEANUP_SUMMARY.md
+Care-N-Tour-Lead-Webhook-Integration-Guide.md
 /docs/
 BLOG_IMPLEMENTATION_STATUS.md
 BLOG_IMPLEMENTATION_COMPLETE.md
