@@ -44,6 +44,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -460,6 +461,9 @@ export function PageBuilder({
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle>Live preview</DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview the current page blocks in a modal.
+            </DialogDescription>
           </DialogHeader>
           {previewBlocks.length ? (
             <div className="max-h-[70vh] overflow-hidden rounded-lg">
