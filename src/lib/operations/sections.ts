@@ -11,6 +11,7 @@ import {
   Plane,
   Users,
   Sparkles,
+  UserRoundSearch,
 } from "lucide-react";
 
 import type { OperationsSectionId } from "@/lib/operations/types";
@@ -36,6 +37,7 @@ const overviewRequirement: AccessRequirement = [
   {
     anyPermissions: [
       "operations.requests",
+      "operations.leads",
       "operations.start_journey",
       "operations.consultations",
       "operations.appointments",
@@ -113,6 +115,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: Bot,
     adminHref: "/admin",
     required: cntAiRequirement,
+  },
+  {
+    id: "leads",
+    label: "Leads",
+    description:
+      "Stage, qualify, deduplicate, assign, and convert incoming funnel leads.",
+    href: "/operations/leads",
+    icon: UserRoundSearch,
+    adminHref: "/admin/leads",
+    required: sectionRequirement("operations.leads"),
   },
   {
     id: "requests",
