@@ -94,3 +94,14 @@ test("media migration script defaults to dry-run and writes a rollback manifest"
   assert.match(source, /newUrl/);
   assert.match(source, /Run again with --apply/);
 });
+
+test("media migration verifies optimized uploads before rewriting CMS rows", () => {
+  const source = readSource("scripts/optimize-cms-media.mjs");
+  const verificationIndex = source.indexOf("verifyUploadedOptimizedImage({");
+  const updateIndex = source.indexOf(".from(spec.table)");
+
+  assert.match(source, /Uploaded image verification failed/);
+  assert.match(source, /fetch\(publicUrl, \{ method: "HEAD" \}\)/);
+  assert.ok(verificationIndex > -1);
+  assert.ok(updateIndex > verificationIndex);
+});
