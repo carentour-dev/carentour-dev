@@ -172,6 +172,38 @@ function publicUrlFor(supabase, storagePath) {
     .publicUrl;
 }
 
+async function verifyUploadedOptimizedImage({
+  supabase,
+  storagePath,
+  publicUrl,
+  expectedByteSize,
+}) {
+  const { data, error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .download(storagePath);
+  if (error || !data) {
+    throw new Error(
+      `Uploaded image verification failed for ${storagePath}: ${
+        error?.message ?? "no data"
+      }`,
+    );
+  }
+
+  const downloadedByteSize = Buffer.from(await data.arrayBuffer()).byteLength;
+  if (downloadedByteSize !== expectedByteSize) {
+    throw new Error(
+      `Uploaded image verification failed for ${storagePath}: expected ${expectedByteSize} bytes, got ${downloadedByteSize}`,
+    );
+  }
+
+  const response = await fetch(publicUrl, { method: "HEAD" });
+  if (!response.ok) {
+    throw new Error(
+      `Uploaded image public URL is not readable for ${storagePath}: ${response.status} ${response.statusText}`,
+    );
+  }
+}
+
 function rewriteValue(value, rewrites) {
   if (typeof value === "string") {
     return rewrites.get(value) ?? value;
@@ -325,6 +357,13 @@ async function optimizeReference({ value, supabase, supabaseUrl, cache }) {
     if (error) {
       throw error;
     }
+
+    await verifyUploadedOptimizedImage({
+      supabase,
+      storagePath: optimizedPath,
+      publicUrl: nextUrl,
+      expectedByteSize: optimized.buffer.byteLength,
+    });
   }
 
   cache.set(value, result);
