@@ -1,5 +1,6 @@
 export type OperationsSectionId =
   | "overview"
+  | "leads"
   | "requests"
   | "start-journey"
   | "consultations"
