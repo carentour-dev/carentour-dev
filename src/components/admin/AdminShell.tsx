@@ -36,12 +36,14 @@ import {
   Stethoscope,
   Users,
   UserPlus,
+  UserRoundSearch,
   ShieldCheck,
 } from "lucide-react";
 
 // Admin navigation configuration keeps sidebar items in one place.
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Leads", href: "/admin/leads", icon: UserRoundSearch },
   { label: "Requests", href: "/admin/requests", icon: Inbox },
   { label: "Start Journey", href: "/admin/start-journey", icon: Plane },
   { label: "Consultations", href: "/admin/consultations", icon: CalendarCheck },
@@ -67,15 +69,15 @@ const NAV_SECTIONS: Array<{
 }> = [
   {
     label: "Core",
-    items: NAV_ITEMS.slice(0, 6),
+    items: NAV_ITEMS.slice(0, 7),
   },
   {
     label: "Catalog",
-    items: NAV_ITEMS.slice(6, 12),
+    items: NAV_ITEMS.slice(7, 13),
   },
   {
     label: "Access",
-    items: NAV_ITEMS.slice(12),
+    items: NAV_ITEMS.slice(13),
   },
 ];
 
