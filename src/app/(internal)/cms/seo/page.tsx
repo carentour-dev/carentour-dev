@@ -31,6 +31,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -1537,6 +1538,10 @@ export default function CmsSeoWorkspacePage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>How SEO Control Center works</DialogTitle>
+            <DialogDescription className="sr-only">
+              Steps for filtering pages, editing overrides, and publishing SEO
+              changes.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
             <p>Use this flow to update SEO safely:</p>
@@ -1637,6 +1642,10 @@ export default function CmsSeoWorkspacePage() {
         <DialogContent className="max-h-[95vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit SEO Override</DialogTitle>
+            <DialogDescription className="sr-only">
+              Edit route-specific SEO title, description, metadata, and
+              structured data overrides.
+            </DialogDescription>
           </DialogHeader>
 
           {editorLoading || !formState ? (
