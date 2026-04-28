@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 import type { JsonLdNode } from "@/lib/seo/types";
 
 type StructuredDataScriptsProps = {
@@ -21,8 +23,9 @@ export function StructuredDataScripts({ payload }: StructuredDataScriptsProps) {
   return (
     <>
       {payload.map((entry, index) => (
-        <script
+        <Script
           key={`jsonld-${index}`}
+          id={`jsonld-${index}`}
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(entry) }}
         />
