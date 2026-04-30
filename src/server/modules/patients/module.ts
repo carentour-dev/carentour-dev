@@ -20,11 +20,19 @@ import {
   type PatientSource,
   type PatientCreationChannel,
 } from "@/lib/patients/status";
+import { normalizeRoles } from "@/lib/auth/roles";
 
 // Patients share the generic CRUD helpers used by other admin modules.
 const patientServiceInstance = new CrudService("patients", "patient");
 
 const CONFIRM_PATIENT_PERMISSION = "operations.patients.confirm";
+const ASSIGN_PATIENT_PERMISSION = "operations.patients.assign";
+const COORDINATOR_ASSIGNABLE_ROLES = new Set([
+  "admin",
+  "coordinator",
+  "employee",
+  "management",
+]);
 
 const isoDate = z
   .string()
@@ -71,6 +79,7 @@ const createPatientSchema = z.object({
   source: PatientSourceEnum.optional(),
   created_channel: PatientCreationChannelEnum.optional(),
   created_by_profile_id: optionalUuid,
+  coordinator_id: optionalUuid,
 });
 
 const updatePatientSchema = createPatientSchema.partial();
@@ -100,6 +109,12 @@ type ServiceProviderRow =
   Database["public"]["Tables"]["service_providers"]["Row"];
 type DoctorReviewRow = Database["public"]["Tables"]["doctor_reviews"]["Row"];
 type PatientStoryRow = Database["public"]["Tables"]["patient_stories"]["Row"];
+type PatientCoordinatorAssignmentRow =
+  Database["public"]["Tables"]["patient_coordinator_assignments"]["Row"];
+type PatientWithCoordinatorProfiles = PatientRow & {
+  coordinator_profile?: ProfileSummary | null;
+  coordinator_assigned_by_profile?: ProfileSummary | null;
+};
 type StartJourneyDocumentRecord = {
   id?: string;
   type?: string;
@@ -213,6 +228,8 @@ export type PatientDetails = {
   patient: PatientRow & {
     creator_profile: ProfileSummary | null;
     confirmed_by_profile: ProfileSummary | null;
+    coordinator_profile: ProfileSummary | null;
+    coordinator_assigned_by_profile: ProfileSummary | null;
     portal_profile: ProfileSummary | null;
     auth_user: {
       id: string;
@@ -229,6 +246,13 @@ export type PatientDetails = {
   stories: StoryDetail[];
   documents: PatientDocumentSummary[];
   finance_overview: PatientFinanceOverview;
+  coordinator_assignments: Array<
+    PatientCoordinatorAssignmentRow & {
+      coordinator_profile: ProfileSummary | null;
+      assigned_by_profile: ProfileSummary | null;
+      ended_by_profile: ProfileSummary | null;
+    }
+  >;
 };
 
 const normalizePatientDocumentSource = (
@@ -581,6 +605,90 @@ const CONTACT_REQUEST_SELECT = `
   )
 `;
 
+const PATIENT_WITH_COORDINATOR_SELECT = `
+  *,
+  coordinator_profile:profiles!patients_coordinator_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  coordinator_assigned_by_profile:profiles!patients_coordinator_assigned_by_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
+const PATIENT_DETAIL_SELECT = `
+  *,
+  creator_profile:profiles!patients_created_by_profile_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  confirmed_by_profile:profiles!patients_confirmed_by_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  coordinator_profile:profiles!patients_coordinator_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  coordinator_assigned_by_profile:profiles!patients_coordinator_assigned_by_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
+const COORDINATOR_ASSIGNMENT_SELECT = `
+  *,
+  coordinator_profile:profiles!patient_coordinator_assignments_coordinator_profile_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  assigned_by_profile:profiles!patient_coordinator_assignments_assigned_by_profile_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  ),
+  ended_by_profile:profiles!patient_coordinator_assignments_ended_by_profile_id_fkey(
+    id,
+    username,
+    email,
+    avatar_url,
+    phone,
+    job_title
+  )
+`;
+
 const START_JOURNEY_SELECT = `
   *,
   assigned_profile:profiles!start_journey_submissions_assigned_to_fkey(
@@ -877,6 +985,105 @@ const sendPortalPasswordEmail = async (
   }
 };
 
+type RawAssignableProfile = {
+  id: string;
+  profile_roles: Array<{
+    role?: {
+      slug?: string | null;
+    } | null;
+  }> | null;
+};
+
+const validateAssignableCoordinator = async (
+  supabase: SupabaseAdminClient,
+  coordinatorId: string | null | undefined,
+) => {
+  if (!coordinatorId) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(
+      `
+        id,
+        profile_roles:profile_roles(
+          role:roles(
+            slug
+          )
+        )
+      `,
+    )
+    .eq("id", coordinatorId)
+    .maybeSingle();
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to verify patient coordinator.",
+      error.message,
+    );
+  }
+
+  if (!data) {
+    throw new ApiError(400, "Selected coordinator profile was not found.");
+  }
+
+  const rawProfile = data as RawAssignableProfile;
+  const roles = normalizeRoles(
+    (rawProfile.profile_roles ?? [])
+      .map((entry) => entry?.role?.slug ?? "")
+      .filter(Boolean),
+  );
+
+  if (!roles.some((role) => COORDINATOR_ASSIGNABLE_ROLES.has(role))) {
+    throw new ApiError(
+      400,
+      "Selected coordinator must be a team member with operations access.",
+    );
+  }
+};
+
+const assignPatientCoordinator = async (
+  supabase: SupabaseAdminClient,
+  {
+    patientId,
+    coordinatorId,
+    actorProfileId,
+    reason,
+  }: {
+    patientId: string;
+    coordinatorId: string | null;
+    actorProfileId: string | null | undefined;
+    reason?: string | null;
+  },
+): Promise<PatientRow> => {
+  const { data, error } = await supabase.rpc("assign_patient_coordinator", {
+    p_patient_id: patientId,
+    p_coordinator_profile_id: coordinatorId,
+    p_actor_profile_id: actorProfileId ?? null,
+    p_reason: reason ?? null,
+  });
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to assign patient coordinator.",
+      error.message,
+    );
+  }
+
+  if (!data) {
+    throw new ApiError(
+      500,
+      "Failed to assign patient coordinator.",
+      "Supabase did not return the updated patient.",
+    );
+  }
+
+  return data as PatientRow;
+};
+
 /**
  * Determines if a user should have scoped (RLS-filtered) patient access.
  * Returns true if the user has ONLY the referral role without any privileged roles.
@@ -911,7 +1118,7 @@ function isReferralOnlyUser(auth?: AuthorizationContext): boolean {
 
 export const patientController = {
   async list(
-    options?: { status?: PatientStatus },
+    options?: { status?: PatientStatus; coordinatorId?: string | null },
     auth?: AuthorizationContext,
   ) {
     // Use RLS-enabled client for referral-only users, admin client for others
@@ -919,20 +1126,30 @@ export const patientController = {
       ? await getSupabaseWithAuth()
       : getSupabaseAdmin();
 
-    const query = supabase
+    let query = supabase
       .from("patients")
-      .select("*")
+      .select(PATIENT_WITH_COORDINATOR_SELECT)
       .order("created_at", { ascending: false });
 
-    const { data, error } = await (options?.status
-      ? (query as any).eq("status", options.status)
-      : query);
+    if (options?.status) {
+      query = query.eq("status", options.status);
+    }
+
+    if (options?.coordinatorId !== undefined) {
+      if (options.coordinatorId === null) {
+        query = query.is("coordinator_id", null);
+      } else {
+        query = query.eq("coordinator_id", options.coordinatorId);
+      }
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new ApiError(500, "Failed to fetch patient list", error.message);
     }
 
-    return data ?? [];
+    return (data ?? []) as PatientWithCoordinatorProfiles[];
   },
 
   async search(
@@ -950,7 +1167,7 @@ export const patientController = {
     const request = supabase
       .from("patients")
       .select(
-        "id, full_name, contact_email, nationality, home_city, has_testimonial, status",
+        "id, full_name, contact_email, nationality, home_city, has_testimonial, status, coordinator_id",
       )
       .or(`full_name.ilike.${searchTerm},contact_email.ilike.${searchTerm}`)
       .order("full_name", { ascending: true })
@@ -969,7 +1186,22 @@ export const patientController = {
 
   async get(id: unknown) {
     const patientId = patientIdSchema.parse(id);
-    return patientService.getById(patientId);
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("patients")
+      .select(PATIENT_WITH_COORDINATOR_SELECT)
+      .eq("id", patientId)
+      .maybeSingle();
+
+    if (error) {
+      throw new ApiError(500, "Failed to load patient", error.message);
+    }
+
+    if (!data) {
+      throw new ApiError(404, "Patient not found");
+    }
+
+    return data as PatientWithCoordinatorProfiles;
   },
 
   async details(
@@ -984,27 +1216,7 @@ export const patientController = {
 
     const { data: patientRow, error: patientError } = await supabase
       .from("patients")
-      .select(
-        `
-          *,
-          creator_profile:profiles!patients_created_by_profile_id_fkey(
-            id,
-            username,
-            email,
-            avatar_url,
-            phone,
-            job_title
-          ),
-          confirmed_by_profile:profiles!patients_confirmed_by_fkey(
-            id,
-            username,
-            email,
-            avatar_url,
-            phone,
-            job_title
-          )
-        `,
-      )
+      .select(PATIENT_DETAIL_SELECT)
       .eq("id", patientId)
       .maybeSingle();
 
@@ -1023,6 +1235,8 @@ export const patientController = {
     const patient = patientRow as PatientRow & {
       creator_profile: ProfileSummary | null;
       confirmed_by_profile: ProfileSummary | null;
+      coordinator_profile: ProfileSummary | null;
+      coordinator_assigned_by_profile: ProfileSummary | null;
     };
     const financeOverviewPromise = loadPatientFinanceOverview(
       getSupabaseAdmin(),
@@ -1115,6 +1329,7 @@ export const patientController = {
       reviewsResult,
       storiesResult,
       portalDocumentsResult,
+      coordinatorAssignmentsResult,
     ] = await Promise.all([
       supabase
         .from("patient_consultations")
@@ -1164,6 +1379,11 @@ export const patientController = {
         )
         .eq("patient_id", patientId)
         .order("uploaded_at", { ascending: false }),
+      supabase
+        .from("patient_coordinator_assignments")
+        .select(COORDINATOR_ASSIGNMENT_SELECT)
+        .eq("patient_id", patientId)
+        .order("assigned_at", { ascending: false }),
     ]);
 
     if (consultationsResult.error) {
@@ -1203,6 +1423,14 @@ export const patientController = {
         500,
         "Failed to load patient documents",
         portalDocumentsResult.error.message,
+      );
+    }
+
+    if (coordinatorAssignmentsResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load coordinator assignment history",
+        coordinatorAssignmentsResult.error.message,
       );
     }
 
@@ -1604,6 +1832,8 @@ export const patientController = {
       stories: (storiesResult.data ?? []) as StoryDetail[],
       documents,
       finance_overview: financeOverview,
+      coordinator_assignments: (coordinatorAssignmentsResult.data ??
+        []) as PatientDetails["coordinator_assignments"],
     };
   },
 
@@ -1639,6 +1869,8 @@ export const patientController = {
     );
     const canManageStatus =
       auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
+    const canAssignCoordinator =
+      auth?.hasPermission(ASSIGN_PATIENT_PERMISSION) ?? false;
     const requestedStatus: PatientStatus = parsed.status ?? "potential";
 
     if (
@@ -1659,6 +1891,16 @@ export const patientController = {
 
     // Always use admin client for auth operations
     const adminSupabase = getSupabaseAdmin();
+
+    if (parsed.coordinator_id !== undefined) {
+      if (!canAssignCoordinator) {
+        throw new ApiError(
+          403,
+          "Assign patient coordinator permission is required.",
+        );
+      }
+      await validateAssignableCoordinator(adminSupabase, parsed.coordinator_id);
+    }
 
     // Prevent staff accounts from being registered as patients
     if (parsed.user_id) {
@@ -1751,7 +1993,7 @@ export const patientController = {
 
     createPayload.email_verified = effectiveEmailVerified;
 
-    let patient: PatientRow;
+    let patient: PatientRow | null = null;
     try {
       // For referral users, use RLS-enabled client; for others, use admin service
       if (isReferralOnlyUser(auth)) {
@@ -1768,13 +2010,29 @@ export const patientController = {
       } else {
         patient = await patientService.create(createPayload);
       }
+
+      if (parsed.coordinator_id !== undefined) {
+        patient = await assignPatientCoordinator(adminSupabase, {
+          patientId: patient.id,
+          coordinatorId: parsed.coordinator_id ?? null,
+          actorProfileId: auth?.profileId ?? null,
+          reason: "Initial patient coordinator assignment",
+        });
+      }
     } catch (error) {
       if (portalAccount?.createdNew) {
         await adminSupabase.auth.admin
           .deleteUser(portalAccount.userId)
           .catch(() => {});
       }
+      if (typeof patient?.id === "string") {
+        await patientService.remove(patient.id).catch(() => {});
+      }
       throw error;
+    }
+
+    if (!patient) {
+      throw new ApiError(500, "Failed to create patient");
     }
 
     try {
@@ -1843,6 +2101,8 @@ export const patientController = {
       existing as Database["public"]["Tables"]["patients"]["Row"];
     const canManageStatus =
       auth?.hasPermission(CONFIRM_PATIENT_PERMISSION) ?? false;
+    const canAssignCoordinator =
+      auth?.hasPermission(ASSIGN_PATIENT_PERMISSION) ?? false;
     const existingStatus =
       (existing as { status?: PatientStatus | null }).status ?? "potential";
     const existingSource =
@@ -1882,6 +2142,27 @@ export const patientController = {
     const providedChannel = parsed.created_channel as
       | PatientCreationChannel
       | undefined;
+    const existingCoordinatorId = existingPatient.coordinator_id ?? null;
+    const requestedCoordinatorId =
+      parsed.coordinator_id === undefined
+        ? undefined
+        : (parsed.coordinator_id ?? null);
+    const coordinatorWillChange =
+      requestedCoordinatorId !== undefined &&
+      requestedCoordinatorId !== existingCoordinatorId;
+
+    if (coordinatorWillChange) {
+      if (!canAssignCoordinator) {
+        throw new ApiError(
+          403,
+          "Assign patient coordinator permission is required.",
+        );
+      }
+      await validateAssignableCoordinator(
+        adminSupabase,
+        requestedCoordinatorId,
+      );
+    }
 
     let nextSource = existingSource;
     let nextCreatedBy = existingCreatedBy;
@@ -2111,6 +2392,18 @@ export const patientController = {
         "Failed to synchronize patient profile details.",
         error instanceof Error ? error.message : undefined,
       );
+    }
+
+    if (coordinatorWillChange) {
+      updated = await assignPatientCoordinator(adminSupabase, {
+        patientId,
+        coordinatorId: requestedCoordinatorId ?? null,
+        actorProfileId: auth?.profileId ?? null,
+        reason:
+          requestedCoordinatorId === null
+            ? "Patient coordinator cleared"
+            : "Patient coordinator updated",
+      });
     }
 
     if (portalPassword && effectiveContactEmail) {
