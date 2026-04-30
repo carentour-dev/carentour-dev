@@ -1,6 +1,16 @@
 "use client";
 
-import { useMemo, useState, type ComponentPropsWithoutRef } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react";
+import type {
+  TouchEvent as ReactTouchEvent,
+  WheelEvent as ReactWheelEvent,
+} from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +82,8 @@ export const ComboBox = ({
 }: ComboBoxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const touchStartRef = useRef<number>(0);
 
   const selectedOption = options.find((option) => option.value === value);
   const filteredOptions = useMemo(() => {
@@ -88,6 +100,34 @@ export const ComboBox = ({
       return fields.some((field) => field.toLowerCase().includes(lower));
     });
   }, [options, search]);
+
+  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!scrollContainerRef.current) return;
+    event.preventDefault();
+    scrollContainerRef.current.scrollTop += event.deltaY;
+  }, []);
+
+  const handleTouchStart = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      touchStartRef.current = event.touches[0]?.clientY ?? 0;
+    },
+    [],
+  );
+
+  const handleTouchMove = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (!scrollContainerRef.current) return;
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const delta = touchStartRef.current - currentY;
+      if (Math.abs(delta) < 0.5) {
+        return;
+      }
+      event.preventDefault();
+      scrollContainerRef.current.scrollTop += delta;
+      touchStartRef.current = currentY;
+    },
+    [],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -121,7 +161,13 @@ export const ComboBox = ({
             value={search}
             onValueChange={setSearch}
           />
-          <div className="max-h-64 overflow-y-auto overscroll-contain">
+          <div
+            ref={scrollContainerRef}
+            className="max-h-64 overflow-y-auto overscroll-contain [@supports(-webkit-touch-callout:none)]:[-webkit-overflow-scrolling:touch]"
+            onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+          >
             <CommandList className="max-h-none">
               {filteredOptions.length === 0 ? (
                 <CommandEmpty>{emptyLabel}</CommandEmpty>
