@@ -175,12 +175,23 @@ const normalizeSex = (value: string): string | null => {
   return value;
 };
 
+const PATIENT_PORTAL_SELECT =
+  "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_by_profile_id, created_channel, source, coordinator_id, coordinator_assigned_at, coordinator_assigned_by, created_at, updated_at";
+
+const normalizePatientRow = (patient: PatientRow): PatientRow => ({
+  ...patient,
+  created_by_profile_id: patient.created_by_profile_id ?? null,
+  created_channel: patient.created_channel ?? "portal_signup",
+  source: patient.source ?? "organic",
+  coordinator_id: patient.coordinator_id ?? null,
+  coordinator_assigned_at: patient.coordinator_assigned_at ?? null,
+  coordinator_assigned_by: patient.coordinator_assigned_by ?? null,
+});
+
 const fetchPatientRecord = async (userId: string) => {
   return supabase
     .from("patients")
-    .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_by_profile_id, created_channel, source, created_at, updated_at",
-    )
+    .select(PATIENT_PORTAL_SELECT)
     .eq("user_id", userId)
     .maybeSingle();
 };
@@ -200,12 +211,7 @@ const ensurePatientRecord = async (
   }
 
   if (data) {
-    return {
-      ...data,
-      created_by_profile_id: data.created_by_profile_id ?? null,
-      created_channel: data.created_channel ?? "portal_signup",
-      source: data.source ?? "organic",
-    };
+    return normalizePatientRow(data);
   }
 
   const fallbackName = buildFallbackName(user);
@@ -243,9 +249,7 @@ const ensurePatientRecord = async (
       source: "organic",
       created_channel: "portal_signup",
     })
-    .select(
-      "id, user_id, full_name, contact_email, contact_phone, preferred_language, preferred_currency, nationality, has_testimonial, email_verified, date_of_birth, home_city, travel_year, notes, sex, status, confirmed_at, confirmed_by, created_by_profile_id, created_channel, source, created_at, updated_at",
-    )
+    .select(PATIENT_PORTAL_SELECT)
     .maybeSingle();
 
   if (insertError) {
@@ -260,7 +264,7 @@ const ensurePatientRecord = async (
       if (!retry.data) {
         throw new Error("Patient record exists but could not be loaded");
       }
-      return retry.data;
+      return normalizePatientRow(retry.data);
     }
     throw new Error(insertError.message ?? "Failed to create patient record");
   }
@@ -273,15 +277,10 @@ const ensurePatientRecord = async (
     if (!retry.data) {
       throw new Error("Patient record was not created");
     }
-    return retry.data;
+    return normalizePatientRow(retry.data);
   }
 
-  return {
-    ...inserted,
-    created_by_profile_id: inserted.created_by_profile_id ?? null,
-    created_channel: inserted.created_channel ?? "portal_signup",
-    source: inserted.source ?? "organic",
-  };
+  return normalizePatientRow(inserted);
 };
 
 const fetchPatientPortalSnapshot = async (
