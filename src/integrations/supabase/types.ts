@@ -1328,10 +1328,12 @@ export type Database = {
           patient_id: string;
           request_id: string | null;
           size: number | null;
+          source: string;
           type: string;
           updated_at: string;
           uploaded_at: string;
           user_id: string | null;
+          visibility: string;
         };
         Insert: {
           bucket?: string;
@@ -1344,10 +1346,12 @@ export type Database = {
           patient_id: string;
           request_id?: string | null;
           size?: number | null;
+          source?: string;
           type?: string;
           updated_at?: string;
           uploaded_at?: string;
           user_id?: string | null;
+          visibility?: string;
         };
         Update: {
           bucket?: string;
@@ -1360,10 +1364,12 @@ export type Database = {
           patient_id?: string;
           request_id?: string | null;
           size?: number | null;
+          source?: string;
           type?: string;
           updated_at?: string;
           uploaded_at?: string;
           user_id?: string | null;
+          visibility?: string;
         };
         Relationships: [
           {
