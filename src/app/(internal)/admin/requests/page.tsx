@@ -863,6 +863,9 @@ export default function AdminRequestsPage() {
         if (request.phone) {
           params.set("phone", request.phone);
         }
+        if (request.assigned_to) {
+          params.set("coordinatorId", request.assigned_to);
+        }
         const query = params.toString();
         router.push(query ? `${patientsPath}?${query}` : patientsPath);
         return;
