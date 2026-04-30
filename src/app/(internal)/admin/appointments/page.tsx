@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 import {
   Form,
   FormControl,
@@ -94,6 +95,8 @@ const appointmentStatuses = [
 ] as const;
 type AppointmentStatus = (typeof appointmentStatuses)[number];
 
+const CLEAR_SERVICE_PROVIDER_VALUE = "__clear_service_provider__";
+
 const getAppointmentStatusTone = (status: AppointmentStatus) => {
   switch (status) {
     case "completed":
@@ -155,6 +158,9 @@ const toIsoString = (value: string) => {
   return date.toISOString();
 };
 
+const formatProviderType = (value: string | null) =>
+  value?.replace(/_/g, " ") ?? "Service provider";
+
 export default function AdminAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">(
     "all",
@@ -176,6 +182,18 @@ export default function AdminAppointmentsPage() {
         `/api/admin/appointments${params.size ? `?${params}` : ""}`,
       );
     },
+  });
+
+  const serviceProvidersQuery = useQuery({
+    queryKey: ["admin", "service-providers", "appointment-selector"],
+    queryFn: () =>
+      adminFetch<
+        Pick<
+          ServiceProviderRow,
+          "id" | "name" | "facility_type" | "city" | "country_code"
+        >[]
+      >("/api/admin/service-providers"),
+    staleTime: 5 * 60 * 1000,
   });
 
   const form = useForm<AppointmentFormValues>({
@@ -348,6 +366,38 @@ export default function AdminAppointmentsPage() {
   });
 
   const appointments = useMemo(() => query.data ?? [], [query.data]);
+
+  const serviceProviderOptions = useMemo<ComboOption[]>(() => {
+    const options =
+      serviceProvidersQuery.data?.map((provider) => {
+        const location = [provider.city, provider.country_code]
+          .filter(Boolean)
+          .join(", ");
+        const providerType = formatProviderType(provider.facility_type);
+
+        return {
+          value: provider.id,
+          label: provider.name,
+          description: location || providerType,
+          badge: location ? providerType : undefined,
+          searchTerms: [
+            provider.id,
+            provider.facility_type,
+            provider.city ?? "",
+            provider.country_code ?? "",
+          ],
+        } satisfies ComboOption;
+      }) ?? [];
+
+    return [
+      {
+        value: CLEAR_SERVICE_PROVIDER_VALUE,
+        label: "No service provider",
+        description: "Leave this appointment unassigned",
+      },
+      ...options,
+    ];
+  }, [serviceProvidersQuery.data]);
 
   const groupedByStatus = useMemo(() => {
     return appointments.reduce<Record<AppointmentStatus, number>>(
@@ -673,13 +723,26 @@ export default function AdminAppointmentsPage() {
                   name="facility_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Service provider ID (optional)</FormLabel>
+                      <FormLabel>Service provider (optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Paste service provider ID"
+                        <ComboBox
                           value={field.value ?? ""}
-                          onChange={(event) =>
-                            field.onChange(event.target.value || null)
+                          options={serviceProviderOptions}
+                          placeholder={
+                            serviceProvidersQuery.isLoading
+                              ? "Loading providers..."
+                              : "Select service provider..."
+                          }
+                          searchPlaceholder="Search service providers..."
+                          emptyLabel="No service providers found."
+                          disabled={serviceProvidersQuery.isLoading}
+                          contentClassName="w-[min(400px,calc(100vw-3rem))] p-0"
+                          onChange={(value) =>
+                            field.onChange(
+                              value === CLEAR_SERVICE_PROVIDER_VALUE
+                                ? null
+                                : value,
+                            )
                           }
                         />
                       </FormControl>
