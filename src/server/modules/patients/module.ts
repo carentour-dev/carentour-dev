@@ -152,18 +152,28 @@ type StoryDetail = PatientStoryRow & {
 };
 type PatientDocumentRow =
   Database["public"]["Tables"]["patient_documents"]["Row"];
+type PatientDocumentWithProfile = PatientDocumentRow & {
+  created_by_profile: ProfileSummary | null;
+};
 
 export type PatientDocumentSummary = {
   id: string;
-  source: "contact_request" | "start_journey" | "storage" | "patient_portal";
+  source:
+    | "contact_request"
+    | "start_journey"
+    | "storage"
+    | "patient_portal"
+    | "staff";
   label: string;
   type: string | null;
+  visibility?: string | null;
   uploaded_at: string | null;
   request_id?: string | null;
   bucket?: string | null;
   path?: string | null;
   size?: number | null;
   signed_url?: string | null;
+  uploaded_by_profile?: ProfileSummary | null;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -220,6 +230,17 @@ export type PatientDetails = {
   documents: PatientDocumentSummary[];
   finance_overview: PatientFinanceOverview;
 };
+
+const normalizePatientDocumentSource = (
+  value: string | null | undefined,
+): PatientDocumentSummary["source"] =>
+  value === "staff" ||
+  value === "contact_request" ||
+  value === "start_journey" ||
+  value === "storage" ||
+  value === "patient_portal"
+    ? value
+    : "patient_portal";
 
 const trimString = (value: string) => value.trim();
 
@@ -1118,7 +1139,28 @@ export const patientController = {
       supabase
         .from("patient_documents")
         .select(
-          "id, label, type, bucket, path, size, uploaded_at, created_at, request_id, metadata",
+          `
+            id,
+            label,
+            type,
+            bucket,
+            path,
+            size,
+            source,
+            visibility,
+            uploaded_at,
+            created_at,
+            request_id,
+            metadata,
+            created_by_profile:profiles!patient_documents_created_by_profile_id_fkey(
+              id,
+              username,
+              email,
+              avatar_url,
+              phone,
+              job_title
+            )
+          `,
         )
         .eq("patient_id", patientId)
         .order("uploaded_at", { ascending: false }),
@@ -1210,7 +1252,7 @@ export const patientController = {
     const contactRequests = dedupeById(contactAccumulator);
     const startJourneySubmissions = dedupeById(startJourneyAccumulator);
     const portalDocuments = (portalDocumentsResult.data ??
-      []) as PatientDocumentRow[];
+      []) as PatientDocumentWithProfile[];
 
     const documentsMap = new Map<string, PatientDocumentSummary>();
 
@@ -1253,6 +1295,7 @@ export const patientController = {
             (raw as { type?: string }).type!.length > 0
               ? (raw as { type?: string }).type
               : null,
+          visibility: "patient_visible",
           uploaded_at:
             typeof (raw as { uploadedAt?: string }).uploadedAt === "string" &&
             (raw as { uploadedAt?: string }).uploadedAt!.length > 0
@@ -1292,6 +1335,11 @@ export const patientController = {
             request_id: existingDoc.request_id ?? document.request_id,
             size: existingDoc.size ?? document.size ?? null,
             signed_url: existingDoc.signed_url ?? document.signed_url ?? null,
+            visibility: existingDoc.visibility ?? document.visibility ?? null,
+            uploaded_by_profile:
+              existingDoc.uploaded_by_profile ??
+              document.uploaded_by_profile ??
+              null,
             metadata: {
               ...(existingDoc.metadata ?? {}),
               ...(document.metadata ?? {}),
@@ -1335,6 +1383,7 @@ export const patientController = {
             typeof raw.type === "string" && raw.type.length > 0
               ? raw.type
               : null,
+          visibility: "patient_visible",
           uploaded_at:
             typeof raw.uploadedAt === "string" && raw.uploadedAt.length > 0
               ? raw.uploadedAt
@@ -1367,6 +1416,11 @@ export const patientController = {
             request_id: existingDoc.request_id ?? document.request_id,
             size: existingDoc.size ?? document.size ?? null,
             signed_url: existingDoc.signed_url ?? document.signed_url ?? null,
+            visibility: existingDoc.visibility ?? document.visibility ?? null,
+            uploaded_by_profile:
+              existingDoc.uploaded_by_profile ??
+              document.uploaded_by_profile ??
+              null,
             metadata: {
               ...(existingDoc.metadata ?? {}),
               ...(document.metadata ?? {}),
@@ -1382,9 +1436,10 @@ export const patientController = {
       const key = doc.path ?? doc.id;
       const document: PatientDocumentSummary = {
         id: doc.id,
-        source: "patient_portal",
+        source: normalizePatientDocumentSource(doc.source),
         label: doc.label ?? doc.path ?? "Uploaded document",
         type: doc.type ?? null,
+        visibility: doc.visibility ?? "patient_visible",
         uploaded_at: doc.uploaded_at ?? doc.created_at ?? null,
         request_id: doc.request_id ?? null,
         bucket: doc.bucket ?? PATIENT_DOCUMENT_BUCKET,
@@ -1394,6 +1449,7 @@ export const patientController = {
             ? doc.size
             : null,
         signed_url: null,
+        uploaded_by_profile: doc.created_by_profile ?? null,
         metadata:
           doc.metadata &&
           typeof doc.metadata === "object" &&
@@ -1409,6 +1465,11 @@ export const patientController = {
           source: existingDoc.source ?? document.source,
           request_id: existingDoc.request_id ?? document.request_id ?? null,
           size: existingDoc.size ?? document.size ?? null,
+          visibility: existingDoc.visibility ?? document.visibility ?? null,
+          uploaded_by_profile:
+            existingDoc.uploaded_by_profile ??
+            document.uploaded_by_profile ??
+            null,
           metadata: {
             ...(existingDoc.metadata ?? {}),
             ...(document.metadata ?? {}),
@@ -1444,6 +1505,7 @@ export const patientController = {
             source: "storage",
             label: entry.name,
             type: null,
+            visibility: "patient_visible",
             uploaded_at: entry.created_at ?? entry.updated_at ?? null,
             bucket: PATIENT_DOCUMENT_BUCKET,
             path,
@@ -1461,6 +1523,11 @@ export const patientController = {
               ...existingDoc,
               source: existingDoc.source ?? document.source,
               size: existingDoc.size ?? document.size ?? null,
+              visibility: existingDoc.visibility ?? document.visibility ?? null,
+              uploaded_by_profile:
+                existingDoc.uploaded_by_profile ??
+                document.uploaded_by_profile ??
+                null,
               uploaded_at:
                 existingDoc.uploaded_at ?? document.uploaded_at ?? null,
               metadata: {
