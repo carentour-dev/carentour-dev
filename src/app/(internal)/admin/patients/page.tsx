@@ -54,6 +54,8 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import { AssignmentControl } from "@/components/admin/AssignmentControl";
+import { useTeamMembers } from "@/components/admin/hooks/useTeamMembers";
 import {
   Loader2,
   Pencil,
@@ -137,6 +139,7 @@ const patientSchema = z
     source: PatientSourceEnum.optional(),
     created_channel: PatientCreationChannelEnum.optional(),
     created_by_profile_id: optionalUuid,
+    coordinator_id: optionalUuid,
   })
   .superRefine((data, ctx) => {
     const password = data.portal_password;
@@ -186,6 +189,7 @@ type PatientBasePayload = {
   source?: PatientSource;
   created_channel?: PatientCreationChannel;
   created_by_profile_id?: string | null;
+  coordinator_id?: string | null;
 };
 
 type PatientCreatePayload = PatientBasePayload;
@@ -201,8 +205,21 @@ type PatientRecord = Omit<PatientBasePayload, "portal_password" | "status"> & {
   source: PatientSource;
   created_channel: PatientCreationChannel;
   created_by_profile_id?: string | null;
+  coordinator_assigned_at?: string | null;
+  coordinator_assigned_by?: string | null;
+  coordinator_profile?: ProfileSummary | null;
+  coordinator_assigned_by_profile?: ProfileSummary | null;
   confirmed_at?: string | null;
   confirmed_by?: string | null;
+};
+
+type ProfileSummary = {
+  id: string;
+  username: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+  job_title: string | null;
 };
 
 const QUERY_KEY = ["admin", "patients"] as const;
@@ -217,6 +234,16 @@ const STATUS_BADGE_VARIANT: Record<PatientStatus, "outline" | "success"> = {
   confirmed: "success",
 };
 
+type CoordinatorFilter = "all" | "me" | "unassigned" | string;
+
+const formatProfileName = (profile: ProfileSummary | null | undefined) =>
+  profile?.username?.trim() || profile?.email?.trim() || null;
+
+const isAssignableCoordinatorRole = (role: string) =>
+  ["admin", "coordinator", "employee", "management"].includes(
+    role.toLowerCase(),
+  );
+
 export default function AdminPatientsPage() {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -230,6 +257,8 @@ export default function AdminPatientsPage() {
   const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">(
     "all",
   );
+  const [coordinatorFilter, setCoordinatorFilter] =
+    useState<CoordinatorFilter>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(
     null,
@@ -245,8 +274,18 @@ export default function AdminPatientsPage() {
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const coordinatorMembers = useMemo(
+    () =>
+      teamMembers.filter((member) =>
+        member.roles.some(isAssignableCoordinatorRole),
+      ),
+    [teamMembers],
+  );
   const canConfirmPatients =
     profile?.hasPermission("operations.patients.confirm") ?? false;
+  const canAssignPatients =
+    profile?.hasPermission("operations.patients.assign") ?? false;
   const statusOptions = Object.values(PATIENT_STATUS) as PatientStatus[];
 
   const form = useForm<PatientFormValues>({
@@ -266,6 +305,7 @@ export default function AdminPatientsPage() {
       portal_password: "",
       portal_password_confirm: "",
       status: PATIENT_STATUS.potential,
+      coordinator_id: null,
     },
   });
   const watchPortalPassword = form.watch("portal_password");
@@ -280,11 +320,14 @@ export default function AdminPatientsPage() {
   }, [watchPortalPassword, form]);
 
   const patientsQuery = useQuery({
-    queryKey: [...QUERY_KEY, statusFilter],
+    queryKey: [...QUERY_KEY, statusFilter, coordinatorFilter],
     queryFn: () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") {
         params.set("status", statusFilter);
+      }
+      if (coordinatorFilter !== "all") {
+        params.set("coordinatorId", coordinatorFilter);
       }
       const url = params.size
         ? `/api/admin/patients?${params.toString()}`
@@ -467,6 +510,7 @@ export default function AdminPatientsPage() {
       portal_password: "",
       portal_password_confirm: "",
       status: PATIENT_STATUS.potential,
+      coordinator_id: null,
     });
     setRequestLinkId(null);
     setDialogOpen(true);
@@ -489,6 +533,7 @@ export default function AdminPatientsPage() {
       portal_password: "",
       portal_password_confirm: "",
       status: patient.status,
+      coordinator_id: patient.coordinator_id ?? null,
     });
     setDialogOpen(true);
   };
@@ -543,6 +588,7 @@ export default function AdminPatientsPage() {
       searchParams.get("fromStartJourneyId") ?? ""
     ).trim();
     const fromRequestId = (searchParams.get("fromRequestId") ?? "").trim();
+    const coordinatorIdParam = (searchParams.get("coordinatorId") ?? "").trim();
 
     const normalizedDateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirthParam)
       ? dateOfBirthParam
@@ -567,6 +613,9 @@ export default function AdminPatientsPage() {
     const normalizedRequestId = UUID_PATTERN.test(fromRequestId)
       ? fromRequestId
       : null;
+    const normalizedCoordinatorId = UUID_PATTERN.test(coordinatorIdParam)
+      ? coordinatorIdParam
+      : null;
 
     if (normalizedStartJourneyId) {
       setStartJourneyLinkId(normalizedStartJourneyId);
@@ -590,6 +639,7 @@ export default function AdminPatientsPage() {
       portal_password: portalPassword,
       portal_password_confirm: portalPassword,
       status: PATIENT_STATUS.potential,
+      coordinator_id: normalizedCoordinatorId,
     });
 
     const params = new URLSearchParams(searchParams.toString());
@@ -607,6 +657,7 @@ export default function AdminPatientsPage() {
       "userId",
       "portalPassword",
       "fromStartJourneyId",
+      "coordinatorId",
     ].forEach((key) => params.delete(key));
     const nextUrl =
       params.size > 0 ? `${patientsPath}?${params.toString()}` : patientsPath;
@@ -637,6 +688,10 @@ export default function AdminPatientsPage() {
       notes: rest.notes?.trim() || undefined,
       email_verified: rest.email_verified ?? false,
     };
+
+    if (canAssignPatients) {
+      payload.coordinator_id = rest.coordinator_id ?? null;
+    }
 
     const trimmedPassword = portal_password?.trim();
     if (trimmedPassword && trimmedPassword.length > 0) {
@@ -888,6 +943,51 @@ export default function AdminPatientsPage() {
 
               <FormField
                 control={form.control}
+                name="coordinator_id"
+                render={({ field }) => {
+                  const selectedCoordinator =
+                    coordinatorMembers.find(
+                      (member) => member.id === field.value,
+                    ) ?? null;
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Patient coordinator</FormLabel>
+                      <FormControl>
+                        <AssignmentControl
+                          assigneeId={field.value ?? null}
+                          assigneeLabel={
+                            selectedCoordinator?.displayName ?? null
+                          }
+                          assigneeDescription={
+                            selectedCoordinator?.jobTitle ??
+                            selectedCoordinator?.email ??
+                            null
+                          }
+                          onAssign={(memberId) => field.onChange(memberId)}
+                          disabled={!canAssignPatients}
+                          allowedRoles={[
+                            "admin",
+                            "coordinator",
+                            "employee",
+                            "management",
+                          ]}
+                          placeholder="Assign coordinator"
+                          triggerClassName="h-11 w-full justify-start rounded-xl bg-background/85"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        The active owner for this patient&apos;s ongoing
+                        coordination.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+
+              <FormField
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -971,6 +1071,26 @@ export default function AdminPatientsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select
+              value={coordinatorFilter}
+              onValueChange={(value) =>
+                setCoordinatorFilter(value as CoordinatorFilter)
+              }
+            >
+              <SelectTrigger className="h-11 rounded-xl bg-background/85 sm:w-[190px]">
+                <SelectValue placeholder="Filter coordinator" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All coordinators</SelectItem>
+                <SelectItem value="me">My patients</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {coordinatorMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         }
       >
@@ -986,6 +1106,7 @@ export default function AdminPatientsPage() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Nationality</TableHead>
                 <TableHead>Language</TableHead>
+                <TableHead>Coordinator</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-36 text-right">Actions</TableHead>
               </TableRow>
@@ -1023,6 +1144,22 @@ export default function AdminPatientsPage() {
                   </TableCell>
                   <TableCell>{patient.nationality || "—"}</TableCell>
                   <TableCell>{patient.preferred_language || "—"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col text-sm">
+                      <span>
+                        {formatProfileName(patient.coordinator_profile) ??
+                          "Unassigned"}
+                      </span>
+                      {patient.coordinator_assigned_at ? (
+                        <span className="text-xs text-muted-foreground">
+                          Since{" "}
+                          {new Date(
+                            patient.coordinator_assigned_at,
+                          ).toLocaleDateString()}
+                        </span>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <Badge
@@ -1100,7 +1237,7 @@ export default function AdminPatientsPage() {
               {filteredPatients.length === 0 && !patientsQuery.isLoading && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     No patients found. Adjust filters or add a new record.
