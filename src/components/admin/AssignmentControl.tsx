@@ -50,6 +50,7 @@ type AssignmentControlProps = {
   isPending?: boolean;
   disabled?: boolean;
   allowUnassign?: boolean;
+  allowedRoles?: string[];
   placeholder?: string;
   triggerClassName?: string;
 };
@@ -62,6 +63,7 @@ export function AssignmentControl({
   isPending = false,
   disabled = false,
   allowUnassign = true,
+  allowedRoles,
   placeholder = "Assign to…",
   triggerClassName,
 }: AssignmentControlProps) {
@@ -77,10 +79,21 @@ export function AssignmentControl({
     isFetching,
   } = useTeamMembers();
 
+  const availableMembers = useMemo(() => {
+    if (!allowedRoles?.length) {
+      return members;
+    }
+
+    const allowed = new Set(allowedRoles.map((role) => role.toLowerCase()));
+    return members.filter((member) =>
+      member.roles.some((role) => allowed.has(role.toLowerCase())),
+    );
+  }, [allowedRoles, members]);
+
   const filteredMembers = useMemo(() => {
-    if (!search) return members;
+    if (!search) return availableMembers;
     const lower = search.toLowerCase();
-    return members.filter((member) => {
+    return availableMembers.filter((member) => {
       const fields = [
         member.displayName,
         member.email ?? "",
@@ -89,10 +102,10 @@ export function AssignmentControl({
       ];
       return fields.some((field) => field.toLowerCase().includes(lower));
     });
-  }, [members, search]);
+  }, [availableMembers, search]);
 
   const selectedMember =
-    members.find((member) => member.id === assigneeId) ?? null;
+    availableMembers.find((member) => member.id === assigneeId) ?? null;
 
   const currentLabel =
     assigneeLabel ??
