@@ -314,6 +314,10 @@ const buildPatientPrefillParams = (submission: StartJourneySubmission) => {
     params.set("preferredLanguage", preferredLanguage);
   }
 
+  if (submission.assigned_to) {
+    params.set("coordinatorId", submission.assigned_to);
+  }
+
   return params;
 };
 
