@@ -1316,6 +1316,106 @@ export type Database = {
           },
         ];
       };
+      patient_coordinator_assignments: {
+        Row: {
+          assigned_at: string;
+          assigned_by_profile_id: string | null;
+          coordinator_profile_id: string;
+          created_at: string;
+          ended_at: string | null;
+          ended_by_profile_id: string | null;
+          id: string;
+          patient_id: string;
+          reason: string | null;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by_profile_id?: string | null;
+          coordinator_profile_id: string;
+          created_at?: string;
+          ended_at?: string | null;
+          ended_by_profile_id?: string | null;
+          id?: string;
+          patient_id: string;
+          reason?: string | null;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by_profile_id?: string | null;
+          coordinator_profile_id?: string;
+          created_at?: string;
+          ended_at?: string | null;
+          ended_by_profile_id?: string | null;
+          id?: string;
+          patient_id?: string;
+          reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "patient_coordinator_assignments_assigned_by_profile_id_fkey";
+            columns: ["assigned_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_assigned_by_profile_id_fkey";
+            columns: ["assigned_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_coordinator_profile_id_fkey";
+            columns: ["coordinator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_coordinator_profile_id_fkey";
+            columns: ["coordinator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_ended_by_profile_id_fkey";
+            columns: ["ended_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_ended_by_profile_id_fkey";
+            columns: ["ended_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_testimonial_public";
+            referencedColumns: ["patient_id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_testimonial_rollup";
+            referencedColumns: ["patient_id"];
+          },
+          {
+            foreignKeyName: "patient_coordinator_assignments_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       patient_documents: {
         Row: {
           bucket: string;
@@ -1518,6 +1618,9 @@ export type Database = {
       };
       patients: {
         Row: {
+          coordinator_assigned_at: string | null;
+          coordinator_assigned_by: string | null;
+          coordinator_id: string | null;
           created_by_profile_id: string | null;
           created_channel: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at: string | null;
@@ -1543,6 +1646,9 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          coordinator_assigned_at?: string | null;
+          coordinator_assigned_by?: string | null;
+          coordinator_id?: string | null;
           created_by_profile_id?: string | null;
           created_channel?: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at?: string | null;
@@ -1568,6 +1674,9 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          coordinator_assigned_at?: string | null;
+          coordinator_assigned_by?: string | null;
+          coordinator_id?: string | null;
           created_by_profile_id?: string | null;
           created_channel?: Database["public"]["Enums"]["patient_creation_channel"];
           confirmed_at?: string | null;
@@ -1593,6 +1702,34 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "patients_coordinator_assigned_by_fkey";
+            columns: ["coordinator_assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_coordinator_assigned_by_fkey";
+            columns: ["coordinator_assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_coordinator_id_fkey";
+            columns: ["coordinator_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patients_coordinator_id_fkey";
+            columns: ["coordinator_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "patients_confirmed_by_fkey";
             columns: ["confirmed_by"];
@@ -2796,6 +2933,15 @@ export type Database = {
       };
     };
     Functions: {
+      assign_patient_coordinator: {
+        Args: {
+          p_actor_profile_id?: string | null;
+          p_coordinator_profile_id?: string | null;
+          p_patient_id: string;
+          p_reason?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["patients"]["Row"];
+      };
       check_email_exists: { Args: { p_email: string }; Returns: boolean };
       check_login_rate_limit: {
         Args: { p_email?: string; p_ip_address: unknown };
