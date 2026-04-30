@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { adminRoute } from "@/server/utils/adminRoute";
 import { jsonResponse } from "@/server/utils/http";
 import { patientController } from "@/server/modules/patients/module";
@@ -20,9 +21,35 @@ const parseStatusQuery = (value: string | null): PatientStatus | undefined => {
   return result.success ? result.data : undefined;
 };
 
+const parseCoordinatorQuery = (
+  value: string | null,
+  currentProfileId: string | null,
+): string | null | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value === "me") {
+    return currentProfileId ?? undefined;
+  }
+
+  if (value === "unassigned") {
+    return null;
+  }
+
+  return z.string().uuid().safeParse(value).success ? value : undefined;
+};
+
 export const GET = adminRoute(async (req: NextRequest, ctx) => {
   const status = parseStatusQuery(req.nextUrl.searchParams.get("status"));
-  const patients = await patientController.list({ status }, ctx.auth);
+  const coordinatorId = parseCoordinatorQuery(
+    req.nextUrl.searchParams.get("coordinatorId"),
+    ctx.auth.profileId,
+  );
+  const patients = await patientController.list(
+    { status, coordinatorId },
+    ctx.auth,
+  );
   return jsonResponse(patients);
 }, SHARED_PERMISSIONS);
 
