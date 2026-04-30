@@ -473,22 +473,7 @@ export default function DashboardPage() {
       isStaffAccount &&
       staffWorkspacePath !== "/dashboard"
     ) {
-      const fallbackId =
-        typeof window !== "undefined"
-          ? window.setTimeout(() => {
-              if (window.location.pathname.startsWith("/dashboard")) {
-                window.location.replace(staffWorkspacePath);
-              }
-            }, 500)
-          : undefined;
-
       router.replace(staffWorkspacePath);
-
-      return () => {
-        if (fallbackId !== undefined) {
-          window.clearTimeout(fallbackId);
-        }
-      };
     }
     return undefined;
   }, [authLoading, profileLoading, isStaffAccount, router, staffWorkspacePath]);
