@@ -112,9 +112,10 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseAdmin
     .from("patient_documents")
     .select(
-      "id, label, type, bucket, path, size, uploaded_at, created_at, request_id",
+      "id, label, type, bucket, path, size, uploaded_at, created_at, request_id, source, visibility",
     )
     .eq("patient_id", patient.id)
+    .eq("visibility", "patient_visible")
     .order("uploaded_at", { ascending: false });
 
   if (error) {
@@ -206,13 +207,15 @@ export async function POST(req: NextRequest) {
       uploaded_at: new Date().toISOString(),
       patient_id: patient.id,
       user_id: user.id,
+      source: "patient_portal",
+      visibility: "patient_visible",
     };
 
     const { data: inserted, error: insertError } = await supabaseAdmin
       .from("patient_documents")
       .insert(record)
       .select(
-        "id, label, type, bucket, path, size, uploaded_at, created_at, request_id",
+        "id, label, type, bucket, path, size, uploaded_at, created_at, request_id, source, visibility",
       )
       .maybeSingle();
 
@@ -257,7 +260,7 @@ export async function DELETE(req: NextRequest) {
 
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from("patient_documents")
-      .select("id, bucket, path, patient_id")
+      .select("id, bucket, path, patient_id, visibility")
       .eq("id", payload.id)
       .maybeSingle();
 
@@ -276,6 +279,13 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (existing.patient_id !== patient.id) {
+      return NextResponse.json(
+        { error: "You do not have permission to delete this document" },
+        { status: 403 },
+      );
+    }
+
+    if (existing.visibility !== "patient_visible") {
       return NextResponse.json(
         { error: "You do not have permission to delete this document" },
         { status: 403 },
