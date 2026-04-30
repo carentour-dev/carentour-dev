@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   User,
   Trash2,
+  Upload,
 } from "lucide-react";
 import type {
   PatientDetails,
@@ -30,6 +31,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
   potential: "Potential",
@@ -78,7 +87,23 @@ const DOCUMENT_SOURCE_LABELS: Record<PatientDocumentSummary["source"], string> =
     start_journey: "Start Journey",
     storage: "Storage",
     patient_portal: "Patient portal",
+    staff: "Staff upload",
   };
+
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: "medical_records", label: "Medical records" },
+  { value: "passport", label: "Passport" },
+  { value: "insurance", label: "Insurance" },
+  { value: "other", label: "Other" },
+] as const;
+
+const DOCUMENT_VISIBILITY_OPTIONS = [
+  { value: "patient_visible", label: "Visible to patient" },
+  { value: "internal", label: "Internal only" },
+] as const;
+
+const STAFF_DOCUMENT_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
+const MAX_STAFF_DOCUMENT_SIZE = 10 * 1024 * 1024;
 
 const CREATED_BY_FALLBACK_LABELS: Record<string, string> = {
   portal_signup: "Self signup",
@@ -214,9 +239,15 @@ export default function PatientDetailsPage() {
   const basePath = pathname.startsWith("/operations")
     ? "/operations"
     : "/admin";
+  const { toast } = useToast();
+  const staffDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
     null,
   );
+  const [uploadingStaffDocuments, setUploadingStaffDocuments] = useState(false);
+  const [staffDocumentType, setStaffDocumentType] = useState("medical_records");
+  const [staffDocumentVisibility, setStaffDocumentVisibility] =
+    useState("patient_visible");
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: patientDetailsKey(patientId),
@@ -253,6 +284,56 @@ export default function PatientDetailsPage() {
       console.error("Failed to delete patient document", err);
     } finally {
       setDeletingDocumentId(null);
+    }
+  };
+
+  const handleStaffDocumentSelection = async (fileList: FileList | null) => {
+    if (!patientId || !fileList?.length) return;
+
+    const files = Array.from(fileList);
+    setUploadingStaffDocuments(true);
+
+    try {
+      for (const file of files) {
+        if (file.size > MAX_STAFF_DOCUMENT_SIZE) {
+          throw new Error(`${file.name} exceeds the 10MB limit.`);
+        }
+
+        const formData = new FormData();
+        formData.append("patientId", patientId);
+        formData.append("file", file);
+        formData.append("documentType", staffDocumentType);
+        formData.append("visibility", staffDocumentVisibility);
+
+        await adminFetch("/api/admin/patient-documents", {
+          method: "POST",
+          body: formData,
+        });
+      }
+
+      await refetch();
+      toast({
+        title: "Upload complete",
+        description:
+          files.length === 1
+            ? `${files[0]?.name ?? "Document"} uploaded successfully.`
+            : `${files.length} documents uploaded successfully.`,
+      });
+    } catch (err) {
+      console.error("Failed to upload patient document", err);
+      toast({
+        title: "Upload failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "We could not upload this document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingStaffDocuments(false);
+      if (staffDocumentInputRef.current) {
+        staffDocumentInputRef.current.value = "";
+      }
     }
   };
 
@@ -1133,8 +1214,65 @@ export default function PatientDetailsPage() {
 
         <TabsContent value="documents" className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <CardTitle>Uploaded documents</CardTitle>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <Select
+                  value={staffDocumentType}
+                  onValueChange={setStaffDocumentType}
+                  disabled={uploadingStaffDocuments}
+                >
+                  <SelectTrigger className="h-9 w-full sm:w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOCUMENT_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={staffDocumentVisibility}
+                  onValueChange={setStaffDocumentVisibility}
+                  disabled={uploadingStaffDocuments}
+                >
+                  <SelectTrigger className="h-9 w-full sm:w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOCUMENT_VISIBILITY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input
+                  ref={staffDocumentInputRef}
+                  type="file"
+                  accept={STAFF_DOCUMENT_ACCEPT}
+                  multiple
+                  className="hidden"
+                  onChange={(event) => {
+                    void handleStaffDocumentSelection(event.target.files);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => staffDocumentInputRef.current?.click()}
+                  disabled={uploadingStaffDocuments}
+                >
+                  {uploadingStaffDocuments ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {uploadingStaffDocuments ? "Uploading" : "Upload"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {uniqueDocuments.length === 0 ? (
@@ -1169,10 +1307,24 @@ export default function PatientDetailsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {DOCUMENT_SOURCE_LABELS[document.source] ??
-                                document.source}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className="w-fit">
+                                {DOCUMENT_SOURCE_LABELS[document.source] ??
+                                  document.source}
+                              </Badge>
+                              {document.uploaded_by_profile ? (
+                                <span className="text-xs text-muted-foreground">
+                                  {document.uploaded_by_profile.username ??
+                                    document.uploaded_by_profile.email ??
+                                    "Staff member"}
+                                </span>
+                              ) : null}
+                              {document.visibility === "internal" ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Internal only
+                                </span>
+                              ) : null}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {formatDateTime(document.uploaded_at)}
@@ -1480,6 +1632,9 @@ function dedupeDocuments(documents: PatientDocumentSummary[]) {
       signed_url: existing.signed_url ?? document.signed_url ?? null,
       uploaded_at: existing.uploaded_at ?? document.uploaded_at ?? null,
       size: existing.size ?? document.size ?? null,
+      visibility: existing.visibility ?? document.visibility ?? null,
+      uploaded_by_profile:
+        existing.uploaded_by_profile ?? document.uploaded_by_profile ?? null,
       metadata: {
         ...(existing.metadata ?? {}),
         ...(document.metadata ?? {}),
