@@ -578,6 +578,31 @@ export default function PatientDetailsPage() {
                 Creation details
               </h3>
               <InfoItem
+                label="Coordinator"
+                value={
+                  patient.coordinator_profile ? (
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">
+                        {patient.coordinator_profile.username ??
+                          patient.coordinator_profile.email}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {patient.coordinator_profile.job_title ??
+                          patient.coordinator_profile.email ??
+                          "Team member"}
+                      </span>
+                    </div>
+                  ) : (
+                    "Unassigned"
+                  )
+                }
+                secondary={
+                  patient.coordinator_assigned_at
+                    ? `Assigned ${formatDateTime(patient.coordinator_assigned_at)}`
+                    : undefined
+                }
+              />
+              <InfoItem
                 label="Created via"
                 value={
                   CHANNEL_LABELS[patient.created_channel] ??
@@ -1515,6 +1540,46 @@ function buildTimeline(details: PatientDetails): TimelineEvent[] {
             patient.confirmed_by_profile?.username ??
             patient.confirmed_by_profile?.email ??
             "—",
+        },
+      ],
+    });
+  }
+
+  for (const assignment of details.coordinator_assignments) {
+    events.push({
+      id: `coordinator-${assignment.id}`,
+      timestamp: assignment.assigned_at,
+      title: assignment.ended_at
+        ? "Coordinator assignment ended"
+        : "Coordinator assigned",
+      description:
+        assignment.reason ??
+        (assignment.ended_at
+          ? "Coordinator ownership changed."
+          : "Coordinator ownership updated."),
+      icon: <User className="h-4 w-4" />,
+      badge: assignment.ended_at ? "Past" : "Active",
+      badgeVariant: assignment.ended_at ? "outline" : "success",
+      metadata: [
+        {
+          label: "Coordinator",
+          value:
+            assignment.coordinator_profile?.username ??
+            assignment.coordinator_profile?.email ??
+            "—",
+        },
+        {
+          label: "Assigned by",
+          value:
+            assignment.assigned_by_profile?.username ??
+            assignment.assigned_by_profile?.email ??
+            "—",
+        },
+        {
+          label: "Ended",
+          value: assignment.ended_at
+            ? formatDateTime(assignment.ended_at)
+            : "—",
         },
       ],
     });
