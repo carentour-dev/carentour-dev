@@ -8,7 +8,6 @@ import {
   CircleDollarSign,
   Hotel,
   Inbox,
-  Plane,
   ShieldCheck,
   Sparkles,
   Stethoscope,
@@ -41,17 +40,11 @@ type AdminSurface = {
 
 const SURFACES: AdminSurface[] = [
   {
-    title: "Contact Requests",
+    title: "Requests",
     href: "/admin/requests",
-    description: "Log new inquiries and assign follow-up actions.",
+    description:
+      "Triage consultation, contact-form, and Start Journey intakes.",
     icon: Inbox,
-    group: "care",
-  },
-  {
-    title: "Start Journey",
-    href: "/admin/start-journey",
-    description: "Advance pre-travel intake and keep case handoffs moving.",
-    icon: Plane,
     group: "care",
   },
   {
