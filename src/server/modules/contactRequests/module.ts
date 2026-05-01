@@ -209,6 +209,47 @@ const moveDocumentsToPatientFolder = async (
   return moved;
 };
 
+const addLinkedJourneyIds = async <
+  T extends { id: string; request_type?: string | null },
+>(
+  requests: T[],
+): Promise<Array<T & { linked_journey_id?: string | null }>> => {
+  if (requests.length === 0) return requests;
+
+  const supabase = getSupabaseAdmin() as any;
+  const ids = requests.map((request) => request.id);
+  const { data, error } = await supabase
+    .from("patient_journey_sources")
+    .select("journey_id, source_id, source_type")
+    .in("source_id", ids)
+    .in("source_type", ["contact_request", "consultation_request"]);
+
+  if (error) {
+    console.warn("[contact-requests] failed to load linked journeys", error);
+    return requests;
+  }
+
+  const journeyBySource = new Map<string, string>();
+  for (const source of data ?? []) {
+    journeyBySource.set(
+      `${source.source_type}:${source.source_id}`,
+      source.journey_id,
+    );
+  }
+
+  return requests.map((request) => {
+    const sourceType =
+      request.request_type === "consultation"
+        ? "consultation_request"
+        : "contact_request";
+    return {
+      ...request,
+      linked_journey_id:
+        journeyBySource.get(`${sourceType}:${request.id}`) ?? null,
+    };
+  });
+};
+
 export const contactRequestController = {
   async list(
     filters: { status?: ContactRequestStatus; requestType?: string } = {},
@@ -260,13 +301,16 @@ export const contactRequestController = {
       throw new ApiError(500, "Failed to load contact requests", error.message);
     }
 
-    return (data ??
-      []) as Database["public"]["Tables"]["contact_requests"]["Row"][];
+    return addLinkedJourneyIds(
+      (data ?? []) as Database["public"]["Tables"]["contact_requests"]["Row"][],
+    );
   },
 
   async get(id: unknown) {
     const contactRequestId = contactRequestIdSchema.parse(id);
-    return contactRequestService.getById(contactRequestId);
+    const request = await contactRequestService.getById(contactRequestId);
+    const [enrichedRequest] = await addLinkedJourneyIds([request]);
+    return enrichedRequest;
   },
 
   async create(payload: unknown) {
