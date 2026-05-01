@@ -1,31 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import AdminStartJourneyPage from "@/app/(internal)/admin/start-journey/page";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function OperationsStartJourneyPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [defaultApplied, setDefaultApplied] = useState(false);
 
   useEffect(() => {
-    if (searchParams.has("assigned")) {
-      if (!defaultApplied) {
-        setDefaultApplied(true);
-      }
+    if (defaultApplied) {
       return;
     }
 
-    if (!defaultApplied) {
-      const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", "start-journey");
+    if (!params.has("assigned")) {
       params.set("assigned", "me");
-      const query = params.toString();
-      const target = query ? `${pathname}?${query}` : pathname;
-      router.replace(target, { scroll: false });
     }
-  }, [defaultApplied, pathname, router, searchParams]);
+    const query = params.toString();
+    router.replace(`/operations/requests${query ? `?${query}` : ""}`, {
+      scroll: false,
+    });
+    setDefaultApplied(true);
+  }, [defaultApplied, router, searchParams]);
 
-  return <AdminStartJourneyPage />;
+  return null;
 }
