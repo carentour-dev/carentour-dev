@@ -153,8 +153,8 @@ const formatDateTime = (value: string | null | undefined) => {
 };
 
 const getLeadName = (lead: LeadRecord) =>
-  lead.full_name ??
-  [lead.first_name, lead.last_name].filter(Boolean).join(" ") ??
+  lead.full_name?.trim() ||
+  [lead.first_name, lead.last_name].filter(Boolean).join(" ").trim() ||
   "Unnamed lead";
 
 const getAssigneeName = (lead: LeadRecord) =>
@@ -447,6 +447,16 @@ export function LeadInboxWorkspace() {
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             Loading leads
           </div>
+        ) : leadsQuery.isError ? (
+          <WorkspaceEmptyState
+            title="Unable to load leads"
+            description={
+              leadsQuery.error instanceof Error
+                ? leadsQuery.error.message
+                : "Refresh the workspace and try again."
+            }
+            icon={<AlertTriangle className="h-8 w-8" />}
+          />
         ) : filteredLeads.length === 0 ? (
           <WorkspaceEmptyState
             title="No leads in view"
@@ -534,11 +544,27 @@ export function LeadInboxWorkspace() {
               timeline.
             </DialogDescription>
           </DialogHeader>
-          {detailsQuery.isLoading || !selectedLead ? (
+          {detailsQuery.isLoading ? (
             <div className="flex min-h-[240px] items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Loading lead details
             </div>
+          ) : detailsQuery.isError ? (
+            <WorkspaceEmptyState
+              title="Unable to load lead details"
+              description={
+                detailsQuery.error instanceof Error
+                  ? detailsQuery.error.message
+                  : "Close and reopen the lead to try again."
+              }
+              icon={<AlertTriangle className="h-8 w-8" />}
+            />
+          ) : !selectedLead ? (
+            <WorkspaceEmptyState
+              title="Lead details unavailable"
+              description="Close and reopen the lead to try again."
+              icon={<FileText className="h-8 w-8" />}
+            />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="space-y-6">
@@ -627,11 +653,15 @@ export function LeadInboxWorkspace() {
                       note.trim().length === 0 || updateMutation.isPending
                     }
                     onClick={() => {
-                      updateMutation.mutate({
-                        id: selectedLead.id,
-                        payload: { notes: note },
-                      });
-                      setNote("");
+                      updateMutation.mutate(
+                        {
+                          id: selectedLead.id,
+                          payload: { notes: note },
+                        },
+                        {
+                          onSuccess: () => setNote(""),
+                        },
+                      );
                     }}
                   >
                     Add note
