@@ -6,6 +6,7 @@ import { FileQuestion, Inbox, Loader2, RefreshCcw, Route } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
+import AdminStartJourneyPage from "@/app/(internal)/admin/start-journey/page";
 import {
   adminFetch,
   useAdminInvalidate,
@@ -65,7 +66,8 @@ type ContactRequest = ContactRequestRow & {
 };
 type ContactRequestStatus = ContactRequest["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
-type RequestTab = "contact" | "consultation";
+type ContactRequestTab = "contact" | "consultation";
+type RequestTab = ContactRequestTab | "start-journey";
 type ContactRequestDocument = {
   id?: string | null;
   type?: string | null;
@@ -358,6 +360,14 @@ const formatAssignee = (
   };
 };
 
+const parseRequestTab = (value: string | null): RequestTab => {
+  if (value === "contact" || value === "start-journey") {
+    return value;
+  }
+
+  return "consultation";
+};
+
 export default function AdminRequestsPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -367,8 +377,7 @@ export default function AdminRequestsPage() {
   const patientsPath = `${baseNamespace}/patients`;
   const consultationsPath = `${baseNamespace}/consultations`;
   const searchParams = useSearchParams();
-  const initialTab =
-    searchParams.get("tab") === "contact" ? "contact" : "consultation";
+  const initialTab = parseRequestTab(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<RequestTab>(initialTab);
   const initialAssignmentParam = searchParams.get("assigned");
   const initialAssignmentFilter: AssignmentFilter =
@@ -379,7 +388,7 @@ export default function AdminRequestsPage() {
     initialAssignmentFilter,
   );
   const [statusFilters, setStatusFilters] = useState<
-    Record<RequestTab, StatusFilter>
+    Record<ContactRequestTab, StatusFilter>
   >({
     contact: "all",
     consultation: "all",
@@ -439,6 +448,11 @@ export default function AdminRequestsPage() {
     patientIdDraft,
     requestTypeDraft,
   ]);
+
+  useEffect(() => {
+    const nextTab = parseRequestTab(searchParams.get("tab"));
+    setActiveTab((prev) => (prev === nextTab ? prev : nextTab));
+  }, [searchParams]);
 
   useEffect(() => {
     const param = searchParams.get("assigned");
@@ -1069,7 +1083,7 @@ export default function AdminRequestsPage() {
     );
   };
 
-  const updateStatusFilter = (tab: RequestTab, value: StatusFilter) => {
+  const updateStatusFilter = (tab: ContactRequestTab, value: StatusFilter) => {
     setStatusFilters((prev) => ({ ...prev, [tab]: value }));
   };
 
@@ -1078,7 +1092,7 @@ export default function AdminRequestsPage() {
       <WorkspacePageHeader
         breadcrumb="Admin"
         title="Requests Inbox"
-        subtitle="Review consultation and contact-form submissions, assign ownership, and move qualified cases into patient and consultation workflows."
+        subtitle="Review consultation, contact-form, and Start Journey submissions, assign ownership, and move qualified cases into patient and consultation workflows."
       />
 
       <Tabs
@@ -1108,6 +1122,12 @@ export default function AdminRequestsPage() {
               className="whitespace-nowrap rounded-full px-4"
             >
               Contact Form Inbox
+            </TabsTrigger>
+            <TabsTrigger
+              value="start-journey"
+              className="whitespace-nowrap rounded-full px-4"
+            >
+              Start Journey Submissions
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1905,6 +1925,10 @@ export default function AdminRequestsPage() {
               </div>
             )}
           </WorkspacePanel>
+        </TabsContent>
+
+        <TabsContent value="start-journey" className="mt-6">
+          <AdminStartJourneyPage embedded />
         </TabsContent>
       </Tabs>
 
