@@ -28,6 +28,7 @@ const patientServiceInstance = new CrudService("patients", "patient");
 const CONFIRM_PATIENT_PERMISSION = "operations.patients.confirm";
 const ASSIGN_PATIENT_PERMISSION = "operations.patients.assign";
 const COORDINATOR_ASSIGNABLE_ROLES = new Set([
+  "account_manager",
   "admin",
   "coordinator",
   "employee",
@@ -295,7 +296,11 @@ const normalizeProfileField = (value: string | null | undefined) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const OPERATIONS_PRIMARY_ROLES = new Set(["coordinator", "employee"]);
+const OPERATIONS_PRIMARY_ROLES = new Set([
+  "account_manager",
+  "coordinator",
+  "employee",
+]);
 
 const resolvePatientSource = (
   requested: PatientSource | undefined,
@@ -1102,6 +1107,7 @@ function isReferralOnlyUser(auth?: AuthorizationContext): boolean {
   const hasReferralRole = auth.roles.includes("referral");
   const privilegedRoles = [
     "admin",
+    "account_manager",
     "coordinator",
     "employee",
     "doctor",
@@ -1114,6 +1120,30 @@ function isReferralOnlyUser(auth?: AuthorizationContext): boolean {
 
   // User must have referral role AND no privileged roles
   return hasReferralRole && !hasPrivilegedRole;
+}
+
+function isAssignedCoordinatorOnly(auth?: AuthorizationContext): boolean {
+  if (!auth?.roles?.includes("coordinator")) {
+    return false;
+  }
+
+  return (
+    !auth.hasPermission("operations.patients") &&
+    !auth.hasPermission("operations.patient_journeys.manage")
+  );
+}
+
+function assertAssignedPatientAccess(
+  patient: { coordinator_id?: string | null },
+  auth?: AuthorizationContext,
+) {
+  if (!isAssignedCoordinatorOnly(auth)) {
+    return;
+  }
+
+  if (!auth?.profileId || patient.coordinator_id !== auth.profileId) {
+    throw new ApiError(403, "Patient access is limited to assigned patients.");
+  }
 }
 
 export const patientController = {
@@ -1135,7 +1165,18 @@ export const patientController = {
       query = query.eq("status", options.status);
     }
 
-    if (options?.coordinatorId !== undefined) {
+    if (isAssignedCoordinatorOnly(auth)) {
+      if (!auth?.profileId) {
+        return [];
+      }
+      if (
+        options?.coordinatorId !== undefined &&
+        options.coordinatorId !== auth.profileId
+      ) {
+        return [];
+      }
+      query = query.eq("coordinator_id", auth.profileId);
+    } else if (options?.coordinatorId !== undefined) {
       if (options.coordinatorId === null) {
         query = query.is("coordinator_id", null);
       } else {
@@ -1164,7 +1205,7 @@ export const patientController = {
 
     const searchTerm = `%${query.trim()}%`;
 
-    const request = supabase
+    let request = supabase
       .from("patients")
       .select(
         "id, full_name, contact_email, nationality, home_city, has_testimonial, status, coordinator_id",
@@ -1172,6 +1213,13 @@ export const patientController = {
       .or(`full_name.ilike.${searchTerm},contact_email.ilike.${searchTerm}`)
       .order("full_name", { ascending: true })
       .limit(20);
+
+    if (isAssignedCoordinatorOnly(auth)) {
+      if (!auth?.profileId) {
+        return [];
+      }
+      request = request.eq("coordinator_id", auth.profileId);
+    }
 
     const { data, error } = await (options?.status
       ? (request as any).eq("status", options.status)
@@ -1184,7 +1232,7 @@ export const patientController = {
     return data ?? [];
   },
 
-  async get(id: unknown) {
+  async get(id: unknown, auth?: AuthorizationContext) {
     const patientId = patientIdSchema.parse(id);
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -1201,6 +1249,7 @@ export const patientController = {
       throw new ApiError(404, "Patient not found");
     }
 
+    assertAssignedPatientAccess(data, auth);
     return data as PatientWithCoordinatorProfiles;
   },
 
@@ -1231,6 +1280,8 @@ export const patientController = {
     if (!patientRow) {
       throw new ApiError(404, "Patient not found");
     }
+
+    assertAssignedPatientAccess(patientRow, auth);
 
     const patient = patientRow as PatientRow & {
       creator_profile: ProfileSummary | null;
