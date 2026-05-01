@@ -148,10 +148,10 @@ export default function OperationsOverviewPage() {
         ? [
             {
               id: "start-journey",
-              title: "Start Journey follow-up",
+              title: "Start Journey submissions",
               description:
-                "Active journey submissions waiting for coordination or next-step follow-up.",
-              href: "/operations/start-journey?assigned=me",
+                "Active Start Journey intakes waiting for coordination or next-step follow-up.",
+              href: "/operations/requests?tab=start-journey&assigned=me",
               count: activeStartJourneyCount,
               isLoading: startJourneyLoading,
               badgeTone: "success" as const,
