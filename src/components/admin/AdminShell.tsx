@@ -32,6 +32,7 @@ import {
   LayoutDashboard,
   Loader2,
   Plane,
+  Route,
   Sparkles,
   Stethoscope,
   Users,
@@ -50,6 +51,7 @@ const NAV_ITEMS = [
   { label: "Appointments", href: "/admin/appointments", icon: CalendarDays },
   { label: "Doctors", href: "/admin/doctors", icon: Stethoscope },
   { label: "Patients", href: "/admin/patients", icon: Users },
+  { label: "Patient Journeys", href: "/admin/patient-journeys", icon: Route },
   { label: "Treatments", href: "/admin/treatments", icon: ActivitySquare },
   { label: "Finance", href: "/admin/finance", icon: CircleDollarSign },
   { label: "Testimonials", href: "/admin/testimonials", icon: Sparkles },
@@ -73,11 +75,11 @@ const NAV_SECTIONS: Array<{
   },
   {
     label: "Catalog",
-    items: NAV_ITEMS.slice(7, 13),
+    items: NAV_ITEMS.slice(7, 14),
   },
   {
     label: "Access",
-    items: NAV_ITEMS.slice(13),
+    items: NAV_ITEMS.slice(14),
   },
 ];
 
