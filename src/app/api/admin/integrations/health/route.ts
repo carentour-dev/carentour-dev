@@ -14,7 +14,7 @@ export const GET = adminRoute(async () => {
   const [deliveries, leads, automation] = await Promise.all([
     supabase
       .from("webhook_deliveries")
-      .select("status, signature_valid, received_at")
+      .select("status, signature_valid, delivery_key, received_at")
       .gte("received_at", since),
     supabase.from("lead_inquiries").select("status, urgency_tier"),
     supabase
@@ -39,6 +39,9 @@ export const GET = adminRoute(async () => {
       .length,
     invalidSignatures24h: deliveryRows.filter(
       (row: any) => row.signature_valid === false,
+    ).length,
+    idempotentDeliveries24h: deliveryRows.filter((row: any) =>
+      Boolean(row.delivery_key),
     ).length,
     leadsByStatus: leadRows.reduce((acc: Record<string, number>, row: any) => {
       acc[row.status] = (acc[row.status] ?? 0) + 1;
