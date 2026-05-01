@@ -112,7 +112,7 @@ const getSourceQueueHref = (
   sourceId: string,
 ) => {
   if (sourceType === "start_journey_submission") {
-    return `${baseNamespace}/start-journey?submissionId=${sourceId}`;
+    return `${baseNamespace}/requests?tab=start-journey&submissionId=${sourceId}`;
   }
 
   const tab = sourceType === "contact_request" ? "contact" : "consultation";
