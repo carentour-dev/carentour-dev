@@ -240,9 +240,13 @@ const formatProfileName = (profile: ProfileSummary | null | undefined) =>
   profile?.username?.trim() || profile?.email?.trim() || null;
 
 const isAssignableCoordinatorRole = (role: string) =>
-  ["admin", "coordinator", "employee", "management"].includes(
-    role.toLowerCase(),
-  );
+  [
+    "account_manager",
+    "admin",
+    "coordinator",
+    "employee",
+    "management",
+  ].includes(role.toLowerCase());
 
 export default function AdminPatientsPage() {
   const router = useRouter();
@@ -967,6 +971,7 @@ export default function AdminPatientsPage() {
                           onAssign={(memberId) => field.onChange(memberId)}
                           disabled={!canAssignPatients}
                           allowedRoles={[
+                            "account_manager",
                             "admin",
                             "coordinator",
                             "employee",
