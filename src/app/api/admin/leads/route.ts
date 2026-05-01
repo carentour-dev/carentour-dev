@@ -9,10 +9,14 @@ const LEADS_PERMISSIONS = {
 
 export const GET = adminRoute(async (req: NextRequest, ctx) => {
   const searchParams = req.nextUrl.searchParams;
+  const assignedToParam = searchParams.get("assignedTo");
+
+  if (assignedToParam === "me" && !ctx.auth?.profileId) {
+    return jsonResponse([]);
+  }
+
   const assignedTo =
-    searchParams.get("assignedTo") === "me"
-      ? ctx.auth?.profileId
-      : searchParams.get("assignedTo");
+    assignedToParam === "me" ? ctx.auth?.profileId : assignedToParam;
 
   const leads = await leadController.list({
     status: searchParams.get("status"),
