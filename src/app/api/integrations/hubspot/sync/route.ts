@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const verification = verifyIntegrationWebhook({
     body,
+    endpoint: ENDPOINT,
     timestampHeader: req.headers.get("x-carentour-timestamp"),
     signatureHeader: req.headers.get("x-carentour-signature"),
   });
@@ -55,6 +56,12 @@ export async function POST(req: NextRequest) {
     signatureValid: true,
     status: "accepted",
   });
+  if (delivery.duplicate) {
+    return NextResponse.json(
+      { data: { duplicate: true, status: delivery.status } },
+      { status: 202 },
+    );
+  }
 
   if (!isTruthyFeatureFlag(process.env.LEADS_ENABLE_HUBSPOT_SYNC)) {
     await updateWebhookDelivery(delivery.id, {
@@ -70,23 +77,70 @@ export async function POST(req: NextRequest) {
   try {
     const payload = syncSchema.parse(JSON.parse(body));
     const supabase = getSupabaseAdmin() as any;
-    const { error } = await supabase.from("external_identities").upsert(
-      {
-        entity_type: payload.entityType,
-        entity_id: payload.entityId,
-        provider: "hubspot",
-        external_id: payload.hubspotId,
-        metadata: payload.metadata ?? {},
-      },
-      { onConflict: "provider,external_id" },
-    );
+    const identityPayload = {
+      entity_type: payload.entityType,
+      entity_id: payload.entityId,
+      provider: "hubspot",
+      external_id: payload.hubspotId,
+      metadata: payload.metadata ?? {},
+    };
+    const { error } = await supabase
+      .from("external_identities")
+      .insert(identityPayload);
 
     if (error) {
-      throw new ApiError(
-        500,
-        "Failed to store HubSpot identity",
-        error.message,
-      );
+      const duplicate =
+        error.code === "23505" ||
+        error.message?.toLowerCase().includes("duplicate key") === true;
+      if (!duplicate) {
+        throw new ApiError(
+          500,
+          "Failed to store HubSpot identity",
+          error.message,
+        );
+      }
+
+      const { data: existingIdentity, error: existingError } = await supabase
+        .from("external_identities")
+        .select("entity_type, entity_id")
+        .eq("provider", "hubspot")
+        .eq("external_id", payload.hubspotId)
+        .maybeSingle();
+
+      if (existingError) {
+        throw new ApiError(
+          500,
+          "Failed to resolve HubSpot identity",
+          existingError.message,
+        );
+      }
+
+      if (
+        !existingIdentity ||
+        existingIdentity.entity_type !== payload.entityType ||
+        existingIdentity.entity_id !== payload.entityId
+      ) {
+        throw new ApiError(
+          409,
+          "HubSpot identity already belongs to another record.",
+        );
+      }
+
+      const { error: metadataError } = await supabase
+        .from("external_identities")
+        .update({ metadata: payload.metadata ?? {} })
+        .eq("provider", "hubspot")
+        .eq("external_id", payload.hubspotId)
+        .eq("entity_type", payload.entityType)
+        .eq("entity_id", payload.entityId);
+
+      if (metadataError) {
+        throw new ApiError(
+          500,
+          "Failed to update HubSpot identity metadata",
+          metadataError.message,
+        );
+      }
     }
 
     await updateWebhookDelivery(delivery.id, { status: "processed" });
