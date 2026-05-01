@@ -124,6 +124,39 @@ const sanitizeOrigin = (
 
 export const START_JOURNEY_SUBMISSION_STATUSES = STATUS_VALUES;
 
+const addLinkedJourneyIds = async <T extends { id: string }>(
+  submissions: T[],
+): Promise<Array<T & { linked_journey_id?: string | null }>> => {
+  if (submissions.length === 0) return submissions;
+
+  const supabase = getSupabaseAdmin() as any;
+  const ids = submissions.map((submission) => submission.id);
+  const { data, error } = await supabase
+    .from("patient_journey_sources")
+    .select("journey_id, source_id")
+    .eq("source_type", "start_journey_submission")
+    .in("source_id", ids);
+
+  if (error) {
+    console.warn(
+      "[start-journey-submissions] failed to load linked journeys",
+      error,
+    );
+    return submissions;
+  }
+
+  const journeyBySource = new Map<string, string>(
+    ((data ?? []) as Array<{ source_id: string; journey_id: string }>).map(
+      (source) => [source.source_id, source.journey_id],
+    ),
+  );
+
+  return submissions.map((submission) => ({
+    ...submission,
+    linked_journey_id: journeyBySource.get(submission.id) ?? null,
+  }));
+};
+
 export const startJourneySubmissionController = {
   async list(filters: { status?: StartJourneySubmissionStatus } = {}) {
     const parsed = listFiltersSchema.parse(filters);
@@ -173,13 +206,18 @@ export const startJourneySubmissionController = {
       );
     }
 
-    return (data ??
-      []) as Database["public"]["Tables"]["start_journey_submissions"]["Row"][];
+    return addLinkedJourneyIds(
+      (data ??
+        []) as Database["public"]["Tables"]["start_journey_submissions"]["Row"][],
+    );
   },
 
   async get(id: unknown) {
     const submissionId = submissionIdSchema.parse(id);
-    return startJourneySubmissionService.getById(submissionId);
+    const submission =
+      await startJourneySubmissionService.getById(submissionId);
+    const [enrichedSubmission] = await addLinkedJourneyIds([submission]);
+    return enrichedSubmission;
   },
 
   async create(payload: unknown) {
