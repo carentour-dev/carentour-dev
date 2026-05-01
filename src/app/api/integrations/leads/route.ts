@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const verification = verifyIntegrationWebhook({
     body,
+    endpoint: ENDPOINT,
     timestampHeader: req.headers.get("x-carentour-timestamp"),
     signatureHeader: req.headers.get("x-carentour-signature"),
   });
@@ -42,6 +43,12 @@ export async function POST(req: NextRequest) {
     signatureValid: true,
     status: "accepted",
   });
+  if (delivery.duplicate) {
+    return NextResponse.json(
+      { data: { duplicate: true, status: delivery.status } },
+      { status: 202 },
+    );
+  }
 
   try {
     const payload = JSON.parse(body);
