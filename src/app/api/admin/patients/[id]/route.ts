@@ -13,7 +13,10 @@ const PATIENTS_PERMISSIONS = {
 } as const;
 
 export const GET = adminRoute(async (_req, ctx) => {
-  const patient = await patientController.get(getRouteParam(ctx.params, "id"));
+  const patient = await patientController.get(
+    getRouteParam(ctx.params, "id"),
+    ctx.auth,
+  );
   return jsonResponse(patient);
 }, SHARED_PERMISSIONS);
 
