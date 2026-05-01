@@ -5,6 +5,7 @@ export const KNOWN_ROLES = [
   "management",
   "doctor",
   "employee",
+  "account_manager",
   "coordinator",
   "referral",
 ] as const;
@@ -16,6 +17,7 @@ export const PRIMARY_ROLE_ORDER: RoleSlug[] = [
   "admin",
   "editor",
   "management",
+  "account_manager",
   "coordinator",
   "doctor",
   "employee",
