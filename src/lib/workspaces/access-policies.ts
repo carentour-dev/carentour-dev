@@ -27,6 +27,7 @@ const FINANCE_FALLBACK_ROLE_SLUGS = new Set([
 ]);
 const OPERATIONS_FALLBACK_ROLE_SLUGS = new Set([
   "operations",
+  "account_manager",
   "coordinator",
   "doctor",
   "employee",
@@ -40,6 +41,9 @@ const OPERATIONS_SECTION_PERMISSIONS = [
   "operations.consultations",
   "operations.appointments",
   "operations.patients",
+  "operations.patient_journeys.read",
+  "operations.patient_journeys.manage",
+  "operations.patient_journey_steps.update_assigned",
   "operations.testimonials",
 ] as const;
 
