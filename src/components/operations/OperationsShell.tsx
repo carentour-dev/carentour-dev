@@ -107,15 +107,17 @@ export function OperationsShell({ children }: OperationsShellProps) {
     () => [
       {
         label: "Operations",
-        items: navSections.map((section) => ({
-          label: section.label,
-          href: section.href,
-          icon: section.icon,
-          active:
-            pathname === section.href ||
-            (section.href !== "/operations" &&
-              Boolean(pathname?.startsWith(section.href))),
-        })),
+        items: navSections
+          .filter((section) => section.id !== "start-journey")
+          .map((section) => ({
+            label: section.label,
+            href: section.href,
+            icon: section.icon,
+            active:
+              pathname === section.href ||
+              (section.href !== "/operations" &&
+                Boolean(pathname?.startsWith(section.href))),
+          })),
       },
     ],
     [navSections, pathname],
