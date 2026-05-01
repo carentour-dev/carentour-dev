@@ -26,6 +26,7 @@ const safeCompare = (left: string, right: string) => {
 
 export const verifyIntegrationWebhook = (args: {
   body: string;
+  endpoint: string;
   timestampHeader: string | null;
   signatureHeader: string | null;
   now?: number;
@@ -56,7 +57,7 @@ export const verifyIntegrationWebhook = (args: {
   }
 
   const expectedSignature = createHmac("sha256", secret)
-    .update(`${args.timestampHeader}.${args.body}`)
+    .update(`${args.timestampHeader}.${args.endpoint}.${args.body}`)
     .digest("hex");
 
   if (!safeCompare(providedSignature, expectedSignature)) {
