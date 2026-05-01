@@ -9,8 +9,10 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   createEntitlementContext,
   hasOperationsEntry,
+  satisfiesRequirement,
 } from "@/lib/operations/entitlements";
 import {
+  OPERATIONS_SECTIONS,
   getAccessibleOperationsSections,
   hasAnyOperationsSection,
 } from "@/lib/operations/sections";
@@ -72,6 +74,19 @@ export function OperationsShell({ children }: OperationsShellProps) {
   const assignedSections = hasAnyOperationsSection(entitlements);
   const baseAccess = hasOperationsEntry(entitlements);
   const isAuthorized = baseAccess || assignedSections;
+  const activeSection = useMemo(
+    () =>
+      OPERATIONS_SECTIONS.find(
+        (section) =>
+          section.href !== "/operations" &&
+          (pathname === section.href ||
+            Boolean(pathname?.startsWith(section.href))),
+      ) ?? null,
+    [pathname],
+  );
+  const hasActiveSectionAccess =
+    !activeSection ||
+    satisfiesRequirement(entitlements, activeSection.required);
   const hasAdminAccess = hasAdminWorkspaceAccess({ permissions, roles });
   const hasFinanceAccess = hasFinanceWorkspaceAccess(permissions, roles);
   const hasCmsAccess = hasCmsWorkspaceAccess(permissions, roles);
@@ -165,6 +180,24 @@ export function OperationsShell({ children }: OperationsShellProps) {
             Contact support
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasActiveSectionAccess && !isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Section access required
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Your account does not have access to this Operations section.
+          </p>
+        </div>
+        <Button onClick={() => router.replace("/operations")}>
+          Go to operations overview
+        </Button>
       </div>
     );
   }
