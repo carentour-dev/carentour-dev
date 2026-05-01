@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { contactRequestController } from "@/server/modules/contactRequests/module";
 import { patientController } from "@/server/modules/patients/module";
@@ -26,6 +27,13 @@ const TERMINAL_LEAD_STATUSES = [
   "disqualified",
   "archived",
 ] as const;
+
+type ExternalIdentityRecord = {
+  entity_type: string;
+  entity_id: string;
+  provider: string;
+  external_id: string;
+};
 
 const leadIdSchema = z.string().uuid();
 const optionalUuid = z.preprocess((value) => {
@@ -174,6 +182,20 @@ const loadLeadById = async (id: string) => {
   return data as LeadRecord;
 };
 
+const loadLeadForIdentity = async (identity: ExternalIdentityRecord) => {
+  try {
+    return await loadLeadById(identity.entity_id);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new ApiError(
+        409,
+        "Lead ingestion is already in progress for this external identity.",
+      );
+    }
+    throw error;
+  }
+};
+
 const findIdentityMatch = async (
   externalIds: Array<{ provider: string; externalId: string }>,
 ) => {
@@ -199,12 +221,7 @@ const findIdentityMatch = async (
     }
 
     if (data) {
-      return data as {
-        entity_type: string;
-        entity_id: string;
-        provider: string;
-        external_id: string;
-      };
+      return data as ExternalIdentityRecord;
     }
   }
 
@@ -282,7 +299,11 @@ const findPatientMatch = async (args: {
   } | null;
 };
 
-const upsertExternalIdentities = async (
+const isUniqueViolation = (error: { code?: string; message?: string }) =>
+  error.code === "23505" ||
+  error.message?.toLowerCase().includes("duplicate key") === true;
+
+const cleanupLeadIdentityClaims = async (
   leadId: string,
   externalIds: Array<{ provider: string; externalId: string }>,
 ) => {
@@ -291,19 +312,78 @@ const upsertExternalIdentities = async (
   }
 
   const supabase = getSupabaseAdmin() as any;
-  const rows = externalIds.map((identity) => ({
+  for (const identity of externalIds) {
+    await supabase
+      .from("external_identities")
+      .delete()
+      .eq("entity_type", "lead")
+      .eq("entity_id", leadId)
+      .eq("provider", identity.provider)
+      .eq("external_id", identity.externalId);
+  }
+};
+
+const insertExternalIdentity = async (
+  leadId: string,
+  identity: { provider: string; externalId: string },
+) => {
+  const supabase = getSupabaseAdmin() as any;
+  const { error } = await supabase.from("external_identities").insert({
     entity_type: "lead",
     entity_id: leadId,
     provider: identity.provider,
     external_id: identity.externalId,
-  }));
+  });
 
-  const { error } = await supabase
-    .from("external_identities")
-    .upsert(rows, { onConflict: "provider,external_id" });
+  if (!error) {
+    return null;
+  }
 
-  if (error) {
-    throw new ApiError(500, "Failed to store external identity", error.message);
+  if (isUniqueViolation(error)) {
+    return findIdentityMatch([identity]);
+  }
+
+  throw new ApiError(500, "Failed to store external identity", error.message);
+};
+
+const claimExternalIdentitiesForLead = async (
+  leadId: string,
+  externalIds: Array<{ provider: string; externalId: string }>,
+) => {
+  if (externalIds.length === 0) {
+    return null;
+  }
+
+  const claimed: Array<{ provider: string; externalId: string }> = [];
+
+  for (const identity of externalIds) {
+    const conflict = await insertExternalIdentity(leadId, identity);
+    if (conflict) {
+      await cleanupLeadIdentityClaims(leadId, claimed);
+      return conflict;
+    }
+    claimed.push(identity);
+  }
+
+  return null;
+};
+
+const storeExternalIdentitiesForLead = async (
+  leadId: string,
+  externalIds: Array<{ provider: string; externalId: string }>,
+) => {
+  for (const identity of externalIds) {
+    const conflict = await insertExternalIdentity(leadId, identity);
+    if (
+      conflict &&
+      (conflict.entity_type !== "lead" || conflict.entity_id !== leadId)
+    ) {
+      console.warn("[leads] external identity already belongs to another row", {
+        provider: identity.provider,
+        entityType: conflict.entity_type,
+        entityId: conflict.entity_id,
+      });
+    }
   }
 };
 
@@ -314,7 +394,7 @@ const insertAttribution = async (leadId: string, payload: LeadPayload) => {
 
   const attribution = payload.attribution;
   const supabase = getSupabaseAdmin() as any;
-  await supabase.from("lead_attribution").insert({
+  const { error } = await supabase.from("lead_attribution").insert({
     lead_id: leadId,
     source: toNullableString(attribution.source) ?? payload.source,
     medium: toNullableString(attribution.medium),
@@ -330,6 +410,10 @@ const insertAttribution = async (leadId: string, payload: LeadPayload) => {
     referrer: toNullableString(attribution.referrer),
     raw_attribution: attribution,
   });
+
+  if (error) {
+    throw new ApiError(500, "Failed to store lead attribution", error.message);
+  }
 };
 
 const insertConsents = async (leadId: string, payload: LeadPayload) => {
@@ -351,7 +435,10 @@ const insertConsents = async (leadId: string, payload: LeadPayload) => {
   }
 
   const supabase = getSupabaseAdmin() as any;
-  await supabase.from("marketing_consents").insert(rows);
+  const { error } = await supabase.from("marketing_consents").insert(rows);
+  if (error) {
+    throw new ApiError(500, "Failed to store lead consents", error.message);
+  }
 };
 
 const buildLeadInsert = (payload: LeadPayload, patientId: string | null) => {
@@ -385,6 +472,94 @@ const buildLeadInsert = (payload: LeadPayload, patientId: string | null) => {
     metadata: payload.metadata ?? {},
     raw_payload: payload.rawPayload ?? payload,
   };
+};
+
+const getConvertedLeadTarget = (lead: LeadRecord) => {
+  if (lead.contact_request_id) {
+    return { type: "contact_request", id: lead.contact_request_id };
+  }
+  if (lead.start_journey_submission_id) {
+    return {
+      type: "start_journey_submission",
+      id: lead.start_journey_submission_id,
+    };
+  }
+  if (lead.patient_id) {
+    return { type: "patient", id: lead.patient_id };
+  }
+  return null;
+};
+
+const restoreLeadAfterFailedConversion = async (
+  lead: LeadRecord,
+  auth?: AuthorizationContext,
+) => {
+  const supabase = getSupabaseAdmin() as any;
+  let query = supabase
+    .from("lead_inquiries")
+    .update({
+      status: lead.status,
+      converted_at: lead.converted_at ?? null,
+    })
+    .eq("id", lead.id)
+    .is("contact_request_id", null)
+    .is("start_journey_submission_id", null);
+
+  query = lead.patient_id
+    ? query.eq("patient_id", lead.patient_id)
+    : query.is("patient_id", null);
+
+  const { error } = await query;
+
+  if (!error) {
+    await insertLeadEvent({
+      leadId: lead.id,
+      eventType: "conversion_failed",
+      title: "Lead conversion failed",
+      actorProfileId: auth?.profileId ?? null,
+    });
+  }
+};
+
+const cleanupConversionTarget = async (target: Record<string, unknown>) => {
+  const id = typeof target.id === "string" ? target.id : null;
+  if (!id) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin() as any;
+  if (target.type === "contact_request") {
+    await supabase.from("contact_requests").delete().eq("id", id);
+  } else if (target.type === "start_journey_submission") {
+    await supabase.from("start_journey_submissions").delete().eq("id", id);
+  } else if (target.type === "patient" && target.created === true) {
+    await supabase.from("patients").delete().eq("id", id).eq("source", "staff");
+  }
+};
+
+const assertDuplicateTargetDoesNotCycle = async (
+  leadId: string,
+  duplicateTargetId: string,
+) => {
+  const visited = new Set<string>();
+  let currentId: string | null = duplicateTargetId;
+
+  while (currentId) {
+    if (currentId === leadId) {
+      throw new ApiError(400, "Duplicate lead links cannot form a cycle.");
+    }
+
+    if (visited.has(currentId)) {
+      throw new ApiError(
+        400,
+        "Selected duplicate target already belongs to a duplicate cycle.",
+      );
+    }
+
+    visited.add(currentId);
+    const currentLead = await loadLeadById(currentId);
+    currentId = currentLead.duplicate_of_lead_id;
+  }
 };
 
 export const leadController = {
@@ -494,9 +669,9 @@ export const leadController = {
     const normalizedEmail = normalizeLeadEmail(payload.email);
     const normalizedPhone = normalizeLeadPhone(payload.phone);
 
-    const identityMatch = await findIdentityMatch(externalIds);
+    let identityMatch = await findIdentityMatch(externalIds);
     if (identityMatch?.entity_type === "lead") {
-      const existingLead = await loadLeadById(identityMatch.entity_id);
+      const existingLead = await loadLeadForIdentity(identityMatch);
       const supabase = getSupabaseAdmin() as any;
       await supabase
         .from("lead_inquiries")
@@ -530,8 +705,28 @@ export const leadController = {
         body: "Matched by normalized contact details.",
         payload,
       });
-      await upsertExternalIdentities(recentLead.id, externalIds);
+      await storeExternalIdentitiesForLead(recentLead.id, externalIds);
       return { lead: recentLead, resolution: "duplicate_lead" };
+    }
+
+    const supabase = getSupabaseAdmin() as any;
+    const leadId = randomUUID();
+    if (!identityMatch) {
+      identityMatch = await claimExternalIdentitiesForLead(leadId, externalIds);
+      if (identityMatch?.entity_type === "lead") {
+        const existingLead = await loadLeadForIdentity(identityMatch);
+        await insertLeadEvent({
+          leadId: existingLead.id,
+          eventType: "duplicate_ingested",
+          title: "Duplicate external lead received",
+          body: `Matched ${identityMatch.provider} identity.`,
+          payload,
+        });
+        return {
+          lead: await loadLeadById(existingLead.id),
+          resolution: "existing_raw_lead",
+        };
+      }
     }
 
     const patientMatch =
@@ -539,14 +734,17 @@ export const leadController = {
         ? { id: identityMatch.entity_id, status: "confirmed" as const }
         : await findPatientMatch({ normalizedEmail, normalizedPhone });
 
-    const supabase = getSupabaseAdmin() as any;
     const { data, error } = await supabase
       .from("lead_inquiries")
-      .insert(buildLeadInsert(payload, patientMatch?.id ?? null))
+      .insert({
+        id: leadId,
+        ...buildLeadInsert(payload, patientMatch?.id ?? null),
+      })
       .select("*")
       .single();
 
     if (error) {
+      await cleanupLeadIdentityClaims(leadId, externalIds);
       throw new ApiError(500, "Failed to create lead", error.message);
     }
 
@@ -564,7 +762,9 @@ export const leadController = {
             : null,
         payload,
       }),
-      upsertExternalIdentities(lead.id, externalIds),
+      identityMatch
+        ? Promise.resolve()
+        : storeExternalIdentitiesForLead(lead.id, externalIds),
       insertAttribution(lead.id, payload),
       insertConsents(lead.id, payload),
     ]);
@@ -620,8 +820,18 @@ export const leadController = {
       );
     }
     if (parsed.duplicate_of_lead_id !== undefined) {
+      if (parsed.duplicate_of_lead_id === leadId) {
+        throw new ApiError(
+          400,
+          "A lead cannot be marked as a duplicate of itself.",
+        );
+      }
       updatePayload.duplicate_of_lead_id = parsed.duplicate_of_lead_id ?? null;
       if (parsed.duplicate_of_lead_id) {
+        await assertDuplicateTargetDoesNotCycle(
+          leadId,
+          parsed.duplicate_of_lead_id,
+        );
         updatePayload.status = "duplicate";
       }
     }
@@ -664,7 +874,48 @@ export const leadController = {
   async convert(id: unknown, payload: unknown, auth?: AuthorizationContext) {
     const leadId = leadIdSchema.parse(id);
     const parsed = convertLeadSchema.parse(payload);
-    const lead = await loadLeadById(leadId);
+    const existingLead = await loadLeadById(leadId);
+    const existingTarget = getConvertedLeadTarget(existingLead);
+    if (
+      (TERMINAL_LEAD_STATUSES as readonly LeadStatus[]).includes(
+        existingLead.status,
+      )
+    ) {
+      if (existingLead.status === "converted" && existingTarget) {
+        return { lead: existingLead, target: existingTarget };
+      }
+      throw new ApiError(409, "Lead is already in a terminal status.");
+    }
+
+    const supabase = getSupabaseAdmin() as any;
+    const { data: claimedLead, error: claimError } = await supabase
+      .from("lead_inquiries")
+      .update({
+        status: "converted",
+        converted_at: new Date().toISOString(),
+      })
+      .eq("id", leadId)
+      .not("status", "in", `(${TERMINAL_LEAD_STATUSES.join(",")})`)
+      .select("*")
+      .maybeSingle();
+
+    if (claimError) {
+      throw new ApiError(
+        500,
+        "Failed to claim lead conversion",
+        claimError.message,
+      );
+    }
+    if (!claimedLead) {
+      const latestLead = await loadLeadById(leadId);
+      const latestTarget = getConvertedLeadTarget(latestLead);
+      if (latestLead.status === "converted" && latestTarget) {
+        return { lead: latestLead, target: latestTarget };
+      }
+      throw new ApiError(409, "Lead is already in a terminal status.");
+    }
+
+    const lead = claimedLead as LeadRecord;
     const firstName =
       lead.first_name ?? splitLeadName(lead.full_name).firstName;
     const lastName = lead.last_name ?? splitLeadName(lead.full_name).lastName;
@@ -674,82 +925,83 @@ export const leadController = {
     const phone = lead.phone ?? "";
     const country = lead.country ?? "Not provided";
     const message = lead.message ?? "Converted from Lead Inbox.";
-    const supabase = getSupabaseAdmin() as any;
 
-    let updatePayload: Record<string, unknown> = {
-      status: "converted",
-      converted_at: new Date().toISOString(),
-    };
+    let updatePayload: Record<string, unknown> = {};
     let target: Record<string, unknown>;
 
-    if (parsed.action === "contact_request") {
-      const contactRequest = await contactRequestController.create({
-        first_name: firstName ?? fullName ?? "Lead",
-        last_name: lastName ?? "Inquiry",
-        email,
-        phone,
-        country,
-        treatment: lead.procedure_interest ?? undefined,
-        message,
-        request_type: lead.ready_for_consultation ? "consultation" : "general",
-        notes: parsed.notes,
-        assigned_to: lead.assigned_to,
-        patient_id: lead.patient_id,
-        origin: "manual",
-        portal_metadata: {
-          leadId: lead.id,
-          source: lead.source,
-          convertedBy: auth?.profileId ?? null,
-        },
-      });
-      updatePayload = {
-        ...updatePayload,
-        contact_request_id: contactRequest.id,
-      };
-      target = { type: "contact_request", id: contactRequest.id };
-    } else if (parsed.action === "start_journey") {
-      const submission = await startJourneySubmissionController.create({
-        first_name: firstName ?? fullName ?? "Lead",
-        last_name: lastName ?? "Inquiry",
-        email,
-        phone: phone || "Not provided",
-        country,
-        treatment_name: lead.procedure_interest ?? undefined,
-        medical_condition: message,
-        has_medical_records: lead.has_medical_documents,
-        language_preference: lead.language ?? undefined,
-        patient_id: lead.patient_id,
-        origin: "web",
-      });
-      updatePayload = {
-        ...updatePayload,
-        start_journey_submission_id: submission.id,
-      };
-      target = { type: "start_journey_submission", id: submission.id };
-    } else if (parsed.action === "existing_patient") {
-      if (!parsed.patient_id) {
-        throw new ApiError(400, "Select an existing patient before linking.");
+    try {
+      if (parsed.action === "contact_request") {
+        const contactRequest = await contactRequestController.create({
+          first_name: firstName ?? fullName ?? "Lead",
+          last_name: lastName ?? "Inquiry",
+          email,
+          phone,
+          country,
+          treatment: lead.procedure_interest ?? undefined,
+          message,
+          request_type: lead.ready_for_consultation
+            ? "consultation"
+            : "general",
+          notes: parsed.notes,
+          assigned_to: lead.assigned_to,
+          patient_id: lead.patient_id,
+          origin: "manual",
+          portal_metadata: {
+            leadId: lead.id,
+            source: lead.source,
+            convertedBy: auth?.profileId ?? null,
+          },
+        });
+        updatePayload = {
+          contact_request_id: contactRequest.id,
+        };
+        target = { type: "contact_request", id: contactRequest.id };
+      } else if (parsed.action === "start_journey") {
+        const submission = await startJourneySubmissionController.create({
+          first_name: firstName ?? fullName ?? "Lead",
+          last_name: lastName ?? "Inquiry",
+          email,
+          phone: phone || "Not provided",
+          country,
+          treatment_name: lead.procedure_interest ?? undefined,
+          medical_condition: message,
+          has_medical_records: lead.has_medical_documents,
+          language_preference: lead.language ?? undefined,
+          patient_id: lead.patient_id,
+          origin: "web",
+        });
+        updatePayload = {
+          start_journey_submission_id: submission.id,
+        };
+        target = { type: "start_journey_submission", id: submission.id };
+      } else if (parsed.action === "existing_patient") {
+        if (!parsed.patient_id) {
+          throw new ApiError(400, "Select an existing patient before linking.");
+        }
+        updatePayload = { patient_id: parsed.patient_id };
+        target = { type: "patient", id: parsed.patient_id, existing: true };
+      } else {
+        const patient = await patientController.create(
+          {
+            full_name:
+              fullName && fullName.length >= 2 ? fullName : "Lead Inquiry",
+            contact_email: lead.email ?? undefined,
+            contact_phone: lead.phone ?? undefined,
+            nationality: lead.country ?? undefined,
+            preferred_language: lead.language ?? undefined,
+            notes: [lead.message, parsed.notes].filter(Boolean).join("\n\n"),
+            status: "potential",
+            source: "staff",
+            created_channel: "operations_dashboard",
+          },
+          auth,
+        );
+        updatePayload = { patient_id: patient.id };
+        target = { type: "patient", id: patient.id, created: true };
       }
-      updatePayload = { ...updatePayload, patient_id: parsed.patient_id };
-      target = { type: "patient", id: parsed.patient_id };
-    } else {
-      const patient = await patientController.create(
-        {
-          full_name:
-            fullName && fullName.length >= 2 ? fullName : "Lead Inquiry",
-          contact_email: lead.email ?? undefined,
-          contact_phone: lead.phone ?? undefined,
-          nationality: lead.country ?? undefined,
-          preferred_language: lead.language ?? undefined,
-          notes: [lead.message, parsed.notes].filter(Boolean).join("\n\n"),
-          status: "potential",
-          source: "staff",
-          created_channel: "operations_dashboard",
-        },
-        auth,
-      );
-      updatePayload = { ...updatePayload, patient_id: patient.id };
-      target = { type: "patient", id: patient.id };
+    } catch (error) {
+      await restoreLeadAfterFailedConversion(existingLead, auth);
+      throw error;
     }
 
     const { error } = await supabase
@@ -758,6 +1010,8 @@ export const leadController = {
       .eq("id", leadId);
 
     if (error) {
+      await cleanupConversionTarget(target);
+      await restoreLeadAfterFailedConversion(existingLead, auth);
       throw new ApiError(500, "Failed to mark lead converted", error.message);
     }
 
