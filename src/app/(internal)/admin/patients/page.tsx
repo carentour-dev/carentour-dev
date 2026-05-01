@@ -403,7 +403,7 @@ export default function AdminPatientsPage() {
           title: "Linking issue",
           description: `${linkIssues.join(
             " ",
-          )} Link manually from the Requests or Start Journey tab.`,
+          )} Link manually from the Requests tab.`,
           variant: "destructive",
         });
       }
