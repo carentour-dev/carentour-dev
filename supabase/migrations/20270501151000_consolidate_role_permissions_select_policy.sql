@@ -5,11 +5,10 @@ BEGIN;
 ALTER TABLE public.role_permissions
 ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-    EXECUTE 'DROP POLICY IF EXISTS "Role permissions are readable" ON public.role_permissions';
-END;
-$$;
+-- noqa: disable=RF05
+DROP POLICY IF EXISTS "Role permissions are readable"
+ON public.role_permissions;
+-- noqa: enable=RF05
 
 DROP POLICY IF EXISTS role_permissions_are_readable
 ON public.role_permissions;
