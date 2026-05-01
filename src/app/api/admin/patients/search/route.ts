@@ -18,7 +18,7 @@ const parseStatusQuery = (value: string | null): PatientStatus | undefined => {
   return result.success ? result.data : undefined;
 };
 
-export const GET = adminRoute(async (request: NextRequest) => {
+export const GET = adminRoute(async (request: NextRequest, ctx) => {
   const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   const status = parseStatusQuery(request.nextUrl.searchParams.get("status"));
 
@@ -26,6 +26,6 @@ export const GET = adminRoute(async (request: NextRequest) => {
     return jsonResponse([]);
   }
 
-  const patients = await patientController.search(query, { status });
+  const patients = await patientController.search(query, { status }, ctx.auth);
   return jsonResponse(patients);
 }, SHARED_PERMISSIONS);
