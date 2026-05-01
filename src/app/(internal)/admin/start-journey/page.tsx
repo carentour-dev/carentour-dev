@@ -335,7 +335,13 @@ const getActionButtonLabel = (submission: StartJourneySubmission) => {
   return "Schedule";
 };
 
-export default function AdminStartJourneyPage() {
+type AdminStartJourneyPageProps = {
+  embedded?: boolean;
+};
+
+export default function AdminStartJourneyPage({
+  embedded = false,
+}: AdminStartJourneyPageProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const baseNamespace = pathname.startsWith("/operations")
@@ -375,6 +381,19 @@ export default function AdminStartJourneyPage() {
 
   const { toast } = useToast();
   const invalidate = useAdminInvalidate();
+
+  useEffect(() => {
+    if (embedded) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", "start-journey");
+    const query = params.toString();
+    router.replace(`${baseNamespace}/requests${query ? `?${query}` : ""}`, {
+      scroll: false,
+    });
+  }, [baseNamespace, embedded, router, searchParams]);
 
   const hasUnsavedDialogChanges = useMemo(() => {
     if (!activeSubmission) return false;
@@ -432,6 +451,7 @@ export default function AdminStartJourneyPage() {
   const submissionsQuery = useQuery({
     queryKey: [...QUERY_KEY, statusFilter, assignmentFilter],
     queryFn: () => fetchSubmissions(statusFilter, assignmentFilter),
+    enabled: embedded,
   });
 
   const updateSubmission = useMutation({
@@ -763,16 +783,22 @@ export default function AdminStartJourneyPage() {
     [patientIdDraft, activeSubmission?.patient_id],
   );
 
+  if (!embedded) {
+    return null;
+  }
+
   return (
     <div className="space-y-8">
-      <WorkspacePageHeader
-        breadcrumb="Admin"
-        title="Start Journey Submissions"
-        subtitle="Comprehensive intake forms submitted through the Start Journey flow, including medical history, travel preferences, and supporting documents."
-      />
+      {!embedded && (
+        <WorkspacePageHeader
+          breadcrumb="Admin"
+          title="Start Journey Submissions"
+          subtitle="Comprehensive intake forms submitted through the Start Journey flow, including medical history, travel preferences, and supporting documents."
+        />
+      )}
 
       <WorkspacePanel
-        title="Submission queue"
+        title={embedded ? "Start Journey Submissions" : "Submission queue"}
         description={
           submissions.length === 0
             ? "No Start Journey submissions match the current filters."
