@@ -133,7 +133,7 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     id: "requests",
     label: "Requests",
     description:
-      "Review new patient inquiries, track statuses, and capture coordinator notes.",
+      "Review patient inquiries, Start Journey submissions, track statuses, and capture coordinator notes.",
     href: "/operations/requests",
     icon: Inbox,
     adminHref: "/admin/requests",
