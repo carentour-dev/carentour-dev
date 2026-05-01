@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { FileQuestion, Inbox, Loader2, RefreshCcw } from "lucide-react";
+import { FileQuestion, Inbox, Loader2, RefreshCcw, Route } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
@@ -48,6 +48,7 @@ import type { Database, Tables } from "@/integrations/supabase/types";
 
 type ContactRequestRow = Tables<"contact_requests">;
 type ContactRequest = ContactRequestRow & {
+  linked_journey_id?: string | null;
   assigned_profile?: {
     id: string;
     username: string | null;
@@ -83,6 +84,10 @@ type PatientConsultationRow =
       "id" | "status" | "request_type" | "origin"
     > | null;
   };
+type PatientJourneySummary = {
+  id: string;
+  patient_id: string;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown | null> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -362,7 +367,9 @@ export default function AdminRequestsPage() {
   const patientsPath = `${baseNamespace}/patients`;
   const consultationsPath = `${baseNamespace}/consultations`;
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<RequestTab>("consultation");
+  const initialTab =
+    searchParams.get("tab") === "contact" ? "contact" : "consultation";
+  const [activeTab, setActiveTab] = useState<RequestTab>(initialTab);
   const initialAssignmentParam = searchParams.get("assigned");
   const initialAssignmentFilter: AssignmentFilter =
     initialAssignmentParam === "me" || initialAssignmentParam === "unassigned"
@@ -387,6 +394,12 @@ export default function AdminRequestsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [startingJourneyId, setStartingJourneyId] = useState<string | null>(
+    null,
+  );
+  const [assignmentOverrides, setAssignmentOverrides] = useState<
+    Record<string, string | null>
+  >({});
   const [archiveOverrides, setArchiveOverrides] = useState<
     Record<string, boolean>
   >({});
@@ -593,6 +606,55 @@ export default function AdminRequestsPage() {
     },
   });
 
+  const startJourney = useMutation({
+    mutationFn: ({
+      request,
+      coordinatorProfileId,
+    }: {
+      request: ContactRequest;
+      coordinatorProfileId: string | null;
+    }) => {
+      if (!coordinatorProfileId) {
+        throw new Error("Assign a coordinator before starting the journey.");
+      }
+
+      return adminFetch<PatientJourneySummary>(
+        "/api/admin/patient-journeys/start",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            sourceType:
+              request.request_type === "consultation"
+                ? "consultation_request"
+                : "contact_request",
+            sourceId: request.id,
+            patientId: request.patient_id ?? undefined,
+            coordinatorProfileId,
+          }),
+        },
+      );
+    },
+    onSuccess: (journey) => {
+      invalidate(QUERY_KEY);
+      invalidate(["admin", "patient-journeys"]);
+      toast({
+        title: "Journey started",
+        description: "The intake source is now linked to a patient journey.",
+      });
+      router.push(`${baseNamespace}/patient-journeys?journeyId=${journey.id}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Unable to start journey",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setStartingJourneyId(null);
+    },
+  });
+
   const closeDialog = () => {
     setDialogOpen(false);
     setActiveRequest(null);
@@ -624,6 +686,32 @@ export default function AdminRequestsPage() {
     setPatientIdDraft(request.patient_id ?? null);
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    const requestId = searchParams.get("requestId");
+    if (!requestId || activeRequest?.id === requestId) {
+      return;
+    }
+
+    const request = [
+      ...(consultationQuery.data ?? []),
+      ...(contactQuery.data ?? []),
+    ].find((item) => item.id === requestId);
+
+    if (!request) {
+      return;
+    }
+
+    setActiveTab(
+      request.request_type === "consultation" ? "consultation" : "contact",
+    );
+    openDialogFor(request);
+  }, [
+    activeRequest?.id,
+    contactQuery.data,
+    consultationQuery.data,
+    searchParams,
+  ]);
 
   const handleOpenDocument = async (document: ContactRequestDocument) => {
     if (!document.path || !document.bucket) {
@@ -805,10 +893,30 @@ export default function AdminRequestsPage() {
     }
 
     setUpdatingId(request.id);
-    await updateRequest.mutateAsync({
+    const updatedRequest = await updateRequest.mutateAsync({
       id: request.id,
       data: { assigned_to: normalizedAssignee },
     });
+    setAssignmentOverrides((current) => ({
+      ...current,
+      [request.id]: updatedRequest.assigned_to ?? null,
+    }));
+  };
+
+  const handleStartJourney = (request: ContactRequest) => {
+    if (request.linked_journey_id) {
+      router.push(
+        `${baseNamespace}/patient-journeys?journeyId=${request.linked_journey_id}`,
+      );
+      return;
+    }
+
+    const coordinatorProfileId =
+      request.id in assignmentOverrides
+        ? assignmentOverrides[request.id]
+        : (request.assigned_to ?? null);
+    setStartingJourneyId(request.id);
+    startJourney.mutate({ request, coordinatorProfileId });
   };
 
   const matchesArchiveView = (request: ContactRequest) => {
@@ -975,7 +1083,16 @@ export default function AdminRequestsPage() {
 
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as RequestTab)}
+        onValueChange={(value) => {
+          const nextTab = value as RequestTab;
+          setActiveTab(nextTab);
+          const params = new URLSearchParams(searchParams);
+          params.set("tab", nextTab);
+          const query = params.toString();
+          router.replace(query ? `${pathname}?${query}` : pathname, {
+            scroll: false,
+          });
+        }}
         className="space-y-6"
       >
         <div className="overflow-x-auto pb-1">
@@ -1177,6 +1294,14 @@ export default function AdminRequestsPage() {
                                     {request.patient_id.length > 8 ? "…" : ""}
                                   </Badge>
                                 )}
+                                {request.linked_journey_id && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="mt-1 w-fit text-xs font-normal"
+                                  >
+                                    Journey linked
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1261,6 +1386,26 @@ export default function AdminRequestsPage() {
                               <TooltipContent>{scheduleTooltip}</TooltipContent>
                             </Tooltip>
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-10 w-full justify-start rounded-xl px-3.5"
+                            onClick={() => handleStartJourney(request)}
+                            disabled={
+                              startJourney.isPending &&
+                              startingJourneyId === request.id
+                            }
+                          >
+                            {startJourney.isPending &&
+                            startingJourneyId === request.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Route className="mr-2 h-4 w-4" />
+                            )}
+                            {request.linked_journey_id
+                              ? "Open Journey"
+                              : "Start Journey"}
+                          </Button>
                           <AssignmentControl
                             assigneeId={assignment.id}
                             assigneeLabel={assignment.label}
@@ -1542,6 +1687,14 @@ export default function AdminRequestsPage() {
                                     {request.patient_id.length > 8 ? "…" : ""}
                                   </Badge>
                                 )}
+                                {request.linked_journey_id && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="mt-1 w-fit text-xs font-normal"
+                                  >
+                                    Journey linked
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1638,6 +1791,26 @@ export default function AdminRequestsPage() {
                               <TooltipContent>{scheduleTooltip}</TooltipContent>
                             </Tooltip>
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-10 w-full justify-start rounded-xl px-3.5"
+                            onClick={() => handleStartJourney(request)}
+                            disabled={
+                              startJourney.isPending &&
+                              startingJourneyId === request.id
+                            }
+                          >
+                            {startJourney.isPending &&
+                            startingJourneyId === request.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Route className="mr-2 h-4 w-4" />
+                            )}
+                            {request.linked_journey_id
+                              ? "Open Journey"
+                              : "Start Journey"}
+                          </Button>
                           <AssignmentControl
                             assigneeId={assignment.id}
                             assigneeLabel={assignment.label}
