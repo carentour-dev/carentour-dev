@@ -6,6 +6,7 @@ export type OperationsSectionId =
   | "consultations"
   | "appointments"
   | "patients"
+  | "patient-journeys"
   | "testimonials"
   | "tasks"
   | "cnt-ai"
