@@ -17,14 +17,30 @@ export const normalizeLeadPhone = (value: unknown): string | null => {
     return null;
   }
 
-  const leadingPlus = raw.startsWith("+") ? "+" : "";
+  const explicitInternationalPrefix = raw.startsWith("+");
   const digits = raw.replace(/[^\d]/g, "");
 
   if (digits.length < 7) {
     return null;
   }
 
-  return `${leadingPlus}${digits}`;
+  if (explicitInternationalPrefix) {
+    return `+${digits}`;
+  }
+
+  if (digits.startsWith("00") && digits.length > 9) {
+    return `+${digits.slice(2)}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("01")) {
+    return `+20${digits.slice(1)}`;
+  }
+
+  if (digits.startsWith("011") && digits.length > 10) {
+    return `+${digits.slice(3)}`;
+  }
+
+  return digits;
 };
 
 export const splitLeadName = (value: unknown) => {
