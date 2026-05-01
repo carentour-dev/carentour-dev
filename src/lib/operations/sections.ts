@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Plane,
+  Route,
   Users,
   Sparkles,
   UserRoundSearch,
@@ -42,6 +43,8 @@ const overviewRequirement: AccessRequirement = [
       "operations.consultations",
       "operations.appointments",
       "operations.patients",
+      "operations.patient_journeys.read",
+      "operations.patient_journeys.manage",
       "operations.testimonials",
     ],
   },
@@ -175,6 +178,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: Users,
     adminHref: "/admin/patients",
     required: sectionRequirement("operations.patients"),
+  },
+  {
+    id: "patient-journeys",
+    label: "Patient Journeys",
+    description:
+      "Track active journey plans, assigned coordinator execution, and staff-only step progress.",
+    href: "/operations/patient-journeys",
+    icon: Route,
+    adminHref: "/admin/patient-journeys",
+    required: sectionRequirement("operations.patient_journeys.read"),
   },
   {
     id: "testimonials",
