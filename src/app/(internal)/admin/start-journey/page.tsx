@@ -8,6 +8,7 @@ import {
   Loader2,
   Paperclip,
   RefreshCcw,
+  Route,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PatientSelector } from "@/components/admin/PatientSelector";
@@ -46,6 +47,7 @@ import {
 type StartJourneySubmissionRow =
   Database["public"]["Tables"]["start_journey_submissions"]["Row"];
 type StartJourneySubmission = StartJourneySubmissionRow & {
+  linked_journey_id?: string | null;
   assigned_profile?: {
     id: string;
     username: string | null;
@@ -59,6 +61,10 @@ type StartJourneySubmission = StartJourneySubmissionRow & {
     email: string | null;
     avatar_url: string | null;
   } | null;
+};
+type PatientJourneySummary = {
+  id: string;
+  patient_id: string;
 };
 type SubmissionStatus = StartJourneySubmission["status"];
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
@@ -354,6 +360,12 @@ export default function AdminStartJourneyPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [startingJourneyId, setStartingJourneyId] = useState<string | null>(
+    null,
+  );
+  const [assignmentOverrides, setAssignmentOverrides] = useState<
+    Record<string, string | null>
+  >({});
   const [documentLinks, setDocumentLinks] = useState<Record<string, string>>(
     {},
   );
@@ -487,6 +499,52 @@ export default function AdminStartJourneyPage() {
     },
   });
 
+  const startJourney = useMutation({
+    mutationFn: ({
+      submission,
+      coordinatorProfileId,
+    }: {
+      submission: StartJourneySubmission;
+      coordinatorProfileId: string | null;
+    }) => {
+      if (!coordinatorProfileId) {
+        throw new Error("Assign a coordinator before starting the journey.");
+      }
+
+      return adminFetch<PatientJourneySummary>(
+        "/api/admin/patient-journeys/start",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            sourceType: "start_journey_submission",
+            sourceId: submission.id,
+            patientId: submission.patient_id ?? undefined,
+            coordinatorProfileId,
+          }),
+        },
+      );
+    },
+    onSuccess: (journey) => {
+      invalidate(QUERY_KEY);
+      invalidate(["admin", "patient-journeys"]);
+      toast({
+        title: "Journey started",
+        description: "The submission is now linked to a patient journey.",
+      });
+      router.push(`${baseNamespace}/patient-journeys?journeyId=${journey.id}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Unable to start journey",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setStartingJourneyId(null);
+    },
+  });
+
   const closeDialog = () => {
     setDialogOpen(false);
     setActiveSubmission(null);
@@ -513,6 +571,22 @@ export default function AdminStartJourneyPage() {
     setOpeningDocumentId(null);
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    const submissionId = searchParams.get("submissionId");
+    if (!submissionId || activeSubmission?.id === submissionId) {
+      return;
+    }
+
+    const submission = submissionsQuery.data?.find(
+      (item) => item.id === submissionId,
+    );
+    if (!submission) {
+      return;
+    }
+
+    openDialogFor(submission);
+  }, [activeSubmission?.id, searchParams, submissionsQuery.data]);
 
   const handleStatusChange = async (
     submissionId: string,
@@ -584,10 +658,30 @@ export default function AdminStartJourneyPage() {
     }
 
     setUpdatingId(submission.id);
-    await updateSubmission.mutateAsync({
+    const updatedSubmission = await updateSubmission.mutateAsync({
       id: submission.id,
       data: { assigned_to: normalizedAssignee },
     });
+    setAssignmentOverrides((current) => ({
+      ...current,
+      [submission.id]: updatedSubmission.assigned_to ?? null,
+    }));
+  };
+
+  const handleStartJourney = (submission: StartJourneySubmission) => {
+    if (submission.linked_journey_id) {
+      router.push(
+        `${baseNamespace}/patient-journeys?journeyId=${submission.linked_journey_id}`,
+      );
+      return;
+    }
+
+    const coordinatorProfileId =
+      submission.id in assignmentOverrides
+        ? assignmentOverrides[submission.id]
+        : (submission.assigned_to ?? null);
+    setStartingJourneyId(submission.id);
+    startJourney.mutate({ submission, coordinatorProfileId });
   };
 
   const submissions = submissionsQuery.data ?? [];
@@ -836,6 +930,14 @@ export default function AdminStartJourneyPage() {
                                 {submission.patient_id.length > 8 ? "…" : ""}
                               </Badge>
                             )}
+                            {submission.linked_journey_id && (
+                              <Badge
+                                variant="secondary"
+                                className="mt-1 w-fit text-xs font-normal"
+                              >
+                                Journey linked
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -914,6 +1016,26 @@ export default function AdminStartJourneyPage() {
                           {getActionButtonLabel(submission)}
                         </Button>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-full justify-start rounded-xl px-3.5"
+                        onClick={() => handleStartJourney(submission)}
+                        disabled={
+                          startJourney.isPending &&
+                          startingJourneyId === submission.id
+                        }
+                      >
+                        {startJourney.isPending &&
+                        startingJourneyId === submission.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Route className="mr-2 h-4 w-4" />
+                        )}
+                        {submission.linked_journey_id
+                          ? "Open Journey"
+                          : "Start Journey"}
+                      </Button>
                       <AssignmentControl
                         assigneeId={assignment.id}
                         assigneeLabel={assignment.label}
