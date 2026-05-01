@@ -73,6 +73,7 @@ const EMPTY_WORKSPACE_ACCESS: WorkspaceAccessState = {
 
 const STAFF_ROLE_KEYS = new Set([
   "admin",
+  "account_manager",
   "coordinator",
   "doctor",
   "management",
