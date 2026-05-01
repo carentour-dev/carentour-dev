@@ -7,13 +7,24 @@ export { verifyIntegrationWebhook } from "@/lib/leads/webhook-signature";
 export const hashWebhookPayload = (body: string) =>
   createHash("sha256").update(body).digest("hex");
 
+const SAFE_HEADER_NAMES = new Set([
+  "content-type",
+  "user-agent",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-real-ip",
+  "x-vercel-id",
+]);
+
 const headersToJson = (req: NextRequest) => {
   const headers: Record<string, string> = {};
   for (const [key, value] of req.headers.entries()) {
-    if (key.toLowerCase() === "authorization") {
+    const normalizedKey = key.toLowerCase();
+    if (!SAFE_HEADER_NAMES.has(normalizedKey)) {
       continue;
     }
-    headers[key] = value;
+    headers[normalizedKey] = value;
   }
   return headers;
 };
@@ -37,12 +48,23 @@ export const logWebhookDelivery = async (args: {
   errorMessage?: string | null;
 }) => {
   const supabase = getSupabaseAdmin() as any;
+  const payloadHash = hashWebhookPayload(args.body);
+  const provider = args.provider ?? "unknown";
+  const deliveryId =
+    args.req.headers.get("x-carentour-delivery-id") ??
+    args.req.headers.get("x-provider-delivery-id") ??
+    args.req.headers.get("x-hubspot-event-id") ??
+    null;
+  const deliveryKey = deliveryId
+    ? `${args.endpoint}:${provider}:event:${deliveryId}`
+    : `${args.endpoint}:${provider}:payload:${payloadHash}`;
   const { data, error } = await supabase
     .from("webhook_deliveries")
     .insert({
       endpoint: args.endpoint,
       provider: args.provider ?? null,
-      payload_hash: hashWebhookPayload(args.body),
+      delivery_key: deliveryKey,
+      payload_hash: payloadHash,
       signature_valid: args.signatureValid,
       status: args.status,
       error_message: args.errorMessage ?? null,
@@ -57,10 +79,40 @@ export const logWebhookDelivery = async (args: {
     .single();
 
   if (error) {
+    const duplicate =
+      error.code === "23505" ||
+      error.message?.toLowerCase().includes("duplicate key") === true;
+    if (duplicate) {
+      const { data: existingDelivery, error: existingError } = await supabase
+        .from("webhook_deliveries")
+        .select("id, status")
+        .eq("delivery_key", deliveryKey)
+        .maybeSingle();
+
+      if (!existingError && existingDelivery) {
+        return {
+          id: existingDelivery.id,
+          status: existingDelivery.status,
+          duplicate: true,
+        } as {
+          id: string;
+          status: "accepted" | "rejected" | "processed" | "failed";
+          duplicate: boolean;
+        };
+      }
+    }
     throw new ApiError(500, "Failed to log webhook delivery", error.message);
   }
 
-  return data as { id: string };
+  return {
+    id: data.id,
+    status: data.status,
+    duplicate: false,
+  } as {
+    id: string;
+    status: "accepted" | "rejected" | "processed" | "failed";
+    duplicate: boolean;
+  };
 };
 
 export const updateWebhookDelivery = async (
@@ -71,7 +123,7 @@ export const updateWebhookDelivery = async (
   },
 ) => {
   const supabase = getSupabaseAdmin() as any;
-  await supabase
+  const { error } = await supabase
     .from("webhook_deliveries")
     .update({
       status: payload.status,
@@ -79,4 +131,15 @@ export const updateWebhookDelivery = async (
       processed_at: new Date().toISOString(),
     })
     .eq("id", id);
+
+  if (error) {
+    console.warn("[leads] failed to update webhook delivery", {
+      id,
+      status: payload.status,
+      error: error.message,
+    });
+    return false;
+  }
+
+  return true;
 };
