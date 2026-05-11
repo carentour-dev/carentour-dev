@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Loader2,
   Mail,
   Phone,
+  Route,
   ShieldCheck,
   User,
   Trash2,
@@ -23,7 +24,10 @@ import type {
   PatientDetails,
   PatientDocumentSummary,
 } from "@/server/modules/patients/module";
-import { adminFetch } from "@/components/admin/hooks/useAdminFetch";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
 import { humanizeFinanceLabel } from "@/lib/finance/labels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const STATUS_LABELS: Record<string, string> = {
   potential: "Potential",
@@ -240,6 +245,8 @@ export default function PatientDetailsPage() {
     ? "/operations"
     : "/admin";
   const { toast } = useToast();
+  const invalidate = useAdminInvalidate();
+  const { profile } = useUserProfile();
   const staffDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
     null,
@@ -257,6 +264,43 @@ export default function PatientDetailsPage() {
   });
 
   const details = data ?? null;
+  const canManagePatientJourneys =
+    profile?.hasPermission("operations.patient_journeys.manage") ?? false;
+  const startJourney = useMutation({
+    mutationFn: (target: PatientDetails["patient"]) => {
+      if (!target.coordinator_id) {
+        throw new Error("Assign a coordinator before starting the journey.");
+      }
+
+      return adminFetch<{ id: string; patient_id: string }>(
+        "/api/admin/patient-journeys/start",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            patientId: target.id,
+            coordinatorProfileId: target.coordinator_id,
+          }),
+        },
+      );
+    },
+    onSuccess: (journey) => {
+      invalidate(patientDetailsKey(patientId));
+      invalidate(["admin", "patients"]);
+      invalidate(["admin", "patient-journeys"]);
+      toast({
+        title: "Journey ready",
+        description: "The patient journey is now available.",
+      });
+      router.push(`${basePath}/patient-journeys?journeyId=${journey.id}`);
+    },
+    onError: (startError) => {
+      toast({
+        title: "Unable to start journey",
+        description: startError.message,
+        variant: "destructive",
+      });
+    },
+  });
   const timelineEvents = useMemo(
     () => (details ? buildTimeline(details) : []),
     [details],
@@ -432,6 +476,16 @@ export default function PatientDetailsPage() {
     patient.creator_profile?.email ??
     (patient.creator_profile ? "Team member" : null);
   const financeOverview = details.finance_overview;
+  const handleStartJourney = () => {
+    if (patient.active_journey_id) {
+      router.push(
+        `${basePath}/patient-journeys?journeyId=${patient.active_journey_id}`,
+      );
+      return;
+    }
+
+    startJourney.mutate(patient);
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -465,6 +519,21 @@ export default function PatientDetailsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {canManagePatientJourneys ? (
+              <Button
+                size="sm"
+                variant="default"
+                disabled={startJourney.isPending}
+                onClick={handleStartJourney}
+              >
+                {startJourney.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Route className="h-4 w-4" />
+                )}
+                {patient.active_journey_id ? "Open Journey" : "Start Journey"}
+              </Button>
+            ) : null}
             {patient.contact_email ? (
               <Button asChild size="sm" variant="outline">
                 <a href={`mailto:${patient.contact_email}`}>
