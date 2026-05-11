@@ -51,6 +51,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
@@ -60,6 +65,7 @@ import {
   Loader2,
   Pencil,
   PlusCircle,
+  Route,
   ShieldCheck,
   Trash2,
   Undo2,
@@ -211,6 +217,7 @@ type PatientRecord = Omit<PatientBasePayload, "portal_password" | "status"> & {
   coordinator_assigned_by_profile?: ProfileSummary | null;
   confirmed_at?: string | null;
   confirmed_by?: string | null;
+  active_journey_id?: string | null;
 };
 
 type ProfileSummary = {
@@ -275,6 +282,9 @@ export default function AdminPatientsPage() {
     patient: PatientRecord;
     nextStatus: PatientStatus;
   } | null>(null);
+  const [startingJourneyPatientId, setStartingJourneyPatientId] = useState<
+    string | null
+  >(null);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
   const { profile } = useUserProfile();
@@ -290,6 +300,8 @@ export default function AdminPatientsPage() {
     profile?.hasPermission("operations.patients.confirm") ?? false;
   const canAssignPatients =
     profile?.hasPermission("operations.patients.assign") ?? false;
+  const canManagePatientJourneys =
+    profile?.hasPermission("operations.patient_journeys.manage") ?? false;
   const statusOptions = Object.values(PATIENT_STATUS) as PatientStatus[];
 
   const form = useForm<PatientFormValues>({
@@ -458,6 +470,44 @@ export default function AdminPatientsPage() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const startJourney = useMutation({
+    mutationFn: (patient: PatientRecord) => {
+      if (!patient.coordinator_id) {
+        throw new Error("Assign a coordinator before starting the journey.");
+      }
+
+      return adminFetch<{ id: string; patient_id: string }>(
+        "/api/admin/patient-journeys/start",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            patientId: patient.id,
+            coordinatorProfileId: patient.coordinator_id,
+          }),
+        },
+      );
+    },
+    onSuccess: (journey) => {
+      invalidate(QUERY_KEY);
+      invalidate(["admin", "patient-journeys"]);
+      toast({
+        title: "Journey ready",
+        description: "The patient journey is now available.",
+      });
+      router.push(`${basePath}/patient-journeys?journeyId=${journey.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Unable to start journey",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setStartingJourneyPatientId(null);
     },
   });
 
@@ -711,6 +761,18 @@ export default function AdminPatientsPage() {
     } else {
       createPatient.mutate(payload);
     }
+  };
+
+  const handleStartJourney = (patient: PatientRecord) => {
+    if (patient.active_journey_id) {
+      router.push(
+        `${basePath}/patient-journeys?journeyId=${patient.active_journey_id}`,
+      );
+      return;
+    }
+
+    setStartingJourneyPatientId(patient.id);
+    startJourney.mutate(patient);
   };
 
   return (
@@ -1113,7 +1175,7 @@ export default function AdminPatientsPage() {
                 <TableHead>Language</TableHead>
                 <TableHead>Coordinator</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-36 text-right">Actions</TableHead>
+                <TableHead className="w-40 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1182,59 +1244,102 @@ export default function AdminPatientsPage() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="flex justify-end gap-2">
-                    {canConfirmPatients &&
-                      patient.status === PATIENT_STATUS.potential && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Mark as confirmed"
-                          title="Mark as confirmed"
-                          disabled={updatePatient.isPending}
-                          onClick={() =>
-                            setStatusChangeTarget({
-                              patient,
-                              nextStatus: PATIENT_STATUS.confirmed,
-                            })
-                          }
-                        >
-                          <ShieldCheck className="h-4 w-4" />
-                        </Button>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {canManagePatientJourneys && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={
+                                patient.active_journey_id
+                                  ? "Open Journey"
+                                  : "Start Journey"
+                              }
+                              title={
+                                patient.active_journey_id
+                                  ? "Open Journey"
+                                  : "Start Journey"
+                              }
+                              disabled={
+                                startJourney.isPending &&
+                                startingJourneyPatientId === patient.id
+                              }
+                              onClick={() => handleStartJourney(patient)}
+                            >
+                              {startJourney.isPending &&
+                              startingJourneyPatientId === patient.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Route className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {patient.active_journey_id
+                              ? "Open Journey"
+                              : "Start Journey"}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
-                    {canConfirmPatients &&
-                      patient.status === PATIENT_STATUS.confirmed && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Revert to potential"
-                          title="Revert to potential"
-                          disabled={updatePatient.isPending}
-                          onClick={() =>
-                            setStatusChangeTarget({
-                              patient,
-                              nextStatus: PATIENT_STATUS.potential,
-                            })
-                          }
-                        >
-                          <Undo2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditDialog(patient)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      disabled={deletePatient.isPending}
-                      onClick={() => deletePatient.mutate(patient.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      {canConfirmPatients &&
+                        patient.status === PATIENT_STATUS.potential && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Mark as confirmed"
+                            title="Mark as confirmed"
+                            disabled={updatePatient.isPending}
+                            onClick={() =>
+                              setStatusChangeTarget({
+                                patient,
+                                nextStatus: PATIENT_STATUS.confirmed,
+                              })
+                            }
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                          </Button>
+                        )}
+                      {canConfirmPatients &&
+                        patient.status === PATIENT_STATUS.confirmed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Revert to potential"
+                            title="Revert to potential"
+                            disabled={updatePatient.isPending}
+                            onClick={() =>
+                              setStatusChangeTarget({
+                                patient,
+                                nextStatus: PATIENT_STATUS.potential,
+                              })
+                            }
+                          >
+                            <Undo2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Edit patient"
+                        title="Edit patient"
+                        onClick={() => openEditDialog(patient)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete patient"
+                        title="Delete patient"
+                        className="text-destructive hover:text-destructive"
+                        disabled={deletePatient.isPending}
+                        onClick={() => deletePatient.mutate(patient.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
