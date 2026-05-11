@@ -115,6 +115,7 @@ type PatientCoordinatorAssignmentRow =
 type PatientWithCoordinatorProfiles = PatientRow & {
   coordinator_profile?: ProfileSummary | null;
   coordinator_assigned_by_profile?: ProfileSummary | null;
+  active_journey_id?: string | null;
 };
 type StartJourneyDocumentRecord = {
   id?: string;
@@ -231,6 +232,7 @@ export type PatientDetails = {
     confirmed_by_profile: ProfileSummary | null;
     coordinator_profile: ProfileSummary | null;
     coordinator_assigned_by_profile: ProfileSummary | null;
+    active_journey_id?: string | null;
     portal_profile: ProfileSummary | null;
     auth_user: {
       id: string;
@@ -1146,6 +1148,57 @@ function assertAssignedPatientAccess(
   }
 }
 
+async function addActiveJourneyIds<
+  T extends {
+    id: string;
+  },
+>(
+  patients: T[],
+  auth?: AuthorizationContext,
+): Promise<Array<T & { active_journey_id: string | null }>> {
+  if (patients.length === 0) {
+    return [];
+  }
+
+  const canExposeJourneyIds =
+    auth?.hasPermission("operations.patient_journeys.read") ||
+    auth?.hasPermission("operations.patient_journeys.manage");
+
+  if (!canExposeJourneyIds) {
+    return patients.map((patient) => ({
+      ...patient,
+      active_journey_id: null,
+    }));
+  }
+
+  const patientIds = patients.map((patient) => patient.id);
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("patient_journeys")
+    .select("id, patient_id")
+    .in("patient_id", patientIds)
+    .eq("status", "active");
+
+  if (error) {
+    console.warn("[patients] failed to load active journey ids", error);
+    return patients.map((patient) => ({
+      ...patient,
+      active_journey_id: null,
+    }));
+  }
+
+  const activeJourneyByPatientId = new Map<string, string>();
+  for (const journey of data ?? []) {
+    if (!activeJourneyByPatientId.has(journey.patient_id)) {
+      activeJourneyByPatientId.set(journey.patient_id, journey.id);
+    }
+  }
+
+  return patients.map((patient) => ({
+    ...patient,
+    active_journey_id: activeJourneyByPatientId.get(patient.id) ?? null,
+  }));
+}
+
 export const patientController = {
   async list(
     options?: { status?: PatientStatus; coordinatorId?: string | null },
@@ -1190,7 +1243,10 @@ export const patientController = {
       throw new ApiError(500, "Failed to fetch patient list", error.message);
     }
 
-    return (data ?? []) as PatientWithCoordinatorProfiles[];
+    return addActiveJourneyIds(
+      (data ?? []) as PatientWithCoordinatorProfiles[],
+      auth,
+    );
   },
 
   async search(
@@ -1250,7 +1306,11 @@ export const patientController = {
     }
 
     assertAssignedPatientAccess(data, auth);
-    return data as PatientWithCoordinatorProfiles;
+    const [patient] = await addActiveJourneyIds(
+      [data as PatientWithCoordinatorProfiles],
+      auth,
+    );
+    return patient;
   },
 
   async details(
@@ -1283,12 +1343,17 @@ export const patientController = {
 
     assertAssignedPatientAccess(patientRow, auth);
 
-    const patient = patientRow as PatientRow & {
-      creator_profile: ProfileSummary | null;
-      confirmed_by_profile: ProfileSummary | null;
-      coordinator_profile: ProfileSummary | null;
-      coordinator_assigned_by_profile: ProfileSummary | null;
-    };
+    const [patient] = await addActiveJourneyIds(
+      [
+        patientRow as PatientRow & {
+          creator_profile: ProfileSummary | null;
+          confirmed_by_profile: ProfileSummary | null;
+          coordinator_profile: ProfileSummary | null;
+          coordinator_assigned_by_profile: ProfileSummary | null;
+        },
+      ],
+      auth,
+    );
     const financeOverviewPromise = loadPatientFinanceOverview(
       getSupabaseAdmin(),
       patientId,
