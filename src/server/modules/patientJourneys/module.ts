@@ -127,12 +127,33 @@ const listFiltersSchema = z.object({
   assignedTo: z.string().uuid().nullable().optional(),
 });
 
-const startJourneySchema = z.object({
-  sourceType: z.enum(SOURCE_TYPES),
-  sourceId: z.string().uuid(),
-  patientId: optionalUuidSchema,
-  coordinatorProfileId: z.string().uuid(),
-});
+const startJourneySchema = z
+  .object({
+    sourceType: z.enum(SOURCE_TYPES).optional(),
+    sourceId: z.string().uuid().optional(),
+    patientId: optionalUuidSchema,
+    coordinatorProfileId: z.string().uuid(),
+  })
+  .superRefine((data, ctx) => {
+    const hasSourceType = data.sourceType !== undefined;
+    const hasSourceId = data.sourceId !== undefined;
+
+    if (hasSourceType !== hasSourceId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasSourceType ? ["sourceId"] : ["sourceType"],
+        message: "Provide both sourceType and sourceId to start from a source.",
+      });
+    }
+
+    if (!hasSourceType && !data.patientId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["patientId"],
+        message: "Provide a patient to start a journey.",
+      });
+    }
+  });
 
 const updateJourneySchema = z
   .object({
@@ -311,6 +332,66 @@ const assertActiveJourney = (journey: PatientJourney, action: string) => {
       409,
       `Cannot ${action} a ${journey.status} patient journey.`,
     );
+  }
+};
+
+const createDefaultJourneySteps = async (
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  journeyId: string,
+  actorProfileId: string | null | undefined,
+) => {
+  const { error } = await (supabase as any)
+    .from("patient_journey_steps")
+    .insert([
+      {
+        journey_id: journeyId,
+        position: 1,
+        title: "Intake review and case validation",
+        description:
+          "Confirm patient details, treatment goals, medical history, uploaded documents, and urgency.",
+        created_by_profile_id: actorProfileId ?? null,
+        updated_by_profile_id: actorProfileId ?? null,
+      },
+      {
+        journey_id: journeyId,
+        position: 2,
+        title: "Medical records and doctor matching",
+        description:
+          "Collect missing records, prepare the case summary, and match the patient with suitable doctors or facilities.",
+        created_by_profile_id: actorProfileId ?? null,
+        updated_by_profile_id: actorProfileId ?? null,
+      },
+      {
+        journey_id: journeyId,
+        position: 3,
+        title: "Consultation and treatment plan",
+        description:
+          "Coordinate consultation scheduling, capture doctor recommendations, and assemble the proposed treatment plan.",
+        created_by_profile_id: actorProfileId ?? null,
+        updated_by_profile_id: actorProfileId ?? null,
+      },
+      {
+        journey_id: journeyId,
+        position: 4,
+        title: "Quotation, travel, and accommodation",
+        description:
+          "Prepare pricing, travel windows, accommodation preferences, companion needs, and payment next steps.",
+        created_by_profile_id: actorProfileId ?? null,
+        updated_by_profile_id: actorProfileId ?? null,
+      },
+      {
+        journey_id: journeyId,
+        position: 5,
+        title: "Arrival, treatment, and follow-up",
+        description:
+          "Track arrival logistics, appointments, post-treatment follow-up, and patient satisfaction handoff.",
+        created_by_profile_id: actorProfileId ?? null,
+        updated_by_profile_id: actorProfileId ?? null,
+      },
+    ]);
+
+  if (error) {
+    throw new ApiError(500, "Failed to create journey steps", error.message);
   }
 };
 
@@ -702,6 +783,134 @@ export const patientJourneyController = {
     const parsed = startJourneySchema.parse(payload);
     const supabase = getSupabaseAdmin() as any;
     await validateAssignableCoordinator(supabase, parsed.coordinatorProfileId);
+
+    if (!parsed.sourceType || !parsed.sourceId) {
+      const patientId = parsed.patientId;
+      if (!patientId) {
+        throw new ApiError(400, "Provide a patient to start a journey.");
+      }
+
+      const { data: patient, error: patientError } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("id", patientId)
+        .maybeSingle();
+
+      if (patientError) {
+        throw new ApiError(
+          500,
+          "Failed to verify patient.",
+          patientError.message,
+        );
+      }
+
+      if (!patient) {
+        throw new ApiError(404, "Patient not found");
+      }
+
+      const { error: assignmentError } = await supabase.rpc(
+        "assign_patient_coordinator",
+        {
+          p_patient_id: patientId,
+          p_coordinator_profile_id: parsed.coordinatorProfileId,
+          p_actor_profile_id: auth?.profileId ?? null,
+          p_reason: "Journey started from patient profile",
+        },
+      );
+
+      if (assignmentError) {
+        throw new ApiError(
+          500,
+          "Failed to assign journey coordinator.",
+          assignmentError.message,
+        );
+      }
+
+      const { data: existingJourney, error: existingJourneyError } =
+        await supabase
+          .from("patient_journeys")
+          .select("id")
+          .eq("patient_id", patientId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (existingJourneyError) {
+        throw new ApiError(
+          500,
+          "Failed to verify active journey.",
+          existingJourneyError.message,
+        );
+      }
+
+      if (existingJourney?.id) {
+        const { error: updateError } = await supabase
+          .from("patient_journeys")
+          .update({
+            assigned_coordinator_profile_id: parsed.coordinatorProfileId,
+            updated_by_profile_id: auth?.profileId ?? null,
+          })
+          .eq("id", existingJourney.id);
+
+        if (updateError) {
+          throw new ApiError(
+            500,
+            "Failed to update active journey.",
+            updateError.message,
+          );
+        }
+
+        if (auth?.profileId) {
+          const { error: accountManagerError } = await supabase
+            .from("patient_journeys")
+            .update({
+              account_manager_profile_id: auth.profileId,
+            })
+            .eq("id", existingJourney.id)
+            .is("account_manager_profile_id", null);
+
+          if (accountManagerError) {
+            throw new ApiError(
+              500,
+              "Failed to update active journey.",
+              accountManagerError.message,
+            );
+          }
+        }
+
+        return this.get(existingJourney.id, auth);
+      }
+
+      const { data: createdJourney, error: createError } = await supabase
+        .from("patient_journeys")
+        .insert({
+          patient_id: patientId,
+          account_manager_profile_id: auth?.profileId ?? null,
+          assigned_coordinator_profile_id: parsed.coordinatorProfileId,
+          status: "active",
+          created_by_profile_id: auth?.profileId ?? null,
+          updated_by_profile_id: auth?.profileId ?? null,
+        })
+        .select("*")
+        .single();
+
+      if (createError) {
+        throw new ApiError(
+          500,
+          "Failed to start patient journey",
+          createError.message,
+        );
+      }
+
+      await createDefaultJourneySteps(
+        supabase,
+        (createdJourney as PatientJourney).id,
+        auth?.profileId ?? null,
+      );
+
+      return this.get((createdJourney as PatientJourney).id, auth);
+    }
 
     const { data: existingSource, error: existingSourceError } = await supabase
       .from("patient_journey_sources")
