@@ -240,6 +240,18 @@ type DashboardDocument = {
   deletable?: boolean;
 };
 
+type PatientFinancePaymentLink = {
+  id: string;
+  finance_invoice_id: string;
+  finance_invoice_installment_id: string | null;
+  label: string;
+  amount: number;
+  currency: string;
+  url: string;
+  status: "active" | "disabled" | "paid" | "expired";
+  expires_at: string | null;
+};
+
 type PatientFinanceInstallment = {
   id: string;
   label: string;
@@ -250,6 +262,7 @@ type PatientFinanceInstallment = {
   due_date: string;
   status: "pending" | "partially_paid" | "paid" | "overdue" | "cancelled";
   display_order: number;
+  payment_links?: PatientFinancePaymentLink[];
 };
 
 type PatientFinanceInvoice = {
@@ -278,11 +291,13 @@ type PatientFinanceInvoice = {
   paid_amount: number;
   balance_amount: number;
   installments: PatientFinanceInstallment[];
+  payment_links?: PatientFinancePaymentLink[];
 };
 
 type PatientFinanceSnapshot = {
   patientId: string | null;
   invoices: PatientFinanceInvoice[];
+  payment_links?: PatientFinancePaymentLink[];
 };
 
 const sanitizePatientCountry = (value?: string | null) => {
@@ -614,6 +629,7 @@ export default function DashboardPage() {
       return (result?.data ?? {
         patientId: null,
         invoices: [],
+        payment_links: [],
       }) as PatientFinanceSnapshot;
     },
   });
@@ -1288,6 +1304,17 @@ export default function DashboardPage() {
   const financeInvoices = useMemo(
     () => patientFinance?.invoices ?? [],
     [patientFinance?.invoices],
+  );
+  const financePaymentLinks = useMemo(
+    () => patientFinance?.payment_links ?? [],
+    [patientFinance?.payment_links],
+  );
+  const standaloneFinancePaymentLinks = useMemo(
+    () =>
+      financePaymentLinks.filter(
+        (paymentLink) => !paymentLink.finance_invoice_id,
+      ),
+    [financePaymentLinks],
   );
 
   const upcomingFinanceInstallments = useMemo(() => {
@@ -2604,7 +2631,8 @@ export default function DashboardPage() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading finance details...
                     </div>
-                  ) : financeInvoices.length === 0 ? (
+                  ) : financeInvoices.length === 0 &&
+                    standaloneFinancePaymentLinks.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
                       <p className="font-medium text-foreground">
                         No invoices yet
@@ -2616,69 +2644,128 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Total outstanding balance
-                        </p>
-                        <p className="mt-1 text-xl font-semibold text-foreground">
-                          {formatCurrencyAmount(
-                            totalOutstandingFinanceBalance,
-                            financeInvoices[0]?.currency ?? "USD",
-                          )}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {upcomingFinanceInstallments.length} upcoming
-                          installment
-                          {upcomingFinanceInstallments.length === 1 ? "" : "s"}
-                        </p>
-                      </div>
+                      {financeInvoices.length > 0 ? (
+                        <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Total outstanding balance
+                          </p>
+                          <p className="mt-1 text-xl font-semibold text-foreground">
+                            {formatCurrencyAmount(
+                              totalOutstandingFinanceBalance,
+                              financeInvoices[0]?.currency ?? "USD",
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {upcomingFinanceInstallments.length} upcoming
+                            installment
+                            {upcomingFinanceInstallments.length === 1
+                              ? ""
+                              : "s"}
+                          </p>
+                        </div>
+                      ) : null}
 
-                      <div className="space-y-3">
-                        {financeInvoices.slice(0, 4).map((invoice) => (
-                          <div
-                            key={invoice.id}
-                            className="rounded-lg border border-border/70 bg-muted/10 p-3"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-semibold text-foreground">
-                                {invoice.invoice_number}
-                              </p>
-                              <Badge
-                                variant={financeStatusBadgeVariant(
-                                  invoice.computed_status ?? invoice.status,
-                                )}
-                              >
-                                {humanizeFinanceLabel(
-                                  invoice.computed_status ?? invoice.status,
-                                )}
-                              </Badge>
-                            </div>
-                            <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
-                              <p>
-                                Due {formatDate(invoice.due_date)} • Balance{" "}
-                                {formatCurrencyAmount(
-                                  invoice.balance_amount,
-                                  invoice.currency,
-                                )}
-                              </p>
-                              {invoice.installments.length > 0 ? (
-                                <p>
-                                  Installments: {invoice.installments.length}{" "}
-                                  total •{" "}
-                                  {
-                                    invoice.installments.filter(
-                                      (item) =>
-                                        item.status === "paid" ||
-                                        item.balance_amount <= 0,
-                                    ).length
-                                  }{" "}
-                                  paid
-                                </p>
-                              ) : null}
-                            </div>
+                      {standaloneFinancePaymentLinks.length > 0 ? (
+                        <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Payment links
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {standaloneFinancePaymentLinks.map(
+                              (paymentLink) => (
+                                <Button
+                                  key={paymentLink.id}
+                                  asChild
+                                  size="sm"
+                                  className="h-8"
+                                >
+                                  <a
+                                    href={paymentLink.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    {paymentLink.label || "Pay now"}
+                                  </a>
+                                </Button>
+                              ),
+                            )}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ) : null}
+
+                      {financeInvoices.length > 0 ? (
+                        <div className="space-y-3">
+                          {financeInvoices.slice(0, 4).map((invoice) => {
+                            const paymentLinks = invoice.payment_links ?? [];
+                            return (
+                              <div
+                                key={invoice.id}
+                                className="rounded-lg border border-border/70 bg-muted/10 p-3"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {invoice.invoice_number}
+                                  </p>
+                                  <Badge
+                                    variant={financeStatusBadgeVariant(
+                                      invoice.computed_status ?? invoice.status,
+                                    )}
+                                  >
+                                    {humanizeFinanceLabel(
+                                      invoice.computed_status ?? invoice.status,
+                                    )}
+                                  </Badge>
+                                </div>
+                                <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
+                                  <p>
+                                    Due {formatDate(invoice.due_date)} • Balance{" "}
+                                    {formatCurrencyAmount(
+                                      invoice.balance_amount,
+                                      invoice.currency,
+                                    )}
+                                  </p>
+                                  {invoice.installments.length > 0 ? (
+                                    <p>
+                                      Installments:{" "}
+                                      {invoice.installments.length} total •{" "}
+                                      {
+                                        invoice.installments.filter(
+                                          (item) =>
+                                            item.status === "paid" ||
+                                            item.balance_amount <= 0,
+                                        ).length
+                                      }{" "}
+                                      paid
+                                    </p>
+                                  ) : null}
+                                </div>
+                                {paymentLinks.length > 0 ? (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {paymentLinks.map((paymentLink) => (
+                                      <Button
+                                        key={paymentLink.id}
+                                        asChild
+                                        size="sm"
+                                        className="h-8"
+                                      >
+                                        <a
+                                          href={paymentLink.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          <ExternalLink className="mr-2 h-4 w-4" />
+                                          {paymentLink.label || "Pay now"}
+                                        </a>
+                                      </Button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
 
                       {financeInvoices.length > 4 ? (
                         <p className="text-xs text-muted-foreground">
