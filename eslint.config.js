@@ -1,4 +1,5 @@
 import nextVitals from "eslint-config-next";
+import reactHooks from "eslint-plugin-react-hooks";
 
 const reactCompilerIncompatibleLibraryFiles = [
   "src/app/(internal)/admin/consultations/page.tsx",
@@ -54,6 +55,9 @@ const config = [
   },
   ...nextVitals,
   {
+    plugins: {
+      "react-hooks": reactHooks,
+    },
     rules: {
       "react-hooks/incompatible-library": "error",
       "react-hooks/preserve-manual-memoization": "error",
