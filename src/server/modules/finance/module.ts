@@ -39,6 +39,19 @@ const CREDIT_ADJUSTMENT_STATUSES = [
   "cancelled",
 ] as const;
 
+const PAYMENT_LINK_STATUSES = [
+  "active",
+  "disabled",
+  "paid",
+  "expired",
+] as const;
+const STRIPE_PAYMENT_LINK_HOSTS = new Set([
+  "buy.stripe.com",
+  "checkout.stripe.com",
+  "invoice.stripe.com",
+  "pay.stripe.com",
+]);
+
 const PAYMENT_METHODS = ["bank_transfer", "cash", "card", "gateway"] as const;
 const FINANCE_CURRENCIES = ["USD", "EGP", "EUR", "GBP", "SAR", "AED"] as const;
 type FinanceCurrency = (typeof FINANCE_CURRENCIES)[number];
@@ -110,6 +123,47 @@ const creditAdjustmentDecisionSchema = z.object({
 });
 
 const creditAdjustmentStatusSchema = z.enum(CREDIT_ADJUSTMENT_STATUSES);
+const paymentLinkStatusSchema = z.enum(PAYMENT_LINK_STATUSES);
+const stripePaymentUrlSchema = z
+  .string()
+  .trim()
+  .url("Enter a valid Stripe payment URL")
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return (
+        parsed.protocol === "https:" &&
+        STRIPE_PAYMENT_LINK_HOSTS.has(parsed.hostname.toLowerCase())
+      );
+    } catch {
+      return false;
+    }
+  }, "Payment link must be an HTTPS Stripe-hosted URL");
+
+const paymentLinkPayloadSchema = z.object({
+  patientId: z.string().uuid().optional(),
+  invoiceId: z.string().uuid().optional().nullable(),
+  installmentId: z.string().uuid().optional().nullable(),
+  label: z.string().min(1, "Payment link label is required").max(160),
+  amount: z.coerce.number().gt(0, "Payment link amount must be positive"),
+  currency: financeCurrencySchema.default("USD"),
+  url: stripePaymentUrlSchema,
+  status: paymentLinkStatusSchema.default("active"),
+  expiresAt: z.string().datetime({ offset: true }).optional().nullable(),
+});
+
+const createPaymentLinkSchema = paymentLinkPayloadSchema.extend({
+  patientId: z.string().uuid("Select a patient for this payment link"),
+});
+
+const updatePaymentLinkSchema = paymentLinkPayloadSchema
+  .partial()
+  .extend({
+    status: paymentLinkStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No fields provided for update",
+  });
 
 const getClient = () => getSupabaseAdmin() as any;
 const UNIQUE_VIOLATION_CODE = "23505";
@@ -156,6 +210,22 @@ const normalizeText = (value?: string | null) => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeStripePaymentUrl = (value: string) =>
+  stripePaymentUrlSchema.parse(value);
+
+const isPaymentLinkVisibleToPatient = (link: any, now = new Date()) => {
+  if (link?.status !== "active") {
+    return false;
+  }
+  if (!link.expires_at) {
+    return true;
+  }
+  const expiresAt = new Date(link.expires_at);
+  return (
+    Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() > now.getTime()
+  );
 };
 
 const ensureActor = (actor?: FinanceActor) => {
@@ -610,6 +680,7 @@ export const financeController = {
       installmentsResult,
       allocationsResult,
       adjustmentsResult,
+      paymentLinksResult,
       patientResult,
     ] = await Promise.all([
       supabase
@@ -624,6 +695,11 @@ export const financeController = {
         .order("created_at", { ascending: true }),
       supabase
         .from("finance_credit_adjustments")
+        .select("*")
+        .eq("finance_invoice_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("finance_payment_links")
         .select("*")
         .eq("finance_invoice_id", id)
         .order("created_at", { ascending: false }),
@@ -657,6 +733,14 @@ export const financeController = {
         500,
         "Failed to load invoice credit adjustments",
         adjustmentsResult.error.message,
+      );
+    }
+
+    if (paymentLinksResult.error) {
+      throw new ApiError(
+        500,
+        "Failed to load invoice payment links",
+        paymentLinksResult.error.message,
       );
     }
 
@@ -772,7 +856,323 @@ export const financeController = {
       payments: paymentHistory,
       allocationTimeline,
       creditAdjustments: adjustments,
+      paymentLinks: paymentLinksResult.data ?? [],
     };
+  },
+
+  async listPaymentLinksForInvoice(invoiceId: unknown) {
+    const id = uuidSchema.parse(invoiceId);
+    const supabase = getClient();
+
+    const { data, error } = await supabase
+      .from("finance_payment_links")
+      .select("*")
+      .eq("finance_invoice_id", id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new ApiError(500, "Failed to load payment links", error.message);
+    }
+
+    return data ?? [];
+  },
+
+  async listPaymentLinks(filters?: { patientId?: unknown }) {
+    const supabase = getClient();
+    const patientId =
+      filters?.patientId === undefined || filters.patientId === null
+        ? null
+        : uuidSchema.parse(filters.patientId);
+
+    let query = supabase
+      .from("finance_payment_links")
+      .select(
+        "*, patients(id, full_name, contact_email, nationality), finance_invoices(id, invoice_number, status, balance_amount, currency), finance_invoice_installments(id, label, status, due_date, balance_amount)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (patientId) {
+      query = query.eq("patient_id", patientId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new ApiError(500, "Failed to load payment links", error.message);
+    }
+
+    return data ?? [];
+  },
+
+  async createPaymentLink(payload: unknown, actor?: FinanceActor) {
+    const owner = ensureActor(actor);
+    const parsed = createPaymentLinkSchema.parse(payload);
+    const supabase = getClient();
+
+    const { data: patient, error: patientError } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("id", parsed.patientId)
+      .maybeSingle();
+
+    if (patientError) {
+      throw new ApiError(500, "Failed to load patient", patientError.message);
+    }
+    if (!patient) {
+      throw new ApiError(404, "Patient not found");
+    }
+
+    const invoiceId = parsed.invoiceId ?? null;
+    let invoiceCurrency: string | null = null;
+    if (invoiceId) {
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("finance_invoices")
+        .select("id, patient_id, currency")
+        .eq("id", invoiceId)
+        .maybeSingle();
+
+      if (invoiceError) {
+        throw new ApiError(500, "Failed to load invoice", invoiceError.message);
+      }
+      if (!invoice) {
+        throw new ApiError(404, "Invoice not found");
+      }
+      if (invoice.patient_id !== patient.id) {
+        throw new ApiError(
+          422,
+          "Payment link invoice must belong to the selected patient",
+        );
+      }
+      invoiceCurrency = invoice.currency ?? null;
+    }
+
+    const installmentId = parsed.installmentId ?? null;
+    if (installmentId) {
+      if (!invoiceId) {
+        throw new ApiError(
+          422,
+          "Select an invoice before attaching a payment link to an installment",
+        );
+      }
+      const { data: installment, error: installmentError } = await supabase
+        .from("finance_invoice_installments")
+        .select("id")
+        .eq("id", installmentId)
+        .eq("finance_invoice_id", invoiceId)
+        .maybeSingle();
+
+      if (installmentError) {
+        throw new ApiError(
+          500,
+          "Failed to validate installment",
+          installmentError.message,
+        );
+      }
+      if (!installment) {
+        throw new ApiError(
+          422,
+          "Payment link installment must belong to the selected invoice",
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("finance_payment_links")
+      .insert({
+        patient_id: patient.id,
+        finance_invoice_id: invoiceId,
+        finance_invoice_installment_id: installmentId,
+        label: parsed.label.trim(),
+        amount: normalizeMoney(parsed.amount),
+        currency: parsed.currency ?? invoiceCurrency ?? "USD",
+        url: normalizeStripePaymentUrl(parsed.url),
+        status: parsed.status,
+        expires_at: parsed.expiresAt ?? null,
+        created_by_profile_id: owner.profileId ?? null,
+      })
+      .select("*")
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new ApiError(500, "Failed to create payment link", error?.message);
+    }
+
+    return data;
+  },
+
+  async createPaymentLinkForInvoice(
+    invoiceId: unknown,
+    payload: unknown,
+    actor?: FinanceActor,
+  ) {
+    const id = uuidSchema.parse(invoiceId);
+    const supabase = getClient();
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("finance_invoices")
+      .select("id, patient_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (invoiceError) {
+      throw new ApiError(500, "Failed to load invoice", invoiceError.message);
+    }
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    if (!invoice.patient_id) {
+      throw new ApiError(
+        422,
+        "Payment links require the invoice to be assigned to a patient",
+      );
+    }
+
+    return this.createPaymentLink(
+      {
+        ...(payload && typeof payload === "object" ? payload : {}),
+        patientId: invoice.patient_id,
+        invoiceId: id,
+      },
+      actor,
+    );
+  },
+
+  async updatePaymentLink(
+    paymentLinkId: unknown,
+    payload: unknown,
+    actor?: FinanceActor,
+  ) {
+    ensureActor(actor);
+    const id = uuidSchema.parse(paymentLinkId);
+    const parsed = updatePaymentLinkSchema.parse(payload);
+    const supabase = getClient();
+
+    const { data: existing, error: existingError } = await supabase
+      .from("finance_payment_links")
+      .select("id, patient_id, finance_invoice_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new ApiError(
+        500,
+        "Failed to load payment link",
+        existingError.message,
+      );
+    }
+    if (!existing) {
+      throw new ApiError(404, "Payment link not found");
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+
+    let nextPatientId = existing.patient_id;
+    let nextInvoiceId = existing.finance_invoice_id;
+
+    if (parsed.patientId !== undefined) {
+      const { data: patient, error: patientError } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("id", parsed.patientId)
+        .maybeSingle();
+
+      if (patientError) {
+        throw new ApiError(500, "Failed to load patient", patientError.message);
+      }
+      if (!patient) {
+        throw new ApiError(404, "Patient not found");
+      }
+      nextPatientId = patient.id;
+      updatePayload.patient_id = patient.id;
+    }
+
+    if (parsed.invoiceId !== undefined) {
+      nextInvoiceId = parsed.invoiceId ?? null;
+      if (nextInvoiceId) {
+        const { data: invoice, error: invoiceError } = await supabase
+          .from("finance_invoices")
+          .select("id, patient_id")
+          .eq("id", nextInvoiceId)
+          .maybeSingle();
+
+        if (invoiceError) {
+          throw new ApiError(
+            500,
+            "Failed to load invoice",
+            invoiceError.message,
+          );
+        }
+        if (!invoice) {
+          throw new ApiError(404, "Invoice not found");
+        }
+        if (invoice.patient_id !== nextPatientId) {
+          throw new ApiError(
+            422,
+            "Payment link invoice must belong to the selected patient",
+          );
+        }
+      }
+      updatePayload.finance_invoice_id = nextInvoiceId;
+      if (!nextInvoiceId) {
+        updatePayload.finance_invoice_installment_id = null;
+      }
+    }
+
+    if (parsed.installmentId !== undefined) {
+      const installmentId = parsed.installmentId ?? null;
+      if (installmentId) {
+        if (!nextInvoiceId) {
+          throw new ApiError(
+            422,
+            "Select an invoice before attaching a payment link to an installment",
+          );
+        }
+        const { data: installment, error: installmentError } = await supabase
+          .from("finance_invoice_installments")
+          .select("id")
+          .eq("id", installmentId)
+          .eq("finance_invoice_id", nextInvoiceId)
+          .maybeSingle();
+
+        if (installmentError) {
+          throw new ApiError(
+            500,
+            "Failed to validate installment",
+            installmentError.message,
+          );
+        }
+        if (!installment) {
+          throw new ApiError(
+            422,
+            "Payment link installment must belong to the selected invoice",
+          );
+        }
+      }
+      updatePayload.finance_invoice_installment_id = installmentId;
+    }
+    if (parsed.label !== undefined) updatePayload.label = parsed.label.trim();
+    if (parsed.amount !== undefined)
+      updatePayload.amount = normalizeMoney(parsed.amount);
+    if (parsed.currency !== undefined) updatePayload.currency = parsed.currency;
+    if (parsed.url !== undefined)
+      updatePayload.url = normalizeStripePaymentUrl(parsed.url);
+    if (parsed.status !== undefined) updatePayload.status = parsed.status;
+    if (parsed.expiresAt !== undefined)
+      updatePayload.expires_at = parsed.expiresAt ?? null;
+
+    const { data, error } = await supabase
+      .from("finance_payment_links")
+      .update(updatePayload)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new ApiError(500, "Failed to update payment link", error?.message);
+    }
+
+    return data;
   },
 
   async listCreditAdjustments(status?: unknown) {
@@ -2058,9 +2458,35 @@ export const financeController = {
       );
     }
 
+    const { data: patientPaymentLinks, error: paymentLinksError } =
+      await supabase
+        .from("finance_payment_links")
+        .select(
+          "id, finance_invoice_id, finance_invoice_installment_id, label, amount, currency, url, status, expires_at",
+        )
+        .eq("patient_id", patient.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+    if (paymentLinksError) {
+      throw new ApiError(
+        500,
+        "Failed to load patient payment links",
+        paymentLinksError.message,
+      );
+    }
+
+    const visiblePaymentLinks = (patientPaymentLinks ?? []).filter(
+      (link: any) => isPaymentLinkVisibleToPatient(link),
+    );
+
     const invoiceIds = (invoices ?? []).map((invoice: any) => invoice.id);
     if (invoiceIds.length === 0) {
-      return { patientId: patient.id, invoices: [] };
+      return {
+        patientId: patient.id,
+        invoices: [],
+        payment_links: visiblePaymentLinks,
+      };
     }
 
     const { data: installments, error: installmentsError } = await supabase
@@ -2083,6 +2509,29 @@ export const financeController = {
       const list = installmentMap.get(key) ?? [];
       list.push(installment);
       installmentMap.set(key, list);
+    }
+
+    const paymentLinksByInvoice = new Map<string, any[]>();
+    const paymentLinksByInstallment = new Map<string, any[]>();
+    for (const link of visiblePaymentLinks) {
+      if (!link.finance_invoice_id) {
+        continue;
+      }
+      const invoiceLinks =
+        paymentLinksByInvoice.get(link.finance_invoice_id) ?? [];
+      invoiceLinks.push(link);
+      paymentLinksByInvoice.set(link.finance_invoice_id, invoiceLinks);
+
+      if (link.finance_invoice_installment_id) {
+        const installmentLinks =
+          paymentLinksByInstallment.get(link.finance_invoice_installment_id) ??
+          [];
+        installmentLinks.push(link);
+        paymentLinksByInstallment.set(
+          link.finance_invoice_installment_id,
+          installmentLinks,
+        );
+      }
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -2122,13 +2571,16 @@ export const financeController = {
           due_date: installment.dueDate,
           status: installment.status,
           display_order: installment.displayOrder,
+          payment_links: paymentLinksByInstallment.get(installment.id) ?? [],
         })),
+        payment_links: paymentLinksByInvoice.get(invoice.id) ?? [],
       };
     });
 
     return {
       patientId: patient.id,
       invoices: outputInvoices,
+      payment_links: visiblePaymentLinks,
     };
   },
 
