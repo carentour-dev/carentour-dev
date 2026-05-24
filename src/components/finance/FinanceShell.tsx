@@ -33,6 +33,7 @@ import {
   CheckCheck,
   CircleDollarSign,
   LayoutDashboard,
+  Link2,
   Loader2,
   SlidersHorizontal,
   Users,
@@ -69,6 +70,12 @@ const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
     href: "/finance/payables",
     icon: Wallet,
     isVisible: (capabilities) => capabilities.canManagePayables,
+  },
+  {
+    label: "Payment Links",
+    href: "/finance/payment-links",
+    icon: Link2,
+    isVisible: (capabilities) => capabilities.canManageInvoices,
   },
   {
     label: "Approvals",
@@ -126,11 +133,11 @@ const FINANCE_NAV_SECTIONS: Array<{
 }> = [
   {
     label: "Workspace",
-    items: FINANCE_NAV_ITEMS.slice(0, 6),
+    items: FINANCE_NAV_ITEMS.slice(0, 7),
   },
   {
     label: "Ledger & Reports",
-    items: FINANCE_NAV_ITEMS.slice(6),
+    items: FINANCE_NAV_ITEMS.slice(7),
   },
 ];
 
