@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  ExternalLink,
+  Link2,
   Loader2,
+  PlusCircle,
   ReceiptText,
   Wallet,
 } from "lucide-react";
@@ -22,6 +26,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 type InvoiceDetailResponse = {
   invoice: {
@@ -91,6 +105,17 @@ type InvoiceDetailResponse = {
     notes: string | null;
     created_at: string;
   }>;
+  paymentLinks: Array<{
+    id: string;
+    finance_invoice_installment_id: string | null;
+    label: string;
+    amount: number;
+    currency: string;
+    url: string;
+    status: "active" | "disabled" | "paid" | "expired";
+    expires_at: string | null;
+    created_at: string;
+  }>;
 };
 
 type FinanceInvoiceDetailProps = {
@@ -142,11 +167,21 @@ const badgeVariant = (status?: string | null) => {
   }
 };
 
+const INVOICE_LEVEL_LINK_VALUE = "invoice";
+
 export function FinanceInvoiceDetail({
   workspacePath,
 }: FinanceInvoiceDetailProps) {
   const params = useParams<{ id: string }>();
   const invoiceId = typeof params?.id === "string" ? params.id : "";
+  const { toast } = useToast();
+  const [paymentLinkForm, setPaymentLinkForm] = useState({
+    label: "",
+    amount: "",
+    url: "",
+    installmentId: INVOICE_LEVEL_LINK_VALUE,
+    expiresAt: "",
+  });
 
   const detailQuery = useQuery({
     queryKey: ["finance", "invoice-detail", invoiceId],
@@ -155,6 +190,85 @@ export function FinanceInvoiceDetail({
       adminFetch<InvoiceDetailResponse>(
         `/api/admin/finance/invoices/${invoiceId}`,
       ),
+  });
+
+  const createPaymentLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoiceId) {
+        throw new Error("Invoice id is missing.");
+      }
+      const amount = Number(paymentLinkForm.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Enter a positive payment link amount.");
+      }
+
+      return adminFetch(
+        `/api/admin/finance/invoices/${invoiceId}/payment-links`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            label: paymentLinkForm.label.trim() || "Stripe payment link",
+            amount,
+            url: paymentLinkForm.url.trim(),
+            installmentId:
+              paymentLinkForm.installmentId === INVOICE_LEVEL_LINK_VALUE
+                ? null
+                : paymentLinkForm.installmentId,
+            expiresAt: paymentLinkForm.expiresAt
+              ? new Date(paymentLinkForm.expiresAt).toISOString()
+              : null,
+          }),
+        },
+      );
+    },
+    onSuccess: async () => {
+      setPaymentLinkForm({
+        label: "",
+        amount: "",
+        url: "",
+        installmentId: INVOICE_LEVEL_LINK_VALUE,
+        expiresAt: "",
+      });
+      await detailQuery.refetch();
+      toast({
+        title: "Payment link added",
+        description: "The patient can now see this link on their dashboard.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add payment link",
+        description:
+          error instanceof Error ? error.message : "Please check the link.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePaymentLinkStatusMutation = useMutation({
+    mutationFn: (input: {
+      paymentLinkId: string;
+      status: "active" | "disabled" | "paid" | "expired";
+    }) =>
+      adminFetch(`/api/admin/finance/payment-links/${input.paymentLinkId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: input.status }),
+      }),
+    onSuccess: async () => {
+      await detailQuery.refetch();
+      toast({
+        title: "Payment link updated",
+        description: "The dashboard visibility was updated.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update payment link",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (detailQuery.isLoading) {
@@ -194,7 +308,12 @@ export function FinanceInvoiceDetail({
     payments,
     allocationTimeline,
     creditAdjustments,
+    paymentLinks,
   } = detailQuery.data;
+
+  const installmentLabelById = new Map(
+    installments.map((installment) => [installment.id, installment.label]),
+  );
 
   return (
     <div className="space-y-6">
@@ -257,6 +376,224 @@ export function FinanceInvoiceDetail({
               </p>
             </div>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            Patient payment links
+          </CardTitle>
+          <CardDescription>
+            Add manually generated Stripe links for the patient dashboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_0.8fr_1fr_auto]">
+            <div className="space-y-1">
+              <Label htmlFor="payment-link-label">Label</Label>
+              <Input
+                id="payment-link-label"
+                value={paymentLinkForm.label}
+                placeholder="Deposit payment"
+                onChange={(event) =>
+                  setPaymentLinkForm((current) => ({
+                    ...current,
+                    label: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="payment-link-url">Stripe URL</Label>
+              <Input
+                id="payment-link-url"
+                value={paymentLinkForm.url}
+                placeholder="https://buy.stripe.com/..."
+                onChange={(event) =>
+                  setPaymentLinkForm((current) => ({
+                    ...current,
+                    url: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="payment-link-amount">Amount</Label>
+              <Input
+                id="payment-link-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={paymentLinkForm.amount}
+                placeholder={String(invoice.balance_amount)}
+                onChange={(event) =>
+                  setPaymentLinkForm((current) => ({
+                    ...current,
+                    amount: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Scope</Label>
+              <Select
+                value={paymentLinkForm.installmentId}
+                onValueChange={(value) =>
+                  setPaymentLinkForm((current) => ({
+                    ...current,
+                    installmentId: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={INVOICE_LEVEL_LINK_VALUE}>
+                    Invoice balance
+                  </SelectItem>
+                  {installments.map((installment) => (
+                    <SelectItem key={installment.id} value={installment.id}>
+                      {installment.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                className="w-full"
+                onClick={() => createPaymentLinkMutation.mutate()}
+                disabled={createPaymentLinkMutation.isPending}
+              >
+                {createPaymentLinkMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                )}
+                Add link
+              </Button>
+            </div>
+          </div>
+
+          <div className="max-w-xs space-y-1">
+            <Label htmlFor="payment-link-expires-at">Expires at</Label>
+            <Input
+              id="payment-link-expires-at"
+              type="datetime-local"
+              value={paymentLinkForm.expiresAt}
+              onChange={(event) =>
+                setPaymentLinkForm((current) => ({
+                  ...current,
+                  expiresAt: event.target.value,
+                }))
+              }
+            />
+          </div>
+
+          {paymentLinks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No payment links have been added for this invoice.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {paymentLinks.map((paymentLink) => (
+                <div
+                  key={paymentLink.id}
+                  className="rounded-lg border border-border/60 bg-muted/20 p-3"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {paymentLink.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {paymentLink.finance_invoice_installment_id
+                          ? installmentLabelById.get(
+                              paymentLink.finance_invoice_installment_id,
+                            ) || "Installment"
+                          : "Invoice balance"}{" "}
+                        •{" "}
+                        {formatCurrency(
+                          paymentLink.amount,
+                          paymentLink.currency,
+                        )}
+                      </p>
+                      <p className="mt-1 break-all text-xs text-muted-foreground">
+                        {paymentLink.url}
+                      </p>
+                      {paymentLink.expires_at ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Expires {formatDateTime(paymentLink.expires_at)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={badgeVariant(paymentLink.status)}>
+                        {humanizeFinanceLabel(paymentLink.status)}
+                      </Badge>
+                      <Button asChild variant="outline" size="sm">
+                        <a
+                          href={paymentLink.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open
+                        </a>
+                      </Button>
+                      {paymentLink.status === "active" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updatePaymentLinkStatusMutation.mutate({
+                              paymentLinkId: paymentLink.id,
+                              status: "disabled",
+                            })
+                          }
+                          disabled={updatePaymentLinkStatusMutation.isPending}
+                        >
+                          Disable
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updatePaymentLinkStatusMutation.mutate({
+                              paymentLinkId: paymentLink.id,
+                              status: "active",
+                            })
+                          }
+                          disabled={updatePaymentLinkStatusMutation.isPending}
+                        >
+                          Activate
+                        </Button>
+                      )}
+                      {paymentLink.status !== "paid" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updatePaymentLinkStatusMutation.mutate({
+                              paymentLinkId: paymentLink.id,
+                              status: "paid",
+                            })
+                          }
+                          disabled={updatePaymentLinkStatusMutation.isPending}
+                        >
+                          Mark paid
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
