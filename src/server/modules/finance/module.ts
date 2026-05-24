@@ -51,6 +51,8 @@ const STRIPE_PAYMENT_LINK_HOSTS = new Set([
   "invoice.stripe.com",
   "pay.stripe.com",
 ]);
+const FINANCE_PAYMENT_LINK_SELECT =
+  "id, patient_id, finance_invoice_id, finance_invoice_installment_id, label:link_label, amount, currency, url:payment_url, status, expires_at, created_by_profile_id, created_at, updated_at";
 
 const PAYMENT_METHODS = ["bank_transfer", "cash", "card", "gateway"] as const;
 const FINANCE_CURRENCIES = ["USD", "EGP", "EUR", "GBP", "SAR", "AED"] as const;
@@ -700,7 +702,7 @@ export const financeController = {
         .order("created_at", { ascending: false }),
       supabase
         .from("finance_payment_links")
-        .select("*")
+        .select(FINANCE_PAYMENT_LINK_SELECT)
         .eq("finance_invoice_id", id)
         .order("created_at", { ascending: false }),
       invoice.patient_id
@@ -866,7 +868,7 @@ export const financeController = {
 
     const { data, error } = await supabase
       .from("finance_payment_links")
-      .select("*")
+      .select(FINANCE_PAYMENT_LINK_SELECT)
       .eq("finance_invoice_id", id)
       .order("created_at", { ascending: false });
 
@@ -887,7 +889,7 @@ export const financeController = {
     let query = supabase
       .from("finance_payment_links")
       .select(
-        "*, patients(id, full_name, contact_email, nationality), finance_invoices(id, invoice_number, status, balance_amount, currency), finance_invoice_installments(id, label, status, due_date, balance_amount)",
+        `${FINANCE_PAYMENT_LINK_SELECT}, patients(id, full_name, contact_email, nationality), finance_invoices(id, invoice_number, status, balance_amount, currency), finance_invoice_installments(id, label, status, due_date, balance_amount)`,
       )
       .order("created_at", { ascending: false })
       .limit(100);
@@ -983,15 +985,15 @@ export const financeController = {
         patient_id: patient.id,
         finance_invoice_id: invoiceId,
         finance_invoice_installment_id: installmentId,
-        label: parsed.label.trim(),
+        link_label: parsed.label.trim(),
         amount: normalizeMoney(parsed.amount),
         currency: parsed.currency ?? invoiceCurrency ?? "USD",
-        url: normalizeStripePaymentUrl(parsed.url),
+        payment_url: normalizeStripePaymentUrl(parsed.url),
         status: parsed.status,
         expires_at: parsed.expiresAt ?? null,
         created_by_profile_id: owner.profileId ?? null,
       })
-      .select("*")
+      .select(FINANCE_PAYMENT_LINK_SELECT)
       .maybeSingle();
 
     if (error || !data) {
@@ -1151,12 +1153,13 @@ export const financeController = {
       }
       updatePayload.finance_invoice_installment_id = installmentId;
     }
-    if (parsed.label !== undefined) updatePayload.label = parsed.label.trim();
+    if (parsed.label !== undefined)
+      updatePayload.link_label = parsed.label.trim();
     if (parsed.amount !== undefined)
       updatePayload.amount = normalizeMoney(parsed.amount);
     if (parsed.currency !== undefined) updatePayload.currency = parsed.currency;
     if (parsed.url !== undefined)
-      updatePayload.url = normalizeStripePaymentUrl(parsed.url);
+      updatePayload.payment_url = normalizeStripePaymentUrl(parsed.url);
     if (parsed.status !== undefined) updatePayload.status = parsed.status;
     if (parsed.expiresAt !== undefined)
       updatePayload.expires_at = parsed.expiresAt ?? null;
@@ -1165,7 +1168,7 @@ export const financeController = {
       .from("finance_payment_links")
       .update(updatePayload)
       .eq("id", id)
-      .select("*")
+      .select(FINANCE_PAYMENT_LINK_SELECT)
       .maybeSingle();
 
     if (error || !data) {
@@ -2462,7 +2465,7 @@ export const financeController = {
       await supabase
         .from("finance_payment_links")
         .select(
-          "id, finance_invoice_id, finance_invoice_installment_id, label, amount, currency, url, status, expires_at",
+          "id, finance_invoice_id, finance_invoice_installment_id, label:link_label, amount, currency, url:payment_url, status, expires_at",
         )
         .eq("patient_id", patient.id)
         .eq("status", "active")
