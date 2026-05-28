@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   CalendarDays,
   Globe2,
@@ -33,6 +35,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDoctors } from "@/hooks/useDoctors";
 import { useTreatments } from "@/hooks/useTreatments";
 import { COUNTRY_OPTIONS } from "@/constants/countries";
 
@@ -74,6 +77,9 @@ const consultationSchema = z.object({
   country: z.string().min(1, "Tell us where you live"),
   treatmentId: z.string().min(1, "Select a treatment"),
   procedure: z.string().min(1, "Select a procedure"),
+  doctorId: z.string().uuid().optional().nullable(),
+  bookingType: z.enum(["video", "phone", "onsite"]).default("video"),
+  selectedSlotId: z.string().uuid().optional().nullable(),
   travelWindow: consultationTravelWindowSchema,
   healthBackground: z
     .string()
@@ -88,6 +94,22 @@ const consultationSchema = z.object({
 
 type ConsultationFormValues = z.infer<typeof consultationSchema>;
 type ConsultationDocument = z.infer<typeof consultationDocumentSchema>;
+type ConsultationSlot = {
+  id: string;
+  doctor_id: string;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  booking_type: "onsite" | "phone" | "video";
+  location: string | null;
+  doctors?: {
+    id: string;
+    name: string;
+    title: string;
+    specialization: string;
+    avatar_url?: string | null;
+  } | null;
+};
 
 const TRAVEL_HINTS = [
   {
@@ -116,6 +138,11 @@ const countryComboOptions: ComboOption[] = COUNTRY_OPTIONS.map((country) => ({
   value: country,
   label: country,
 }));
+const bookingTypeOptions = [
+  { value: "video", label: "Online video meeting" },
+  { value: "phone", label: "Phone call" },
+  { value: "onsite", label: "In-person consultation" },
+] as const;
 
 const splitFullName = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -151,6 +178,9 @@ export default function ConsultationPage() {
       country: "",
       treatmentId: "",
       procedure: "",
+      doctorId: null,
+      bookingType: "video",
+      selectedSlotId: null,
       travelWindow: { from: undefined, to: undefined } as {
         from?: Date;
         to?: Date | null;
@@ -169,6 +199,7 @@ export default function ConsultationPage() {
 
   const { treatments: treatmentRows, loading: treatmentsLoading } =
     useTreatments();
+  const { doctors, loading: doctorsLoading } = useDoctors();
 
   const treatments = useMemo(() => treatmentRows, [treatmentRows]);
   const featuredTreatments = useMemo(
@@ -189,6 +220,8 @@ export default function ConsultationPage() {
   );
 
   const selectedTreatmentId = form.watch("treatmentId");
+  const selectedDoctorId = form.watch("doctorId");
+  const selectedBookingType = form.watch("bookingType");
   const documents = form.watch("documents") ?? [];
 
   const selectedTreatment = useMemo(
@@ -217,6 +250,59 @@ export default function ConsultationPage() {
     form.setValue("procedure", "");
     form.clearErrors("procedure");
   }, [selectedTreatmentId, form]);
+
+  useEffect(() => {
+    form.setValue("selectedSlotId", null);
+    form.clearErrors("selectedSlotId");
+  }, [selectedDoctorId, selectedBookingType, form]);
+
+  const doctorComboOptions = useMemo<ComboOption[]>(
+    () =>
+      doctors.map((doctor) => ({
+        value: doctor.id,
+        label: doctor.name,
+        description: doctor.specialization,
+        searchTerms: [doctor.title, doctor.specialization],
+      })),
+    [doctors],
+  );
+
+  const slotRange = useMemo(() => {
+    const from = new Date();
+    const to = new Date();
+    to.setDate(to.getDate() + 30);
+    return { from: from.toISOString(), to: to.toISOString() };
+  }, []);
+
+  const slotsQuery = useQuery({
+    queryKey: [
+      "consultation-slots",
+      selectedDoctorId,
+      selectedBookingType,
+      slotRange.from,
+      slotRange.to,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        doctorId: selectedDoctorId ?? "",
+        bookingType: selectedBookingType,
+        from: slotRange.from,
+        to: slotRange.to,
+      });
+      const response = await fetch(`/api/consultation-slots?${params}`, {
+        credentials: "same-origin",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to load consultation slots");
+      }
+      return (payload?.data ?? []) as ConsultationSlot[];
+    },
+    enabled: Boolean(selectedDoctorId),
+    staleTime: 60_000,
+  });
+
+  const slots = slotsQuery.data ?? [];
 
   const uploadDocument = async (file: File): Promise<ConsultationDocument> => {
     setUploadingDocuments(true);
@@ -369,7 +455,15 @@ export default function ConsultationPage() {
         .filter((part) => part && part.length > 0)
         .join(" — ");
 
-      const { treatmentId, procedure, travelWindow, ...rest } = values;
+      const {
+        treatmentId,
+        procedure,
+        doctorId,
+        bookingType,
+        selectedSlotId,
+        travelWindow,
+        ...rest
+      } = values;
       const preparedTravelWindow = (() => {
         const from = travelWindow?.from;
         const to = travelWindow?.to;
@@ -389,6 +483,9 @@ export default function ConsultationPage() {
         medicalReports,
         treatmentId,
         procedure,
+        doctorId,
+        bookingType,
+        selectedSlotId,
         treatment: combinedTreatment || selectedTreatmentName || procedure,
         travelWindow: preparedTravelWindow,
       };
@@ -421,9 +518,12 @@ export default function ConsultationPage() {
       );
 
       toast({
-        title: "Consultation Request Submitted",
-        description:
-          "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
+        title: result?.data?.booked
+          ? "Consultation booked"
+          : "Consultation Request Submitted",
+        description: result?.data?.booked
+          ? "Your selected consultation slot is confirmed in your patient dashboard."
+          : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
       });
 
       form.reset();
@@ -638,6 +738,136 @@ export default function ConsultationPage() {
                                   contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
                                 />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-5 rounded-lg border border-border/60 bg-muted/20 p-5">
+                        <div className="grid gap-6 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="doctorId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Preferred Doctor</FormLabel>
+                                <FormControl>
+                                  <ComboBox
+                                    value={field.value ?? ""}
+                                    options={doctorComboOptions}
+                                    placeholder={
+                                      doctorsLoading
+                                        ? "Loading doctors..."
+                                        : "Select a doctor"
+                                    }
+                                    searchPlaceholder="Search doctors..."
+                                    emptyLabel="No doctors found."
+                                    onChange={(selected) => {
+                                      field.onChange(selected || null);
+                                      form.clearErrors("doctorId");
+                                    }}
+                                    disabled={doctorsLoading}
+                                    className="font-normal"
+                                    contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="bookingType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Consultation Type</FormLabel>
+                                <FormControl>
+                                  <ComboBox
+                                    value={field.value ?? "video"}
+                                    options={bookingTypeOptions.map(
+                                      (option) => ({
+                                        value: option.value,
+                                        label: option.label,
+                                      }),
+                                    )}
+                                    placeholder="Select consultation type"
+                                    searchPlaceholder="Search types..."
+                                    emptyLabel="No types found."
+                                    onChange={(selected) => {
+                                      field.onChange(selected || "video");
+                                      form.clearErrors("bookingType");
+                                    }}
+                                    className="font-normal"
+                                    contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="selectedSlotId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Available Time</FormLabel>
+                              {!selectedDoctorId ? (
+                                <p className="text-sm text-muted-foreground">
+                                  Select a doctor to view available times.
+                                </p>
+                              ) : slotsQuery.isLoading ? (
+                                <div className="text-sm text-muted-foreground">
+                                  Loading available times...
+                                </div>
+                              ) : slots.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  No published times match this selection.
+                                </p>
+                              ) : (
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  {slots.map((slot) => {
+                                    const isSelected = field.value === slot.id;
+                                    return (
+                                      <button
+                                        key={slot.id}
+                                        type="button"
+                                        className={cn(
+                                          "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                                          isSelected
+                                            ? "border-primary bg-primary text-primary-foreground"
+                                            : "border-border bg-background hover:border-primary/60",
+                                        )}
+                                        onClick={() =>
+                                          field.onChange(
+                                            isSelected ? null : slot.id,
+                                          )
+                                        }
+                                      >
+                                        <span className="block font-medium">
+                                          {format(
+                                            new Date(slot.starts_at),
+                                            "PPp",
+                                          )}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "text-xs",
+                                            isSelected
+                                              ? "text-primary-foreground/80"
+                                              : "text-muted-foreground",
+                                          )}
+                                        >
+                                          {format(new Date(slot.ends_at), "p")}{" "}
+                                          • {slot.timezone}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
