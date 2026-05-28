@@ -3,6 +3,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { contactRequestController } from "@/server/modules/contactRequests/module";
+import { consultationSlotController } from "@/server/modules/consultationSlots/module";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
 import { createClient as createSupabaseClient } from "@/integrations/supabase/server";
@@ -20,6 +21,9 @@ const consultationSchema = z.object({
   treatment: z.string().min(1, "Preferred treatment is required"),
   treatmentId: z.string().optional(),
   procedure: z.string().optional(),
+  doctorId: z.string().uuid().optional().nullable(),
+  bookingType: z.enum(["onsite", "phone", "video"]).optional(),
+  selectedSlotId: z.string().uuid().optional().nullable(),
   destination: z.string().optional(),
   travelWindow: travelWindowSchema,
   healthBackground: z
@@ -72,10 +76,59 @@ const formatTravelWindow = (window: z.infer<typeof travelWindowSchema>) => {
   return `${window.from} - ${window.to}`;
 };
 
+const ensurePatientForUser = async (
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  user: { id: string; email?: string | null },
+  payload: z.infer<typeof consultationSchema>,
+) => {
+  const { data: existingPatient, error: patientError } = await supabaseAdmin
+    .from("patients")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!patientError && existingPatient?.id) {
+    return existingPatient.id;
+  }
+
+  const { data: insertedPatient, error: insertError } = await supabaseAdmin
+    .from("patients")
+    .insert({
+      user_id: user.id,
+      full_name: payload.fullName.trim(),
+      contact_email: payload.email || user.email || null,
+      contact_phone: payload.phone || null,
+      nationality: payload.country || null,
+      source: "organic",
+      created_channel: "api",
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (insertError) {
+    if (insertError.code === "23505" || insertError.code === "409") {
+      const { data: retryPatient, error: retryError } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!retryError && retryPatient?.id) {
+        return retryPatient.id;
+      }
+    }
+
+    throw insertError;
+  }
+
+  return insertedPatient?.id ?? null;
+};
+
 export const POST = async (req: NextRequest) => {
   try {
     const supabaseClient = await createSupabaseClient();
     const supabaseAdmin = getSupabaseAdmin();
+    const payload = consultationSchema.parse(await req.json());
 
     const authHeader = req.headers.get("authorization");
     let user = null;
@@ -105,21 +158,9 @@ export const POST = async (req: NextRequest) => {
       }
     }
 
-    let patientId: string | null = null;
-
-    if (user?.id) {
-      const { data: existingPatient, error: patientError } = await supabaseAdmin
-        .from("patients")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!patientError && existingPatient?.id) {
-        patientId = existingPatient.id;
-      }
-    }
-
-    const payload = consultationSchema.parse(await req.json());
+    const patientId = user
+      ? await ensurePatientForUser(supabaseAdmin, user, payload)
+      : null;
     const { firstName, lastName } = splitFullName(payload.fullName);
     const travelWindow = formatTravelWindow(payload.travelWindow);
 
@@ -132,12 +173,26 @@ export const POST = async (req: NextRequest) => {
       documentNames.length > 0 ? documentNames.join(", ") : null;
 
     const portalMetadata =
-      payload.treatmentId || payload.procedure
+      payload.treatmentId ||
+      payload.procedure ||
+      payload.doctorId ||
+      payload.bookingType ||
+      payload.selectedSlotId
         ? {
             ...(payload.treatmentId
               ? { treatmentId: payload.treatmentId }
               : {}),
             ...(payload.procedure ? { procedure: payload.procedure } : {}),
+            ...(payload.doctorId ? { doctorId: payload.doctorId } : {}),
+            ...(payload.bookingType
+              ? { bookingType: payload.bookingType }
+              : {}),
+            ...(payload.selectedSlotId
+              ? {
+                  selectedSlotId: payload.selectedSlotId,
+                  selectedSlotStatus: "requested",
+                }
+              : {}),
           }
         : undefined;
 
@@ -165,6 +220,18 @@ export const POST = async (req: NextRequest) => {
       documents: documents.length > 0 ? documents : null,
     });
 
+    let bookedConsultationId: string | null = null;
+    if (payload.selectedSlotId && user && patientId) {
+      const bookedConsultation = await consultationSlotController.book({
+        slot_id: payload.selectedSlotId,
+        patient_id: patientId,
+        user_id: user.id,
+        contact_request_id: consultationRequest.id,
+        notes: payload.additionalQuestions,
+      });
+      bookedConsultationId = bookedConsultation.id;
+    }
+
     const { error: emailError } = await supabaseAdmin.functions.invoke(
       "send-contact-email",
       {
@@ -176,6 +243,10 @@ export const POST = async (req: NextRequest) => {
           country: payload.country,
           treatment: payload.treatment,
           procedure: payload.procedure,
+          doctorId: payload.doctorId,
+          bookingType: payload.bookingType,
+          selectedSlotId: payload.selectedSlotId,
+          bookedConsultationId,
           destination: payload.destination,
           travelWindow,
           healthBackground,
@@ -201,6 +272,8 @@ export const POST = async (req: NextRequest) => {
     return jsonResponse({
       success: true,
       consultationRequestId: consultationRequest.id,
+      bookedConsultationId,
+      booked: Boolean(bookedConsultationId),
       status: consultationRequest.status,
     });
   } catch (error) {
