@@ -34,6 +34,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { ComboBox } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -49,6 +50,7 @@ import {
 import { AssignmentControl } from "@/components/admin/AssignmentControl";
 import { PatientSelector } from "@/components/admin/PatientSelector";
 import { DoctorSelector } from "@/components/admin/DoctorSelector";
+import { ConsultationSlotManager } from "@/components/admin/ConsultationSlotManager";
 import {
   WorkspaceEmptyState,
   WorkspaceFilterBar,
@@ -61,6 +63,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { Loader2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { getDefaultTimeZone, TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 type ConsultationRow =
   Database["public"]["Tables"]["patient_consultations"]["Row"];
@@ -102,6 +105,24 @@ const consultationStatuses = [
   "no_show",
 ] as const;
 type ConsultationStatus = (typeof consultationStatuses)[number];
+const consultationBookingTypes = ["video", "phone", "onsite"] as const;
+
+const consultationStatusLabels: Record<ConsultationStatus, string> = {
+  scheduled: "Scheduled",
+  rescheduled: "Rescheduled",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  no_show: "No Show",
+};
+
+const consultationBookingTypeLabels: Record<
+  (typeof consultationBookingTypes)[number],
+  string
+> = {
+  video: "Video",
+  phone: "Phone Call",
+  onsite: "Onsite",
+};
 
 const getConsultationStatusTone = (status: ConsultationStatus) => {
   switch (status) {
@@ -143,6 +164,7 @@ const formSchema = z.object({
   patient_id: z.string().uuid({ message: "Select a patient" }),
   doctor_id: nullableUuidField,
   contact_request_id: nullableUuidField,
+  booking_type: z.enum(consultationBookingTypes),
   scheduled_at: z.string().min(1, "Provide a schedule"),
   duration_minutes: z
     .union([z.string(), z.number()])
@@ -321,9 +343,10 @@ export default function AdminConsultationsPage() {
       patient_id: "",
       doctor_id: null,
       contact_request_id: null,
+      booking_type: "video",
       scheduled_at: "",
       duration_minutes: undefined,
-      timezone: "UTC",
+      timezone: getDefaultTimeZone(),
       location: "",
       meeting_url: "",
       notes: "",
@@ -337,9 +360,10 @@ export default function AdminConsultationsPage() {
         patient_id: "",
         doctor_id: null,
         contact_request_id: null,
+        booking_type: "video",
         scheduled_at: "",
         duration_minutes: undefined,
-        timezone: "UTC",
+        timezone: getDefaultTimeZone(),
         location: "",
         meeting_url: "",
         notes: "",
@@ -376,6 +400,7 @@ export default function AdminConsultationsPage() {
       patient_id: consultation.patient_id,
       doctor_id: consultation.doctor_id ?? null,
       contact_request_id: consultation.contact_request_id ?? null,
+      booking_type: consultation.booking_type ?? "video",
       scheduled_at: toDateTimeLocal(consultation.scheduled_at),
       duration_minutes: consultation.duration_minutes ?? undefined,
       timezone: consultation.timezone ?? "UTC",
@@ -522,8 +547,11 @@ export default function AdminConsultationsPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="capitalize">
-              {request.status.replace("_", " ")}
+            <Badge variant="outline">
+              {request.status
+                .split("_")
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(" ")}
             </Badge>
             <Badge variant="secondary" className="capitalize">
               {request.request_type ?? "general"}
@@ -595,6 +623,7 @@ export default function AdminConsultationsPage() {
           ...payload,
           doctor_id: payload.doctor_id || null,
           contact_request_id: payload.contact_request_id || null,
+          booking_type: payload.booking_type,
           scheduled_at: toIsoString(payload.scheduled_at),
           duration_minutes:
             typeof payload.duration_minutes === "number"
@@ -633,6 +662,7 @@ export default function AdminConsultationsPage() {
           ...data,
           doctor_id: data.doctor_id || null,
           contact_request_id: data.contact_request_id || null,
+          booking_type: data.booking_type,
           scheduled_at: toIsoString(data.scheduled_at),
           duration_minutes:
             typeof data.duration_minutes === "number"
@@ -645,6 +675,7 @@ export default function AdminConsultationsPage() {
       }),
     onSuccess: async (_consultation, variables) => {
       invalidate(QUERY_KEY);
+      invalidate(["admin", "consultation-slots"]);
       if (variables?.data.contact_request_id && variables.data.patient_id) {
         await syncLinkedRequest(
           variables.data.contact_request_id,
@@ -670,6 +701,7 @@ export default function AdminConsultationsPage() {
       }),
     onSuccess: () => {
       invalidate(QUERY_KEY);
+      invalidate(["admin", "consultation-slots"]);
       toast({ title: "Consultation deleted" });
     },
     onError: (error: Error) => {
@@ -752,6 +784,11 @@ export default function AdminConsultationsPage() {
         }
       />
 
+      <ConsultationSlotManager
+        consultations={consultations}
+        onManageConsultation={openEditDialog}
+      />
+
       <WorkspacePanel
         title="Consultations"
         description={
@@ -773,7 +810,7 @@ export default function AdminConsultationsPage() {
                 }
                 className="gap-2 border-border/70 px-3 py-1.5"
               >
-                <span>{status.replace("_", " ")}</span>
+                <span>{consultationStatusLabels[status]}</span>
                 <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[9px] tracking-[0.16em] text-foreground/80">
                   {groupedByStatus[status]}
                 </span>
@@ -813,7 +850,7 @@ export default function AdminConsultationsPage() {
                 <SelectItem value="all">All statuses</SelectItem>
                 {consultationStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status.replace("_", " ")}
+                    {consultationStatusLabels[status]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -917,7 +954,12 @@ export default function AdminConsultationsPage() {
                           </span>
                           {consultation.duration_minutes ? (
                             <span className="text-xs text-muted-foreground">
-                              {consultation.duration_minutes} minutes
+                              {consultation.duration_minutes} minutes •{" "}
+                              {
+                                consultationBookingTypeLabels[
+                                  consultation.booking_type
+                                ]
+                              }
                             </span>
                           ) : null}
                         </div>
@@ -932,9 +974,8 @@ export default function AdminConsultationsPage() {
                                 ? "success"
                                 : "secondary"
                           }
-                          className="capitalize"
                         >
-                          {consultation.status.replace("_", " ")}
+                          {consultationStatusLabels[consultation.status]}
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden px-5 py-4 lg:table-cell">
@@ -1086,6 +1127,33 @@ export default function AdminConsultationsPage() {
                 />
                 <FormField
                   control={form.control}
+                  name="booking_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consultation type</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {consultationBookingTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {consultationBookingTypeLabels[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="scheduled_at"
                   render={({ field }) => (
                     <FormItem>
@@ -1132,7 +1200,16 @@ export default function AdminConsultationsPage() {
                     <FormItem>
                       <FormLabel>Timezone</FormLabel>
                       <FormControl>
-                        <Input placeholder="UTC" {...field} />
+                        <ComboBox
+                          value={field.value}
+                          options={TIMEZONE_OPTIONS}
+                          placeholder="Select timezone"
+                          searchPlaceholder="Search timezones..."
+                          emptyLabel="No timezones found."
+                          onChange={field.onChange}
+                          className="font-normal"
+                          contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1156,7 +1233,7 @@ export default function AdminConsultationsPage() {
                         <SelectContent>
                           {consultationStatuses.map((status) => (
                             <SelectItem key={status} value={status}>
-                              {status.replace("_", " ")}
+                              {consultationStatusLabels[status]}
                             </SelectItem>
                           ))}
                         </SelectContent>
