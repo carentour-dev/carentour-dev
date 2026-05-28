@@ -1214,6 +1214,8 @@ export type Database = {
       };
       patient_consultations: {
         Row: {
+          booking_type: Database["public"]["Enums"]["consultation_booking_type"];
+          consultation_slot_id: string | null;
           contact_request_id: string | null;
           coordinator_id: string | null;
           created_at: string;
@@ -1231,6 +1233,8 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          consultation_slot_id?: string | null;
           contact_request_id?: string | null;
           coordinator_id?: string | null;
           created_at?: string;
@@ -1248,6 +1252,8 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          consultation_slot_id?: string | null;
           contact_request_id?: string | null;
           coordinator_id?: string | null;
           created_at?: string;
@@ -1270,6 +1276,13 @@ export type Database = {
             columns: ["contact_request_id"];
             isOneToOne: false;
             referencedRelation: "contact_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "patient_consultations_slot_fkey";
+            columns: ["consultation_slot_id"];
+            isOneToOne: false;
+            referencedRelation: "consultation_slots";
             referencedColumns: ["id"];
           },
           {
@@ -1312,6 +1325,89 @@ export type Database = {
             columns: ["patient_id"];
             isOneToOne: false;
             referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      consultation_slots: {
+        Row: {
+          booking_type: Database["public"]["Enums"]["consultation_booking_type"];
+          created_at: string;
+          created_by_profile_id: string | null;
+          doctor_id: string;
+          ends_at: string;
+          hold_expires_at: string | null;
+          id: string;
+          location: string | null;
+          meeting_url: string | null;
+          notes: string | null;
+          patient_consultation_id: string | null;
+          starts_at: string;
+          status: Database["public"]["Enums"]["consultation_slot_status"];
+          timezone: string;
+          updated_at: string;
+        };
+        Insert: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          created_at?: string;
+          created_by_profile_id?: string | null;
+          doctor_id: string;
+          ends_at: string;
+          hold_expires_at?: string | null;
+          id?: string;
+          location?: string | null;
+          meeting_url?: string | null;
+          notes?: string | null;
+          patient_consultation_id?: string | null;
+          starts_at: string;
+          status?: Database["public"]["Enums"]["consultation_slot_status"];
+          timezone?: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          created_at?: string;
+          created_by_profile_id?: string | null;
+          doctor_id?: string;
+          ends_at?: string;
+          hold_expires_at?: string | null;
+          id?: string;
+          location?: string | null;
+          meeting_url?: string | null;
+          notes?: string | null;
+          patient_consultation_id?: string | null;
+          starts_at?: string;
+          status?: Database["public"]["Enums"]["consultation_slot_status"];
+          timezone?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consultation_slots_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultation_slots_created_by_profile_id_fkey";
+            columns: ["created_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "secure_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultation_slots_doctor_id_fkey";
+            columns: ["doctor_id"];
+            isOneToOne: false;
+            referencedRelation: "doctors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultation_slots_patient_consultation_id_fkey";
+            columns: ["patient_consultation_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_consultations";
             referencedColumns: ["id"];
           },
         ];
@@ -3018,6 +3114,16 @@ export type Database = {
         Args: { p_email: string; p_ip_address: unknown; p_success: boolean };
         Returns: undefined;
       };
+      book_consultation_slot: {
+        Args: {
+          p_slot_id: string;
+          p_patient_id: string;
+          p_user_id?: string | null;
+          p_contact_request_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["patient_consultations"]["Row"];
+      };
       user_permissions: { Args: { p_user_id: string }; Returns: string[] };
       user_roles: { Args: { p_user_id: string }; Returns: string[] };
     };
@@ -3028,6 +3134,13 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "rescheduled";
+      consultation_booking_type: "onsite" | "phone" | "video";
+      consultation_slot_status:
+        | "available"
+        | "held"
+        | "booked"
+        | "blocked"
+        | "cancelled";
       consultation_status:
         | "scheduled"
         | "rescheduled"
@@ -3190,6 +3303,14 @@ export const Constants = {
         "completed",
         "cancelled",
         "rescheduled",
+      ],
+      consultation_booking_type: ["onsite", "phone", "video"],
+      consultation_slot_status: [
+        "available",
+        "held",
+        "booked",
+        "blocked",
+        "cancelled",
       ],
       consultation_status: [
         "scheduled",
