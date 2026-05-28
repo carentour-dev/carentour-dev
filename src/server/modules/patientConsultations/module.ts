@@ -12,6 +12,8 @@ const STATUS_VALUES = [
   "no_show",
 ] as const;
 const statusSchema = z.enum(STATUS_VALUES);
+const BOOKING_TYPE_VALUES = ["onsite", "phone", "video"] as const;
+const bookingTypeSchema = z.enum(BOOKING_TYPE_VALUES);
 
 const optionalUuid = z.preprocess((value) => {
   if (typeof value === "string" && value.trim() === "") {
@@ -84,8 +86,10 @@ const createConsultationSchema = z.object({
   user_id: optionalUuid,
   contact_request_id: optionalUuid,
   doctor_id: optionalUuid,
+  consultation_slot_id: optionalUuid,
   coordinator_id: optionalUuid,
   status: statusSchema.optional(),
+  booking_type: bookingTypeSchema.optional(),
   scheduled_at: isoDateTime,
   duration_minutes: durationSchema,
   timezone: z.string().min(2).max(60).optional().nullable(),
@@ -112,6 +116,61 @@ type ConsultationInsert =
   Database["public"]["Tables"]["patient_consultations"]["Insert"];
 type ConsultationUpdate =
   Database["public"]["Tables"]["patient_consultations"]["Update"];
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+
+const releaseConsultationSlot = async (
+  supabase: SupabaseAdminClient,
+  consultationId: string,
+  slotId: string | null | undefined,
+) => {
+  if (!slotId) return;
+
+  const { error } = await supabase
+    .from("consultation_slots")
+    .update({
+      status: "available",
+      patient_consultation_id: null,
+      hold_expires_at: null,
+    })
+    .eq("id", slotId)
+    .or(
+      `patient_consultation_id.eq.${consultationId},patient_consultation_id.is.null`,
+    );
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to release consultation slot",
+      error.message,
+    );
+  }
+};
+
+const releaseDeletedConsultationSlot = async (
+  supabase: SupabaseAdminClient,
+  slotId: string | null | undefined,
+) => {
+  if (!slotId) return;
+
+  const { error } = await supabase
+    .from("consultation_slots")
+    .update({
+      status: "available",
+      patient_consultation_id: null,
+      hold_expires_at: null,
+    })
+    .eq("id", slotId)
+    .eq("status", "booked")
+    .is("patient_consultation_id", null);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to release consultation slot",
+      error.message,
+    );
+  }
+};
 
 const resolveUserIdForPatient = async (
   patientId: string,
@@ -207,8 +266,10 @@ export const patientConsultationController = {
       ),
       contact_request_id: parsed.contact_request_id ?? null,
       doctor_id: parsed.doctor_id ?? null,
+      consultation_slot_id: parsed.consultation_slot_id ?? null,
       coordinator_id: parsed.coordinator_id ?? null,
       status: parsed.status ?? "scheduled",
+      booking_type: parsed.booking_type ?? "video",
       scheduled_at: parsed.scheduled_at,
       duration_minutes: parsed.duration_minutes ?? null,
       timezone: trimOptional(parsed.timezone),
@@ -223,6 +284,7 @@ export const patientConsultationController = {
   async update(id: unknown, payload: unknown) {
     const consultationId = z.string().uuid().parse(id);
     const parsed = updateConsultationSchema.parse(payload);
+    const supabase = getSupabaseAdmin();
 
     const updatePayload: ConsultationUpdate = {};
 
@@ -240,9 +302,13 @@ export const patientConsultationController = {
       updatePayload.contact_request_id = parsed.contact_request_id ?? null;
     if (parsed.doctor_id !== undefined)
       updatePayload.doctor_id = parsed.doctor_id ?? null;
+    if (parsed.consultation_slot_id !== undefined)
+      updatePayload.consultation_slot_id = parsed.consultation_slot_id ?? null;
     if (parsed.coordinator_id !== undefined)
       updatePayload.coordinator_id = parsed.coordinator_id ?? null;
     if (parsed.status !== undefined) updatePayload.status = parsed.status;
+    if (parsed.booking_type !== undefined)
+      updatePayload.booking_type = parsed.booking_type;
     if (parsed.scheduled_at !== undefined)
       updatePayload.scheduled_at = parsed.scheduled_at;
     if (parsed.duration_minutes !== undefined)
@@ -260,11 +326,35 @@ export const patientConsultationController = {
       throw new ApiError(400, "No fields provided for update");
     }
 
-    return consultationService.update(consultationId, updatePayload);
+    const currentConsultation =
+      await consultationService.getById(consultationId);
+    const updatedConsultation = await consultationService.update(
+      consultationId,
+      updatePayload,
+    );
+
+    if (parsed.status === "cancelled") {
+      await releaseConsultationSlot(
+        supabase,
+        consultationId,
+        currentConsultation.consultation_slot_id,
+      );
+    }
+
+    return updatedConsultation;
   },
 
   async delete(id: unknown) {
     const consultationId = z.string().uuid().parse(id);
-    return consultationService.remove(consultationId);
+    const supabase = getSupabaseAdmin();
+    const consultation = await consultationService.getById(consultationId);
+    const result = await consultationService.remove(consultationId);
+
+    await releaseDeletedConsultationSlot(
+      supabase,
+      consultation.consultation_slot_id,
+    );
+
+    return result;
   },
 };
