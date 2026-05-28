@@ -962,6 +962,18 @@ export default function AdminRequestsPage() {
     staleTime: 30_000,
   });
 
+  const activeRequestLinkedConsultation = useMemo(() => {
+    if (!activeRequest?.id) {
+      return null;
+    }
+
+    return (
+      (relatedConsultationsQuery.data ?? []).find(
+        (consultation) => consultation.contact_request_id === activeRequest.id,
+      ) ?? null
+    );
+  }, [activeRequest?.id, relatedConsultationsQuery.data]);
+
   const handleSchedule = (request: ContactRequest) => {
     const hasLinkedPatient = Boolean(request.patient_id);
     const isPortalRequest =
@@ -1047,6 +1059,12 @@ export default function AdminRequestsPage() {
     }
 
     const consultations = relatedConsultationsQuery.data ?? [];
+    const linkedConsultation = activeRequestLinkedConsultation;
+    const otherConsultations = linkedConsultation
+      ? consultations.filter(
+          (consultation) => consultation.id !== linkedConsultation.id,
+        )
+      : consultations;
 
     if (consultations.length === 0) {
       return (
@@ -1059,7 +1077,22 @@ export default function AdminRequestsPage() {
 
     return (
       <div className="space-y-2">
-        {consultations.map((consultation) => (
+        {linkedConsultation ? (
+          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium text-foreground">
+                This request is already scheduled
+              </span>
+              <Badge variant="outline" className="capitalize">
+                {linkedConsultation.status.replace("_", " ")}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Consultation on {formatDateTime(linkedConsultation.scheduled_at)}
+            </p>
+          </div>
+        ) : null}
+        {otherConsultations.map((consultation) => (
           <div
             key={consultation.id}
             className="rounded-md border border-border/60 bg-muted/10 p-3 text-sm"
@@ -2184,7 +2217,10 @@ export default function AdminRequestsPage() {
                     </div>
                     <Button
                       className="mt-3 w-full"
-                      disabled={!selectedPatientForDialog}
+                      disabled={
+                        !selectedPatientForDialog ||
+                        Boolean(activeRequestLinkedConsultation)
+                      }
                       onClick={() =>
                         handleSchedule({
                           ...activeRequest,
@@ -2192,7 +2228,9 @@ export default function AdminRequestsPage() {
                         })
                       }
                     >
-                      Schedule consultation
+                      {activeRequestLinkedConsultation
+                        ? "Consultation already scheduled"
+                        : "Schedule consultation"}
                     </Button>
                   </div>
                 ) : (
