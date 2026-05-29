@@ -144,6 +144,17 @@ const bookingTypeOptions = [
   { value: "onsite", label: "In-person consultation" },
 ] as const;
 
+const createSubmissionKey = () => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
+
 const splitFullName = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
 
@@ -168,6 +179,7 @@ export default function ConsultationPage() {
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const { session } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const submissionKeyRef = useRef(createSubmissionKey());
 
   const form = useForm<ConsultationFormValues>({
     resolver: zodResolver(consultationSchema),
@@ -480,6 +492,7 @@ export default function ConsultationPage() {
       const submissionPayload = {
         ...rest,
         documents: values.documents ?? [],
+        idempotencyKey: submissionKeyRef.current,
         medicalReports,
         treatmentId,
         procedure,
@@ -520,13 +533,18 @@ export default function ConsultationPage() {
       toast({
         title: result?.data?.booked
           ? "Consultation booked"
-          : "Consultation Request Submitted",
+          : values.selectedSlotId
+            ? "Preferred time requested"
+            : "Consultation Request Submitted",
         description: result?.data?.booked
           ? "Your selected consultation slot is confirmed in your patient dashboard."
-          : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
+          : values.selectedSlotId
+            ? "Your coordinator will confirm whether this time is still available after reviewing your request."
+            : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
       });
 
       form.reset();
+      submissionKeyRef.current = createSubmissionKey();
       router.prefetch("/"); // prepare homepage follow-up in case they navigate back
     } catch (error) {
       console.error("Failed to submit consultation request", error);
@@ -813,7 +831,7 @@ export default function ConsultationPage() {
                           name="selectedSlotId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Available Time</FormLabel>
+                              <FormLabel>Preferred Time</FormLabel>
                               {!selectedDoctorId ? (
                                 <p className="text-sm text-muted-foreground">
                                   Select a doctor to view available times.
@@ -827,45 +845,56 @@ export default function ConsultationPage() {
                                   No published times match this selection.
                                 </p>
                               ) : (
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  {slots.map((slot) => {
-                                    const isSelected = field.value === slot.id;
-                                    return (
-                                      <button
-                                        key={slot.id}
-                                        type="button"
-                                        className={cn(
-                                          "rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                                          isSelected
-                                            ? "border-primary bg-primary text-primary-foreground"
-                                            : "border-border bg-background hover:border-primary/60",
-                                        )}
-                                        onClick={() =>
-                                          field.onChange(
-                                            isSelected ? null : slot.id,
-                                          )
-                                        }
-                                      >
-                                        <span className="block font-medium">
-                                          {format(
-                                            new Date(slot.starts_at),
-                                            "PPp",
-                                          )}
-                                        </span>
-                                        <span
+                                <div className="space-y-3">
+                                  <p className="text-sm text-muted-foreground">
+                                    {session
+                                      ? "Authenticated patients can book a listed time directly."
+                                      : "Guest requests use this as a preferred time until a coordinator confirms it."}
+                                  </p>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    {slots.map((slot) => {
+                                      const isSelected =
+                                        field.value === slot.id;
+                                      return (
+                                        <button
+                                          key={slot.id}
+                                          type="button"
                                           className={cn(
-                                            "text-xs",
+                                            "rounded-md border px-3 py-2 text-left text-sm transition-colors",
                                             isSelected
-                                              ? "text-primary-foreground/80"
-                                              : "text-muted-foreground",
+                                              ? "border-primary bg-primary text-primary-foreground"
+                                              : "border-border bg-background hover:border-primary/60",
                                           )}
+                                          onClick={() =>
+                                            field.onChange(
+                                              isSelected ? null : slot.id,
+                                            )
+                                          }
                                         >
-                                          {format(new Date(slot.ends_at), "p")}{" "}
-                                          • {slot.timezone}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
+                                          <span className="block font-medium">
+                                            {format(
+                                              new Date(slot.starts_at),
+                                              "PPp",
+                                            )}
+                                          </span>
+                                          <span
+                                            className={cn(
+                                              "text-xs",
+                                              isSelected
+                                                ? "text-primary-foreground/80"
+                                                : "text-muted-foreground",
+                                            )}
+                                          >
+                                            {format(
+                                              new Date(slot.ends_at),
+                                              "p",
+                                            )}{" "}
+                                            • {slot.timezone}
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               )}
                               <FormMessage />
