@@ -338,6 +338,7 @@ export type Database = {
           first_name: string;
           health_background: string | null;
           id: string;
+          idempotency_key: string | null;
           last_name: string;
           medical_reports: string | null;
           message: string;
@@ -368,6 +369,7 @@ export type Database = {
           first_name: string;
           health_background?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           last_name: string;
           medical_reports?: string | null;
           message: string;
@@ -398,6 +400,7 @@ export type Database = {
           first_name?: string;
           health_background?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           last_name?: string;
           medical_reports?: string | null;
           message?: string;
