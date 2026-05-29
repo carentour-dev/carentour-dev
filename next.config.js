@@ -2,6 +2,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ["[::1]"],
   images: {
     // CMS media URLs are versioned, so optimizer responses can be cached aggressively.
     minimumCacheTTL: 60 * 60 * 24 * 365,
