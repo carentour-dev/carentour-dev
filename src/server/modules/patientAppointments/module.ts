@@ -12,6 +12,8 @@ const STATUS_VALUES = [
   "rescheduled",
 ] as const;
 const statusSchema = z.enum(STATUS_VALUES);
+const ACTIVE_STATUS_VALUES = ["scheduled", "confirmed", "rescheduled"] as const;
+const DEFAULT_APPOINTMENT_DURATION_MINUTES = 30;
 
 const optionalUuid = z.preprocess((value) => {
   if (typeof value === "string" && value.trim() === "") {
@@ -40,7 +42,7 @@ const appointmentService = new CrudService(
   selectColumns,
 );
 
-const createAppointmentSchema = z.object({
+const appointmentPayloadSchema = z.object({
   patient_id: z.string().uuid(),
   user_id: optionalUuid,
   consultation_id: optionalUuid,
@@ -57,11 +59,32 @@ const createAppointmentSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-const updateAppointmentSchema = createAppointmentSchema
+const createAppointmentSchema = appointmentPayloadSchema.refine(
+  (data) => {
+    if (!data.ends_at) return true;
+    return new Date(data.ends_at) > new Date(data.starts_at);
+  },
+  {
+    path: ["ends_at"],
+    message: "Appointment end time must be after start time",
+  },
+);
+
+const updateAppointmentSchema = appointmentPayloadSchema
   .partial()
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields provided for update",
-  });
+  })
+  .refine(
+    (data) => {
+      if (!data.starts_at || !data.ends_at) return true;
+      return new Date(data.ends_at) > new Date(data.starts_at);
+    },
+    {
+      path: ["ends_at"],
+      message: "Appointment end time must be after start time",
+    },
+  );
 
 const listFiltersSchema = z.object({
   status: statusSchema.optional(),
@@ -73,6 +96,30 @@ type AppointmentInsert =
   Database["public"]["Tables"]["patient_appointments"]["Insert"];
 type AppointmentUpdate =
   Database["public"]["Tables"]["patient_appointments"]["Update"];
+type AppointmentRow =
+  Database["public"]["Tables"]["patient_appointments"]["Row"];
+
+const isActiveAppointmentStatus = (
+  status: AppointmentRow["status"],
+): status is (typeof ACTIVE_STATUS_VALUES)[number] =>
+  ACTIVE_STATUS_VALUES.includes(
+    status as (typeof ACTIVE_STATUS_VALUES)[number],
+  );
+
+const addMinutes = (date: Date, minutes: number) =>
+  new Date(date.getTime() + minutes * 60_000);
+
+const resolveAppointmentEnd = (startsAt: string, endsAt?: string | null) => {
+  if (endsAt) return new Date(endsAt);
+  return addMinutes(new Date(startsAt), DEFAULT_APPOINTMENT_DURATION_MINUTES);
+};
+
+const intervalsOverlap = (
+  leftStart: Date,
+  leftEnd: Date,
+  rightStart: Date,
+  rightEnd: Date,
+) => leftStart < rightEnd && rightStart < leftEnd;
 
 const resolveUserIdForPatient = async (
   patientId: string,
@@ -94,6 +141,128 @@ const resolveUserIdForPatient = async (
   }
 
   return data?.user_id ?? null;
+};
+
+const mapAppointmentWriteError = (error: {
+  code?: string;
+  message?: string;
+}) => {
+  if (error.code === "23P01") {
+    return new ApiError(
+      409,
+      "This appointment conflicts with an existing active patient, doctor, or facility appointment.",
+      error.message,
+    );
+  }
+
+  if (error.code === "23514") {
+    return new ApiError(
+      422,
+      "Appointment end time must be after start time.",
+      error.message,
+    );
+  }
+
+  return new ApiError(
+    500,
+    "Patient appointment operation failed",
+    error.message,
+  );
+};
+
+const ensureNoAppointmentConflict = async (
+  candidate: Pick<
+    AppointmentRow,
+    | "patient_id"
+    | "doctor_id"
+    | "facility_id"
+    | "status"
+    | "starts_at"
+    | "ends_at"
+  >,
+  options: { excludeAppointmentId?: string } = {},
+) => {
+  if (!isActiveAppointmentStatus(candidate.status)) return;
+
+  const startsAt = new Date(candidate.starts_at);
+  const endsAt = resolveAppointmentEnd(candidate.starts_at, candidate.ends_at);
+
+  if (
+    Number.isNaN(startsAt.getTime()) ||
+    Number.isNaN(endsAt.getTime()) ||
+    endsAt <= startsAt
+  ) {
+    throw new ApiError(422, "Appointment end time must be after start time.");
+  }
+
+  const resourceFilters = [`patient_id.eq.${candidate.patient_id}`];
+
+  if (candidate.doctor_id) {
+    resourceFilters.push(`doctor_id.eq.${candidate.doctor_id}`);
+  }
+
+  if (candidate.facility_id) {
+    resourceFilters.push(`facility_id.eq.${candidate.facility_id}`);
+  }
+
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("patient_appointments")
+    .select(
+      "id, patient_id, doctor_id, facility_id, status, starts_at, ends_at",
+    )
+    .in("status", [...ACTIVE_STATUS_VALUES])
+    .lt("starts_at", endsAt.toISOString())
+    .or(resourceFilters.join(","));
+
+  if (options.excludeAppointmentId) {
+    query = query.neq("id", options.excludeAppointmentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to check appointment availability",
+      error.message,
+    );
+  }
+
+  const conflict = (
+    (data ?? []) as Pick<
+      AppointmentRow,
+      | "id"
+      | "patient_id"
+      | "doctor_id"
+      | "facility_id"
+      | "starts_at"
+      | "ends_at"
+    >[]
+  ).find((appointment) => {
+    const existingStart = new Date(appointment.starts_at);
+    const existingEnd = resolveAppointmentEnd(
+      appointment.starts_at,
+      appointment.ends_at,
+    );
+
+    return (
+      intervalsOverlap(startsAt, endsAt, existingStart, existingEnd) &&
+      (appointment.patient_id === candidate.patient_id ||
+        (candidate.doctor_id !== null &&
+          appointment.doctor_id === candidate.doctor_id) ||
+        (candidate.facility_id !== null &&
+          appointment.facility_id === candidate.facility_id))
+    );
+  });
+
+  if (conflict) {
+    throw new ApiError(
+      409,
+      "This appointment conflicts with an existing active patient, doctor, or facility appointment.",
+      { conflictingAppointmentId: conflict.id },
+    );
+  }
 };
 
 export const appointmentStatusValues = STATUS_VALUES;
@@ -146,6 +315,7 @@ export const patientAppointmentController = {
 
   async create(payload: unknown) {
     const parsed = createAppointmentSchema.parse(payload);
+    const supabase = getSupabaseAdmin();
 
     const insertPayload: AppointmentInsert = {
       patient_id: parsed.patient_id,
@@ -167,12 +337,32 @@ export const patientAppointmentController = {
       notes: trimOptional(parsed.notes),
     };
 
-    return appointmentService.create(insertPayload);
+    await ensureNoAppointmentConflict({
+      patient_id: insertPayload.patient_id,
+      doctor_id: insertPayload.doctor_id ?? null,
+      facility_id: insertPayload.facility_id ?? null,
+      status: insertPayload.status ?? "scheduled",
+      starts_at: insertPayload.starts_at,
+      ends_at: insertPayload.ends_at ?? null,
+    });
+
+    const { data, error } = await supabase
+      .from("patient_appointments")
+      .insert(insertPayload)
+      .select(selectColumns)
+      .single();
+
+    if (error) {
+      throw mapAppointmentWriteError(error);
+    }
+
+    return data;
   },
 
   async update(id: unknown, payload: unknown) {
     const appointmentId = z.string().uuid().parse(id);
     const parsed = updateAppointmentSchema.parse(payload);
+    const supabase = getSupabaseAdmin();
 
     const updatePayload: AppointmentUpdate = {};
 
@@ -216,7 +406,63 @@ export const patientAppointmentController = {
       throw new ApiError(400, "No fields provided for update");
     }
 
-    return appointmentService.update(appointmentId, updatePayload);
+    const { data: currentAppointment, error: loadError } = await supabase
+      .from("patient_appointments")
+      .select(
+        "id, patient_id, doctor_id, facility_id, status, starts_at, ends_at",
+      )
+      .eq("id", appointmentId)
+      .maybeSingle();
+
+    if (loadError) {
+      throw new ApiError(
+        500,
+        "Failed to load patient appointment",
+        loadError.message,
+      );
+    }
+
+    if (!currentAppointment) {
+      throw new ApiError(404, "patient appointment not found");
+    }
+
+    await ensureNoAppointmentConflict(
+      {
+        patient_id: updatePayload.patient_id ?? currentAppointment.patient_id,
+        doctor_id:
+          updatePayload.doctor_id !== undefined
+            ? (updatePayload.doctor_id ?? null)
+            : currentAppointment.doctor_id,
+        facility_id:
+          updatePayload.facility_id !== undefined
+            ? (updatePayload.facility_id ?? null)
+            : currentAppointment.facility_id,
+        status: updatePayload.status ?? currentAppointment.status,
+        starts_at: updatePayload.starts_at ?? currentAppointment.starts_at,
+        ends_at:
+          updatePayload.ends_at !== undefined
+            ? (updatePayload.ends_at ?? null)
+            : currentAppointment.ends_at,
+      },
+      { excludeAppointmentId: appointmentId },
+    );
+
+    const { data, error } = await supabase
+      .from("patient_appointments")
+      .update(updatePayload)
+      .eq("id", appointmentId)
+      .select(selectColumns)
+      .maybeSingle();
+
+    if (error) {
+      throw mapAppointmentWriteError(error);
+    }
+
+    if (!data) {
+      throw new ApiError(404, "patient appointment not found");
+    }
+
+    return data;
   },
 
   async delete(id: unknown) {
