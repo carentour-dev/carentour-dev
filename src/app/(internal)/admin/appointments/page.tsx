@@ -120,21 +120,32 @@ const nullableUuidField = z.preprocess((value) => {
   return value ?? null;
 }, z.string().uuid().nullable());
 
-const formSchema = z.object({
-  patient_id: z.string().uuid({ message: "Select a patient" }),
-  doctor_id: nullableUuidField,
-  facility_id: nullableUuidField,
-  consultation_id: nullableUuidField,
-  title: z.string().min(3, "Title is required"),
-  appointment_type: z.string().min(2, "Appointment type is required"),
-  starts_at: z.string().min(1, "Provide a start time"),
-  ends_at: z.string().optional(),
-  status: z.enum(appointmentStatuses),
-  timezone: z.string().min(1).max(60),
-  location: z.string().optional(),
-  pre_visit_instructions: z.string().optional(),
-  notes: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    patient_id: z.string().uuid({ message: "Select a patient" }),
+    doctor_id: nullableUuidField,
+    facility_id: nullableUuidField,
+    consultation_id: nullableUuidField,
+    title: z.string().min(3, "Title is required"),
+    appointment_type: z.string().min(2, "Appointment type is required"),
+    starts_at: z.string().min(1, "Provide a start time"),
+    ends_at: z.string().optional(),
+    status: z.enum(appointmentStatuses),
+    timezone: z.string().min(1).max(60),
+    location: z.string().optional(),
+    pre_visit_instructions: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (!data.ends_at) return true;
+      return new Date(data.ends_at) > new Date(data.starts_at);
+    },
+    {
+      path: ["ends_at"],
+      message: "End time must be after start time",
+    },
+  );
 
 type AppointmentFormValues = z.infer<typeof formSchema>;
 
