@@ -24,6 +24,7 @@ const consultationSchema = z.object({
   doctorId: z.string().uuid().optional().nullable(),
   bookingType: z.enum(["onsite", "phone", "video"]).optional(),
   selectedSlotId: z.string().uuid().optional().nullable(),
+  idempotencyKey: z.string().min(12).max(120).optional(),
   destination: z.string().optional(),
   travelWindow: travelWindowSchema,
   healthBackground: z
@@ -124,6 +125,46 @@ const ensurePatientForUser = async (
   return insertedPatient?.id ?? null;
 };
 
+const normalizeIdempotencyKey = (value?: string | null) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length >= 12 ? trimmed.slice(0, 120) : null;
+};
+
+const findExistingSubmission = async (
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  idempotencyKey: string | null,
+  email: string,
+) => {
+  if (!idempotencyKey) return null;
+
+  const { data: existingRequest, error: requestError } = await supabaseAdmin
+    .from("contact_requests")
+    .select("id, status, email")
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (requestError || !existingRequest) {
+    return null;
+  }
+
+  if (existingRequest.email.toLowerCase() !== email.trim().toLowerCase()) {
+    return null;
+  }
+
+  const { data: existingConsultation } = await supabaseAdmin
+    .from("patient_consultations")
+    .select("id")
+    .eq("contact_request_id", existingRequest.id)
+    .maybeSingle();
+
+  return {
+    consultationRequestId: existingRequest.id,
+    bookedConsultationId: existingConsultation?.id ?? null,
+    status: existingRequest.status,
+  };
+};
+
 export const POST = async (req: NextRequest) => {
   try {
     const supabaseClient = await createSupabaseClient();
@@ -161,6 +202,25 @@ export const POST = async (req: NextRequest) => {
     const patientId = user
       ? await ensurePatientForUser(supabaseAdmin, user, payload)
       : null;
+    const idempotencyKey = normalizeIdempotencyKey(payload.idempotencyKey);
+    const existingSubmission = await findExistingSubmission(
+      supabaseAdmin,
+      idempotencyKey,
+      payload.email,
+    );
+
+    if (existingSubmission) {
+      return jsonResponse({
+        success: true,
+        consultationRequestId: existingSubmission.consultationRequestId,
+        bookedConsultationId: existingSubmission.bookedConsultationId,
+        booked: Boolean(existingSubmission.bookedConsultationId),
+        duplicate: true,
+        notificationQueued: false,
+        status: existingSubmission.status,
+      });
+    }
+
     const { firstName, lastName } = splitFullName(payload.fullName);
     const travelWindow = formatTravelWindow(payload.travelWindow);
 
@@ -208,10 +268,12 @@ export const POST = async (req: NextRequest) => {
       health_background: healthBackground,
       budget_range: payload.budgetRange,
       companions: payload.companions,
-      medical_reports: payload.medicalReports ?? attachmentsSummary,
+      medical_reports:
+        payload.medicalReports ?? attachmentsSummary ?? undefined,
       contact_preference: payload.contactPreference,
       additional_questions: payload.additionalQuestions,
       message: healthBackground,
+      idempotency_key: idempotencyKey ?? undefined,
       request_type: "consultation",
       user_id: user?.id ?? null,
       patient_id: patientId,
@@ -266,7 +328,10 @@ export const POST = async (req: NextRequest) => {
     );
 
     if (emailError) {
-      throw emailError;
+      console.error(
+        "[consultations] request saved but notification email failed",
+        emailError,
+      );
     }
 
     return jsonResponse({
@@ -274,6 +339,8 @@ export const POST = async (req: NextRequest) => {
       consultationRequestId: consultationRequest.id,
       bookedConsultationId,
       booked: Boolean(bookedConsultationId),
+      duplicate: false,
+      notificationQueued: !emailError,
       status: consultationRequest.status,
     });
   } catch (error) {
