@@ -137,6 +137,18 @@ test("admin booking queue exposes coordinator actions", () => {
   const archiveMigrationSource = readSource(
     "supabase/migrations/20260530004028_archive_appointment_bookings.sql",
   );
+  const deliveryGuardrailsMigrationSource = readSource(
+    "supabase/migrations/20260530150900_consultation_slot_delivery_guardrails.sql",
+  );
+  const consultationSlotModuleSource = readSource(
+    "src/server/modules/consultationSlots/module.ts",
+  );
+  const patientConsultationModuleSource = readSource(
+    "src/server/modules/patientConsultations/module.ts",
+  );
+  const consultationSlotManagerSource = readSource(
+    "src/components/admin/ConsultationSlotManager.tsx",
+  );
   const listRouteSource = readSource(
     "src/app/api/admin/appointment-bookings/route.ts",
   );
@@ -188,6 +200,48 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(moduleSource, /async archive/);
   assert.match(moduleSource, /archived_at: new Date\(\)\.toISOString\(\)/);
   assert.match(listRouteSource, /archived/);
+  assert.match(
+    deliveryGuardrailsMigrationSource,
+    /consultation_slots_delivery_fields_match_type/,
+  );
+  assert.match(
+    deliveryGuardrailsMigrationSource,
+    /appointment_bookings_delivery_fields_match_type/,
+  );
+  assert.match(
+    deliveryGuardrailsMigrationSource,
+    /patient_consultations_delivery_fields_match_type/,
+  );
+  assert.match(
+    deliveryGuardrailsMigrationSource,
+    /booking_type IN \('video', 'phone'\)/,
+  );
+  assert.match(consultationSlotModuleSource, /normalizeSlotDeliveryFields/);
+  assert.match(
+    consultationSlotModuleSource,
+    /Onsite consultation slots require a location/,
+  );
+  assert.match(consultationSlotModuleSource, /bookingType === "video"/);
+  assert.match(consultationSlotModuleSource, /location: null/);
+  assert.match(
+    patientConsultationModuleSource,
+    /normalizeConsultationDeliveryFields/,
+  );
+  assert.match(
+    patientConsultationModuleSource,
+    /Onsite consultations require a location/,
+  );
+  assert.match(
+    patientConsultationModuleSource,
+    /fields\.booking_type === "video"/,
+  );
+  assert.match(patientConsultationModuleSource, /location: null/);
+  assert.match(consultationSlotManagerSource, /watchedBookingType/);
+  assert.match(
+    consultationSlotManagerSource,
+    /Onsite consultation slots require a location/,
+  );
+  assert.match(consultationSlotManagerSource, /Clinic name or address/);
 
   assert.match(listRouteSource, /appointmentBookingController\.list/);
   assert.match(
