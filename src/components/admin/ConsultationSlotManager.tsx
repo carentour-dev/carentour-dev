@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { CalendarPlus, Loader2, Pencil, Trash2 } from "lucide-react";
@@ -152,6 +152,15 @@ const formSchema = z
   .refine((data) => new Date(data.ends_at) > new Date(data.starts_at), {
     path: ["ends_at"],
     message: "End time must be after start time",
+  })
+  .superRefine((data, ctx) => {
+    if (data.booking_type === "onsite" && !data.location?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location"],
+        message: "Onsite consultation slots require a location",
+      });
+    }
   });
 
 type SlotFormValues = z.infer<typeof formSchema>;
@@ -245,6 +254,10 @@ export function ConsultationSlotManager({
       notes: "",
     },
   });
+  const watchedBookingType = useWatch({
+    control: form.control,
+    name: "booking_type",
+  });
 
   const resetForm = () => {
     const start = defaultStart();
@@ -293,8 +306,12 @@ export function ConsultationSlotManager({
     ...values,
     starts_at: toIsoString(values.starts_at),
     ends_at: toIsoString(values.ends_at),
-    location: values.location?.trim() || null,
-    meeting_url: values.meeting_url?.trim() || null,
+    location:
+      values.booking_type === "onsite" ? values.location?.trim() || null : null,
+    meeting_url:
+      values.booking_type === "video"
+        ? values.meeting_url?.trim() || null
+        : null,
     notes: values.notes?.trim() || null,
   });
 
@@ -553,7 +570,18 @@ export function ConsultationSlotManager({
                       <FormLabel>Consultation type</FormLabel>
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+
+                          if (value === "onsite") {
+                            form.setValue("meeting_url", "");
+                          } else if (value === "video") {
+                            form.setValue("location", "");
+                          } else {
+                            form.setValue("location", "");
+                            form.setValue("meeting_url", "");
+                          }
+                        }}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -659,35 +687,39 @@ export function ConsultationSlotManager({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Clinic, phone, or virtual"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="meeting_url"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Meeting link</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {watchedBookingType === "onsite" ? (
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Clinic name or address"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
+                {watchedBookingType === "video" ? (
+                  <FormField
+                    control={form.control}
+                    name="meeting_url"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Meeting link</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
               </div>
               <FormField
                 control={form.control}
