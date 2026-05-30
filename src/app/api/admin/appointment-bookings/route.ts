@@ -28,11 +28,13 @@ export const GET = adminRoute(async (req: NextRequest) => {
     status?: (typeof appointmentBookingStatusValues)[number];
     patientId?: string;
     upcomingOnly?: boolean;
+    archived?: "active" | "archived" | "all";
   } = {};
 
   const statusParam = params.get("status");
   const patientId = params.get("patientId");
   const upcomingOnly = params.get("upcomingOnly");
+  const archived = params.get("archived");
 
   if (isValidStatus(statusParam)) {
     filters.status = statusParam;
@@ -44,6 +46,10 @@ export const GET = adminRoute(async (req: NextRequest) => {
 
   if (upcomingOnly !== null) {
     filters.upcomingOnly = upcomingOnly === "true";
+  }
+
+  if (archived === "active" || archived === "archived" || archived === "all") {
+    filters.archived = archived;
   }
 
   const bookings = await appointmentBookingController.list(filters);
