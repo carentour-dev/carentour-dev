@@ -107,6 +107,27 @@ type BookingActivityEntry = {
   type?: string | null;
 };
 
+type ReminderActionResponse = {
+  booking: BookingRecord;
+  reminder: {
+    success: boolean;
+    dryRun: boolean;
+    checked: number;
+    processed: number;
+    results?: Array<{
+      key?: string;
+      status?: string;
+      email?: string;
+      emailId?: string | null;
+      error?: string;
+      preview?: {
+        subject?: string;
+        text?: string;
+      };
+    }>;
+  };
+};
+
 const bookingStatuses = [
   "requested",
   "held",
@@ -260,6 +281,60 @@ const getBookingEmailStatus = (booking: BookingRecord) => {
   return null;
 };
 
+const getBookingReminderStatus = (booking: BookingRecord) => {
+  const metadata = getMetadataRecord(booking);
+  const reminders =
+    metadata &&
+    typeof metadata.reminders === "object" &&
+    metadata.reminders !== null &&
+    !Array.isArray(metadata.reminders)
+      ? metadata.reminders
+      : null;
+
+  const twentyFourHour =
+    reminders &&
+    typeof reminders.twentyFourHour === "object" &&
+    reminders.twentyFourHour !== null &&
+    !Array.isArray(reminders.twentyFourHour)
+      ? reminders.twentyFourHour
+      : null;
+  const twoHour =
+    reminders &&
+    typeof reminders.twoHour === "object" &&
+    reminders.twoHour !== null &&
+    !Array.isArray(reminders.twoHour)
+      ? reminders.twoHour
+      : null;
+  const manual =
+    reminders &&
+    typeof reminders.manual === "object" &&
+    reminders.manual !== null &&
+    !Array.isArray(reminders.manual)
+      ? reminders.manual
+      : null;
+
+  const statuses = [
+    twentyFourHour?.status,
+    twoHour?.status,
+    manual?.status,
+  ].filter((status): status is string => typeof status === "string");
+
+  if (statuses.includes("failed")) return "failed";
+  if (manual?.status === "sent") return "sent manually";
+  if (twoHour?.status === "sent") return "2h sent";
+  if (twentyFourHour?.status === "sent") return "24h sent";
+
+  if (
+    booking.status === "confirmed" &&
+    booking.confirmed_starts_at &&
+    new Date(booking.confirmed_starts_at).getTime() > Date.now()
+  ) {
+    return "pending";
+  }
+
+  return null;
+};
+
 const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
   const metadata = getMetadataRecord(booking);
   const storedActivity = Array.isArray(metadata?.activity)
@@ -312,6 +387,9 @@ const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
   );
 };
 
+const getReminderResult = (response: ReminderActionResponse) =>
+  response.reminder.results?.[0] ?? null;
+
 export default function AdminAppointmentBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("active");
@@ -326,6 +404,12 @@ export default function AdminAppointmentBookingsPage() {
   const [detailsTarget, setDetailsTarget] = useState<BookingRecord | null>(
     null,
   );
+  const [reminderPreview, setReminderPreview] = useState<{
+    booking: BookingRecord;
+    email: string;
+    subject: string;
+    text: string;
+  } | null>(null);
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -481,6 +565,68 @@ export default function AdminAppointmentBookingsPage() {
     },
   });
 
+  const reminderMutation = useMutation({
+    mutationFn: ({
+      booking,
+      dryRun,
+    }: {
+      booking: BookingRecord;
+      dryRun: boolean;
+    }) =>
+      adminFetch<ReminderActionResponse>(
+        `/api/admin/appointment-bookings/${booking.id}/reminder`,
+        {
+          method: "POST",
+          body: JSON.stringify({ dryRun }),
+        },
+      ),
+    onSuccess: (response, variables) => {
+      const result = getReminderResult(response);
+
+      if (variables.dryRun) {
+        const preview = result?.preview;
+        if (!preview?.subject || !preview.text || !result?.email) {
+          toast({
+            title: "Reminder preview unavailable",
+            description:
+              result?.error ??
+              "No patient email is available for this booking.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setReminderPreview({
+          booking: variables.booking,
+          email: result.email,
+          subject: preview.subject,
+          text: preview.text,
+        });
+        return;
+      }
+
+      invalidate(QUERY_KEY);
+      setDetailsTarget((current) =>
+        current?.id === response.booking.id ? response.booking : current,
+      );
+      toast({
+        title:
+          result?.status === "sent"
+            ? "Reminder sent"
+            : "Reminder request completed",
+        description: result?.email ? `Sent to ${result.email}.` : undefined,
+      });
+    },
+    onError: (error: Error) => {
+      invalidate(QUERY_KEY);
+      toast({
+        title: "Reminder action failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const openAction = (booking: BookingRecord, action: BookingAction) => {
     setActionTarget({ booking, action });
     setActionNotes("");
@@ -503,6 +649,12 @@ export default function AdminAppointmentBookingsPage() {
     !CLOSED_QUEUE_STATUSES.includes(booking.status);
   const canArchive = (booking: BookingRecord) =>
     CLOSED_QUEUE_STATUSES.includes(booking.status) && !booking.archived_at;
+  const canSendReminder = (booking: BookingRecord) =>
+    booking.status === "confirmed" &&
+    !booking.archived_at &&
+    Boolean(booking.confirmed_starts_at) &&
+    new Date(booking.confirmed_starts_at).getTime() >
+      new Date(slotRange.from).getTime();
   const hasPrimaryBookingActions = (booking: BookingRecord) =>
     canAssignSlot(booking) ||
     canConfirm(booking) ||
@@ -510,6 +662,7 @@ export default function AdminAppointmentBookingsPage() {
     canRequestReschedule(booking);
   const hasBookingActions = (booking: BookingRecord) =>
     hasPrimaryBookingActions(booking) ||
+    canSendReminder(booking) ||
     canCancel(booking) ||
     canArchive(booking);
   const filterDescription =
@@ -716,6 +869,11 @@ export default function AdminAppointmentBookingsPage() {
                           Email {getBookingEmailStatus(booking)}
                         </div>
                       ) : null}
+                      {getBookingReminderStatus(booking) ? (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Reminder {getBookingReminderStatus(booking)}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <div>{formatDateTime(booking.hold_expires_at)}</div>
@@ -777,9 +935,39 @@ export default function AdminAppointmentBookingsPage() {
                               Needs reschedule
                             </DropdownMenuItem>
                           ) : null}
-                          {canCancel(booking) ? (
+                          {canSendReminder(booking) ? (
                             <>
                               {hasPrimaryBookingActions(booking) ? (
+                                <DropdownMenuSeparator />
+                              ) : null}
+                              <DropdownMenuItem
+                                disabled={reminderMutation.isPending}
+                                onSelect={() =>
+                                  reminderMutation.mutate({
+                                    booking,
+                                    dryRun: true,
+                                  })
+                                }
+                              >
+                                Preview reminder
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={reminderMutation.isPending}
+                                onSelect={() =>
+                                  reminderMutation.mutate({
+                                    booking,
+                                    dryRun: false,
+                                  })
+                                }
+                              >
+                                Send reminder now
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                          {canCancel(booking) ? (
+                            <>
+                              {hasPrimaryBookingActions(booking) ||
+                              canSendReminder(booking) ? (
                                 <DropdownMenuSeparator />
                               ) : null}
                               <DropdownMenuItem
@@ -793,6 +981,7 @@ export default function AdminAppointmentBookingsPage() {
                           {canArchive(booking) ? (
                             <>
                               {hasPrimaryBookingActions(booking) ||
+                              canSendReminder(booking) ||
                               canCancel(booking) ? (
                                 <DropdownMenuSeparator />
                               ) : null}
@@ -863,6 +1052,10 @@ export default function AdminAppointmentBookingsPage() {
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Email {getBookingEmailStatus(detailsTarget) ?? "not sent"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Reminder{" "}
+                    {getBookingReminderStatus(detailsTarget) ?? "not pending"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Visibility:{" "}
@@ -979,6 +1172,83 @@ export default function AdminAppointmentBookingsPage() {
               onClick={() => setDetailsTarget(null)}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(reminderPreview)}
+        onOpenChange={(open) => {
+          if (!open) setReminderPreview(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reminder preview</DialogTitle>
+            <DialogDescription>
+              Preview the manual reminder before sending it to the patient.
+            </DialogDescription>
+          </DialogHeader>
+          {reminderPreview ? (
+            <div className="space-y-4">
+              <div className="grid gap-2 text-sm md:grid-cols-2">
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Patient
+                  </div>
+                  <div className="font-medium">
+                    {reminderPreview.booking.patients?.full_name ??
+                      "Guest request"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Recipient
+                  </div>
+                  <div className="font-medium">{reminderPreview.email}</div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Subject
+                </div>
+                <div className="rounded-md border border-border px-3 py-2 text-sm">
+                  {reminderPreview.subject}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Message
+                </div>
+                <pre className="max-h-80 whitespace-pre-wrap rounded-md border border-border px-3 py-2 text-sm leading-6 text-muted-foreground">
+                  {reminderPreview.text}
+                </pre>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReminderPreview(null)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              disabled={!reminderPreview || reminderMutation.isPending}
+              onClick={() => {
+                if (reminderPreview) {
+                  reminderMutation.mutate({
+                    booking: reminderPreview.booking,
+                    dryRun: false,
+                  });
+                  setReminderPreview(null);
+                }
+              }}
+            >
+              {reminderMutation.isPending ? "Sending..." : "Send reminder"}
             </Button>
           </DialogFooter>
         </DialogContent>
