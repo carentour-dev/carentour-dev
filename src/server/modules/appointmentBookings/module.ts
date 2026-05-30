@@ -77,6 +77,10 @@ const bookingActionSchema = z.object({
   cancellation_reason: z.string().optional().nullable(),
 });
 
+const reminderActionSchema = z.object({
+  dryRun: z.coerce.boolean().optional().default(true),
+});
+
 type AppointmentBookingInsert =
   Database["public"]["Tables"]["appointment_bookings"]["Insert"];
 type AppointmentBookingUpdate =
@@ -87,11 +91,114 @@ type AppointmentBookingNotificationType =
   | "confirmed"
   | "rescheduled"
   | "cancelled";
+type AppointmentBookingReminderResult = {
+  success: boolean;
+  dryRun: boolean;
+  checked: number;
+  processed: number;
+  results?: Array<{
+    bookingId?: string;
+    key?: string;
+    status?: string;
+    email?: string;
+    emailId?: string | null;
+    error?: string;
+    preview?: {
+      subject?: string;
+      text?: string;
+    };
+  }>;
+  error?: string;
+};
+type AppointmentBookingWithRelations = AppointmentBookingRow & {
+  patients?: {
+    full_name?: string | null;
+    contact_email?: string | null;
+  } | null;
+  doctors?: { name?: string | null } | null;
+  contact_requests?: { email?: string | null } | null;
+};
 
 const trimOptional = (value: string | undefined | null): string | null => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const formatReminderBookingType = (
+  value: Database["public"]["Enums"]["consultation_booking_type"],
+) => {
+  if (value === "onsite") return "Onsite";
+  if (value === "phone") return "Phone";
+  return "Video";
+};
+
+const formatReminderDateTime = (
+  value: string | null,
+  timezone: string | null,
+) => {
+  if (!value) return "To be confirmed";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "To be confirmed";
+
+  try {
+    return new Intl.DateTimeFormat("en", {
+      dateStyle: "full",
+      timeStyle: "short",
+      timeZone: timezone || undefined,
+    }).format(date);
+  } catch {
+    return date.toUTCString();
+  }
+};
+
+const getReminderEmail = (booking: AppointmentBookingWithRelations) =>
+  trimOptional(booking.patients?.contact_email) ??
+  trimOptional(booking.contact_requests?.email);
+
+const getReminderLocationRows = (booking: AppointmentBookingWithRelations) => {
+  if (booking.booking_type === "onsite" && booking.location) {
+    return [["Location", booking.location]] as Array<[string, string]>;
+  }
+
+  if (booking.booking_type === "video" && booking.meeting_url) {
+    return [["Meeting link", booking.meeting_url]] as Array<[string, string]>;
+  }
+
+  return [];
+};
+
+const buildManualReminderPreview = (
+  booking: AppointmentBookingWithRelations,
+) => {
+  const patientName = booking.patients?.full_name?.trim() || "there";
+  const subject = "Reminder: your Care N Tour consultation is coming up";
+  const rows = [
+    ["Reminder", "manual"],
+    [
+      "Time",
+      formatReminderDateTime(booking.confirmed_starts_at, booking.timezone),
+    ],
+    booking.doctors?.name ? ["Doctor", booking.doctors.name] : null,
+    ["Consultation type", formatReminderBookingType(booking.booking_type)],
+    ...getReminderLocationRows(booking),
+  ].filter(Boolean) as Array<[string, string]>;
+
+  return {
+    subject,
+    text: [
+      `Hello ${patientName},`,
+      "",
+      "This is your consultation reminder.",
+      "",
+      ...rows.map(([label, value]) => `${label}: ${value}`),
+      "",
+      "If you need to reschedule, reply to this email or contact your Care N Tour coordinator.",
+      "",
+      "Care N Tour Team",
+    ].join("\n"),
+  };
 };
 
 const toRecord = (value: Json | null | undefined): Record<string, Json> =>
@@ -578,6 +685,129 @@ export const appointmentBookingController = {
         detail: error instanceof Error ? error.message : String(error),
       });
     }
+  },
+
+  async sendAppointmentReminder(id: unknown, payload: unknown) {
+    const bookingId = z.string().uuid().parse(id);
+    const parsed = reminderActionSchema.parse(payload);
+    const booking = (await this.get(
+      bookingId,
+    )) as AppointmentBookingWithRelations;
+
+    if (booking.status !== "confirmed" || booking.archived_at) {
+      throw new ApiError(
+        422,
+        "Only active confirmed appointment bookings can receive reminders.",
+      );
+    }
+
+    if (!booking.confirmed_starts_at) {
+      throw new ApiError(
+        422,
+        "Appointment booking has no confirmed start time.",
+      );
+    }
+
+    const confirmedStartsAt = new Date(booking.confirmed_starts_at);
+    if (
+      Number.isNaN(confirmedStartsAt.getTime()) ||
+      confirmedStartsAt.getTime() <= Date.now()
+    ) {
+      throw new ApiError(
+        422,
+        "Appointment reminders can only be sent before the start time.",
+      );
+    }
+
+    const email = getReminderEmail(booking);
+    if (!email) {
+      throw new ApiError(
+        422,
+        "No patient or request email is available for this booking.",
+      );
+    }
+
+    if (parsed.dryRun) {
+      const preview = buildManualReminderPreview(booking);
+      return {
+        reminder: {
+          success: true,
+          dryRun: true,
+          checked: 1,
+          processed: 1,
+          results: [
+            {
+              bookingId,
+              key: "manual",
+              status: "dry_run",
+              email,
+              preview,
+            },
+          ],
+        },
+        booking,
+      };
+    }
+
+    const reminderSecret = process.env.REMINDER_JOB_SECRET?.trim();
+    if (!reminderSecret) {
+      throw new ApiError(
+        500,
+        "REMINDER_JOB_SECRET is not configured on the server. Add the same reminder secret used by the Supabase cron job to your app environment.",
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } =
+      await supabase.functions.invoke<AppointmentBookingReminderResult>(
+        "send-appointment-reminders",
+        {
+          headers: {
+            "x-reminder-secret": reminderSecret,
+          },
+          body: {
+            bookingId,
+            dryRun: parsed.dryRun,
+            reminderKey: "manual",
+          },
+        },
+      );
+
+    if (error) {
+      throw new ApiError(
+        502,
+        "Appointment reminder function failed",
+        error.message,
+      );
+    }
+
+    if (!data?.success) {
+      throw new ApiError(
+        502,
+        data?.error ?? "Appointment reminder function failed",
+      );
+    }
+
+    const result = data.results?.[0];
+    if (!result) {
+      throw new ApiError(
+        502,
+        "Appointment reminder function did not return a booking result. Redeploy the send-appointment-reminders Edge Function so it supports manual bookingId reminders.",
+      );
+    }
+
+    if (result?.status !== "sent") {
+      throw new ApiError(
+        result?.status === "skipped" ? 422 : 502,
+        result?.error ??
+          `Appointment reminder was not sent. Status: ${result?.status ?? "unknown"}.`,
+      );
+    }
+
+    return {
+      reminder: data,
+      booking: parsed.dryRun ? booking : await this.get(bookingId),
+    };
   },
 
   async assignSlot(
