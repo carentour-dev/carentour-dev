@@ -61,6 +61,120 @@ test("public consultation flow distinguishes requested and confirmed slots", () 
   assert.doesNotMatch(routeSource, /if \(emailError\) \{\s*throw emailError;/);
 });
 
+test("appointment booking workflow records selected slot lifecycle", () => {
+  const migrationSource = readSource(
+    "supabase/migrations/20260529225015_appointment_booking_workflow.sql",
+  );
+  const bookingSource = readSource(
+    "src/server/modules/appointmentBookings/module.ts",
+  );
+  const routeSource = readSource("src/app/api/consultations/route.ts");
+  const portalSource = readSource("src/hooks/usePatientPortalData.ts");
+
+  assert.match(
+    migrationSource,
+    /CREATE TYPE public\.appointment_booking_status/,
+  );
+  assert.match(
+    migrationSource,
+    /CREATE TABLE IF NOT EXISTS public\.appointment_bookings/,
+  );
+  assert.match(
+    migrationSource,
+    /CREATE POLICY "Patients can view their appointment bookings"/,
+  );
+  assert.match(
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\.hold_appointment_booking_slot/,
+  );
+  assert.match(
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\.confirm_appointment_booking/,
+  );
+  assert.match(
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\.expire_stale_appointment_booking_holds/,
+  );
+  assert.match(
+    migrationSource,
+    /GRANT EXECUTE ON FUNCTION public\.confirm_appointment_booking/,
+  );
+
+  assert.match(bookingSource, /async createRequested\(payload: unknown\)/);
+  assert.match(bookingSource, /async hold\(/);
+  assert.match(bookingSource, /async confirm\(/);
+  assert.match(bookingSource, /expire_stale_appointment_booking_holds/);
+
+  assert.match(routeSource, /appointmentBookingController\.createRequested/);
+  assert.match(routeSource, /appointmentBookingController\.confirm/);
+  assert.match(routeSource, /appointmentBookingController\.hold/);
+  assert.match(routeSource, /appointmentBookingStatus/);
+
+  assert.match(portalSource, /type AppointmentBookingRow/);
+  assert.match(portalSource, /\.from\("appointment_bookings"\)/);
+  assert.match(
+    portalSource,
+    /appointmentBookings: snapshot\?\.appointmentBookings/,
+  );
+});
+
+test("admin booking queue exposes coordinator actions", () => {
+  const moduleSource = readSource(
+    "src/server/modules/appointmentBookings/module.ts",
+  );
+  const reassignmentMigrationSource = readSource(
+    "supabase/migrations/20260529235307_appointment_booking_slot_reassignment.sql",
+  );
+  const listRouteSource = readSource(
+    "src/app/api/admin/appointment-bookings/route.ts",
+  );
+  const actionRouteSource = readSource(
+    "src/app/api/admin/appointment-bookings/[id]/route.ts",
+  );
+  const pageSource = readSource(
+    "src/app/(internal)/admin/appointment-bookings/page.tsx",
+  );
+  const operationsPageSource = readSource(
+    "src/app/(internal)/operations/appointment-bookings/page.tsx",
+  );
+
+  assert.match(moduleSource, /async list\(filters/);
+  assert.match(moduleSource, /async performAction/);
+  assert.match(moduleSource, /case "confirm"/);
+  assert.match(moduleSource, /case "release"/);
+  assert.match(moduleSource, /case "cancel"/);
+  assert.match(moduleSource, /case "request_reschedule"/);
+  assert.match(moduleSource, /case "assign_slot"/);
+  assert.match(moduleSource, /async assignSlot/);
+
+  assert.match(
+    reassignmentMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.reassign_appointment_booking_slot/,
+  );
+  assert.match(reassignmentMigrationSource, /status = 'rescheduled'/);
+  assert.match(reassignmentMigrationSource, /previousSlotId/);
+
+  assert.match(listRouteSource, /appointmentBookingController\.list/);
+  assert.match(
+    actionRouteSource,
+    /appointmentBookingController\.performAction/,
+  );
+  assert.match(pageSource, /title="Booking Queue"/);
+  assert.match(pageSource, /retry: false/);
+  assert.match(pageSource, /Booking queue could not be loaded/);
+  assert.match(pageSource, /useState<StatusFilter>\("all"\)/);
+  assert.match(pageSource, /Needs action shows requested, held/);
+  assert.match(pageSource, /No bookings currently need coordinator action/);
+  assert.match(pageSource, /Confirm booking/);
+  assert.match(pageSource, /Release hold/);
+  assert.match(pageSource, /Request reschedule/);
+  assert.match(pageSource, /Cancel booking/);
+  assert.match(pageSource, /DropdownMenu/);
+  assert.match(pageSource, /Assign available slot/);
+  assert.match(pageSource, /action: "assign_slot"/);
+  assert.match(operationsPageSource, /admin\/appointment-bookings\/page/);
+});
+
 test("consultation submissions carry an idempotency key through the request flow", () => {
   const pageSource = readSource(
     "src/app/(public)/[locale]/consultation/ConsultationPageClient.tsx",
