@@ -107,6 +107,18 @@ type BookingActivityEntry = {
   type?: string | null;
 };
 
+type ReminderAuditEntry = {
+  id: string;
+  key: string;
+  label: string;
+  source: "Automatic" | "Manual";
+  status: string;
+  attemptedAt: string | null;
+  email: string | null;
+  emailId: string | null;
+  error: string | null;
+};
+
 type ReminderActionResponse = {
   booking: BookingRecord;
   reminder: {
@@ -227,6 +239,9 @@ const formatBookingType = (value: BookingRow["booking_type"]) =>
 const formatNullable = (value: string | null | undefined) =>
   value && value.trim().length > 0 ? value : "Not set";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const isConfirmedBooking = (booking: Pick<BookingRecord, "status">) =>
   booking.status === "confirmed";
 
@@ -242,14 +257,163 @@ const shouldShowCoordinatorNotes = (booking: BookingRecord) =>
 
 const getMetadataRecord = (booking: BookingRecord) => {
   const metadata = booking.metadata;
-  if (
-    typeof metadata !== "object" ||
-    metadata === null ||
-    Array.isArray(metadata)
-  ) {
-    return null;
+  return isRecord(metadata) ? metadata : null;
+};
+
+const reminderKeyLabels: Record<string, string> = {
+  twentyFourHour: "24-hour reminder",
+  twoHour: "2-hour reminder",
+  manual: "Manual reminder",
+};
+
+const getReminderKeyLabel = (key: string) =>
+  reminderKeyLabels[key] ?? "Reminder";
+
+const getReminderSource = (key: string): ReminderAuditEntry["source"] =>
+  key === "manual" ? "Manual" : "Automatic";
+
+const getReminderStatusLabel = (status: string) => {
+  if (status === "sent") return "Sent";
+  if (status === "failed") return "Failed";
+  if (status === "skipped") return "Skipped";
+  if (status === "dry_run") return "Previewed";
+  return status;
+};
+
+const getReminderRecord = (booking: BookingRecord, key: string) => {
+  const reminders = getMetadataRecord(booking)?.reminders;
+  if (!isRecord(reminders)) return null;
+  const reminder = reminders[key];
+  return isRecord(reminder) ? reminder : null;
+};
+
+const getReminderAttemptStatus = (booking: BookingRecord, key: string) => {
+  const status = getReminderRecord(booking, key)?.status;
+  return typeof status === "string" ? status : null;
+};
+
+const getBookingReminderAudit = (
+  booking: BookingRecord,
+): ReminderAuditEntry[] => {
+  const metadata = getMetadataRecord(booking);
+  const entries: ReminderAuditEntry[] = [];
+  const seen = new Set<string>();
+
+  const pushEntry = (
+    raw: Record<string, unknown>,
+    fallbackKey: string,
+    index: number,
+  ) => {
+    const key = typeof raw.key === "string" ? raw.key : fallbackKey;
+    const status = typeof raw.status === "string" ? raw.status : null;
+    if (!status) return;
+
+    const attemptedAt =
+      typeof raw.attemptedAt === "string"
+        ? raw.attemptedAt
+        : typeof raw.at === "string"
+          ? raw.at
+          : null;
+    const email = typeof raw.email === "string" ? raw.email : null;
+    const emailId = typeof raw.emailId === "string" ? raw.emailId : null;
+    const error = typeof raw.error === "string" ? raw.error : null;
+    const dedupeKey = [
+      key,
+      status,
+      attemptedAt ?? "",
+      email ?? "",
+      emailId ?? "",
+      error ?? "",
+    ].join("|");
+
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+
+    entries.push({
+      id:
+        typeof raw.id === "string"
+          ? raw.id
+          : `reminder-${fallbackKey}-${index}`,
+      key,
+      label: getReminderKeyLabel(key),
+      source: getReminderSource(key),
+      status,
+      attemptedAt,
+      email,
+      emailId,
+      error,
+    });
+  };
+
+  const reminderEvents = metadata?.reminderEvents;
+  if (Array.isArray(reminderEvents)) {
+    reminderEvents.forEach((item, index) => {
+      if (isRecord(item)) pushEntry(item, "event", index);
+    });
   }
-  return metadata;
+
+  const reminders = metadata?.reminders;
+  if (isRecord(reminders)) {
+    ["manual", "twoHour", "twentyFourHour"].forEach((key, index) => {
+      const reminder = reminders[key];
+      if (isRecord(reminder)) pushEntry(reminder, key, index);
+    });
+  }
+
+  return entries.sort((left, right) => {
+    const leftTime = left.attemptedAt
+      ? new Date(left.attemptedAt).getTime()
+      : 0;
+    const rightTime = right.attemptedAt
+      ? new Date(right.attemptedAt).getTime()
+      : 0;
+    return rightTime - leftTime;
+  });
+};
+
+const getNextReminderSummary = (booking: BookingRecord) => {
+  if (booking.archived_at) return "Archived booking; reminders are disabled.";
+  if (booking.status !== "confirmed") {
+    return "Reminders start after the booking is confirmed.";
+  }
+  if (!booking.confirmed_starts_at) {
+    return "No confirmed time is set, so reminders cannot be scheduled.";
+  }
+
+  const startsAt = new Date(booking.confirmed_starts_at);
+  if (Number.isNaN(startsAt.getTime())) {
+    return "The confirmed time is invalid, so reminders cannot be scheduled.";
+  }
+
+  const msUntil = startsAt.getTime() - Date.now();
+  if (msUntil <= 0) return "The appointment time has passed.";
+
+  const twoHourStatus = getReminderAttemptStatus(booking, "twoHour");
+  const twentyFourHourStatus = getReminderAttemptStatus(
+    booking,
+    "twentyFourHour",
+  );
+
+  if (msUntil <= 2 * 60 * 60 * 1000) {
+    return twoHourStatus
+      ? `2-hour reminder already ${getReminderStatusLabel(twoHourStatus).toLowerCase()}.`
+      : "Eligible for the 2-hour automatic reminder.";
+  }
+
+  if (msUntil <= 24 * 60 * 60 * 1000) {
+    return twentyFourHourStatus
+      ? `24-hour reminder already ${getReminderStatusLabel(twentyFourHourStatus).toLowerCase()}.`
+      : "Eligible for the 24-hour automatic reminder.";
+  }
+
+  return "Automatic reminder window has not opened yet.";
+};
+
+const getReminderTone = (status: string) => {
+  if (status === "sent") return "success" as const;
+  if (status === "failed") return "danger" as const;
+  if (status === "skipped") return "warning" as const;
+  return "default" as const;
 };
 
 const getBookingEmailStatus = (booking: BookingRecord) => {
@@ -389,6 +553,114 @@ const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
 
 const getReminderResult = (response: ReminderActionResponse) =>
   response.reminder.results?.[0] ?? null;
+
+const ReminderAuditPanel = ({ booking }: { booking: BookingRecord }) => {
+  const reminders = getBookingReminderAudit(booking);
+  const lastReminder = reminders[0] ?? null;
+  const shouldShowAttemptList =
+    reminders.length > 1 ||
+    reminders.some(
+      (reminder) =>
+        reminder.status === "failed" || reminder.status === "skipped",
+    );
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        Reminder audit
+      </div>
+      <div className="grid gap-3 rounded-md border border-border p-3 text-sm md:grid-cols-3">
+        <div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Last reminder
+          </div>
+          <div className="mt-1 font-medium">
+            {lastReminder
+              ? `${lastReminder.label} ${getReminderStatusLabel(lastReminder.status).toLowerCase()}`
+              : "No reminder sent"}
+          </div>
+          {lastReminder?.attemptedAt ? (
+            <div className="mt-1 text-xs text-muted-foreground">
+              {formatDateTime(lastReminder.attemptedAt)}
+            </div>
+          ) : null}
+        </div>
+        <div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Recipient
+          </div>
+          <div className="mt-1 font-medium">
+            {formatNullable(lastReminder?.email)}
+          </div>
+          {lastReminder?.emailId ? (
+            <details className="mt-1 text-xs text-muted-foreground">
+              <summary className="cursor-pointer select-none">
+                Delivery details
+              </summary>
+              <div className="mt-1 break-all">
+                Email delivery ID: {lastReminder.emailId}
+              </div>
+            </details>
+          ) : null}
+        </div>
+        <div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Next automatic reminder
+          </div>
+          <div className="mt-1 text-muted-foreground">
+            {getNextReminderSummary(booking)}
+          </div>
+        </div>
+      </div>
+
+      {shouldShowAttemptList ? (
+        <div className="space-y-2">
+          {reminders.map((reminder) => (
+            <div
+              key={reminder.id}
+              className="grid gap-3 border-b border-border pb-3 last:border-b-0 md:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1.2fr)]"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">{reminder.label}</span>
+                  <WorkspaceStatusBadge tone={getReminderTone(reminder.status)}>
+                    {getReminderStatusLabel(reminder.status)}
+                  </WorkspaceStatusBadge>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {reminder.source}
+                  {reminder.attemptedAt
+                    ? ` · ${formatDateTime(reminder.attemptedAt)}`
+                    : ""}
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <div>{formatNullable(reminder.email)}</div>
+                {reminder.emailId ? (
+                  <details className="mt-1 text-xs">
+                    <summary className="cursor-pointer select-none">
+                      Delivery details
+                    </summary>
+                    <div className="mt-1 break-all">
+                      Email delivery ID: {reminder.emailId}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {reminder.error ?? "No failure recorded."}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : reminders.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+          No reminder attempts have been recorded for this booking yet.
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 export default function AdminAppointmentBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -866,7 +1138,7 @@ export default function AdminAppointmentBookingsPage() {
                       </WorkspaceStatusBadge>
                       {getBookingEmailStatus(booking) ? (
                         <div className="mt-2 text-xs text-muted-foreground">
-                          Email {getBookingEmailStatus(booking)}
+                          Confirmation email {getBookingEmailStatus(booking)}
                         </div>
                       ) : null}
                       {getBookingReminderStatus(booking) ? (
@@ -1051,7 +1323,8 @@ export default function AdminAppointmentBookingsPage() {
                     </WorkspaceStatusBadge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Email {getBookingEmailStatus(detailsTarget) ?? "not sent"}
+                    Confirmation email{" "}
+                    {getBookingEmailStatus(detailsTarget) ?? "not sent"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Reminder{" "}
@@ -1117,6 +1390,8 @@ export default function AdminAppointmentBookingsPage() {
                   </div>
                 ) : null}
               </div>
+
+              <ReminderAuditPanel booking={detailsTarget} />
 
               <div className="space-y-3">
                 <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
