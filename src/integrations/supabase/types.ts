@@ -1114,6 +1114,8 @@ export type Database = {
       };
       appointment_bookings: {
         Row: {
+          archive_note: string | null;
+          archived_at: string | null;
           booking_type: Database["public"]["Enums"]["consultation_booking_type"];
           cancellation_reason: string | null;
           confirmed_ends_at: string | null;
@@ -1139,6 +1141,8 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          archive_note?: string | null;
+          archived_at?: string | null;
           booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
           cancellation_reason?: string | null;
           confirmed_ends_at?: string | null;
@@ -1164,6 +1168,8 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          archive_note?: string | null;
+          archived_at?: string | null;
           booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
           cancellation_reason?: string | null;
           confirmed_ends_at?: string | null;
@@ -3261,6 +3267,14 @@ export type Database = {
           p_user_id?: string | null;
           p_contact_request_id?: string | null;
           p_notes?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["appointment_bookings"]["Row"];
+      };
+      cancel_appointment_booking: {
+        Args: {
+          p_booking_id: string;
+          p_notes?: string | null;
+          p_cancellation_reason?: string | null;
         };
         Returns: Database["public"]["Tables"]["appointment_bookings"]["Row"];
       };
