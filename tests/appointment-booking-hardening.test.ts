@@ -256,6 +256,7 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /retry: false/);
   assert.match(pageSource, /Booking queue could not be loaded/);
   assert.match(pageSource, /useState<StatusFilter>\("all"\)/);
+  assert.match(pageSource, /useState<ReminderFilter>\("all"\)/);
   assert.match(pageSource, /Needs action shows requested, held/);
   assert.match(pageSource, /No bookings currently need coordinator action/);
   assert.match(pageSource, /Confirm booking/);
@@ -280,6 +281,12 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Archive record/);
   assert.match(pageSource, /Visibility/);
   assert.match(pageSource, /Archived records/);
+  assert.match(pageSource, /reminderFilterLabels/);
+  assert.match(pageSource, /Reminder pending/);
+  assert.match(pageSource, /Reminder sent/);
+  assert.match(pageSource, /Reminder failed/);
+  assert.match(pageSource, /No reminder activity/);
+  assert.match(pageSource, /getBookingReminderFilterState/);
   assert.match(
     pageSource,
     /Confirmation email \{getBookingEmailStatus\(booking\)\}/,
