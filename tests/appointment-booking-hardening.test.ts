@@ -125,6 +125,9 @@ test("admin booking queue exposes coordinator actions", () => {
   const notificationFunctionSource = readSource(
     "supabase/functions/send-booking-notification/index.ts",
   );
+  const reminderFunctionSource = readSource(
+    "supabase/functions/send-appointment-reminders/index.ts",
+  );
   const reassignmentMigrationSource = readSource(
     "supabase/migrations/20260529235307_appointment_booking_slot_reassignment.sql",
   );
@@ -139,6 +142,9 @@ test("admin booking queue exposes coordinator actions", () => {
   );
   const actionRouteSource = readSource(
     "src/app/api/admin/appointment-bookings/[id]/route.ts",
+  );
+  const reminderRouteSource = readSource(
+    "src/app/api/admin/appointment-bookings/[id]/reminder/route.ts",
   );
   const pageSource = readSource(
     "src/app/(internal)/admin/appointment-bookings/page.tsx",
@@ -160,6 +166,9 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(moduleSource, /appendActivityMetadata/);
   assert.match(moduleSource, /recordBookingActivity/);
   assert.match(moduleSource, /status: "failed"/);
+  assert.match(moduleSource, /async sendAppointmentReminder/);
+  assert.match(moduleSource, /send-appointment-reminders/);
+  assert.match(moduleSource, /reminderKey: "manual"/);
 
   assert.match(
     reassignmentMigrationSource,
@@ -184,6 +193,10 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(
     actionRouteSource,
     /appointmentBookingController\.performAction/,
+  );
+  assert.match(
+    reminderRouteSource,
+    /appointmentBookingController\.sendAppointmentReminder/,
   );
   assert.match(pageSource, /title="Booking Queue"/);
   assert.match(pageSource, /retry: false/);
@@ -214,11 +227,25 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Visibility/);
   assert.match(pageSource, /Archived records/);
   assert.match(pageSource, /Email \{getBookingEmailStatus\(booking\)\}/);
+  assert.match(pageSource, /getBookingReminderStatus/);
+  assert.match(pageSource, /Reminder \{getBookingReminderStatus\(booking\)\}/);
+  assert.match(pageSource, /Preview reminder/);
+  assert.match(pageSource, /Send reminder now/);
+  assert.match(pageSource, /Reminder preview/);
+  assert.match(pageSource, /\/reminder/);
   assert.match(notificationFunctionSource, /type NotificationType/);
   assert.match(notificationFunctionSource, /confirmed/);
   assert.match(notificationFunctionSource, /rescheduled/);
   assert.match(notificationFunctionSource, /cancelled/);
   assert.match(notificationFunctionSource, /resend\.emails\.send/);
+  assert.match(reminderFunctionSource, /type ReminderKey/);
+  assert.match(reminderFunctionSource, /twentyFourHour/);
+  assert.match(reminderFunctionSource, /twoHour/);
+  assert.match(reminderFunctionSource, /manual/);
+  assert.match(reminderFunctionSource, /bookingId/);
+  assert.match(reminderFunctionSource, /hasServiceRoleToken/);
+  assert.match(reminderFunctionSource, /send-appointment-reminders function/);
+  assert.match(reminderFunctionSource, /reminder_sent/);
   assert.match(operationsPageSource, /admin\/appointment-bookings\/page/);
 });
 
