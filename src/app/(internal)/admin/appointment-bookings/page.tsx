@@ -989,6 +989,11 @@ export default function AdminAppointmentBookingsPage() {
     Boolean(booking.confirmed_starts_at) &&
     new Date(booking.confirmed_starts_at).getTime() >
       new Date(slotRange.from).getTime();
+  const canRetryReminder = (booking: BookingRecord) =>
+    canSendReminder(booking) &&
+    getBookingReminderFilterState(booking) === "failed";
+  const getReminderSendActionLabel = (booking: BookingRecord) =>
+    canRetryReminder(booking) ? "Retry reminder" : "Send reminder now";
   const hasPrimaryBookingActions = (booking: BookingRecord) =>
     canAssignSlot(booking) ||
     canConfirm(booking) ||
@@ -1097,8 +1102,8 @@ export default function AdminAppointmentBookingsPage() {
         />
       </div>
 
-      <WorkspaceFilterBar>
-        <div className="flex min-w-[240px] flex-col gap-1">
+      <WorkspaceFilterBar className="grid gap-4 p-4 lg:grid-cols-3 lg:items-start lg:justify-normal">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">
             Status
           </span>
@@ -1124,7 +1129,7 @@ export default function AdminAppointmentBookingsPage() {
             {filterDescription}
           </span>
         </div>
-        <div className="flex min-w-[220px] flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">
             Visibility
           </span>
@@ -1145,7 +1150,7 @@ export default function AdminAppointmentBookingsPage() {
             {archiveDescription}
           </span>
         </div>
-        <div className="flex min-w-[220px] flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">
             Reminder
           </span>
@@ -1366,7 +1371,7 @@ export default function AdminAppointmentBookingsPage() {
                                   })
                                 }
                               >
-                                Send reminder now
+                                {getReminderSendActionLabel(booking)}
                               </DropdownMenuItem>
                             </>
                           ) : null}
