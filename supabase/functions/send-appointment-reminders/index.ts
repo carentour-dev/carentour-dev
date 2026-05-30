@@ -136,6 +136,32 @@ function setReminderMetadata(
   };
 }
 
+function appendReminderEvent(
+  metadata: Record<string, unknown> | null,
+  key: ReminderKey,
+  reminder: ReminderRecord,
+) {
+  const base = toRecord(metadata);
+  const existingEvents = Array.isArray(base.reminderEvents)
+    ? base.reminderEvents.filter(
+        (item) =>
+          typeof item === "object" && item !== null && !Array.isArray(item),
+      )
+    : [];
+
+  return {
+    ...base,
+    reminderEvents: [
+      ...existingEvents,
+      {
+        id: crypto.randomUUID(),
+        key,
+        ...reminder,
+      },
+    ].slice(-50),
+  };
+}
+
 function appendActivity(
   metadata: Record<string, unknown> | null,
   activity: Record<string, unknown>,
@@ -168,7 +194,8 @@ function updateReminderAndActivity(
   activity: Record<string, unknown>,
 ) {
   const withReminder = setReminderMetadata(metadata, key, reminder);
-  return appendActivity(withReminder, activity);
+  const withReminderEvent = appendReminderEvent(withReminder, key, reminder);
+  return appendActivity(withReminderEvent, activity);
 }
 
 function getDueReminderKey(
@@ -311,7 +338,7 @@ function buildEmail(booking: BookingRecord, key: ReminderKey) {
       </div>
 
       <p style="font-size: 16px; line-height: 1.6;">Hello ${escapeHtml(patientName)},</p>
-      <p style="font-size: 16px; line-height: 1.6;">This is your ${escapeHtml(reminderName)} reminder.</p>
+      <p style="font-size: 16px; line-height: 1.6;">This is your consultation reminder.</p>
 
       <table style="width: 100%; border-collapse: collapse; margin: 24px 0; background: #f8fafc; border-radius: 14px; padding: 18px; display: block;">
         <tbody>${detailsHtml}</tbody>
@@ -331,7 +358,7 @@ function buildEmail(booking: BookingRecord, key: ReminderKey) {
   const text = [
     `Hello ${patientName},`,
     "",
-    `This is your ${reminderName} reminder.`,
+    "This is your consultation reminder.",
     "",
     ...detailRows.map(([label, value]) => `${label}: ${value}`),
     "",
@@ -432,6 +459,7 @@ async function processReminder(
       bookingId: booking.id,
       key,
       status: "failed",
+      email,
       error: error.message,
     };
   }
@@ -457,6 +485,7 @@ async function processReminder(
     bookingId: booking.id,
     key,
     status: "sent",
+    email,
     emailId: data?.id ?? null,
   };
 }
