@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
+  AlertTriangle,
+  Bell,
+  BellOff,
   CalendarClock,
   CheckCircle2,
   Loader2,
@@ -760,21 +763,21 @@ export default function AdminAppointmentBookingsPage() {
       ? query.error.message
       : "The booking queue could not be loaded. Retry in a moment.";
 
-  const bookings = useMemo(() => {
+  const statusFilteredBookings = useMemo(() => {
     const rows = query.data ?? [];
-    const statusRows =
-      statusFilter === "active"
-        ? rows.filter((booking) =>
-            ACTIVE_QUEUE_STATUSES.includes(booking.status),
-          )
-        : rows;
+    if (statusFilter !== "active") return rows;
+    return rows.filter((booking) =>
+      ACTIVE_QUEUE_STATUSES.includes(booking.status),
+    );
+  }, [query.data, statusFilter]);
 
-    if (reminderFilter === "all") return statusRows;
+  const bookings = useMemo(() => {
+    if (reminderFilter === "all") return statusFilteredBookings;
 
-    return statusRows.filter(
+    return statusFilteredBookings.filter(
       (booking) => getBookingReminderFilterState(booking) === reminderFilter,
     );
-  }, [query.data, reminderFilter, statusFilter]);
+  }, [reminderFilter, statusFilteredBookings]);
 
   const counts = useMemo(
     () =>
@@ -795,6 +798,26 @@ export default function AdminAppointmentBookingsPage() {
         },
       ),
     [query.data],
+  );
+
+  const reminderCounts = useMemo(
+    () =>
+      statusFilteredBookings.reduce<
+        Record<Exclude<ReminderFilter, "all">, number>
+      >(
+        (acc, booking) => {
+          const state = getBookingReminderFilterState(booking);
+          acc[state] += 1;
+          return acc;
+        },
+        {
+          pending: 0,
+          sent: 0,
+          failed: 0,
+          none: 0,
+        },
+      ),
+    [statusFilteredBookings],
   );
 
   const actionMutation = useMutation({
@@ -1036,6 +1059,41 @@ export default function AdminAppointmentBookingsPage() {
           value={counts.reschedule_requested}
           icon={RotateCcw}
           emphasisTone="warning"
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Pending reminders"
+          value={reminderCounts.pending}
+          icon={Bell}
+          emphasisTone="warning"
+          helperText="Confirmed future bookings awaiting reminder delivery."
+          onClick={() => setReminderFilter("pending")}
+        />
+        <WorkspaceMetricCard
+          label="Sent reminders"
+          value={reminderCounts.sent}
+          icon={CheckCircle2}
+          emphasisTone="success"
+          helperText="Bookings with at least one successful reminder."
+          onClick={() => setReminderFilter("sent")}
+        />
+        <WorkspaceMetricCard
+          label="Failed reminders"
+          value={reminderCounts.failed}
+          icon={AlertTriangle}
+          emphasisTone="danger"
+          helperText="Reminder attempts that need coordinator follow-up."
+          onClick={() => setReminderFilter("failed")}
+        />
+        <WorkspaceMetricCard
+          label="No reminder activity"
+          value={reminderCounts.none}
+          icon={BellOff}
+          emphasisTone="muted"
+          helperText="Bookings outside reminder tracking or not eligible yet."
+          onClick={() => setReminderFilter("none")}
         />
       </div>
 
