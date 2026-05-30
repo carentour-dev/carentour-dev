@@ -49,6 +49,7 @@ const listBookingsSchema = z.object({
   status: z.enum(BOOKING_STATUSES).optional(),
   patientId: z.string().uuid().optional(),
   upcomingOnly: z.coerce.boolean().optional(),
+  archived: z.enum(["active", "archived", "all"]).optional(),
 });
 
 const updateBookingSchema = z
@@ -69,6 +70,7 @@ const bookingActionSchema = z.object({
     "cancel",
     "request_reschedule",
     "assign_slot",
+    "archive",
   ]),
   slot_id: z.string().uuid().optional(),
   notes: z.string().optional().nullable(),
@@ -81,11 +83,61 @@ type AppointmentBookingUpdate =
   Database["public"]["Tables"]["appointment_bookings"]["Update"];
 type AppointmentBookingRow =
   Database["public"]["Tables"]["appointment_bookings"]["Row"];
+type AppointmentBookingNotificationType =
+  | "confirmed"
+  | "rescheduled"
+  | "cancelled";
 
 const trimOptional = (value: string | undefined | null): string | null => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const toRecord = (value: Json | null | undefined): Record<string, Json> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? { ...value }
+    : {};
+
+const appendNotificationMetadata = (
+  metadata: Json | null | undefined,
+  notification: Record<string, Json>,
+): Json => {
+  const base = toRecord(metadata);
+  const notifications = toRecord(base.notifications);
+
+  return {
+    ...base,
+    notifications: {
+      ...notifications,
+      bookingEmail: notification,
+    },
+  };
+};
+
+const appendActivityMetadata = (
+  metadata: Json | null | undefined,
+  activity: Record<string, Json>,
+): Json => {
+  const base = toRecord(metadata);
+  const existingActivity = Array.isArray(base.activity)
+    ? base.activity.filter(
+        (item): item is Json =>
+          typeof item === "object" && item !== null && !Array.isArray(item),
+      )
+    : [];
+
+  return {
+    ...base,
+    activity: [
+      ...existingActivity,
+      {
+        id: crypto.randomUUID(),
+        at: new Date().toISOString(),
+        ...activity,
+      },
+    ].slice(-80),
+  };
 };
 
 const mapBookingError = (error: { code?: string; message?: string }) => {
@@ -180,6 +232,12 @@ export const appointmentBookingController = {
       );
     }
 
+    if (parsed.archived === "archived") {
+      query = query.not("archived_at", "is", null);
+    } else if (parsed.archived !== "all") {
+      query = query.is("archived_at", null);
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -270,7 +328,12 @@ export const appointmentBookingController = {
       meeting_url: slot.meeting_url,
       source: parsed.source ?? "consultation_form",
       notes: trimOptional(parsed.notes),
-      metadata: parsed.metadata ?? {},
+      metadata: appendActivityMetadata(parsed.metadata ?? {}, {
+        type: "requested",
+        title: "Booking requested",
+        detail: "Patient selected a preferred consultation slot.",
+        slotId: slot.id,
+      }),
     };
 
     const { data, error } = await supabase
@@ -326,6 +389,13 @@ export const appointmentBookingController = {
       throw mapBookingError(error);
     }
 
+    await this.recordBookingActivity(data.id, {
+      type: "held",
+      title: "Slot held",
+      detail: `Slot hold created for ${options.holdMinutes ?? 120} minutes.`,
+      slotId: booking.consultation_slot_id,
+    });
+
     return data;
   },
 
@@ -361,7 +431,153 @@ export const appointmentBookingController = {
       throw mapBookingError(error);
     }
 
+    await this.recordBookingActivity(data.id, {
+      type: "confirmed",
+      title: "Booking confirmed",
+      detail: "Linked consultation created and slot booked.",
+      slotId: booking.consultation_slot_id,
+    });
+
     return data;
+  },
+
+  async recordBookingActivity(
+    bookingId: string,
+    activity: Record<string, Json>,
+  ) {
+    const supabase = getSupabaseAdmin();
+    const booking = await this.get(bookingId);
+    const metadata = appendActivityMetadata(booking.metadata, activity);
+
+    const { error } = await supabase
+      .from("appointment_bookings")
+      .update({ metadata })
+      .eq("id", bookingId);
+
+    if (error) {
+      console.error(
+        "[appointment-bookings] failed to record activity metadata",
+        error,
+      );
+    }
+  },
+
+  async recordNotificationStatus(
+    bookingId: string,
+    notification: Record<string, Json>,
+  ) {
+    const supabase = getSupabaseAdmin();
+    const booking = await this.get(bookingId);
+    const metadata = appendNotificationMetadata(booking.metadata, notification);
+
+    const { error } = await supabase
+      .from("appointment_bookings")
+      .update({ metadata })
+      .eq("id", bookingId);
+
+    if (error) {
+      console.error(
+        "[appointment-bookings] failed to record notification metadata",
+        error,
+      );
+    }
+  },
+
+  async sendBookingNotification(
+    bookingId: string,
+    type: AppointmentBookingNotificationType,
+    options: { notes?: string | null } = {},
+  ) {
+    const booking = (await this.get(bookingId)) as Awaited<
+      ReturnType<typeof this.get>
+    > & {
+      patients?: {
+        full_name?: string | null;
+        contact_email?: string | null;
+      } | null;
+      doctors?: { name?: string | null } | null;
+      contact_requests?: { email?: string | null } | null;
+    };
+    const email =
+      trimOptional(booking.patients?.contact_email) ??
+      trimOptional(booking.contact_requests?.email);
+
+    if (!email) {
+      await this.recordNotificationStatus(booking.id, {
+        type,
+        status: "skipped",
+        reason: "missing_email",
+        attemptedAt: new Date().toISOString(),
+      });
+      await this.recordBookingActivity(booking.id, {
+        type: "email_skipped",
+        title: "Email skipped",
+        detail: "No patient or request email was available.",
+      });
+      return;
+    }
+
+    const supabase = getSupabaseAdmin();
+    const payload = {
+      type,
+      email,
+      patientName: booking.patients?.full_name ?? null,
+      doctorName: booking.doctors?.name ?? null,
+      startsAt: booking.confirmed_starts_at ?? booking.requested_starts_at,
+      endsAt: booking.confirmed_ends_at ?? booking.requested_ends_at,
+      timezone: booking.timezone,
+      bookingType: booking.booking_type,
+      location: booking.location,
+      meetingUrl: booking.meeting_url,
+      cancellationReason: booking.cancellation_reason,
+      notes: trimOptional(options.notes) ?? booking.notes,
+    };
+
+    const attemptedAt = new Date().toISOString();
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "send-booking-notification",
+        { body: payload },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      await this.recordNotificationStatus(booking.id, {
+        type,
+        status: "sent",
+        email,
+        emailId:
+          data && typeof data === "object" && "emailId" in data
+            ? ((data.emailId as string | null) ?? null)
+            : null,
+        attemptedAt,
+      });
+      await this.recordBookingActivity(booking.id, {
+        type: "email_sent",
+        title: "Email sent",
+        detail: `${type} notification sent to ${email}.`,
+      });
+    } catch (error) {
+      console.error(
+        "[appointment-bookings] booking notification failed",
+        error,
+      );
+      await this.recordNotificationStatus(booking.id, {
+        type,
+        status: "failed",
+        email,
+        error: error instanceof Error ? error.message : String(error),
+        attemptedAt,
+      });
+      await this.recordBookingActivity(booking.id, {
+        type: "email_failed",
+        title: "Email failed",
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
   },
 
   async assignSlot(
@@ -403,6 +619,14 @@ export const appointmentBookingController = {
       if (error) {
         throw mapBookingError(error);
       }
+
+      await this.recordBookingActivity(booking.id, {
+        type: "rescheduled",
+        title: "Slot rescheduled",
+        detail: "Confirmed consultation moved to a new available slot.",
+        previousSlotId: booking.consultation_slot_id,
+        newSlotId: slotId,
+      });
 
       return this.get(booking.id);
     }
@@ -518,6 +742,13 @@ export const appointmentBookingController = {
       }
     }
 
+    await this.recordBookingActivity(bookingId, {
+      type: "hold_released",
+      title: "Slot released",
+      detail: "Held slot released back to available inventory.",
+      slotId: booking.consultation_slot_id,
+    });
+
     return this.get(bookingId);
   },
 
@@ -526,46 +757,132 @@ export const appointmentBookingController = {
     payload: { notes?: string | null; cancellation_reason?: string | null },
   ) {
     const bookingId = z.string().uuid().parse(id);
-    const released = await this.releaseHold(bookingId, payload.notes);
-
-    return this.update(released.id, {
-      status: "cancelled",
-      notes: payload.notes ?? released.notes,
-      cancellation_reason: payload.cancellation_reason ?? null,
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.rpc("cancel_appointment_booking", {
+      p_booking_id: bookingId,
+      p_notes: trimOptional(payload.notes),
+      p_cancellation_reason: trimOptional(payload.cancellation_reason),
     });
+
+    if (error) {
+      throw mapBookingError(error);
+    }
+
+    await this.recordBookingActivity(data.id, {
+      type: "cancelled",
+      title: "Booking cancelled",
+      detail:
+        trimOptional(payload.cancellation_reason) ??
+        "Booking cancelled and linked slot released.",
+    });
+
+    return this.get(data.id);
   },
 
   async requestReschedule(id: unknown, notes?: string | null) {
     const bookingId = z.string().uuid().parse(id);
     const released = await this.releaseHold(bookingId, notes);
 
-    return this.update(released.id, {
+    const updated = await this.update(released.id, {
       status: "reschedule_requested",
       notes: notes ?? released.notes,
     });
+
+    await this.recordBookingActivity(updated.id, {
+      type: "needs_reschedule",
+      title: "Needs reschedule",
+      detail: "Booking flagged for reschedule follow-up.",
+    });
+
+    return this.get(updated.id);
+  },
+
+  async archive(id: unknown, notes?: string | null) {
+    const bookingId = z.string().uuid().parse(id);
+    const booking = await this.get(bookingId);
+
+    if (
+      !["cancelled", "expired", "completed", "no_show"].includes(booking.status)
+    ) {
+      throw new ApiError(
+        422,
+        "Only closed appointment bookings can be archived.",
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("appointment_bookings")
+      .update({
+        archived_at: new Date().toISOString(),
+        archive_note: trimOptional(notes),
+      })
+      .eq("id", bookingId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      throw mapBookingError(error);
+    }
+
+    if (!data) {
+      throw new ApiError(404, "Appointment booking not found");
+    }
+
+    await this.recordBookingActivity(data.id, {
+      type: "archived",
+      title: "Record archived",
+      detail: trimOptional(notes) ?? "Closed booking hidden from active queue.",
+    });
+
+    return this.get(data.id);
   },
 
   async performAction(id: unknown, payload: unknown) {
     const parsed = bookingActionSchema.parse(payload);
     const booking = await this.get(id);
+    let result: AppointmentBookingRow | null = null;
+    let notificationType: AppointmentBookingNotificationType | null = null;
 
     switch (parsed.action) {
       case "confirm":
-        return this.confirm(booking, { notes: parsed.notes });
+        result = await this.confirm(booking, { notes: parsed.notes });
+        notificationType = "confirmed";
+        break;
       case "release":
-        return this.releaseHold(booking.id, parsed.notes);
+        result = await this.releaseHold(booking.id, parsed.notes);
+        break;
       case "cancel":
-        return this.cancel(booking.id, {
+        result = await this.cancel(booking.id, {
           notes: parsed.notes,
           cancellation_reason: parsed.cancellation_reason,
         });
+        notificationType = "cancelled";
+        break;
       case "request_reschedule":
-        return this.requestReschedule(booking.id, parsed.notes);
+        result = await this.requestReschedule(booking.id, parsed.notes);
+        break;
       case "assign_slot":
-        return this.assignSlot(booking, {
+        result = await this.assignSlot(booking, {
           slotId: parsed.slot_id,
           notes: parsed.notes,
         });
+        if (booking.patient_consultation_id) {
+          notificationType = "rescheduled";
+        }
+        break;
+      case "archive":
+        result = await this.archive(booking.id, parsed.notes);
+        break;
     }
+
+    if (result && notificationType) {
+      await this.sendBookingNotification(result.id, notificationType, {
+        notes: parsed.notes,
+      });
+      return this.get(result.id);
+    }
+
+    return result;
   },
 };
