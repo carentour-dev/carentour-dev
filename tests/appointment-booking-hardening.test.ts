@@ -122,8 +122,17 @@ test("admin booking queue exposes coordinator actions", () => {
   const moduleSource = readSource(
     "src/server/modules/appointmentBookings/module.ts",
   );
+  const notificationFunctionSource = readSource(
+    "supabase/functions/send-booking-notification/index.ts",
+  );
   const reassignmentMigrationSource = readSource(
     "supabase/migrations/20260529235307_appointment_booking_slot_reassignment.sql",
+  );
+  const cancellationMigrationSource = readSource(
+    "supabase/migrations/20260530003229_appointment_booking_cancel_releases_slot.sql",
+  );
+  const archiveMigrationSource = readSource(
+    "supabase/migrations/20260530004028_archive_appointment_bookings.sql",
   );
   const listRouteSource = readSource(
     "src/app/api/admin/appointment-bookings/route.ts",
@@ -146,6 +155,11 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(moduleSource, /case "request_reschedule"/);
   assert.match(moduleSource, /case "assign_slot"/);
   assert.match(moduleSource, /async assignSlot/);
+  assert.match(moduleSource, /send-booking-notification/);
+  assert.match(moduleSource, /recordNotificationStatus/);
+  assert.match(moduleSource, /appendActivityMetadata/);
+  assert.match(moduleSource, /recordBookingActivity/);
+  assert.match(moduleSource, /status: "failed"/);
 
   assert.match(
     reassignmentMigrationSource,
@@ -153,6 +167,18 @@ test("admin booking queue exposes coordinator actions", () => {
   );
   assert.match(reassignmentMigrationSource, /status = 'rescheduled'/);
   assert.match(reassignmentMigrationSource, /previousSlotId/);
+  assert.match(
+    cancellationMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.cancel_appointment_booking/,
+  );
+  assert.match(cancellationMigrationSource, /status = 'available'/);
+  assert.match(cancellationMigrationSource, /patient_consultation_id = NULL/);
+  assert.match(moduleSource, /cancel_appointment_booking/);
+  assert.match(archiveMigrationSource, /archived_at timestamptz/);
+  assert.match(moduleSource, /archived: z\.enum/);
+  assert.match(moduleSource, /async archive/);
+  assert.match(moduleSource, /archived_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(listRouteSource, /archived/);
 
   assert.match(listRouteSource, /appointmentBookingController\.list/);
   assert.match(
@@ -167,11 +193,32 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /No bookings currently need coordinator action/);
   assert.match(pageSource, /Confirm booking/);
   assert.match(pageSource, /Release hold/);
-  assert.match(pageSource, /Request reschedule/);
+  assert.match(pageSource, /Needs reschedule/);
   assert.match(pageSource, /Cancel booking/);
   assert.match(pageSource, /DropdownMenu/);
-  assert.match(pageSource, /Assign available slot/);
+  assert.match(pageSource, /getSlotActionLabel/);
+  assert.match(pageSource, /Reschedule slot/);
+  assert.match(pageSource, /Slot rescheduled/);
+  assert.match(pageSource, /getActionNoteLabel/);
+  assert.match(pageSource, /shouldShowCoordinatorNotes/);
+  assert.match(pageSource, /notes: action === "cancel" \? null/);
+  assert.match(pageSource, /Cancellation reason/);
   assert.match(pageSource, /action: "assign_slot"/);
+  assert.match(pageSource, /CLOSED_QUEUE_STATUSES/);
+  assert.match(pageSource, /hasPrimaryBookingActions/);
+  assert.match(pageSource, /hasBookingActions/);
+  assert.match(pageSource, /View details/);
+  assert.match(pageSource, /Activity timeline/);
+  assert.match(pageSource, /getBookingActivity/);
+  assert.match(pageSource, /Archive record/);
+  assert.match(pageSource, /Visibility/);
+  assert.match(pageSource, /Archived records/);
+  assert.match(pageSource, /Email \{getBookingEmailStatus\(booking\)\}/);
+  assert.match(notificationFunctionSource, /type NotificationType/);
+  assert.match(notificationFunctionSource, /confirmed/);
+  assert.match(notificationFunctionSource, /rescheduled/);
+  assert.match(notificationFunctionSource, /cancelled/);
+  assert.match(notificationFunctionSource, /resend\.emails\.send/);
   assert.match(operationsPageSource, /admin\/appointment-bookings\/page/);
 });
 
