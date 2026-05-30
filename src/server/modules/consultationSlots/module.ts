@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { appointmentBookingController } from "@/server/modules/appointmentBookings/module";
 import { ApiError } from "@/server/utils/errors";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import type { Database } from "@/integrations/supabase/types";
@@ -209,6 +210,10 @@ export const consultationSlotController = {
   ) {
     const parsed = listSlotsSchema.parse(filters);
     const supabase = getSupabaseAdmin();
+
+    if (options.publicOnly || parsed.availableOnly) {
+      await appointmentBookingController.expireStaleHolds();
+    }
 
     let query = supabase
       .from("consultation_slots")
