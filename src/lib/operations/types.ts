@@ -4,6 +4,7 @@ export type OperationsSectionId =
   | "requests"
   | "start-journey"
   | "consultations"
+  | "appointment-bookings"
   | "appointments"
   | "patients"
   | "patient-journeys"
