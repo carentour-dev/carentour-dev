@@ -1,0 +1,751 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import {
+  CalendarClock,
+  CheckCircle2,
+  Loader2,
+  MoreHorizontal,
+  RotateCcw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  adminFetch,
+  useAdminInvalidate,
+} from "@/components/admin/hooks/useAdminFetch";
+import {
+  WorkspaceEmptyState,
+  WorkspaceFilterBar,
+  WorkspaceMetricCard,
+  WorkspacePageHeader,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+} from "@/components/workspaces/WorkspacePrimitives";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
+
+type BookingRow = Database["public"]["Tables"]["appointment_bookings"]["Row"];
+type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
+type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
+type ContactRequestRow =
+  Database["public"]["Tables"]["contact_requests"]["Row"];
+type ConsultationSlotRow =
+  Database["public"]["Tables"]["consultation_slots"]["Row"];
+type ConsultationRow =
+  Database["public"]["Tables"]["patient_consultations"]["Row"];
+
+type BookingRecord = BookingRow & {
+  patients?: Pick<
+    PatientRow,
+    "id" | "full_name" | "contact_email" | "contact_phone" | "nationality"
+  > | null;
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "specialization"> | null;
+  contact_requests?: Pick<
+    ContactRequestRow,
+    | "id"
+    | "status"
+    | "request_type"
+    | "origin"
+    | "treatment"
+    | "email"
+    | "phone"
+  > | null;
+  consultation_slots?: Pick<
+    ConsultationSlotRow,
+    "id" | "status" | "starts_at" | "ends_at" | "timezone"
+  > | null;
+  patient_consultations?: Pick<
+    ConsultationRow,
+    "id" | "status" | "scheduled_at"
+  > | null;
+};
+
+type AvailableSlotRecord = ConsultationSlotRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "specialization"> | null;
+};
+
+const bookingStatuses = [
+  "requested",
+  "held",
+  "confirmed",
+  "reschedule_requested",
+  "cancelled",
+  "expired",
+  "completed",
+  "no_show",
+] as const;
+type BookingStatus = (typeof bookingStatuses)[number];
+type StatusFilter = BookingStatus | "active" | "all";
+type BookingAction = "confirm" | "release" | "cancel" | "request_reschedule";
+
+const QUERY_KEY = ["admin", "appointment-bookings"] as const;
+const AVAILABLE_SLOTS_QUERY_KEY = [
+  "admin",
+  "appointment-booking-available-slots",
+] as const;
+const ACTIVE_QUEUE_STATUSES: BookingStatus[] = [
+  "requested",
+  "held",
+  "reschedule_requested",
+];
+
+const statusLabels: Record<BookingStatus, string> = {
+  requested: "Requested",
+  held: "Held",
+  confirmed: "Confirmed",
+  reschedule_requested: "Reschedule requested",
+  cancelled: "Cancelled",
+  expired: "Expired",
+  completed: "Completed",
+  no_show: "No show",
+};
+
+const actionLabels: Record<BookingAction, string> = {
+  confirm: "Confirm booking",
+  release: "Release hold",
+  cancel: "Cancel booking",
+  request_reschedule: "Request reschedule",
+};
+
+const actionDescriptions: Record<BookingAction, string> = {
+  confirm:
+    "Confirm the selected slot and create the linked patient consultation.",
+  release:
+    "Free the held slot and keep the booking open as a coordinator request.",
+  cancel: "Close this booking and release any held slot.",
+  request_reschedule:
+    "Release any held slot and mark the booking for rescheduling.",
+};
+
+const getStatusTone = (status: BookingStatus) => {
+  switch (status) {
+    case "confirmed":
+    case "completed":
+      return "success" as const;
+    case "held":
+    case "reschedule_requested":
+      return "warning" as const;
+    case "cancelled":
+    case "expired":
+    case "no_show":
+      return "danger" as const;
+    case "requested":
+    default:
+      return "default" as const;
+  }
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Invalid date";
+  return format(date, "PPp");
+};
+
+const formatBookingType = (value: BookingRow["booking_type"]) =>
+  value === "onsite" ? "Onsite" : value === "phone" ? "Phone" : "Video";
+
+export default function AdminAppointmentBookingsPage() {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [actionTarget, setActionTarget] = useState<{
+    booking: BookingRecord;
+    action: BookingAction;
+  } | null>(null);
+  const [actionNotes, setActionNotes] = useState("");
+  const [slotTarget, setSlotTarget] = useState<BookingRecord | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState("");
+  const [slotNotes, setSlotNotes] = useState("");
+  const invalidate = useAdminInvalidate();
+  const { toast } = useToast();
+
+  const slotRange = useMemo(() => {
+    const from = new Date();
+    const to = new Date();
+    to.setDate(to.getDate() + 60);
+    return { from: from.toISOString(), to: to.toISOString() };
+  }, []);
+
+  const query = useQuery({
+    queryKey: [...QUERY_KEY, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (bookingStatuses.includes(statusFilter as BookingStatus)) {
+        params.set("status", statusFilter);
+      }
+      return adminFetch<BookingRecord[]>(
+        `/api/admin/appointment-bookings${params.size ? `?${params}` : ""}`,
+      );
+    },
+    retry: false,
+  });
+
+  const availableSlotsQuery = useQuery({
+    queryKey: [...AVAILABLE_SLOTS_QUERY_KEY, slotRange.from, slotRange.to],
+    enabled: Boolean(slotTarget),
+    queryFn: () => {
+      const params = new URLSearchParams({
+        status: "available",
+        from: slotRange.from,
+        to: slotRange.to,
+      });
+
+      return adminFetch<AvailableSlotRecord[]>(
+        `/api/admin/consultation-slots?${params.toString()}`,
+      );
+    },
+    retry: false,
+  });
+
+  const queryErrorMessage =
+    query.error instanceof Error
+      ? query.error.message
+      : "The booking queue could not be loaded. Retry in a moment.";
+
+  const bookings = useMemo(() => {
+    const rows = query.data ?? [];
+    if (statusFilter !== "active") return rows;
+    return rows.filter((booking) =>
+      ACTIVE_QUEUE_STATUSES.includes(booking.status),
+    );
+  }, [query.data, statusFilter]);
+
+  const counts = useMemo(
+    () =>
+      (query.data ?? []).reduce<Record<BookingStatus, number>>(
+        (acc, booking) => {
+          acc[booking.status] = (acc[booking.status] ?? 0) + 1;
+          return acc;
+        },
+        {
+          requested: 0,
+          held: 0,
+          confirmed: 0,
+          reschedule_requested: 0,
+          cancelled: 0,
+          expired: 0,
+          completed: 0,
+          no_show: 0,
+        },
+      ),
+    [query.data],
+  );
+
+  const actionMutation = useMutation({
+    mutationFn: ({
+      booking,
+      action,
+      notes,
+    }: {
+      booking: BookingRecord;
+      action: BookingAction;
+      notes: string;
+    }) =>
+      adminFetch<BookingRecord>(
+        `/api/admin/appointment-bookings/${booking.id}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action,
+            notes: notes.trim() || null,
+            cancellation_reason:
+              action === "cancel" ? notes.trim() || null : null,
+          }),
+        },
+      ),
+    onSuccess: (_booking, variables) => {
+      invalidate(QUERY_KEY);
+      toast({ title: actionLabels[variables.action] });
+      setActionTarget(null);
+      setActionNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Booking action failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const slotMutation = useMutation({
+    mutationFn: ({
+      booking,
+      slotId,
+      notes,
+    }: {
+      booking: BookingRecord;
+      slotId: string;
+      notes: string;
+    }) =>
+      adminFetch<BookingRecord>(
+        `/api/admin/appointment-bookings/${booking.id}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "assign_slot",
+            slot_id: slotId,
+            notes: notes.trim() || null,
+          }),
+        },
+      ),
+    onSuccess: () => {
+      invalidate(QUERY_KEY);
+      invalidate(AVAILABLE_SLOTS_QUERY_KEY);
+      toast({ title: "Slot assigned" });
+      setSlotTarget(null);
+      setSelectedSlotId("");
+      setSlotNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Slot assignment failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openAction = (booking: BookingRecord, action: BookingAction) => {
+    setActionTarget({ booking, action });
+    setActionNotes("");
+  };
+  const openSlotDialog = (booking: BookingRecord) => {
+    setSlotTarget(booking);
+    setSelectedSlotId("");
+    setSlotNotes("");
+  };
+
+  const canConfirm = (booking: BookingRecord) =>
+    Boolean(booking.patient_id && booking.consultation_slot_id) &&
+    (booking.status === "requested" || booking.status === "held");
+  const canRelease = (booking: BookingRecord) => booking.status === "held";
+  const canCancel = (booking: BookingRecord) =>
+    !["cancelled", "completed", "no_show"].includes(booking.status);
+  const canRequestReschedule = (booking: BookingRecord) =>
+    ["requested", "held", "confirmed"].includes(booking.status);
+  const canAssignSlot = (booking: BookingRecord) =>
+    !["cancelled", "expired", "completed", "no_show"].includes(booking.status);
+  const filterDescription =
+    statusFilter === "active"
+      ? "Needs action shows requested, held, and reschedule-requested bookings."
+      : statusFilter === "all"
+        ? "All statuses includes confirmed, cancelled, expired, completed, and no-show records."
+        : `${statusLabels[statusFilter]} bookings only.`;
+  const emptyStateDescription =
+    statusFilter === "active"
+      ? "No bookings currently need coordinator action. Switch to All statuses to view confirmed or closed bookings."
+      : "Change the filter or wait for new consultation slot requests.";
+
+  return (
+    <div className="space-y-6">
+      <WorkspacePageHeader
+        title="Booking Queue"
+        subtitle="Review consultation booking workflow records, confirm patient slots, release holds, and handle reschedule requests."
+      />
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <WorkspaceMetricCard
+          label="Requested"
+          value={counts.requested}
+          icon={CalendarClock}
+          emphasisTone="info"
+        />
+        <WorkspaceMetricCard
+          label="Held"
+          value={counts.held}
+          icon={CalendarClock}
+          emphasisTone="warning"
+        />
+        <WorkspaceMetricCard
+          label="Confirmed"
+          value={counts.confirmed}
+          icon={CheckCircle2}
+          emphasisTone="success"
+        />
+        <WorkspaceMetricCard
+          label="Needs reschedule"
+          value={counts.reschedule_requested}
+          icon={RotateCcw}
+          emphasisTone="warning"
+        />
+      </div>
+
+      <WorkspaceFilterBar>
+        <div className="flex min-w-[240px] flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            Status
+          </span>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Needs action</SelectItem>
+              <SelectSeparator />
+              {bookingStatuses.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {statusLabels[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs leading-5 text-muted-foreground">
+            {filterDescription}
+          </span>
+        </div>
+      </WorkspaceFilterBar>
+
+      <WorkspacePanel
+        title="Appointment booking workflow"
+        description={
+          query.isError
+            ? "Unable to load booking workflow records."
+            : query.isLoading
+              ? "Loading booking workflow records."
+              : bookings.length === 0
+                ? "No bookings match the current filter."
+                : `${bookings.length} booking${bookings.length === 1 ? "" : "s"} in view.`
+        }
+      >
+        {query.isLoading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading booking queue...
+          </div>
+        ) : query.isError ? (
+          <WorkspaceEmptyState
+            title="Booking queue could not be loaded"
+            description={queryErrorMessage}
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void query.refetch()}
+              >
+                Retry
+              </Button>
+            }
+          />
+        ) : bookings.length === 0 ? (
+          <WorkspaceEmptyState
+            title="No bookings found"
+            description={emptyStateDescription}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient / request</TableHead>
+                  <TableHead>Slot</TableHead>
+                  <TableHead>Doctor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Hold</TableHead>
+                  <TableHead className="w-[120px] text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell>
+                      <div className="font-medium">
+                        {booking.patients?.full_name ??
+                          booking.contact_requests?.email ??
+                          "Guest request"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {booking.patients?.contact_email ??
+                          booking.contact_requests?.phone ??
+                          booking.contact_request_id}
+                      </div>
+                      {booking.contact_request_id ? (
+                        <Button
+                          asChild
+                          variant="link"
+                          size="sm"
+                          className="h-auto px-0 py-1 text-xs"
+                        >
+                          <Link href="/admin/requests">Open requests</Link>
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <div>{formatDateTime(booking.requested_starts_at)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatBookingType(booking.booking_type)} ·{" "}
+                        {booking.timezone}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>{booking.doctors?.name ?? "Unassigned doctor"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {booking.doctors?.specialization ??
+                          booking.doctors?.title ??
+                          booking.doctor_id ??
+                          "No doctor linked"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <WorkspaceStatusBadge
+                        tone={getStatusTone(booking.status)}
+                      >
+                        {statusLabels[booking.status]}
+                      </WorkspaceStatusBadge>
+                    </TableCell>
+                    <TableCell>
+                      <div>{formatDateTime(booking.hold_expires_at)}</div>
+                      {booking.consultation_slots?.status ? (
+                        <div className="text-xs text-muted-foreground">
+                          Slot {booking.consultation_slots.status}
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                          >
+                            Actions
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem
+                            disabled={!canAssignSlot(booking)}
+                            onSelect={() => openSlotDialog(booking)}
+                          >
+                            Assign slot
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!canConfirm(booking)}
+                            onSelect={() => openAction(booking, "confirm")}
+                          >
+                            Confirm booking
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!canRelease(booking)}
+                            onSelect={() => openAction(booking, "release")}
+                          >
+                            Release hold
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!canRequestReschedule(booking)}
+                            onSelect={() =>
+                              openAction(booking, "request_reschedule")
+                            }
+                          >
+                            Request reschedule
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={!canCancel(booking)}
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => openAction(booking, "cancel")}
+                          >
+                            Cancel booking
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </WorkspacePanel>
+
+      <Dialog
+        open={Boolean(actionTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActionTarget(null);
+            setActionNotes("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionTarget ? actionLabels[actionTarget.action] : "Booking"}
+            </DialogTitle>
+            <DialogDescription>
+              {actionTarget
+                ? actionDescriptions[actionTarget.action]
+                : "Review this booking action before continuing."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={actionNotes}
+              rows={4}
+              placeholder="Coordinator note"
+              onChange={(event) => setActionNotes(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setActionTarget(null)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              disabled={!actionTarget || actionMutation.isPending}
+              onClick={() => {
+                if (actionTarget) {
+                  actionMutation.mutate({
+                    ...actionTarget,
+                    notes: actionNotes,
+                  });
+                }
+              }}
+            >
+              {actionMutation.isPending ? "Working..." : "Continue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(slotTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSlotTarget(null);
+            setSelectedSlotId("");
+            setSlotNotes("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign available slot</DialogTitle>
+            <DialogDescription>
+              {slotTarget?.patient_consultation_id
+                ? "Move the linked consultation to a new available slot. The old booked slot will be released."
+                : "Hold a new available slot for this booking so it can be confirmed next."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-foreground">
+                Available slot
+              </span>
+              {availableSlotsQuery.isLoading ? (
+                <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading available slots...
+                </div>
+              ) : availableSlotsQuery.isError ? (
+                <div className="rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  Available slots could not be loaded.
+                </div>
+              ) : (availableSlotsQuery.data ?? []).length === 0 ? (
+                <div className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                  No available slots in the next 60 days.
+                </div>
+              ) : (
+                <Select
+                  value={selectedSlotId}
+                  onValueChange={setSelectedSlotId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an available slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(availableSlotsQuery.data ?? []).map((slot) => (
+                      <SelectItem key={slot.id} value={slot.id}>
+                        {formatDateTime(slot.starts_at)} ·{" "}
+                        {slot.doctors?.name ?? "Unassigned doctor"} ·{" "}
+                        {formatBookingType(slot.booking_type)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <Textarea
+              value={slotNotes}
+              rows={4}
+              placeholder="Coordinator note"
+              onChange={(event) => setSlotNotes(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSlotTarget(null)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                !slotTarget || !selectedSlotId || slotMutation.isPending
+              }
+              onClick={() => {
+                if (slotTarget && selectedSlotId) {
+                  slotMutation.mutate({
+                    booking: slotTarget,
+                    slotId: selectedSlotId,
+                    notes: slotNotes,
+                  });
+                }
+              }}
+            >
+              {slotMutation.isPending ? "Assigning..." : "Assign slot"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
