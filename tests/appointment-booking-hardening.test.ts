@@ -307,6 +307,9 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Send reminder now/);
   assert.match(pageSource, /Reminder preview/);
   assert.match(pageSource, /\/reminder/);
+  assert.match(pageSource, /canRetryReminder/);
+  assert.match(pageSource, /getReminderSendActionLabel/);
+  assert.match(pageSource, /Retry reminder/);
   assert.match(notificationFunctionSource, /type NotificationType/);
   assert.match(notificationFunctionSource, /confirmed/);
   assert.match(notificationFunctionSource, /rescheduled/);
