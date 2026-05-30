@@ -1112,6 +1112,120 @@ export type Database = {
         };
         Relationships: [];
       };
+      appointment_bookings: {
+        Row: {
+          booking_type: Database["public"]["Enums"]["consultation_booking_type"];
+          cancellation_reason: string | null;
+          confirmed_ends_at: string | null;
+          confirmed_starts_at: string | null;
+          consultation_slot_id: string | null;
+          contact_request_id: string | null;
+          created_at: string;
+          doctor_id: string | null;
+          hold_expires_at: string | null;
+          id: string;
+          location: string | null;
+          meeting_url: string | null;
+          metadata: Json;
+          notes: string | null;
+          patient_consultation_id: string | null;
+          patient_id: string | null;
+          requested_ends_at: string | null;
+          requested_starts_at: string | null;
+          source: string;
+          status: Database["public"]["Enums"]["appointment_booking_status"];
+          timezone: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          cancellation_reason?: string | null;
+          confirmed_ends_at?: string | null;
+          confirmed_starts_at?: string | null;
+          consultation_slot_id?: string | null;
+          contact_request_id?: string | null;
+          created_at?: string;
+          doctor_id?: string | null;
+          hold_expires_at?: string | null;
+          id?: string;
+          location?: string | null;
+          meeting_url?: string | null;
+          metadata?: Json;
+          notes?: string | null;
+          patient_consultation_id?: string | null;
+          patient_id?: string | null;
+          requested_ends_at?: string | null;
+          requested_starts_at?: string | null;
+          source?: string;
+          status?: Database["public"]["Enums"]["appointment_booking_status"];
+          timezone?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          booking_type?: Database["public"]["Enums"]["consultation_booking_type"];
+          cancellation_reason?: string | null;
+          confirmed_ends_at?: string | null;
+          confirmed_starts_at?: string | null;
+          consultation_slot_id?: string | null;
+          contact_request_id?: string | null;
+          created_at?: string;
+          doctor_id?: string | null;
+          hold_expires_at?: string | null;
+          id?: string;
+          location?: string | null;
+          meeting_url?: string | null;
+          metadata?: Json;
+          notes?: string | null;
+          patient_consultation_id?: string | null;
+          patient_id?: string | null;
+          requested_ends_at?: string | null;
+          requested_starts_at?: string | null;
+          source?: string;
+          status?: Database["public"]["Enums"]["appointment_booking_status"];
+          timezone?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "appointment_bookings_consultation_slot_id_fkey";
+            columns: ["consultation_slot_id"];
+            isOneToOne: false;
+            referencedRelation: "consultation_slots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointment_bookings_contact_request_id_fkey";
+            columns: ["contact_request_id"];
+            isOneToOne: false;
+            referencedRelation: "contact_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointment_bookings_doctor_id_fkey";
+            columns: ["doctor_id"];
+            isOneToOne: false;
+            referencedRelation: "doctors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointment_bookings_patient_consultation_id_fkey";
+            columns: ["patient_consultation_id"];
+            isOneToOne: false;
+            referencedRelation: "patient_consultations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointment_bookings_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       patient_appointments: {
         Row: {
           appointment_type: string;
@@ -3127,10 +3241,54 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["patient_consultations"]["Row"];
       };
+      hold_appointment_booking_slot: {
+        Args: {
+          p_booking_id: string;
+          p_slot_id: string;
+          p_patient_id?: string | null;
+          p_user_id?: string | null;
+          p_contact_request_id?: string | null;
+          p_notes?: string | null;
+          p_hold_minutes?: number | null;
+        };
+        Returns: Database["public"]["Tables"]["appointment_bookings"]["Row"];
+      };
+      confirm_appointment_booking: {
+        Args: {
+          p_booking_id: string;
+          p_slot_id: string;
+          p_patient_id: string;
+          p_user_id?: string | null;
+          p_contact_request_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["appointment_bookings"]["Row"];
+      };
+      reassign_appointment_booking_slot: {
+        Args: {
+          p_booking_id: string;
+          p_slot_id: string;
+          p_notes?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["appointment_bookings"]["Row"];
+      };
+      expire_stale_appointment_booking_holds: {
+        Args: never;
+        Returns: number;
+      };
       user_permissions: { Args: { p_user_id: string }; Returns: string[] };
       user_roles: { Args: { p_user_id: string }; Returns: string[] };
     };
     Enums: {
+      appointment_booking_status:
+        | "requested"
+        | "held"
+        | "confirmed"
+        | "reschedule_requested"
+        | "cancelled"
+        | "expired"
+        | "completed"
+        | "no_show";
       appointment_status:
         | "scheduled"
         | "confirmed"
