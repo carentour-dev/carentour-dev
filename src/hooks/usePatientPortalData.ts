@@ -14,6 +14,8 @@ type ConsultationRow =
   Database["public"]["Tables"]["patient_consultations"]["Row"];
 type AppointmentRow =
   Database["public"]["Tables"]["patient_appointments"]["Row"];
+type AppointmentBookingRow =
+  Database["public"]["Tables"]["appointment_bookings"]["Row"];
 type DoctorReviewRow = Database["public"]["Tables"]["doctor_reviews"]["Row"];
 type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 type TreatmentRow = Database["public"]["Tables"]["treatments"]["Row"];
@@ -97,6 +99,22 @@ export type PatientAppointment = AppointmentRow & {
   > | null;
 };
 
+export type PatientAppointmentBooking = AppointmentBookingRow & {
+  doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
+  consultation_slots?: Pick<
+    Database["public"]["Tables"]["consultation_slots"]["Row"],
+    "id" | "starts_at" | "ends_at" | "timezone" | "status"
+  > | null;
+  patient_consultations?: Pick<
+    ConsultationRow,
+    "id" | "scheduled_at" | "status"
+  > | null;
+  contact_requests?: Pick<
+    ContactRequestRow,
+    "id" | "status" | "request_type" | "origin"
+  > | null;
+};
+
 export type PatientReview = DoctorReviewRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "avatar_url"> | null;
   treatments?: Pick<TreatmentRow, "id" | "name" | "slug"> | null;
@@ -121,6 +139,7 @@ export interface PatientPortalSnapshot {
   requests: PatientPortalRequest[];
   consultations: PatientConsultation[];
   appointments: PatientAppointment[];
+  appointmentBookings: PatientAppointmentBooking[];
   reviews: PatientReview[];
   stories: PatientStory[];
 }
@@ -325,6 +344,7 @@ const fetchPatientPortalSnapshot = async (
     journeySubmissionsResult,
     consultationsResult,
     appointmentsResult,
+    appointmentBookingsResult,
     reviewsResult,
     storiesResult,
   ] = await Promise.all([
@@ -356,6 +376,13 @@ const fetchPatientPortalSnapshot = async (
       )
       .eq("patient_id", patient.id)
       .order("starts_at", { ascending: true }),
+    supabase
+      .from("appointment_bookings")
+      .select(
+        "id, patient_id, user_id, contact_request_id, consultation_slot_id, patient_consultation_id, doctor_id, booking_type, status, requested_starts_at, requested_ends_at, confirmed_starts_at, confirmed_ends_at, timezone, location, meeting_url, hold_expires_at, source, notes, cancellation_reason, metadata, created_at, updated_at, doctors(id, name, title, avatar_url), consultation_slots(id, starts_at, ends_at, timezone, status), patient_consultations(id, scheduled_at, status), contact_requests(id, status, request_type, origin)",
+      )
+      .or(`user_id.eq.${user.id},patient_id.eq.${patient.id}`)
+      .order("created_at", { ascending: false }),
     supabase
       .from("doctor_reviews")
       .select(
@@ -394,6 +421,13 @@ const fetchPatientPortalSnapshot = async (
   const appointmentsError = appointmentsResult.error;
   if (appointmentsError) {
     throw new Error(appointmentsError.message ?? "Failed to load appointments");
+  }
+
+  const appointmentBookingsError = appointmentBookingsResult.error;
+  if (appointmentBookingsError) {
+    throw new Error(
+      appointmentBookingsError.message ?? "Failed to load appointment bookings",
+    );
   }
 
   const reviewsError = reviewsResult.error;
@@ -459,6 +493,8 @@ const fetchPatientPortalSnapshot = async (
     requests: portalRequests,
     consultations: (consultationsResult.data ?? []) as PatientConsultation[],
     appointments: (appointmentsResult.data ?? []) as PatientAppointment[],
+    appointmentBookings: (appointmentBookingsResult.data ??
+      []) as PatientAppointmentBooking[],
     reviews: (reviewsResult.data ?? []) as PatientReview[],
     stories: (storiesResult.data ?? []) as PatientStory[],
   };
@@ -488,6 +524,7 @@ export const usePatientPortalData = (options?: UsePatientPortalOptions) => {
     requests: snapshot?.requests ?? [],
     consultations: snapshot?.consultations ?? [],
     appointments: snapshot?.appointments ?? [],
+    appointmentBookings: snapshot?.appointmentBookings ?? [],
     reviews: snapshot?.reviews ?? [],
     stories: snapshot?.stories ?? [],
     isLoading: isEnabled ? query.isLoading : false,
