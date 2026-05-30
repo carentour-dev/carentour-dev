@@ -127,6 +127,55 @@ const bookSlotSchema = z.object({
 
 type SlotInsert = Database["public"]["Tables"]["consultation_slots"]["Insert"];
 type SlotUpdate = Database["public"]["Tables"]["consultation_slots"]["Update"];
+type SlotDeliveryFields = {
+  booking_type: (typeof BOOKING_TYPES)[number];
+  location?: string | null;
+  meeting_url?: string | null;
+};
+
+const normalizeSlotDeliveryFields = (
+  fields: SlotDeliveryFields,
+  existing?: SlotDeliveryFields | null,
+) => {
+  const bookingType = fields.booking_type;
+  const providedLocation =
+    fields.location !== undefined ? trimOptional(fields.location) : undefined;
+  const providedMeetingUrl =
+    fields.meeting_url !== undefined
+      ? trimOptional(fields.meeting_url)
+      : undefined;
+
+  if (bookingType === "onsite") {
+    const location =
+      providedLocation !== undefined
+        ? providedLocation
+        : trimOptional(existing?.location);
+
+    if (!location) {
+      throw new ApiError(422, "Onsite consultation slots require a location.");
+    }
+
+    return {
+      location,
+      meeting_url: null,
+    };
+  }
+
+  if (bookingType === "video") {
+    return {
+      location: null,
+      meeting_url:
+        providedMeetingUrl !== undefined
+          ? providedMeetingUrl
+          : trimOptional(existing?.meeting_url),
+    };
+  }
+
+  return {
+    location: null,
+    meeting_url: null,
+  };
+};
 
 const applyDateFilter = <
   T extends {
@@ -262,6 +311,11 @@ export const consultationSlotController = {
   async create(payload: unknown, createdByProfileId?: string | null) {
     const parsed = createSlotSchema.parse(payload);
     const supabase = getSupabaseAdmin();
+    const deliveryFields = normalizeSlotDeliveryFields({
+      booking_type: parsed.booking_type,
+      location: parsed.location,
+      meeting_url: parsed.meeting_url,
+    });
 
     const insertPayload: SlotInsert = {
       doctor_id: parsed.doctor_id,
@@ -270,8 +324,8 @@ export const consultationSlotController = {
       starts_at: parsed.starts_at,
       ends_at: parsed.ends_at,
       timezone: parsed.timezone,
-      location: trimOptional(parsed.location),
-      meeting_url: trimOptional(parsed.meeting_url),
+      location: deliveryFields.location,
+      meeting_url: deliveryFields.meeting_url,
       notes: trimOptional(parsed.notes),
       created_by_profile_id:
         parsed.created_by_profile_id ?? createdByProfileId ?? null,
@@ -295,6 +349,31 @@ export const consultationSlotController = {
     const parsed = updateSlotSchema.parse(payload);
     const supabase = getSupabaseAdmin();
 
+    const { data: existingSlot, error: loadError } = await supabase
+      .from("consultation_slots")
+      .select("id, booking_type, location, meeting_url")
+      .eq("id", slotId)
+      .maybeSingle();
+
+    if (loadError) {
+      throw mapSlotError(loadError);
+    }
+
+    if (!existingSlot) {
+      throw new ApiError(404, "Consultation slot not found");
+    }
+
+    const effectiveBookingType =
+      parsed.booking_type ?? existingSlot.booking_type;
+    const deliveryFields = normalizeSlotDeliveryFields(
+      {
+        booking_type: effectiveBookingType,
+        location: parsed.location,
+        meeting_url: parsed.meeting_url,
+      },
+      existingSlot,
+    );
+
     const updatePayload: SlotUpdate = {};
     if (parsed.doctor_id !== undefined)
       updatePayload.doctor_id = parsed.doctor_id;
@@ -305,10 +384,8 @@ export const consultationSlotController = {
       updatePayload.starts_at = parsed.starts_at;
     if (parsed.ends_at !== undefined) updatePayload.ends_at = parsed.ends_at;
     if (parsed.timezone !== undefined) updatePayload.timezone = parsed.timezone;
-    if (parsed.location !== undefined)
-      updatePayload.location = trimOptional(parsed.location);
-    if (parsed.meeting_url !== undefined)
-      updatePayload.meeting_url = trimOptional(parsed.meeting_url);
+    updatePayload.location = deliveryFields.location;
+    updatePayload.meeting_url = deliveryFields.meeting_url;
     if (parsed.notes !== undefined)
       updatePayload.notes = trimOptional(parsed.notes);
     if (parsed.created_by_profile_id !== undefined) {
