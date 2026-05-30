@@ -117,6 +117,54 @@ type ConsultationInsert =
 type ConsultationUpdate =
   Database["public"]["Tables"]["patient_consultations"]["Update"];
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type ConsultationDeliveryFields = {
+  booking_type: (typeof BOOKING_TYPE_VALUES)[number];
+  location?: string | null;
+  meeting_url?: string | null;
+};
+
+const normalizeConsultationDeliveryFields = (
+  fields: ConsultationDeliveryFields,
+  existing?: ConsultationDeliveryFields | null,
+) => {
+  const providedLocation =
+    fields.location !== undefined ? trimOptional(fields.location) : undefined;
+  const providedMeetingUrl =
+    fields.meeting_url !== undefined
+      ? trimOptional(fields.meeting_url)
+      : undefined;
+
+  if (fields.booking_type === "onsite") {
+    const location =
+      providedLocation !== undefined
+        ? providedLocation
+        : trimOptional(existing?.location);
+
+    if (!location) {
+      throw new ApiError(422, "Onsite consultations require a location.");
+    }
+
+    return {
+      location,
+      meeting_url: null,
+    };
+  }
+
+  if (fields.booking_type === "video") {
+    return {
+      location: null,
+      meeting_url:
+        providedMeetingUrl !== undefined
+          ? providedMeetingUrl
+          : trimOptional(existing?.meeting_url),
+    };
+  }
+
+  return {
+    location: null,
+    meeting_url: null,
+  };
+};
 
 const releaseConsultationSlot = async (
   supabase: SupabaseAdminClient,
@@ -257,6 +305,12 @@ export const patientConsultationController = {
 
   async create(payload: unknown) {
     const parsed = createConsultationSchema.parse(payload);
+    const bookingType = parsed.booking_type ?? "video";
+    const deliveryFields = normalizeConsultationDeliveryFields({
+      booking_type: bookingType,
+      location: parsed.location,
+      meeting_url: parsed.meeting_url,
+    });
 
     const insertPayload: ConsultationInsert = {
       patient_id: parsed.patient_id,
@@ -269,12 +323,12 @@ export const patientConsultationController = {
       consultation_slot_id: parsed.consultation_slot_id ?? null,
       coordinator_id: parsed.coordinator_id ?? null,
       status: parsed.status ?? "scheduled",
-      booking_type: parsed.booking_type ?? "video",
+      booking_type: bookingType,
       scheduled_at: parsed.scheduled_at,
       duration_minutes: parsed.duration_minutes ?? null,
       timezone: trimOptional(parsed.timezone),
-      location: trimOptional(parsed.location),
-      meeting_url: trimOptional(parsed.meeting_url),
+      location: deliveryFields.location,
+      meeting_url: deliveryFields.meeting_url,
       notes: trimOptional(parsed.notes),
     };
 
@@ -285,6 +339,8 @@ export const patientConsultationController = {
     const consultationId = z.string().uuid().parse(id);
     const parsed = updateConsultationSchema.parse(payload);
     const supabase = getSupabaseAdmin();
+    const currentConsultation =
+      await consultationService.getById(consultationId);
 
     const updatePayload: ConsultationUpdate = {};
 
@@ -315,10 +371,23 @@ export const patientConsultationController = {
       updatePayload.duration_minutes = parsed.duration_minutes ?? null;
     if (parsed.timezone !== undefined)
       updatePayload.timezone = trimOptional(parsed.timezone);
-    if (parsed.location !== undefined)
-      updatePayload.location = trimOptional(parsed.location);
-    if (parsed.meeting_url !== undefined)
-      updatePayload.meeting_url = trimOptional(parsed.meeting_url);
+    if (
+      parsed.booking_type !== undefined ||
+      parsed.location !== undefined ||
+      parsed.meeting_url !== undefined
+    ) {
+      const deliveryFields = normalizeConsultationDeliveryFields(
+        {
+          booking_type: parsed.booking_type ?? currentConsultation.booking_type,
+          location: parsed.location,
+          meeting_url: parsed.meeting_url,
+        },
+        currentConsultation,
+      );
+
+      updatePayload.location = deliveryFields.location;
+      updatePayload.meeting_url = deliveryFields.meeting_url;
+    }
     if (parsed.notes !== undefined)
       updatePayload.notes = trimOptional(parsed.notes);
 
@@ -326,8 +395,6 @@ export const patientConsultationController = {
       throw new ApiError(400, "No fields provided for update");
     }
 
-    const currentConsultation =
-      await consultationService.getById(consultationId);
     const updatedConsultation = await consultationService.update(
       consultationId,
       updatePayload,
