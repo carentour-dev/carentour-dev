@@ -532,6 +532,47 @@ const reminderFilterLabels: Record<ReminderFilter, string> = {
   none: "No reminder activity",
 };
 
+const truncateReminderDetail = (value: string) =>
+  value.length > 72 ? `${value.slice(0, 69)}...` : value;
+
+const getBookingReminderRowSummary = (booking: BookingRecord) => {
+  const reminders = getBookingReminderAudit(booking);
+  const failedReminder = reminders.find(
+    (reminder) => reminder.status === "failed",
+  );
+
+  if (failedReminder) {
+    return {
+      tone: "danger" as const,
+      label: "Reminder failed",
+      detail: failedReminder.error
+        ? truncateReminderDetail(failedReminder.error)
+        : "Retry is available from the actions menu.",
+    };
+  }
+
+  const lastReminder = reminders[0];
+  if (lastReminder?.status === "sent") {
+    return {
+      tone: "default" as const,
+      label: lastReminder.attemptedAt
+        ? `Last reminder: ${formatDateTime(lastReminder.attemptedAt)}`
+        : "Last reminder sent",
+      detail: lastReminder.email ? `Sent to ${lastReminder.email}` : null,
+    };
+  }
+
+  if (getBookingReminderFilterState(booking) === "pending") {
+    return {
+      tone: "default" as const,
+      label: "Reminder pending",
+      detail: "No reminder has been sent yet.",
+    };
+  }
+
+  return null;
+};
+
 const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
   const metadata = getMetadataRecord(booking);
   const storedActivity = Array.isArray(metadata?.activity)
@@ -1229,185 +1270,202 @@ export default function AdminAppointmentBookingsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div className="font-medium">
-                        {booking.patients?.full_name ??
-                          booking.contact_requests?.email ??
-                          "Guest request"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {booking.patients?.contact_email ??
-                          booking.contact_requests?.phone ??
-                          booking.contact_request_id}
-                      </div>
-                      {booking.contact_request_id ? (
-                        <Button
-                          asChild
-                          variant="link"
-                          size="sm"
-                          className="h-auto px-0 py-1 text-xs"
-                        >
-                          <Link href="/admin/requests">Open requests</Link>
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <div>{formatDateTime(booking.requested_starts_at)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatBookingType(booking.booking_type)} ·{" "}
-                        {booking.timezone}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{booking.doctors?.name ?? "Unassigned doctor"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {booking.doctors?.specialization ??
-                          booking.doctors?.title ??
-                          booking.doctor_id ??
-                          "No doctor linked"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <WorkspaceStatusBadge
-                        tone={getStatusTone(booking.status)}
-                      >
-                        {statusLabels[booking.status]}
-                      </WorkspaceStatusBadge>
-                      {getBookingEmailStatus(booking) ? (
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          Confirmation email {getBookingEmailStatus(booking)}
+                {bookings.map((booking) => {
+                  const reminderSummary = getBookingReminderRowSummary(booking);
+
+                  return (
+                    <TableRow key={booking.id}>
+                      <TableCell>
+                        <div className="font-medium">
+                          {booking.patients?.full_name ??
+                            booking.contact_requests?.email ??
+                            "Guest request"}
                         </div>
-                      ) : null}
-                      {getBookingReminderStatus(booking) ? (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Reminder {getBookingReminderStatus(booking)}
-                        </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <div>{formatDateTime(booking.hold_expires_at)}</div>
-                      {booking.consultation_slots?.status ? (
                         <div className="text-xs text-muted-foreground">
-                          Slot {booking.consultation_slots.status}
+                          {booking.patients?.contact_email ??
+                            booking.contact_requests?.phone ??
+                            booking.contact_request_id}
                         </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        {booking.contact_request_id ? (
                           <Button
-                            type="button"
-                            variant="outline"
+                            asChild
+                            variant="link"
                             size="sm"
-                            className="gap-2"
+                            className="h-auto px-0 py-1 text-xs"
                           >
-                            Actions
-                            <MoreHorizontal className="h-4 w-4" />
+                            <Link href="/admin/requests">Open requests</Link>
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem
-                            onSelect={() => setDetailsTarget(booking)}
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <div>{formatDateTime(booking.requested_starts_at)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatBookingType(booking.booking_type)} ·{" "}
+                          {booking.timezone}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          {booking.doctors?.name ?? "Unassigned doctor"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {booking.doctors?.specialization ??
+                            booking.doctors?.title ??
+                            booking.doctor_id ??
+                            "No doctor linked"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <WorkspaceStatusBadge
+                          tone={getStatusTone(booking.status)}
+                        >
+                          {statusLabels[booking.status]}
+                        </WorkspaceStatusBadge>
+                        {getBookingEmailStatus(booking) ? (
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Confirmation email {getBookingEmailStatus(booking)}
+                          </div>
+                        ) : null}
+                        {reminderSummary ? (
+                          <div
+                            className={
+                              reminderSummary.tone === "danger"
+                                ? "mt-1 text-xs text-destructive"
+                                : "mt-1 text-xs text-muted-foreground"
+                            }
                           >
-                            View details
-                          </DropdownMenuItem>
-                          {hasBookingActions(booking) ? (
-                            <DropdownMenuSeparator />
-                          ) : null}
-                          {canAssignSlot(booking) ? (
-                            <DropdownMenuItem
-                              onSelect={() => openSlotDialog(booking)}
+                            <div>{reminderSummary.label}</div>
+                            {reminderSummary.detail ? (
+                              <div>{reminderSummary.detail}</div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <div>{formatDateTime(booking.hold_expires_at)}</div>
+                        {booking.consultation_slots?.status ? (
+                          <div className="text-xs text-muted-foreground">
+                            Slot {booking.consultation_slots.status}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
                             >
-                              {getSlotActionLabel(booking)}
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canConfirm(booking) ? (
+                              Actions
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
                             <DropdownMenuItem
-                              onSelect={() => openAction(booking, "confirm")}
+                              onSelect={() => setDetailsTarget(booking)}
                             >
-                              Confirm booking
+                              View details
                             </DropdownMenuItem>
-                          ) : null}
-                          {canRelease(booking) ? (
-                            <DropdownMenuItem
-                              onSelect={() => openAction(booking, "release")}
-                            >
-                              Release hold
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canRequestReschedule(booking) ? (
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                openAction(booking, "request_reschedule")
-                              }
-                            >
-                              Needs reschedule
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canSendReminder(booking) ? (
-                            <>
-                              {hasPrimaryBookingActions(booking) ? (
-                                <DropdownMenuSeparator />
-                              ) : null}
+                            {hasBookingActions(booking) ? (
+                              <DropdownMenuSeparator />
+                            ) : null}
+                            {canAssignSlot(booking) ? (
                               <DropdownMenuItem
-                                disabled={reminderMutation.isPending}
+                                onSelect={() => openSlotDialog(booking)}
+                              >
+                                {getSlotActionLabel(booking)}
+                              </DropdownMenuItem>
+                            ) : null}
+                            {canConfirm(booking) ? (
+                              <DropdownMenuItem
+                                onSelect={() => openAction(booking, "confirm")}
+                              >
+                                Confirm booking
+                              </DropdownMenuItem>
+                            ) : null}
+                            {canRelease(booking) ? (
+                              <DropdownMenuItem
+                                onSelect={() => openAction(booking, "release")}
+                              >
+                                Release hold
+                              </DropdownMenuItem>
+                            ) : null}
+                            {canRequestReschedule(booking) ? (
+                              <DropdownMenuItem
                                 onSelect={() =>
-                                  reminderMutation.mutate({
-                                    booking,
-                                    dryRun: true,
-                                  })
+                                  openAction(booking, "request_reschedule")
                                 }
                               >
-                                Preview reminder
+                                Needs reschedule
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={reminderMutation.isPending}
-                                onSelect={() =>
-                                  reminderMutation.mutate({
-                                    booking,
-                                    dryRun: false,
-                                  })
-                                }
-                              >
-                                {getReminderSendActionLabel(booking)}
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                          {canCancel(booking) ? (
-                            <>
-                              {hasPrimaryBookingActions(booking) ||
-                              canSendReminder(booking) ? (
-                                <DropdownMenuSeparator />
-                              ) : null}
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onSelect={() => openAction(booking, "cancel")}
-                              >
-                                Cancel booking
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                          {canArchive(booking) ? (
-                            <>
-                              {hasPrimaryBookingActions(booking) ||
-                              canSendReminder(booking) ||
-                              canCancel(booking) ? (
-                                <DropdownMenuSeparator />
-                              ) : null}
-                              <DropdownMenuItem
-                                onSelect={() => openAction(booking, "archive")}
-                              >
-                                Archive record
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            ) : null}
+                            {canSendReminder(booking) ? (
+                              <>
+                                {hasPrimaryBookingActions(booking) ? (
+                                  <DropdownMenuSeparator />
+                                ) : null}
+                                <DropdownMenuItem
+                                  disabled={reminderMutation.isPending}
+                                  onSelect={() =>
+                                    reminderMutation.mutate({
+                                      booking,
+                                      dryRun: true,
+                                    })
+                                  }
+                                >
+                                  Preview reminder
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={reminderMutation.isPending}
+                                  onSelect={() =>
+                                    reminderMutation.mutate({
+                                      booking,
+                                      dryRun: false,
+                                    })
+                                  }
+                                >
+                                  {getReminderSendActionLabel(booking)}
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                            {canCancel(booking) ? (
+                              <>
+                                {hasPrimaryBookingActions(booking) ||
+                                canSendReminder(booking) ? (
+                                  <DropdownMenuSeparator />
+                                ) : null}
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => openAction(booking, "cancel")}
+                                >
+                                  Cancel booking
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                            {canArchive(booking) ? (
+                              <>
+                                {hasPrimaryBookingActions(booking) ||
+                                canSendReminder(booking) ||
+                                canCancel(booking) ? (
+                                  <DropdownMenuSeparator />
+                                ) : null}
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    openAction(booking, "archive")
+                                  }
+                                >
+                                  Archive record
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
