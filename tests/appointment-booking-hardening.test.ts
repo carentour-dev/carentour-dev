@@ -280,9 +280,17 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Archive record/);
   assert.match(pageSource, /Visibility/);
   assert.match(pageSource, /Archived records/);
-  assert.match(pageSource, /Email \{getBookingEmailStatus\(booking\)\}/);
+  assert.match(
+    pageSource,
+    /Confirmation email \{getBookingEmailStatus\(booking\)\}/,
+  );
   assert.match(pageSource, /getBookingReminderStatus/);
   assert.match(pageSource, /Reminder \{getBookingReminderStatus\(booking\)\}/);
+  assert.match(pageSource, /ReminderAuditPanel/);
+  assert.match(pageSource, /Reminder audit/);
+  assert.match(pageSource, /getBookingReminderAudit/);
+  assert.match(pageSource, /Next automatic reminder/);
+  assert.match(pageSource, /Email delivery ID/);
   assert.match(pageSource, /Preview reminder/);
   assert.match(pageSource, /Send reminder now/);
   assert.match(pageSource, /Reminder preview/);
@@ -299,6 +307,8 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(reminderFunctionSource, /bookingId/);
   assert.match(reminderFunctionSource, /hasServiceRoleToken/);
   assert.match(reminderFunctionSource, /send-appointment-reminders function/);
+  assert.match(reminderFunctionSource, /appendReminderEvent/);
+  assert.match(reminderFunctionSource, /reminderEvents/);
   assert.match(reminderFunctionSource, /reminder_sent/);
   assert.match(operationsPageSource, /admin\/appointment-bookings\/page/);
 });
