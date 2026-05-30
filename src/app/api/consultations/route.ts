@@ -2,11 +2,12 @@
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { appointmentBookingController } from "@/server/modules/appointmentBookings/module";
 import { contactRequestController } from "@/server/modules/contactRequests/module";
-import { consultationSlotController } from "@/server/modules/consultationSlots/module";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
 import { createClient as createSupabaseClient } from "@/integrations/supabase/server";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 const travelWindowSchema = z.object({
   from: z.string().min(1, "travel window start is required"),
@@ -158,11 +159,45 @@ const findExistingSubmission = async (
     .eq("contact_request_id", existingRequest.id)
     .maybeSingle();
 
+  const { data: existingBooking } = await supabaseAdmin
+    .from("appointment_bookings")
+    .select("id, status, hold_expires_at, patient_consultation_id")
+    .eq("contact_request_id", existingRequest.id)
+    .maybeSingle();
+
   return {
     consultationRequestId: existingRequest.id,
-    bookedConsultationId: existingConsultation?.id ?? null,
+    bookedConsultationId:
+      existingConsultation?.id ??
+      existingBooking?.patient_consultation_id ??
+      null,
+    appointmentBookingId: existingBooking?.id ?? null,
+    appointmentBookingStatus: existingBooking?.status ?? null,
+    holdExpiresAt: existingBooking?.hold_expires_at ?? null,
     status: existingRequest.status,
   };
+};
+
+type BookingStatus = Database["public"]["Enums"]["appointment_booking_status"];
+
+const buildUpdatedPortalMetadata = (
+  portalMetadata: Json | undefined,
+  updates: Record<string, Json | undefined>,
+): Json => {
+  const base =
+    portalMetadata &&
+    typeof portalMetadata === "object" &&
+    !Array.isArray(portalMetadata)
+      ? { ...(portalMetadata as Record<string, Json>) }
+      : {};
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      base[key] = value;
+    }
+  }
+
+  return base;
 };
 
 export const POST = async (req: NextRequest) => {
@@ -214,6 +249,9 @@ export const POST = async (req: NextRequest) => {
         success: true,
         consultationRequestId: existingSubmission.consultationRequestId,
         bookedConsultationId: existingSubmission.bookedConsultationId,
+        appointmentBookingId: existingSubmission.appointmentBookingId,
+        appointmentBookingStatus: existingSubmission.appointmentBookingStatus,
+        holdExpiresAt: existingSubmission.holdExpiresAt,
         booked: Boolean(existingSubmission.bookedConsultationId),
         duplicate: true,
         notificationQueued: false,
@@ -232,7 +270,7 @@ export const POST = async (req: NextRequest) => {
     const attachmentsSummary =
       documentNames.length > 0 ? documentNames.join(", ") : null;
 
-    const portalMetadata =
+    const portalMetadata: Json | undefined =
       payload.treatmentId ||
       payload.procedure ||
       payload.doctorId ||
@@ -283,15 +321,74 @@ export const POST = async (req: NextRequest) => {
     });
 
     let bookedConsultationId: string | null = null;
-    if (payload.selectedSlotId && user && patientId) {
-      const bookedConsultation = await consultationSlotController.book({
-        slot_id: payload.selectedSlotId,
-        patient_id: patientId,
-        user_id: user.id,
-        contact_request_id: consultationRequest.id,
-        notes: payload.additionalQuestions,
-      });
-      bookedConsultationId = bookedConsultation.id;
+    let appointmentBookingId: string | null = null;
+    let appointmentBookingStatus: BookingStatus | null = null;
+    let holdExpiresAt: string | null = null;
+    let nextPortalMetadata: Json | undefined = portalMetadata;
+
+    if (payload.selectedSlotId) {
+      try {
+        const requestedBooking =
+          await appointmentBookingController.createRequested({
+            patient_id: patientId,
+            user_id: user?.id ?? null,
+            contact_request_id: consultationRequest.id,
+            consultation_slot_id: payload.selectedSlotId,
+            booking_type: payload.bookingType,
+            source: user
+              ? "portal_consultation_form"
+              : "guest_consultation_form",
+            notes: payload.additionalQuestions,
+            metadata: {
+              selectedSlotStatus: "requested",
+              treatmentId: payload.treatmentId ?? null,
+              procedure: payload.procedure ?? null,
+            },
+          });
+
+        let booking = requestedBooking;
+        appointmentBookingId = booking.id;
+        appointmentBookingStatus = booking.status;
+        holdExpiresAt = booking.hold_expires_at;
+
+        try {
+          booking =
+            user && patientId
+              ? await appointmentBookingController.confirm(booking, {
+                  notes: payload.additionalQuestions,
+                })
+              : await appointmentBookingController.hold(booking, {
+                  notes: payload.additionalQuestions,
+                  holdMinutes: 120,
+                });
+        } catch (bookingError) {
+          console.warn(
+            "[consultations] slot workflow stayed requested after booking attempt failed",
+            bookingError,
+          );
+        }
+
+        appointmentBookingId = booking.id;
+        appointmentBookingStatus = booking.status;
+        holdExpiresAt = booking.hold_expires_at;
+        bookedConsultationId = booking.patient_consultation_id;
+        nextPortalMetadata = buildUpdatedPortalMetadata(portalMetadata, {
+          appointmentBookingId,
+          appointmentBookingStatus,
+          selectedSlotStatus: appointmentBookingStatus,
+          bookedConsultationId: bookedConsultationId ?? undefined,
+          holdExpiresAt: holdExpiresAt ?? undefined,
+        });
+
+        await contactRequestController.update(consultationRequest.id, {
+          portal_metadata: nextPortalMetadata,
+        });
+      } catch (bookingError) {
+        console.warn(
+          "[consultations] request saved but booking workflow could not be created",
+          bookingError,
+        );
+      }
     }
 
     const { error: emailError } = await supabaseAdmin.functions.invoke(
@@ -321,7 +418,7 @@ export const POST = async (req: NextRequest) => {
           attachmentsSummary,
           documents,
           requestType: "consultation",
-          portalMetadata,
+          portalMetadata: nextPortalMetadata,
           skipLogging: true,
         },
       },
@@ -338,6 +435,9 @@ export const POST = async (req: NextRequest) => {
       success: true,
       consultationRequestId: consultationRequest.id,
       bookedConsultationId,
+      appointmentBookingId,
+      appointmentBookingStatus,
+      holdExpiresAt,
       booked: Boolean(bookedConsultationId),
       duplicate: false,
       notificationQueued: !emailError,
