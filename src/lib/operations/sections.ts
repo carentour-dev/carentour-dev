@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   Calculator,
   CircleDollarSign,
@@ -158,6 +159,16 @@ export const OPERATIONS_SECTIONS: OperationsSectionConfig[] = [
     icon: CalendarCheck,
     adminHref: "/admin/consultations",
     required: sectionRequirement("operations.consultations"),
+  },
+  {
+    id: "appointment-bookings",
+    label: "Booking Queue",
+    description:
+      "Review requested and held consultation slots before they become confirmed appointments.",
+    href: "/operations/appointment-bookings",
+    icon: CalendarClock,
+    adminHref: "/admin/appointment-bookings",
+    required: sectionRequirement("operations.appointments"),
   },
   {
     id: "appointments",
