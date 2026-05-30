@@ -527,20 +527,31 @@ export default function ConsultationPage() {
         "Consultation request stored for:",
         firstName,
         lastName,
-        result.consultationRequestId,
+        result?.data?.consultationRequestId,
       );
 
+      const responseData = result?.data ?? {};
+      const bookingStatus = responseData.appointmentBookingStatus as
+        | "held"
+        | "confirmed"
+        | "requested"
+        | null
+        | undefined;
       toast({
-        title: result?.data?.booked
+        title: responseData.booked
           ? "Consultation booked"
-          : values.selectedSlotId
-            ? "Preferred time requested"
-            : "Consultation Request Submitted",
-        description: result?.data?.booked
+          : bookingStatus === "held"
+            ? "Preferred time held"
+            : values.selectedSlotId
+              ? "Preferred time requested"
+              : "Consultation Request Submitted",
+        description: responseData.booked
           ? "Your selected consultation slot is confirmed in your patient dashboard."
-          : values.selectedSlotId
-            ? "Your coordinator will confirm whether this time is still available after reviewing your request."
-            : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
+          : bookingStatus === "held"
+            ? "We held this time while your coordinator reviews the request and confirms the next step."
+            : values.selectedSlotId
+              ? "Your coordinator will confirm whether this time is still available after reviewing your request."
+              : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
       });
 
       form.reset();
