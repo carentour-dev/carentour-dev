@@ -99,6 +99,14 @@ type AvailableSlotRecord = ConsultationSlotRow & {
   doctors?: Pick<DoctorRow, "id" | "name" | "title" | "specialization"> | null;
 };
 
+type BookingActivityEntry = {
+  id: string;
+  at: string;
+  title: string;
+  detail?: string | null;
+  type?: string | null;
+};
+
 const bookingStatuses = [
   "requested",
   "held",
@@ -111,7 +119,13 @@ const bookingStatuses = [
 ] as const;
 type BookingStatus = (typeof bookingStatuses)[number];
 type StatusFilter = BookingStatus | "active" | "all";
-type BookingAction = "confirm" | "release" | "cancel" | "request_reschedule";
+type ArchiveFilter = "active" | "archived" | "all";
+type BookingAction =
+  | "confirm"
+  | "release"
+  | "cancel"
+  | "request_reschedule"
+  | "archive";
 
 const QUERY_KEY = ["admin", "appointment-bookings"] as const;
 const AVAILABLE_SLOTS_QUERY_KEY = [
@@ -122,6 +136,12 @@ const ACTIVE_QUEUE_STATUSES: BookingStatus[] = [
   "requested",
   "held",
   "reschedule_requested",
+];
+const CLOSED_QUEUE_STATUSES: BookingStatus[] = [
+  "cancelled",
+  "expired",
+  "completed",
+  "no_show",
 ];
 
 const statusLabels: Record<BookingStatus, string> = {
@@ -139,7 +159,8 @@ const actionLabels: Record<BookingAction, string> = {
   confirm: "Confirm booking",
   release: "Release hold",
   cancel: "Cancel booking",
-  request_reschedule: "Request reschedule",
+  request_reschedule: "Needs reschedule",
+  archive: "Archive record",
 };
 
 const actionDescriptions: Record<BookingAction, string> = {
@@ -149,7 +170,9 @@ const actionDescriptions: Record<BookingAction, string> = {
     "Free the held slot and keep the booking open as a coordinator request.",
   cancel: "Close this booking and release any held slot.",
   request_reschedule:
-    "Release any held slot and mark the booking for rescheduling.",
+    "Flag this booking for reschedule follow-up without selecting a new slot now.",
+  archive:
+    "Clear this closed booking from the default queue while keeping its audit history.",
 };
 
 const getStatusTone = (status: BookingStatus) => {
@@ -180,8 +203,118 @@ const formatDateTime = (value: string | null | undefined) => {
 const formatBookingType = (value: BookingRow["booking_type"]) =>
   value === "onsite" ? "Onsite" : value === "phone" ? "Phone" : "Video";
 
+const formatNullable = (value: string | null | undefined) =>
+  value && value.trim().length > 0 ? value : "Not set";
+
+const isConfirmedBooking = (booking: Pick<BookingRecord, "status">) =>
+  booking.status === "confirmed";
+
+const getSlotActionLabel = (booking: Pick<BookingRecord, "status"> | null) =>
+  booking && isConfirmedBooking(booking) ? "Reschedule slot" : "Assign slot";
+
+const getActionNoteLabel = (action: BookingAction | undefined) =>
+  action === "cancel" ? "Cancellation reason" : "Coordinator note";
+
+const shouldShowCoordinatorNotes = (booking: BookingRecord) =>
+  booking.status !== "cancelled" ||
+  (Boolean(booking.notes) && booking.notes !== booking.cancellation_reason);
+
+const getMetadataRecord = (booking: BookingRecord) => {
+  const metadata = booking.metadata;
+  if (
+    typeof metadata !== "object" ||
+    metadata === null ||
+    Array.isArray(metadata)
+  ) {
+    return null;
+  }
+  return metadata;
+};
+
+const getBookingEmailStatus = (booking: BookingRecord) => {
+  const metadata = getMetadataRecord(booking);
+  if (!metadata) return null;
+
+  const notifications = metadata.notifications;
+  if (
+    typeof notifications !== "object" ||
+    notifications === null ||
+    Array.isArray(notifications)
+  ) {
+    return null;
+  }
+
+  const bookingEmail = notifications.bookingEmail;
+  if (
+    typeof bookingEmail !== "object" ||
+    bookingEmail === null ||
+    Array.isArray(bookingEmail) ||
+    typeof bookingEmail.status !== "string"
+  ) {
+    return null;
+  }
+
+  if (bookingEmail.status === "sent") return "sent";
+  if (bookingEmail.status === "failed") return "failed";
+  if (bookingEmail.status === "skipped") return "skipped";
+  return null;
+};
+
+const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
+  const metadata = getMetadataRecord(booking);
+  const storedActivity = Array.isArray(metadata?.activity)
+    ? metadata.activity.flatMap((item, index): BookingActivityEntry[] => {
+        if (typeof item !== "object" || item === null || Array.isArray(item)) {
+          return [];
+        }
+
+        const at = typeof item.at === "string" ? item.at : null;
+        const title = typeof item.title === "string" ? item.title : null;
+        if (!at || !title) return [];
+
+        return [
+          {
+            id:
+              typeof item.id === "string"
+                ? item.id
+                : `metadata-activity-${index}`,
+            at,
+            title,
+            detail: typeof item.detail === "string" ? item.detail : null,
+            type: typeof item.type === "string" ? item.type : null,
+          },
+        ];
+      })
+    : [];
+
+  const derivedActivity: BookingActivityEntry[] = [
+    {
+      id: "created",
+      at: booking.created_at,
+      title: "Record created",
+      detail: `Source: ${booking.source}`,
+      type: "created",
+    },
+  ];
+
+  if (booking.archived_at) {
+    derivedActivity.push({
+      id: "archived_at",
+      at: booking.archived_at,
+      title: "Record archived",
+      detail: booking.archive_note,
+      type: "archived",
+    });
+  }
+
+  return [...storedActivity, ...derivedActivity].sort(
+    (left, right) => new Date(right.at).getTime() - new Date(left.at).getTime(),
+  );
+};
+
 export default function AdminAppointmentBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("active");
   const [actionTarget, setActionTarget] = useState<{
     booking: BookingRecord;
     action: BookingAction;
@@ -190,6 +323,9 @@ export default function AdminAppointmentBookingsPage() {
   const [slotTarget, setSlotTarget] = useState<BookingRecord | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [slotNotes, setSlotNotes] = useState("");
+  const [detailsTarget, setDetailsTarget] = useState<BookingRecord | null>(
+    null,
+  );
   const invalidate = useAdminInvalidate();
   const { toast } = useToast();
 
@@ -201,12 +337,13 @@ export default function AdminAppointmentBookingsPage() {
   }, []);
 
   const query = useQuery({
-    queryKey: [...QUERY_KEY, statusFilter],
+    queryKey: [...QUERY_KEY, statusFilter, archiveFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (bookingStatuses.includes(statusFilter as BookingStatus)) {
         params.set("status", statusFilter);
       }
+      params.set("archived", archiveFilter);
       return adminFetch<BookingRecord[]>(
         `/api/admin/appointment-bookings${params.size ? `?${params}` : ""}`,
       );
@@ -281,7 +418,7 @@ export default function AdminAppointmentBookingsPage() {
           method: "POST",
           body: JSON.stringify({
             action,
-            notes: notes.trim() || null,
+            notes: action === "cancel" ? null : notes.trim() || null,
             cancellation_reason:
               action === "cancel" ? notes.trim() || null : null,
           }),
@@ -323,10 +460,14 @@ export default function AdminAppointmentBookingsPage() {
           }),
         },
       ),
-    onSuccess: () => {
+    onSuccess: (_booking, variables) => {
       invalidate(QUERY_KEY);
       invalidate(AVAILABLE_SLOTS_QUERY_KEY);
-      toast({ title: "Slot assigned" });
+      toast({
+        title: isConfirmedBooking(variables.booking)
+          ? "Slot rescheduled"
+          : "Slot assigned",
+      });
       setSlotTarget(null);
       setSelectedSlotId("");
       setSlotNotes("");
@@ -355,17 +496,34 @@ export default function AdminAppointmentBookingsPage() {
     (booking.status === "requested" || booking.status === "held");
   const canRelease = (booking: BookingRecord) => booking.status === "held";
   const canCancel = (booking: BookingRecord) =>
-    !["cancelled", "completed", "no_show"].includes(booking.status);
+    !CLOSED_QUEUE_STATUSES.includes(booking.status);
   const canRequestReschedule = (booking: BookingRecord) =>
     ["requested", "held", "confirmed"].includes(booking.status);
   const canAssignSlot = (booking: BookingRecord) =>
-    !["cancelled", "expired", "completed", "no_show"].includes(booking.status);
+    !CLOSED_QUEUE_STATUSES.includes(booking.status);
+  const canArchive = (booking: BookingRecord) =>
+    CLOSED_QUEUE_STATUSES.includes(booking.status) && !booking.archived_at;
+  const hasPrimaryBookingActions = (booking: BookingRecord) =>
+    canAssignSlot(booking) ||
+    canConfirm(booking) ||
+    canRelease(booking) ||
+    canRequestReschedule(booking);
+  const hasBookingActions = (booking: BookingRecord) =>
+    hasPrimaryBookingActions(booking) ||
+    canCancel(booking) ||
+    canArchive(booking);
   const filterDescription =
     statusFilter === "active"
       ? "Needs action shows requested, held, and reschedule-requested bookings."
       : statusFilter === "all"
         ? "All statuses includes confirmed, cancelled, expired, completed, and no-show records."
         : `${statusLabels[statusFilter]} bookings only.`;
+  const archiveDescription =
+    archiveFilter === "active"
+      ? "Archived records are hidden from this queue."
+      : archiveFilter === "archived"
+        ? "Only archived records are shown."
+        : "Active and archived records are shown.";
   const emptyStateDescription =
     statusFilter === "active"
       ? "No bookings currently need coordinator action. Switch to All statuses to view confirmed or closed bookings."
@@ -430,6 +588,27 @@ export default function AdminAppointmentBookingsPage() {
           </Select>
           <span className="text-xs leading-5 text-muted-foreground">
             {filterDescription}
+          </span>
+        </div>
+        <div className="flex min-w-[220px] flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            Visibility
+          </span>
+          <Select
+            value={archiveFilter}
+            onValueChange={(value) => setArchiveFilter(value as ArchiveFilter)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active records</SelectItem>
+              <SelectItem value="archived">Archived records</SelectItem>
+              <SelectItem value="all">All records</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs leading-5 text-muted-foreground">
+            {archiveDescription}
           </span>
         </div>
       </WorkspaceFilterBar>
@@ -532,6 +711,11 @@ export default function AdminAppointmentBookingsPage() {
                       >
                         {statusLabels[booking.status]}
                       </WorkspaceStatusBadge>
+                      {getBookingEmailStatus(booking) ? (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Email {getBookingEmailStatus(booking)}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <div>{formatDateTime(booking.hold_expires_at)}</div>
@@ -556,39 +740,69 @@ export default function AdminAppointmentBookingsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuItem
-                            disabled={!canAssignSlot(booking)}
-                            onSelect={() => openSlotDialog(booking)}
+                            onSelect={() => setDetailsTarget(booking)}
                           >
-                            Assign slot
+                            View details
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={!canConfirm(booking)}
-                            onSelect={() => openAction(booking, "confirm")}
-                          >
-                            Confirm booking
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={!canRelease(booking)}
-                            onSelect={() => openAction(booking, "release")}
-                          >
-                            Release hold
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={!canRequestReschedule(booking)}
-                            onSelect={() =>
-                              openAction(booking, "request_reschedule")
-                            }
-                          >
-                            Request reschedule
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            disabled={!canCancel(booking)}
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => openAction(booking, "cancel")}
-                          >
-                            Cancel booking
-                          </DropdownMenuItem>
+                          {hasBookingActions(booking) ? (
+                            <DropdownMenuSeparator />
+                          ) : null}
+                          {canAssignSlot(booking) ? (
+                            <DropdownMenuItem
+                              onSelect={() => openSlotDialog(booking)}
+                            >
+                              {getSlotActionLabel(booking)}
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canConfirm(booking) ? (
+                            <DropdownMenuItem
+                              onSelect={() => openAction(booking, "confirm")}
+                            >
+                              Confirm booking
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canRelease(booking) ? (
+                            <DropdownMenuItem
+                              onSelect={() => openAction(booking, "release")}
+                            >
+                              Release hold
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canRequestReschedule(booking) ? (
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                openAction(booking, "request_reschedule")
+                              }
+                            >
+                              Needs reschedule
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canCancel(booking) ? (
+                            <>
+                              {hasPrimaryBookingActions(booking) ? (
+                                <DropdownMenuSeparator />
+                              ) : null}
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => openAction(booking, "cancel")}
+                              >
+                                Cancel booking
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                          {canArchive(booking) ? (
+                            <>
+                              {hasPrimaryBookingActions(booking) ||
+                              canCancel(booking) ? (
+                                <DropdownMenuSeparator />
+                              ) : null}
+                              <DropdownMenuItem
+                                onSelect={() => openAction(booking, "archive")}
+                              >
+                                Archive record
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -599,6 +813,176 @@ export default function AdminAppointmentBookingsPage() {
           </div>
         )}
       </WorkspacePanel>
+
+      <Dialog
+        open={Boolean(detailsTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Booking details</DialogTitle>
+            <DialogDescription>
+              Current booking state, linked records, notes, and activity.
+            </DialogDescription>
+          </DialogHeader>
+          {detailsTarget ? (
+            <div className="max-h-[70vh] space-y-6 overflow-y-auto pr-1">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Patient
+                  </div>
+                  <div className="text-sm font-medium">
+                    {detailsTarget.patients?.full_name ?? "Guest request"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatNullable(
+                      detailsTarget.patients?.contact_email ??
+                        detailsTarget.contact_requests?.email,
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatNullable(
+                      detailsTarget.patients?.contact_phone ??
+                        detailsTarget.contact_requests?.phone,
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Status
+                  </div>
+                  <div>
+                    <WorkspaceStatusBadge
+                      tone={getStatusTone(detailsTarget.status)}
+                    >
+                      {statusLabels[detailsTarget.status]}
+                    </WorkspaceStatusBadge>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Email {getBookingEmailStatus(detailsTarget) ?? "not sent"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Visibility:{" "}
+                    {detailsTarget.archived_at ? "Archived" : "Active"}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Slot
+                  </div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(
+                      detailsTarget.confirmed_starts_at ??
+                        detailsTarget.requested_starts_at,
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatBookingType(detailsTarget.booking_type)} ·{" "}
+                    {detailsTarget.timezone}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Slot {detailsTarget.consultation_slots?.status ?? "not set"}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Doctor
+                  </div>
+                  <div className="text-sm font-medium">
+                    {detailsTarget.doctors?.name ?? "Unassigned doctor"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {detailsTarget.doctors?.specialization ??
+                      detailsTarget.doctors?.title ??
+                      "No specialty linked"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {shouldShowCoordinatorNotes(detailsTarget) ? (
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      Coordinator notes
+                    </div>
+                    <div className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                      {formatNullable(detailsTarget.notes)}
+                    </div>
+                  </div>
+                ) : null}
+                {detailsTarget.status === "cancelled" ? (
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      Cancellation reason
+                    </div>
+                    <div className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                      {formatNullable(detailsTarget.cancellation_reason)}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Activity timeline
+                </div>
+                <div className="space-y-3">
+                  {getBookingActivity(detailsTarget).map((event) => (
+                    <div
+                      key={event.id}
+                      className="grid grid-cols-[12px_1fr] gap-3"
+                    >
+                      <span className="mt-1.5 h-2.5 w-2.5 rounded-full bg-foreground/70" />
+                      <div className="border-b border-border pb-3 last:border-b-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {event.title}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateTime(event.at)}
+                          </span>
+                        </div>
+                        {event.detail ? (
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {event.detail}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+                <div>Booking ID: {detailsTarget.id}</div>
+                <div>
+                  Consultation ID:{" "}
+                  {formatNullable(detailsTarget.patient_consultation_id)}
+                </div>
+                <div>
+                  Slot ID: {formatNullable(detailsTarget.consultation_slot_id)}
+                </div>
+                <div>
+                  Contact request ID:{" "}
+                  {formatNullable(detailsTarget.contact_request_id)}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDetailsTarget(null)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(actionTarget)}
@@ -621,10 +1005,13 @@ export default function AdminAppointmentBookingsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="text-sm font-medium text-foreground">
+              {getActionNoteLabel(actionTarget?.action)}
+            </div>
             <Textarea
               value={actionNotes}
               rows={4}
-              placeholder="Coordinator note"
+              placeholder={getActionNoteLabel(actionTarget?.action)}
               onChange={(event) => setActionNotes(event.target.value)}
             />
           </div>
@@ -666,7 +1053,7 @@ export default function AdminAppointmentBookingsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign available slot</DialogTitle>
+            <DialogTitle>{getSlotActionLabel(slotTarget)}</DialogTitle>
             <DialogDescription>
               {slotTarget?.patient_consultation_id
                 ? "Move the linked consultation to a new available slot. The old booked slot will be released."
@@ -741,7 +1128,11 @@ export default function AdminAppointmentBookingsPage() {
                 }
               }}
             >
-              {slotMutation.isPending ? "Assigning..." : "Assign slot"}
+              {slotMutation.isPending
+                ? isConfirmedBooking(slotTarget)
+                  ? "Rescheduling..."
+                  : "Assigning..."
+                : getSlotActionLabel(slotTarget)}
             </Button>
           </DialogFooter>
         </DialogContent>
