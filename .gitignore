@@ -25,7 +25,8 @@ dist-ssr
 WEBSITE_FLOW.md
 CLEANUP_SUMMARY.md
 Care-N-Tour-Lead-Webhook-Integration-Guide.md
-/docs/
+/docs/*
+!/docs/appointment-booking-reminders.md
 BLOG_IMPLEMENTATION_STATUS.md
 BLOG_IMPLEMENTATION_COMPLETE.md
 
