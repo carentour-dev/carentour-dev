@@ -153,6 +153,7 @@ const bookingStatuses = [
 type BookingStatus = (typeof bookingStatuses)[number];
 type StatusFilter = BookingStatus | "active" | "all";
 type ArchiveFilter = "active" | "archived" | "all";
+type ReminderFilter = "all" | "pending" | "sent" | "failed" | "none";
 type BookingAction =
   | "confirm"
   | "release"
@@ -499,6 +500,35 @@ const getBookingReminderStatus = (booking: BookingRecord) => {
   return null;
 };
 
+const getBookingReminderFilterState = (
+  booking: BookingRecord,
+): Exclude<ReminderFilter, "all"> => {
+  const reminders = getBookingReminderAudit(booking);
+  const statuses = reminders.map((reminder) => reminder.status);
+
+  if (statuses.includes("failed")) return "failed";
+  if (statuses.includes("sent")) return "sent";
+
+  if (
+    booking.status === "confirmed" &&
+    !booking.archived_at &&
+    booking.confirmed_starts_at &&
+    new Date(booking.confirmed_starts_at).getTime() > Date.now()
+  ) {
+    return "pending";
+  }
+
+  return "none";
+};
+
+const reminderFilterLabels: Record<ReminderFilter, string> = {
+  all: "All reminders",
+  pending: "Reminder pending",
+  sent: "Reminder sent",
+  failed: "Reminder failed",
+  none: "No reminder activity",
+};
+
 const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
   const metadata = getMetadataRecord(booking);
   const storedActivity = Array.isArray(metadata?.activity)
@@ -665,6 +695,7 @@ const ReminderAuditPanel = ({ booking }: { booking: BookingRecord }) => {
 export default function AdminAppointmentBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("active");
+  const [reminderFilter, setReminderFilter] = useState<ReminderFilter>("all");
   const [actionTarget, setActionTarget] = useState<{
     booking: BookingRecord;
     action: BookingAction;
@@ -731,11 +762,19 @@ export default function AdminAppointmentBookingsPage() {
 
   const bookings = useMemo(() => {
     const rows = query.data ?? [];
-    if (statusFilter !== "active") return rows;
-    return rows.filter((booking) =>
-      ACTIVE_QUEUE_STATUSES.includes(booking.status),
+    const statusRows =
+      statusFilter === "active"
+        ? rows.filter((booking) =>
+            ACTIVE_QUEUE_STATUSES.includes(booking.status),
+          )
+        : rows;
+
+    if (reminderFilter === "all") return statusRows;
+
+    return statusRows.filter(
+      (booking) => getBookingReminderFilterState(booking) === reminderFilter,
     );
-  }, [query.data, statusFilter]);
+  }, [query.data, reminderFilter, statusFilter]);
 
   const counts = useMemo(
     () =>
@@ -949,10 +988,22 @@ export default function AdminAppointmentBookingsPage() {
       : archiveFilter === "archived"
         ? "Only archived records are shown."
         : "Active and archived records are shown.";
+  const reminderDescription =
+    reminderFilter === "all"
+      ? "No reminder filter is applied."
+      : reminderFilter === "pending"
+        ? "Confirmed future bookings without a sent or failed reminder."
+        : reminderFilter === "sent"
+          ? "Bookings with at least one successful reminder attempt."
+          : reminderFilter === "failed"
+            ? "Bookings with a failed reminder attempt."
+            : "Bookings with no reminder attempts or pending reminder.";
   const emptyStateDescription =
-    statusFilter === "active"
-      ? "No bookings currently need coordinator action. Switch to All statuses to view confirmed or closed bookings."
-      : "Change the filter or wait for new consultation slot requests.";
+    reminderFilter !== "all"
+      ? "No bookings match the selected reminder filter."
+      : statusFilter === "active"
+        ? "No bookings currently need coordinator action. Switch to All statuses to view confirmed or closed bookings."
+        : "Change the filter or wait for new consultation slot requests.";
 
   return (
     <div className="space-y-6">
@@ -1034,6 +1085,31 @@ export default function AdminAppointmentBookingsPage() {
           </Select>
           <span className="text-xs leading-5 text-muted-foreground">
             {archiveDescription}
+          </span>
+        </div>
+        <div className="flex min-w-[220px] flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            Reminder
+          </span>
+          <Select
+            value={reminderFilter}
+            onValueChange={(value) =>
+              setReminderFilter(value as ReminderFilter)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(reminderFilterLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs leading-5 text-muted-foreground">
+            {reminderDescription}
           </span>
         </div>
       </WorkspaceFilterBar>
