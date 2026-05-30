@@ -145,6 +145,17 @@ const appointmentStatusLabels = {
   rescheduled: "Rescheduled",
 } as const;
 
+const appointmentBookingStatusLabels = {
+  requested: "Requested",
+  held: "Held",
+  confirmed: "Confirmed",
+  reschedule_requested: "Reschedule requested",
+  cancelled: "Cancelled",
+  expired: "Expired",
+  completed: "Completed",
+  no_show: "No show",
+} as const;
+
 type DoctorOption = Pick<
   Database["public"]["Tables"]["doctors"]["Row"],
   "id" | "name" | "title"
@@ -498,6 +509,7 @@ export default function DashboardPage() {
     requests,
     consultations,
     appointments,
+    appointmentBookings,
     reviews,
     stories,
     isLoading: portalLoading,
@@ -1284,6 +1296,21 @@ export default function DashboardPage() {
   }, [consultations]);
 
   const nextConsultation = upcomingConsultations[0] ?? null;
+
+  const activeAppointmentBookings = useMemo(() => {
+    const activeStatuses = new Set([
+      "requested",
+      "held",
+      "reschedule_requested",
+    ]);
+    return appointmentBookings
+      .filter((booking) => activeStatuses.has(booking.status))
+      .sort(
+        (a, b) =>
+          new Date(a.requested_starts_at ?? a.created_at ?? "").getTime() -
+          new Date(b.requested_starts_at ?? b.created_at ?? "").getTime(),
+      );
+  }, [appointmentBookings]);
 
   const upcomingAppointments = useMemo(() => {
     const now = Date.now();
@@ -2504,6 +2531,62 @@ export default function DashboardPage() {
                           visits or schedule changes.
                         </p>
                       ) : null}
+                    </div>
+                  ) : activeAppointmentBookings.length > 0 ? (
+                    <div className="space-y-4">
+                      {activeAppointmentBookings.map((booking) => (
+                        <div
+                          key={booking.id}
+                          className="rounded-lg border border-border/70 bg-muted/10 p-4"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {booking.requested_starts_at
+                                  ? formatDateTime(booking.requested_starts_at)
+                                  : "Time under review"}
+                              </p>
+                              {booking.hold_expires_at ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Held until{" "}
+                                  {formatDateTime(booking.hold_expires_at)}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  Your coordinator is reviewing this request.
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant={statusBadgeVariant(booking.status)}>
+                              {appointmentBookingStatusLabels[booking.status]}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 space-y-2 text-sm">
+                            {booking.doctors ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Stethoscope className="h-4 w-4" />
+                                <span>{booking.doctors.name}</span>
+                              </div>
+                            ) : null}
+                            {booking.location ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <MapPin className="h-4 w-4" />
+                                <span>{booking.location}</span>
+                              </div>
+                            ) : null}
+                            {booking.requested_starts_at ? (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                <span>
+                                  {formatRelativeTime(
+                                    booking.requested_starts_at,
+                                  )}
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
