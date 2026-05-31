@@ -61,7 +61,7 @@ export const STATIC_PUBLIC_ROUTE_DEFAULTS = [
     pathname: "/consultation",
     title: "Book a Consultation | Care N Tour",
     description:
-      "Share your case and receive specialist recommendations with a free consultation.",
+      "Choose a free care-coordination consultation or a paid medical consultation with specialist guidance.",
     source: "core",
   },
   {
