@@ -253,7 +253,7 @@ type DashboardDocument = {
 
 type PatientFinancePaymentLink = {
   id: string;
-  finance_invoice_id: string;
+  finance_invoice_id: string | null;
   finance_invoice_installment_id: string | null;
   label: string;
   amount: number;
@@ -305,10 +305,21 @@ type PatientFinanceInvoice = {
   payment_links?: PatientFinancePaymentLink[];
 };
 
+type PatientFinanceCredit = {
+  id: string;
+  amount: number;
+  applied_amount: number;
+  balance_amount: number;
+  currency: string;
+  status: "unapplied" | "partially_applied" | "applied" | "void";
+  created_at: string | null;
+};
+
 type PatientFinanceSnapshot = {
   patientId: string | null;
   invoices: PatientFinanceInvoice[];
   payment_links?: PatientFinancePaymentLink[];
+  unapplied_credits?: PatientFinanceCredit[];
 };
 
 const sanitizePatientCountry = (value?: string | null) => {
@@ -642,6 +653,7 @@ export default function DashboardPage() {
         patientId: null,
         invoices: [],
         payment_links: [],
+        unapplied_credits: [],
       }) as PatientFinanceSnapshot;
     },
   });
@@ -1336,6 +1348,10 @@ export default function DashboardPage() {
     () => patientFinance?.payment_links ?? [],
     [patientFinance?.payment_links],
   );
+  const financeUnappliedCredits = useMemo(
+    () => patientFinance?.unapplied_credits ?? [],
+    [patientFinance?.unapplied_credits],
+  );
   const standaloneFinancePaymentLinks = useMemo(
     () =>
       financePaymentLinks.filter(
@@ -1386,11 +1402,27 @@ export default function DashboardPage() {
 
   const totalOutstandingFinanceBalance = useMemo(
     () =>
-      financeInvoices.reduce(
-        (sum, invoice) => sum + (invoice.balance_amount ?? 0),
+      Math.max(
+        financeInvoices.reduce(
+          (sum, invoice) => sum + (invoice.balance_amount ?? 0),
+          0,
+        ) -
+          financeUnappliedCredits.reduce(
+            (sum, credit) => sum + (credit.balance_amount ?? 0),
+            0,
+          ),
         0,
       ),
-    [financeInvoices],
+    [financeInvoices, financeUnappliedCredits],
+  );
+
+  const totalUnappliedFinanceCredit = useMemo(
+    () =>
+      financeUnappliedCredits.reduce(
+        (sum, credit) => sum + (credit.balance_amount ?? 0),
+        0,
+      ),
+    [financeUnappliedCredits],
   );
 
   const recentReviews = useMemo(
@@ -2715,7 +2747,8 @@ export default function DashboardPage() {
                       Loading finance details...
                     </div>
                   ) : financeInvoices.length === 0 &&
-                    standaloneFinancePaymentLinks.length === 0 ? (
+                    standaloneFinancePaymentLinks.length === 0 &&
+                    financeUnappliedCredits.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
                       <p className="font-medium text-foreground">
                         No invoices yet
@@ -2727,7 +2760,8 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <>
-                      {financeInvoices.length > 0 ? (
+                      {financeInvoices.length > 0 ||
+                      financeUnappliedCredits.length > 0 ? (
                         <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
                           <p className="text-xs uppercase tracking-wide text-muted-foreground">
                             Total outstanding balance
@@ -2735,7 +2769,9 @@ export default function DashboardPage() {
                           <p className="mt-1 text-xl font-semibold text-foreground">
                             {formatCurrencyAmount(
                               totalOutstandingFinanceBalance,
-                              financeInvoices[0]?.currency ?? "USD",
+                              financeInvoices[0]?.currency ??
+                                financeUnappliedCredits[0]?.currency ??
+                                "USD",
                             )}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -2744,6 +2780,14 @@ export default function DashboardPage() {
                             {upcomingFinanceInstallments.length === 1
                               ? ""
                               : "s"}
+                            {totalUnappliedFinanceCredit > 0
+                              ? ` • ${formatCurrencyAmount(
+                                  totalUnappliedFinanceCredit,
+                                  financeUnappliedCredits[0]?.currency ??
+                                    financeInvoices[0]?.currency ??
+                                    "USD",
+                                )} unapplied credit`
+                              : ""}
                           </p>
                         </div>
                       ) : null}
