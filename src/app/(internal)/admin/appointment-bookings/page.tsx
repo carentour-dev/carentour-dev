@@ -861,6 +861,119 @@ export default function AdminAppointmentBookingsPage() {
     [statusFilteredBookings],
   );
 
+  const operationsSummary = useMemo(() => {
+    const rows = query.data ?? [];
+    const currentTime = new Date(slotRange.from).getTime();
+    const activeRows = rows.filter((booking) => !booking.archived_at);
+    const reminderStates = activeRows.map((booking) =>
+      getBookingReminderFilterState(booking),
+    );
+
+    return {
+      needsAction: activeRows.filter((booking) =>
+        ACTIVE_QUEUE_STATUSES.includes(booking.status),
+      ).length,
+      needsReschedule: activeRows.filter(
+        (booking) => booking.status === "reschedule_requested",
+      ).length,
+      upcomingConfirmed: activeRows.filter((booking) => {
+        if (booking.status !== "confirmed" || !booking.confirmed_starts_at) {
+          return false;
+        }
+
+        const startsAt = new Date(booking.confirmed_starts_at).getTime();
+        return Number.isFinite(startsAt) && startsAt > currentTime;
+      }).length,
+      expiredHolds: activeRows.filter((booking) => {
+        if (booking.status !== "held" || !booking.hold_expires_at) {
+          return false;
+        }
+
+        const holdExpiresAt = new Date(booking.hold_expires_at).getTime();
+        return Number.isFinite(holdExpiresAt) && holdExpiresAt <= currentTime;
+      }).length,
+      reminderFailures: reminderStates.filter((state) => state === "failed")
+        .length,
+      pendingReminders: reminderStates.filter((state) => state === "pending")
+        .length,
+      closedRecords: activeRows.filter((booking) =>
+        CLOSED_QUEUE_STATUSES.includes(booking.status),
+      ).length,
+      archivedRecords: rows.filter((booking) => booking.archived_at).length,
+    };
+  }, [query.data, slotRange.from]);
+
+  const operationItems = [
+    {
+      label: "Needs action",
+      value: operationsSummary.needsAction,
+      description: "Requested, held, and needs-reschedule bookings.",
+      tone: "warning" as const,
+      onClick: () => {
+        setStatusFilter("active");
+        setArchiveFilter("active");
+        setReminderFilter("all");
+      },
+    },
+    {
+      label: "Failed reminders",
+      value: operationsSummary.reminderFailures,
+      description: "Reminder attempts that need retry or follow-up.",
+      tone: "danger" as const,
+      onClick: () => {
+        setStatusFilter("all");
+        setArchiveFilter("active");
+        setReminderFilter("failed");
+      },
+    },
+    {
+      label: "Pending reminders",
+      value: operationsSummary.pendingReminders,
+      description: "Future confirmed bookings with no reminder sent yet.",
+      tone: "warning" as const,
+      onClick: () => {
+        setStatusFilter("all");
+        setArchiveFilter("active");
+        setReminderFilter("pending");
+      },
+    },
+    {
+      label: "Expired holds",
+      value: operationsSummary.expiredHolds,
+      description: "Held bookings where the temporary hold has passed.",
+      tone: "danger" as const,
+      onClick: () => {
+        setStatusFilter("held");
+        setArchiveFilter("active");
+        setReminderFilter("all");
+      },
+    },
+    {
+      label: "Upcoming confirmed",
+      value: operationsSummary.upcomingConfirmed,
+      description: "Active confirmed bookings still in the future.",
+      tone: "success" as const,
+      onClick: () => {
+        setStatusFilter("confirmed");
+        setArchiveFilter("active");
+        setReminderFilter("all");
+      },
+    },
+    {
+      label: "Closed records to archive",
+      value: operationsSummary.closedRecords,
+      description: `${operationsSummary.archivedRecords} record${
+        operationsSummary.archivedRecords === 1 ? "" : "s"
+      } already archived.`,
+      tone: "muted" as const,
+      onClick: () => {
+        setStatusFilter("all");
+        setArchiveFilter("active");
+        setReminderFilter("none");
+      },
+    },
+  ];
+
   const actionMutation = useMutation({
     mutationFn: ({
       booking,
@@ -1142,6 +1255,49 @@ export default function AdminAppointmentBookingsPage() {
           onClick={() => setReminderFilter("none")}
         />
       </div>
+
+      <WorkspacePanel
+        title="Operations summary"
+        description="Live queue health across active records, independent of the table filters."
+        densityVariant="compact"
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setStatusFilter("all");
+              setArchiveFilter("active");
+              setReminderFilter("all");
+            }}
+          >
+            Reset filters
+          </Button>
+        }
+      >
+        <div className="grid overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+          {operationItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="flex min-h-28 flex-col justify-between gap-4 bg-background p-4 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              onClick={item.onClick}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  {item.label}
+                </span>
+                <WorkspaceStatusBadge tone={item.tone}>
+                  {item.value}
+                </WorkspaceStatusBadge>
+              </div>
+              <span className="text-sm leading-6 text-muted-foreground">
+                {item.description}
+              </span>
+            </button>
+          ))}
+        </div>
+      </WorkspacePanel>
 
       <WorkspaceFilterBar className="grid gap-4 p-4 lg:grid-cols-3 lg:items-start lg:justify-normal">
         <div className="flex min-w-0 flex-col gap-1">
