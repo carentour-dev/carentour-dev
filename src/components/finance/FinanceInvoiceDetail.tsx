@@ -558,7 +558,7 @@ export function FinanceInvoiceDetail({
                         >
                           Disable
                         </Button>
-                      ) : (
+                      ) : paymentLink.status === "disabled" ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -572,7 +572,7 @@ export function FinanceInvoiceDetail({
                         >
                           Activate
                         </Button>
-                      )}
+                      ) : null}
                       {paymentLink.status !== "paid" ? (
                         <Button
                           variant="outline"
