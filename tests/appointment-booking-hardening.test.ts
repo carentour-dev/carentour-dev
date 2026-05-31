@@ -292,6 +292,12 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Sent reminders/);
   assert.match(pageSource, /Failed reminders/);
   assert.match(pageSource, /setReminderFilter\("failed"\)/);
+  assert.match(pageSource, /operationsSummary/);
+  assert.match(pageSource, /Operations summary/);
+  assert.match(pageSource, /Failed reminders/);
+  assert.match(pageSource, /Expired holds/);
+  assert.match(pageSource, /Closed records to archive/);
+  assert.match(pageSource, /Reset filters/);
   assert.match(
     pageSource,
     /Confirmation email \{getBookingEmailStatus\(booking\)\}/,
