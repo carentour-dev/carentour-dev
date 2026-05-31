@@ -307,6 +307,7 @@ npm run verify:release
 | `RESEND_API_KEY`                       | Resend API key used by Edge Functions for outbound email                                            | ✅\*      |
 | `RESEND_FROM_ADDRESS`                  | Optional default sender identity for Resend emails                                                  | Optional  |
 | `RESEND_STAFF_INVITE_FROM`             | Optional override for the staff invite sender address                                               | Optional  |
+| `MEDICAL_CONSULTATION_PAYMENT_URL`     | Server-side Stripe-hosted payment link used for the $50 medical consultation option                 | Optional  |
 | `TEAM_ACCOUNT_INVITE_REDIRECT_URL`     | Optional: exact URL staff invites should open (defaults to `ADMIN_CONSOLE_URL + /staff/onboarding`) | Optional  |
 | `CNT_AI_PROVIDER`                      | Set to `gemini` to enable the CNT AI assistant in the Operations dashboard                          | Optional† |
 | `CNT_AI_GEMINI_KEY`                    | Google AI Studio API key used server-side by CNT AI                                                 | Optional† |
