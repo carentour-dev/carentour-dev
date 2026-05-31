@@ -1159,6 +1159,7 @@ export default function PatientDetailsPage() {
                           <TableHead>Currency</TableHead>
                           <TableHead>Invoiced</TableHead>
                           <TableHead>Paid</TableHead>
+                          <TableHead>Unapplied credit</TableHead>
                           <TableHead>Outstanding</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1178,6 +1179,12 @@ export default function PatientDetailsPage() {
                             </TableCell>
                             <TableCell>
                               {formatCurrency(total.paid_total, total.currency)}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                total.unapplied_credit_total,
+                                total.currency,
+                              )}
                             </TableCell>
                             <TableCell>
                               {formatCurrency(
