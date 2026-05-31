@@ -72,6 +72,7 @@ const bookingActionSchema = z.object({
     "assign_slot",
     "archive",
   ]),
+  patient_id: optionalUuid,
   slot_id: z.string().uuid().optional(),
   notes: z.string().optional().nullable(),
   cancellation_reason: z.string().optional().nullable(),
@@ -886,6 +887,47 @@ export const appointmentBookingController = {
     return this.get(held.id);
   },
 
+  async linkPatient(
+    booking: Pick<AppointmentBookingRow, "id" | "contact_request_id">,
+    patientId: string,
+  ) {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("appointment_bookings")
+      .update({ patient_id: patientId })
+      .eq("id", booking.id)
+      .select(selectColumns)
+      .maybeSingle();
+
+    if (error) {
+      throw mapBookingError(error);
+    }
+
+    if (!data) {
+      throw new ApiError(404, "Appointment booking not found");
+    }
+
+    if (booking.contact_request_id) {
+      const { error: requestError } = await supabase
+        .from("contact_requests")
+        .update({ patient_id: patientId })
+        .eq("id", booking.contact_request_id);
+
+      if (requestError) {
+        throw mapBookingError(requestError);
+      }
+    }
+
+    await this.recordBookingActivity(data.id, {
+      type: "patient_linked",
+      title: "Patient linked",
+      detail: "Booking linked to a patient before confirmation.",
+      patientId,
+    });
+
+    return data;
+  },
+
   async update(id: unknown, payload: unknown) {
     const bookingId = z.string().uuid().parse(id);
     const parsed = updateBookingSchema.parse(payload);
@@ -1076,7 +1118,12 @@ export const appointmentBookingController = {
 
     switch (parsed.action) {
       case "confirm":
-        result = await this.confirm(booking, { notes: parsed.notes });
+        result = await this.confirm(
+          parsed.patient_id && parsed.patient_id !== booking.patient_id
+            ? await this.linkPatient(booking, parsed.patient_id)
+            : booking,
+          { notes: parsed.notes },
+        );
         notificationType = "confirmed";
         break;
       case "release":
