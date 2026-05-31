@@ -78,7 +78,7 @@ const badgeVariant = (status?: string | null) => {
     case "active":
       return "success" as const;
     case "paid":
-      return "secondary" as const;
+      return "success" as const;
     case "expired":
       return "destructive" as const;
     default:
@@ -487,7 +487,7 @@ export function FinancePaymentLinksWorkspace() {
                       >
                         Disable
                       </Button>
-                    ) : (
+                    ) : paymentLink.status === "disabled" ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -501,7 +501,7 @@ export function FinancePaymentLinksWorkspace() {
                       >
                         Activate
                       </Button>
-                    )}
+                    ) : null}
                     {paymentLink.status !== "paid" ? (
                       <Button
                         variant="outline"
