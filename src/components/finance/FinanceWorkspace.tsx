@@ -7,6 +7,7 @@ import {
   AlertCircle,
   BarChart3,
   CheckCircle2,
+  CreditCard,
   Loader2,
   Plus,
   ReceiptText,
@@ -89,6 +90,21 @@ type FinanceInvoiceListItem = {
     due_date: string | null;
     balance_amount: number;
     status: string;
+  } | null;
+};
+
+type FinancePatientCredit = {
+  id: string;
+  patient_id: string;
+  amount: number;
+  applied_amount: number;
+  balance_amount: number;
+  currency: string;
+  status: "unapplied" | "partially_applied" | "applied" | "void";
+  created_at: string | null;
+  patients?: {
+    id: string;
+    full_name: string | null;
   } | null;
 };
 
@@ -178,6 +194,7 @@ type InstallmentEditorRow = {
 };
 
 const INVOICES_QUERY_KEY = ["finance", "invoices"] as const;
+const PATIENT_CREDITS_QUERY_KEY = ["finance", "patient-credits"] as const;
 const QUOTES_QUERY_KEY = ["finance", "quotes", "operations"] as const;
 const AGING_QUERY_KEY = ["finance", "ar-aging"] as const;
 const CREDIT_ADJUSTMENTS_QUERY_KEY = ["finance", "credit-adjustments"] as const;
@@ -340,6 +357,14 @@ export function FinanceWorkspace({
     queryKey: INVOICES_QUERY_KEY,
     queryFn: () =>
       adminFetch<FinanceInvoiceListItem[]>("/api/admin/finance/invoices"),
+    enabled: canViewInvoices,
+    staleTime: 30_000,
+  });
+
+  const patientCreditsQuery = useQuery({
+    queryKey: PATIENT_CREDITS_QUERY_KEY,
+    queryFn: () =>
+      adminFetch<FinancePatientCredit[]>("/api/admin/finance/patient-credits"),
     enabled: canViewInvoices,
     staleTime: 30_000,
   });
@@ -782,6 +807,16 @@ export function FinanceWorkspace({
     [invoicesQuery.data],
   );
 
+  const unappliedCreditsByCurrency = useMemo(
+    () =>
+      sumByCurrency(
+        patientCreditsQuery.data ?? [],
+        (credit) => credit.balance_amount ?? 0,
+        "USD",
+      ),
+    [patientCreditsQuery.data],
+  );
+
   const overdueInstallmentsCount = useMemo(
     () =>
       (invoicesQuery.data ?? []).reduce(
@@ -828,6 +863,7 @@ export function FinanceWorkspace({
 
   const hasFinanceDataError =
     (canViewInvoices && invoicesQuery.isError) ||
+    (canViewInvoices && patientCreditsQuery.isError) ||
     (canViewQuotationData && quotesQuery.isError) ||
     (canViewReports && agingQuery.isError) ||
     (canViewCreditAdjustments && pendingAdjustmentsQuery.isError) ||
@@ -886,6 +922,18 @@ export function FinanceWorkspace({
           helperText="Balance still open across invoice currencies."
           icon={Wallet}
           emphasisTone="info"
+        />
+        <WorkspaceMetricCard
+          label="Patient credits"
+          value={
+            canViewInvoices
+              ? formatCurrencyBreakdown(unappliedCreditsByCurrency)
+              : "-"
+          }
+          valueDensity="compact"
+          helperText="Paid standalone payment links not yet applied to invoices."
+          icon={CreditCard}
+          emphasisTone="success"
         />
         <WorkspaceMetricCard
           label="Overdue installments"
