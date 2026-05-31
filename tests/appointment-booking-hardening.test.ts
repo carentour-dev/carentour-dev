@@ -298,6 +298,13 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Expired holds/);
   assert.match(pageSource, /Closed records to archive/);
   assert.match(pageSource, /Reset filters/);
+  assert.match(pageSource, /getBookingHoldSummary/);
+  assert.match(pageSource, /Slot state/);
+  assert.match(pageSource, /Held until/);
+  assert.match(pageSource, /Hold expired/);
+  assert.match(pageSource, /No hold expiry set/);
+  assert.match(pageSource, /Slot booked/);
+  assert.match(pageSource, /Slot available/);
   assert.match(
     pageSource,
     /Confirmation email \{getBookingEmailStatus\(booking\)\}/,
