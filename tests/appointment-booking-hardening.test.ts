@@ -167,6 +167,8 @@ test("admin booking queue exposes coordinator actions", () => {
 
   assert.match(moduleSource, /async list\(filters/);
   assert.match(moduleSource, /async performAction/);
+  assert.match(moduleSource, /patient_id: optionalUuid/);
+  assert.match(moduleSource, /async linkPatient/);
   assert.match(moduleSource, /case "confirm"/);
   assert.match(moduleSource, /case "release"/);
   assert.match(moduleSource, /case "cancel"/);
@@ -260,6 +262,8 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Needs action shows requested, held/);
   assert.match(pageSource, /No bookings currently need coordinator action/);
   assert.match(pageSource, /Confirm booking/);
+  assert.match(pageSource, /PatientSelector/);
+  assert.match(pageSource, /Guest-held bookings must be linked to a patient/);
   assert.match(pageSource, /Release hold/);
   assert.match(pageSource, /Needs reschedule/);
   assert.match(pageSource, /Cancel booking/);
