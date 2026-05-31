@@ -3,6 +3,13 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { appointmentBookingController } from "@/server/modules/appointmentBookings/module";
+import {
+  buildMedicalConsultationPaymentLink,
+  coerceMedicalPaymentLinkFromMetadata,
+  getConfiguredMedicalConsultationPaymentLink,
+  MEDICAL_CONSULTATION_PAYMENT,
+  type ConsultationPaymentLink,
+} from "@/server/modules/consultations/payment";
 import { contactRequestController } from "@/server/modules/contactRequests/module";
 import { getSupabaseAdmin } from "@/server/supabase/adminClient";
 import { jsonResponse, handleRouteError } from "@/server/utils/http";
@@ -14,6 +21,8 @@ const travelWindowSchema = z.object({
   to: z.string().nullable().optional(),
 });
 
+const consultationOfferingSchema = z.enum(["free", "medical"]).default("free");
+
 const consultationSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
   email: z.string().email("A valid email is required"),
@@ -22,6 +31,7 @@ const consultationSchema = z.object({
   treatment: z.string().min(1, "Preferred treatment is required"),
   treatmentId: z.string().optional(),
   procedure: z.string().optional(),
+  consultationOffering: consultationOfferingSchema,
   doctorId: z.string().uuid().optional().nullable(),
   bookingType: z.enum(["onsite", "phone", "video"]).optional(),
   selectedSlotId: z.string().uuid().optional().nullable(),
@@ -132,6 +142,49 @@ const normalizeIdempotencyKey = (value?: string | null) => {
   return trimmed.length >= 12 ? trimmed.slice(0, 120) : null;
 };
 
+const createMedicalConsultationPaymentLink = async (
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  patientId: string | null,
+) => {
+  const paymentLink = getConfiguredMedicalConsultationPaymentLink();
+  if (!paymentLink) return null;
+
+  if (!patientId) {
+    return paymentLink;
+  }
+
+  const supabase = supabaseAdmin as any;
+  const { data, error } = await supabase
+    .from("finance_payment_links")
+    .insert({
+      patient_id: patientId,
+      link_label: MEDICAL_CONSULTATION_PAYMENT.label,
+      amount: MEDICAL_CONSULTATION_PAYMENT.amount,
+      currency: MEDICAL_CONSULTATION_PAYMENT.currency,
+      payment_url: paymentLink.url,
+      status: "active",
+      expires_at: null,
+      created_by_profile_id: null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "[consultations] medical consultation payment link was not persisted",
+      error,
+    );
+    return paymentLink;
+  }
+
+  return {
+    ...buildMedicalConsultationPaymentLink(paymentLink.url, {
+      id: data?.id,
+      persisted: Boolean(data?.id),
+    }),
+  };
+};
+
 const findExistingSubmission = async (
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
   idempotencyKey: string | null,
@@ -141,7 +194,7 @@ const findExistingSubmission = async (
 
   const { data: existingRequest, error: requestError } = await supabaseAdmin
     .from("contact_requests")
-    .select("id, status, email")
+    .select("id, status, email, portal_metadata")
     .eq("idempotency_key", idempotencyKey)
     .maybeSingle();
 
@@ -174,6 +227,9 @@ const findExistingSubmission = async (
     appointmentBookingId: existingBooking?.id ?? null,
     appointmentBookingStatus: existingBooking?.status ?? null,
     holdExpiresAt: existingBooking?.hold_expires_at ?? null,
+    medicalConsultationPaymentLink: coerceMedicalPaymentLinkFromMetadata(
+      existingRequest.portal_metadata,
+    ),
     status: existingRequest.status,
   };
 };
@@ -255,6 +311,8 @@ export const POST = async (req: NextRequest) => {
         booked: Boolean(existingSubmission.bookedConsultationId),
         duplicate: true,
         notificationQueued: false,
+        medicalConsultationPaymentLink:
+          existingSubmission.medicalConsultationPaymentLink,
         status: existingSubmission.status,
       });
     }
@@ -273,10 +331,23 @@ export const POST = async (req: NextRequest) => {
     const portalMetadata: Json | undefined =
       payload.treatmentId ||
       payload.procedure ||
+      payload.consultationOffering ||
       payload.doctorId ||
       payload.bookingType ||
       payload.selectedSlotId
         ? {
+            consultationOffering: payload.consultationOffering,
+            consultationOfferingLabel:
+              payload.consultationOffering === "medical"
+                ? MEDICAL_CONSULTATION_PAYMENT.label
+                : "Free Consultation",
+            consultationPrice:
+              payload.consultationOffering === "medical"
+                ? {
+                    amount: MEDICAL_CONSULTATION_PAYMENT.amount,
+                    currency: MEDICAL_CONSULTATION_PAYMENT.currency,
+                  }
+                : null,
             ...(payload.treatmentId
               ? { treatmentId: payload.treatmentId }
               : {}),
@@ -325,6 +396,7 @@ export const POST = async (req: NextRequest) => {
     let appointmentBookingStatus: BookingStatus | null = null;
     let holdExpiresAt: string | null = null;
     let nextPortalMetadata: Json | undefined = portalMetadata;
+    let medicalConsultationPaymentLink: ConsultationPaymentLink | null = null;
 
     if (payload.selectedSlotId) {
       try {
@@ -391,6 +463,24 @@ export const POST = async (req: NextRequest) => {
       }
     }
 
+    if (payload.consultationOffering === "medical") {
+      medicalConsultationPaymentLink =
+        await createMedicalConsultationPaymentLink(supabaseAdmin, patientId);
+
+      nextPortalMetadata = buildUpdatedPortalMetadata(nextPortalMetadata, {
+        medicalConsultationPaymentStatus: medicalConsultationPaymentLink
+          ? "link_ready"
+          : "link_pending",
+        medicalConsultationPaymentLink: medicalConsultationPaymentLink
+          ? (medicalConsultationPaymentLink as unknown as Json)
+          : undefined,
+      });
+
+      await contactRequestController.update(consultationRequest.id, {
+        portal_metadata: nextPortalMetadata,
+      });
+    }
+
     const { error: emailError } = await supabaseAdmin.functions.invoke(
       "send-contact-email",
       {
@@ -402,6 +492,12 @@ export const POST = async (req: NextRequest) => {
           country: payload.country,
           treatment: payload.treatment,
           procedure: payload.procedure,
+          consultationOffering: payload.consultationOffering,
+          consultationPrice:
+            payload.consultationOffering === "medical"
+              ? MEDICAL_CONSULTATION_PAYMENT
+              : null,
+          medicalConsultationPaymentLink,
           doctorId: payload.doctorId,
           bookingType: payload.bookingType,
           selectedSlotId: payload.selectedSlotId,
@@ -441,6 +537,7 @@ export const POST = async (req: NextRequest) => {
       booked: Boolean(bookedConsultationId),
       duplicate: false,
       notificationQueued: !emailError,
+      medicalConsultationPaymentLink,
       status: consultationRequest.status,
     });
   } catch (error) {
