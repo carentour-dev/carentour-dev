@@ -321,6 +321,10 @@ export const appointmentBookingController = {
     const parsed = listBookingsSchema.parse(filters);
     const supabase = getSupabaseAdmin();
 
+    if (parsed.archived !== "archived") {
+      await this.expireStaleHolds();
+    }
+
     let query = supabase
       .from("appointment_bookings")
       .select(selectColumns)
