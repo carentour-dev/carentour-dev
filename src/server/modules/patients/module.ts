@@ -220,6 +220,8 @@ export type PatientFinanceOverview = {
     currency: string;
     invoiced_total: number;
     paid_total: number;
+    gross_balance_total: number;
+    unapplied_credit_total: number;
     balance_total: number;
   }>;
   open_installments: number;
@@ -410,29 +412,44 @@ const loadPatientFinanceOverview = async (
       throw invoicesError;
     }
 
-    const invoiceRows = invoices ?? [];
-    if (invoiceRows.length === 0) {
-      return createEmptyFinanceOverview();
+    const { data: patientCredits, error: patientCreditsError } = await supabase
+      .from("finance_patient_credits")
+      .select("currency, balance_amount, status")
+      .eq("patient_id", patientId)
+      .in("status", ["unapplied", "partially_applied"])
+      .gt("balance_amount", FINANCE_BALANCE_EPSILON);
+
+    if (patientCreditsError && !shouldIgnoreFinanceError(patientCreditsError)) {
+      throw patientCreditsError;
     }
 
-    const invoiceIds = invoiceRows.map((invoice: any) => invoice.id);
-    const { data: installments, error: installmentsError } = await supabase
-      .from("finance_invoice_installments")
-      .select(
-        "id, finance_invoice_id, label, due_date, amount, paid_amount, balance_amount, status, display_order",
-      )
-      .in("finance_invoice_id", invoiceIds)
-      .order("display_order", { ascending: true });
+    const invoiceRows = invoices ?? [];
+    const creditRows = shouldIgnoreFinanceError(patientCreditsError)
+      ? []
+      : (patientCredits ?? []);
 
-    if (installmentsError) {
-      if (shouldIgnoreFinanceError(installmentsError)) {
-        return createEmptyFinanceOverview();
+    const invoiceIds = invoiceRows.map((invoice: any) => invoice.id);
+    let installments: any[] = [];
+    if (invoiceIds.length > 0) {
+      const { data: installmentRows, error: installmentsError } = await supabase
+        .from("finance_invoice_installments")
+        .select(
+          "id, finance_invoice_id, label, due_date, amount, paid_amount, balance_amount, status, display_order",
+        )
+        .in("finance_invoice_id", invoiceIds)
+        .order("display_order", { ascending: true });
+
+      if (installmentsError) {
+        if (shouldIgnoreFinanceError(installmentsError)) {
+          return createEmptyFinanceOverview();
+        }
+        throw installmentsError;
       }
-      throw installmentsError;
+      installments = installmentRows ?? [];
     }
 
     const installmentsByInvoice = new Map<string, any[]>();
-    for (const installment of installments ?? []) {
+    for (const installment of installments) {
       const key = installment.finance_invoice_id;
       const rows = installmentsByInvoice.get(key) ?? [];
       rows.push(installment);
@@ -445,6 +462,8 @@ const loadPatientFinanceOverview = async (
       {
         invoiced_total: number;
         paid_total: number;
+        gross_balance_total: number;
+        unapplied_credit_total: number;
         balance_total: number;
       }
     >();
@@ -509,6 +528,8 @@ const loadPatientFinanceOverview = async (
       const currencyTotals = totalsByCurrency.get(currency) ?? {
         invoiced_total: 0,
         paid_total: 0,
+        gross_balance_total: 0,
+        unapplied_credit_total: 0,
         balance_total: 0,
       };
       currencyTotals.invoiced_total = normalizeMoney(
@@ -516,6 +537,9 @@ const loadPatientFinanceOverview = async (
       );
       currencyTotals.paid_total = normalizeMoney(
         currencyTotals.paid_total + paidAmount,
+      );
+      currencyTotals.gross_balance_total = normalizeMoney(
+        currencyTotals.gross_balance_total + balanceAmount,
       );
       currencyTotals.balance_total = normalizeMoney(
         currencyTotals.balance_total + balanceAmount,
@@ -558,6 +582,32 @@ const loadPatientFinanceOverview = async (
           : null,
       };
     });
+
+    for (const credit of creditRows) {
+      const currency =
+        typeof credit.currency === "string" && credit.currency.trim().length > 0
+          ? credit.currency.trim().toUpperCase()
+          : "USD";
+      const creditAmount = normalizeMoney(credit.balance_amount);
+      if (creditAmount <= FINANCE_BALANCE_EPSILON) {
+        continue;
+      }
+
+      const currencyTotals = totalsByCurrency.get(currency) ?? {
+        invoiced_total: 0,
+        paid_total: 0,
+        gross_balance_total: 0,
+        unapplied_credit_total: 0,
+        balance_total: 0,
+      };
+      currencyTotals.unapplied_credit_total = normalizeMoney(
+        currencyTotals.unapplied_credit_total + creditAmount,
+      );
+      currencyTotals.balance_total = normalizeMoney(
+        Math.max(currencyTotals.balance_total - creditAmount, 0),
+      );
+      totalsByCurrency.set(currency, currencyTotals);
+    }
 
     return {
       invoices: formattedInvoices,
