@@ -5,10 +5,14 @@ import { fetchBanqueMisrRates } from "@/server/modules/exchangeRates/banqueMisr"
 import {
   applyPaymentAllocation,
   buildArAgingReport,
+  buildPaymentLinkPaymentReference,
+  canTransitionPaymentLinkStatus,
   computeInstallmentStatus,
   computeInvoiceStatus,
   generateInstallmentSchedule,
   resolveCreditAdjustmentWorkflow,
+  shouldRecordPatientCreditForPaymentLinkStatusChange,
+  shouldRecordPaymentForPaymentLinkStatusChange,
   type FinanceCreditAdjustmentType,
   type FinanceInstallmentState,
   type FinanceInstallmentTemplateItem,
@@ -657,6 +661,25 @@ export const financeController = {
     });
   },
 
+  async listPatientCredits() {
+    const supabase = getClient();
+
+    const { data, error } = await supabase
+      .from("finance_patient_credits")
+      .select(
+        "id, patient_id, amount, applied_amount, balance_amount, currency, status, created_at, patients(id, full_name)",
+      )
+      .in("status", ["unapplied", "partially_applied"])
+      .gt("balance_amount", 0)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new ApiError(500, "Failed to load patient credits", error.message);
+    }
+
+    return data ?? [];
+  },
+
   async getInvoiceDetail(invoiceId: unknown) {
     const id = uuidSchema.parse(invoiceId);
     const supabase = getClient();
@@ -1052,7 +1075,9 @@ export const financeController = {
 
     const { data: existing, error: existingError } = await supabase
       .from("finance_payment_links")
-      .select("id, patient_id, finance_invoice_id")
+      .select(
+        "id, patient_id, finance_invoice_id, finance_invoice_installment_id, link_label, amount, currency, status",
+      )
       .eq("id", id)
       .maybeSingle();
 
@@ -1065,6 +1090,17 @@ export const financeController = {
     }
     if (!existing) {
       throw new ApiError(404, "Payment link not found");
+    }
+    if (
+      !canTransitionPaymentLinkStatus({
+        previousStatus: existing.status,
+        nextStatus: parsed.status,
+      })
+    ) {
+      throw new ApiError(
+        422,
+        "Paid payment links cannot be reactivated or disabled",
+      );
     }
 
     const updatePayload: Record<string, unknown> = {};
@@ -1163,6 +1199,175 @@ export const financeController = {
     if (parsed.status !== undefined) updatePayload.status = parsed.status;
     if (parsed.expiresAt !== undefined)
       updatePayload.expires_at = parsed.expiresAt ?? null;
+
+    if (
+      shouldRecordPatientCreditForPaymentLinkStatusChange({
+        nextStatus: parsed.status,
+        invoiceId: nextInvoiceId,
+      })
+    ) {
+      const paymentReference = buildPaymentLinkPaymentReference(id);
+      const { data: existingCredit, error: existingCreditError } =
+        await supabase
+          .from("finance_patient_credits")
+          .select("id")
+          .eq("finance_payment_link_id", id)
+          .maybeSingle();
+
+      if (existingCreditError) {
+        throw new ApiError(
+          500,
+          "Failed to check patient credit",
+          existingCreditError.message,
+        );
+      }
+
+      if (!existingCredit) {
+        let payment: any = null;
+        const { data: existingPayment, error: existingPaymentError } =
+          await supabase
+            .from("finance_payments")
+            .select("id")
+            .eq("payment_reference", paymentReference)
+            .maybeSingle();
+
+        if (existingPaymentError) {
+          throw new ApiError(
+            500,
+            "Failed to check payment link settlement",
+            existingPaymentError.message,
+          );
+        }
+
+        if (existingPayment) {
+          payment = existingPayment;
+        } else {
+          const creditAmount =
+            parsed.amount !== undefined
+              ? normalizeMoney(parsed.amount)
+              : normalizeMoney(existing.amount);
+          const creditCurrency = parsed.currency ?? existing.currency ?? "USD";
+          const { data: createdPayment, error: paymentError } = await supabase
+            .from("finance_payments")
+            .insert({
+              payment_reference: paymentReference,
+              status: "recorded",
+              payment_method: "gateway",
+              payment_date: new Date().toISOString(),
+              currency: creditCurrency,
+              amount: creditAmount,
+              source: "payment_link",
+              notes: `Unapplied patient credit from payment link ${existing.link_label ?? id}`,
+              created_by_profile_id: actor?.profileId ?? null,
+            })
+            .select("id")
+            .maybeSingle();
+
+          if (paymentError || !createdPayment) {
+            throw new ApiError(
+              500,
+              "Failed to record patient credit payment",
+              paymentError?.message,
+            );
+          }
+
+          payment = createdPayment;
+        }
+
+        const creditAmount =
+          parsed.amount !== undefined
+            ? normalizeMoney(parsed.amount)
+            : normalizeMoney(existing.amount);
+        const creditCurrency = parsed.currency ?? existing.currency ?? "USD";
+        const { error: creditError } = await supabase
+          .from("finance_patient_credits")
+          .insert({
+            patient_id: nextPatientId,
+            finance_payment_id: payment.id,
+            finance_payment_link_id: id,
+            amount: creditAmount,
+            applied_amount: 0,
+            balance_amount: creditAmount,
+            currency: creditCurrency,
+            status: "unapplied",
+            notes: `Created when payment link was marked paid: ${existing.link_label ?? id}`,
+            created_by_profile_id: actor?.profileId ?? null,
+          });
+
+        if (creditError) {
+          throw new ApiError(
+            500,
+            "Failed to create patient credit",
+            creditError.message,
+          );
+        }
+
+        try {
+          await financeLedgerPosting.postPaymentById(
+            payment.id,
+            actor?.profileId ?? null,
+          );
+        } catch (error) {
+          console.error("[finance][patient-credit][ledger-posting]", {
+            paymentLinkId: id,
+            paymentId: payment.id,
+            error,
+          });
+        }
+      }
+    }
+
+    if (
+      shouldRecordPaymentForPaymentLinkStatusChange({
+        previousStatus: existing.status,
+        nextStatus: parsed.status,
+        invoiceId: nextInvoiceId,
+      })
+    ) {
+      const paymentReference = buildPaymentLinkPaymentReference(id);
+      const { data: existingPayment, error: existingPaymentError } =
+        await supabase
+          .from("finance_payments")
+          .select("id")
+          .eq("payment_reference", paymentReference)
+          .maybeSingle();
+
+      if (existingPaymentError) {
+        throw new ApiError(
+          500,
+          "Failed to check payment link settlement",
+          existingPaymentError.message,
+        );
+      }
+
+      if (!existingPayment) {
+        const paymentAmount =
+          parsed.amount !== undefined
+            ? normalizeMoney(parsed.amount)
+            : normalizeMoney(existing.amount);
+        const paymentCurrency = parsed.currency ?? existing.currency ?? "USD";
+        const installmentId =
+          parsed.installmentId !== undefined
+            ? (parsed.installmentId ?? null)
+            : (existing.finance_invoice_installment_id ?? null);
+
+        await this.recordPayment(
+          {
+            invoiceId: nextInvoiceId,
+            amount: paymentAmount,
+            currency: paymentCurrency,
+            paymentMethod: "gateway",
+            paymentReference,
+            source: "payment_link",
+            notes: `Marked paid from payment link ${existing.link_label ?? id}`,
+            allocations: installmentId
+              ? [{ installmentId, amount: paymentAmount }]
+              : undefined,
+          },
+          actor,
+        );
+      }
+    }
 
     const { data, error } = await supabase
       .from("finance_payment_links")
@@ -2483,12 +2688,31 @@ export const financeController = {
       (link: any) => isPaymentLinkVisibleToPatient(link),
     );
 
+    const { data: patientCredits, error: patientCreditsError } = await supabase
+      .from("finance_patient_credits")
+      .select(
+        "id, amount, applied_amount, balance_amount, currency, status, created_at",
+      )
+      .eq("patient_id", patient.id)
+      .in("status", ["unapplied", "partially_applied"])
+      .gt("balance_amount", 0)
+      .order("created_at", { ascending: false });
+
+    if (patientCreditsError) {
+      throw new ApiError(
+        500,
+        "Failed to load patient credits",
+        patientCreditsError.message,
+      );
+    }
+
     const invoiceIds = (invoices ?? []).map((invoice: any) => invoice.id);
     if (invoiceIds.length === 0) {
       return {
         patientId: patient.id,
         invoices: [],
         payment_links: visiblePaymentLinks,
+        unapplied_credits: patientCredits ?? [],
       };
     }
 
@@ -2584,6 +2808,7 @@ export const financeController = {
       patientId: patient.id,
       invoices: outputInvoices,
       payment_links: visiblePaymentLinks,
+      unapplied_credits: patientCredits ?? [],
     };
   },
 
