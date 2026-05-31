@@ -51,6 +51,7 @@ import {
   adminFetch,
   useAdminInvalidate,
 } from "@/components/admin/hooks/useAdminFetch";
+import { PatientSelector } from "@/components/admin/PatientSelector";
 import {
   WorkspaceEmptyState,
   WorkspaceFilterBar,
@@ -789,6 +790,7 @@ export default function AdminAppointmentBookingsPage() {
     action: BookingAction;
   } | null>(null);
   const [actionNotes, setActionNotes] = useState("");
+  const [actionPatientId, setActionPatientId] = useState<string | null>(null);
   const [slotTarget, setSlotTarget] = useState<BookingRecord | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [slotNotes, setSlotNotes] = useState("");
@@ -1023,10 +1025,12 @@ export default function AdminAppointmentBookingsPage() {
       booking,
       action,
       notes,
+      patientId,
     }: {
       booking: BookingRecord;
       action: BookingAction;
       notes: string;
+      patientId?: string | null;
     }) =>
       adminFetch<BookingRecord>(
         `/api/admin/appointment-bookings/${booking.id}`,
@@ -1034,6 +1038,7 @@ export default function AdminAppointmentBookingsPage() {
           method: "POST",
           body: JSON.stringify({
             action,
+            patient_id: action === "confirm" ? patientId : undefined,
             notes: action === "cancel" ? null : notes.trim() || null,
             cancellation_reason:
               action === "cancel" ? notes.trim() || null : null,
@@ -1045,6 +1050,7 @@ export default function AdminAppointmentBookingsPage() {
       toast({ title: actionLabels[variables.action] });
       setActionTarget(null);
       setActionNotes("");
+      setActionPatientId(null);
     },
     onError: (error: Error) => {
       toast({
@@ -1162,6 +1168,7 @@ export default function AdminAppointmentBookingsPage() {
   const openAction = (booking: BookingRecord, action: BookingAction) => {
     setActionTarget({ booking, action });
     setActionNotes("");
+    setActionPatientId(action === "confirm" ? booking.patient_id : null);
   };
   const openSlotDialog = (booking: BookingRecord) => {
     setSlotTarget(booking);
@@ -1170,7 +1177,7 @@ export default function AdminAppointmentBookingsPage() {
   };
 
   const canConfirm = (booking: BookingRecord) =>
-    Boolean(booking.patient_id && booking.consultation_slot_id) &&
+    Boolean(booking.consultation_slot_id) &&
     (booking.status === "requested" || booking.status === "held");
   const canRelease = (booking: BookingRecord) => booking.status === "held";
   const canCancel = (booking: BookingRecord) =>
@@ -1959,6 +1966,7 @@ export default function AdminAppointmentBookingsPage() {
           if (!open) {
             setActionTarget(null);
             setActionNotes("");
+            setActionPatientId(null);
           }
         }}
       >
@@ -1974,6 +1982,24 @@ export default function AdminAppointmentBookingsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {actionTarget?.action === "confirm" &&
+            !actionTarget.booking.patient_id ? (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-foreground">
+                  Linked patient
+                </div>
+                <PatientSelector
+                  value={actionPatientId}
+                  onValueChange={setActionPatientId}
+                  placeholder="Select patient to confirm booking..."
+                  className="w-full"
+                />
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Guest-held bookings must be linked to a patient before the
+                  consultation can be created.
+                </p>
+              </div>
+            ) : null}
             <div className="text-sm font-medium text-foreground">
               {getActionNoteLabel(actionTarget?.action)}
             </div>
@@ -1994,12 +2020,19 @@ export default function AdminAppointmentBookingsPage() {
             </Button>
             <Button
               type="button"
-              disabled={!actionTarget || actionMutation.isPending}
+              disabled={
+                !actionTarget ||
+                actionMutation.isPending ||
+                (actionTarget.action === "confirm" &&
+                  !actionTarget.booking.patient_id &&
+                  !actionPatientId)
+              }
               onClick={() => {
                 if (actionTarget) {
                   actionMutation.mutate({
                     ...actionTarget,
                     notes: actionNotes,
+                    patientId: actionPatientId,
                   });
                 }
               }}
