@@ -573,6 +573,50 @@ const getBookingReminderRowSummary = (booking: BookingRecord) => {
   return null;
 };
 
+const formatSlotStatus = (status: string | null | undefined) => {
+  if (status === "available") return "Slot available";
+  if (status === "booked") return "Slot booked";
+  if (status === "held") return "Slot held";
+  if (status === "blocked") return "Slot blocked";
+  return "No slot linked";
+};
+
+const getBookingHoldSummary = (booking: BookingRecord, currentTime: number) => {
+  const slotStatus = formatSlotStatus(booking.consultation_slots?.status);
+
+  if (booking.status === "held" && booking.hold_expires_at) {
+    const holdExpiresAt = new Date(booking.hold_expires_at).getTime();
+
+    if (Number.isFinite(holdExpiresAt) && holdExpiresAt <= currentTime) {
+      return {
+        label: "Hold expired",
+        detail: slotStatus,
+        tone: "danger" as const,
+      };
+    }
+
+    return {
+      label: `Held until ${formatDateTime(booking.hold_expires_at)}`,
+      detail: slotStatus,
+      tone: "warning" as const,
+    };
+  }
+
+  if (booking.status === "held") {
+    return {
+      label: "Slot held",
+      detail: "No hold expiry set",
+      tone: "warning" as const,
+    };
+  }
+
+  return {
+    label: slotStatus,
+    detail: null,
+    tone: "default" as const,
+  };
+};
+
 const getBookingActivity = (booking: BookingRecord): BookingActivityEntry[] => {
   const metadata = getMetadataRecord(booking);
   const storedActivity = Array.isArray(metadata?.activity)
@@ -1186,6 +1230,10 @@ export default function AdminAppointmentBookingsPage() {
       : statusFilter === "active"
         ? "No bookings currently need coordinator action. Switch to All statuses to view confirmed or closed bookings."
         : "Change the filter or wait for new consultation slot requests.";
+  const currentTime = new Date(slotRange.from).getTime();
+  const detailsHoldSummary = detailsTarget
+    ? getBookingHoldSummary(detailsTarget, currentTime)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -1419,7 +1467,7 @@ export default function AdminAppointmentBookingsPage() {
                   <TableHead>Slot</TableHead>
                   <TableHead>Doctor</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Hold</TableHead>
+                  <TableHead>Slot state</TableHead>
                   <TableHead className="w-[120px] text-right">
                     Actions
                   </TableHead>
@@ -1428,6 +1476,10 @@ export default function AdminAppointmentBookingsPage() {
               <TableBody>
                 {bookings.map((booking) => {
                   const reminderSummary = getBookingReminderRowSummary(booking);
+                  const holdSummary = getBookingHoldSummary(
+                    booking,
+                    currentTime,
+                  );
 
                   return (
                     <TableRow key={booking.id}>
@@ -1498,10 +1550,18 @@ export default function AdminAppointmentBookingsPage() {
                         ) : null}
                       </TableCell>
                       <TableCell>
-                        <div>{formatDateTime(booking.hold_expires_at)}</div>
-                        {booking.consultation_slots?.status ? (
+                        <div
+                          className={
+                            holdSummary.tone === "danger"
+                              ? "text-destructive"
+                              : undefined
+                          }
+                        >
+                          {holdSummary.label}
+                        </div>
+                        {holdSummary.detail ? (
                           <div className="text-xs text-muted-foreground">
-                            Slot {booking.consultation_slots.status}
+                            {holdSummary.detail}
                           </div>
                         ) : null}
                       </TableCell>
@@ -1703,8 +1763,19 @@ export default function AdminAppointmentBookingsPage() {
                     {detailsTarget.timezone}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Slot {detailsTarget.consultation_slots?.status ?? "not set"}
+                    {formatSlotStatus(detailsTarget.consultation_slots?.status)}
                   </div>
+                  {detailsHoldSummary ? (
+                    <div
+                      className={
+                        detailsHoldSummary.tone === "danger"
+                          ? "text-sm text-destructive"
+                          : "text-sm text-muted-foreground"
+                      }
+                    >
+                      {detailsHoldSummary.label}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
