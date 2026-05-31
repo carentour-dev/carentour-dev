@@ -12,6 +12,7 @@ import {
   resolveSeo,
   webPageSchema,
 } from "@/lib/seo";
+import { getConfiguredMedicalConsultationPaymentLink } from "@/server/modules/consultations/payment";
 import ConsultationPageClient from "./ConsultationPageClient";
 
 export const revalidate = 300;
@@ -25,7 +26,7 @@ type PageProps = {
 const DEFAULTS = {
   title: "Book a Consultation | Care N Tour",
   description:
-    "Share your case and receive specialist recommendations with a free consultation.",
+    "Choose a free care-coordination consultation or a paid medical consultation with specialist guidance.",
 };
 
 async function getSeo(locale: PublicLocale) {
@@ -57,12 +58,16 @@ export default async function ConsultationPage({ params }: PageProps) {
   await assertPublicPageAvailable(PATHNAME, locale);
   await maybeRedirectFromLegacyPath(PATHNAME);
   const seo = await getSeo(locale);
+  const medicalConsultationPaymentLink =
+    getConfiguredMedicalConsultationPaymentLink();
 
   return (
     <>
       <StructuredDataScripts payload={seo.jsonLd} />
       <PublicAuthQueryBoundary>
-        <ConsultationPageClient />
+        <ConsultationPageClient
+          medicalConsultationPaymentLink={medicalConsultationPaymentLink}
+        />
       </PublicAuthQueryBoundary>
     </>
   );
