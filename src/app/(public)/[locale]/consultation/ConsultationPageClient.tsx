@@ -19,13 +19,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComboBox, type ComboOption } from "@/components/ui/combobox";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
   CalendarDays,
+  CreditCard,
+  ExternalLink,
   Globe2,
   HeartPulse,
   MapPin,
@@ -77,6 +81,7 @@ const consultationSchema = z.object({
   country: z.string().min(1, "Tell us where you live"),
   treatmentId: z.string().min(1, "Select a treatment"),
   procedure: z.string().min(1, "Select a procedure"),
+  consultationOffering: z.enum(["free", "medical"]).default("free"),
   doctorId: z.string().uuid().optional().nullable(),
   bookingType: z.enum(["video", "phone", "onsite"]).default("video"),
   selectedSlotId: z.string().uuid().optional().nullable(),
@@ -94,6 +99,14 @@ const consultationSchema = z.object({
 
 type ConsultationFormValues = z.infer<typeof consultationSchema>;
 type ConsultationDocument = z.infer<typeof consultationDocumentSchema>;
+type ConsultationPaymentLink = {
+  id?: string;
+  label: string;
+  amount: number;
+  currency: string;
+  url: string;
+  persisted: boolean;
+};
 type ConsultationSlot = {
   id: string;
   doctor_id: string;
@@ -138,6 +151,22 @@ const countryComboOptions: ComboOption[] = COUNTRY_OPTIONS.map((country) => ({
   value: country,
   label: country,
 }));
+const consultationOfferingOptions = [
+  {
+    value: "free",
+    label: "Free Consultation",
+    price: "Free",
+    description:
+      "Start with care coordination, treatment guidance, travel planning, and next-step recommendations.",
+  },
+  {
+    value: "medical",
+    label: "Medical Consultation",
+    price: "$50",
+    description:
+      "Book a paid specialist medical consultation. A Stripe payment link is provided after submission.",
+  },
+] as const;
 const bookingTypeOptions = [
   { value: "video", label: "Online video meeting" },
   { value: "phone", label: "Phone call" },
@@ -172,11 +201,19 @@ const splitFullName = (fullName: string) => {
   };
 };
 
-export default function ConsultationPage() {
+type ConsultationPageProps = {
+  medicalConsultationPaymentLink?: ConsultationPaymentLink | null;
+};
+
+export default function ConsultationPage({
+  medicalConsultationPaymentLink = null,
+}: ConsultationPageProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const [submittedPaymentLink, setSubmittedPaymentLink] =
+    useState<ConsultationPaymentLink | null>(null);
   const { session } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const submissionKeyRef = useRef(createSubmissionKey());
@@ -190,6 +227,7 @@ export default function ConsultationPage() {
       country: "",
       treatmentId: "",
       procedure: "",
+      consultationOffering: "free",
       doctorId: null,
       bookingType: "video",
       selectedSlotId: null,
@@ -234,7 +272,14 @@ export default function ConsultationPage() {
   const selectedTreatmentId = form.watch("treatmentId");
   const selectedDoctorId = form.watch("doctorId");
   const selectedBookingType = form.watch("bookingType");
+  const selectedConsultationOffering = form.watch("consultationOffering");
   const documents = form.watch("documents") ?? [];
+  const visibleMedicalPaymentLink =
+    selectedConsultationOffering === "medical"
+      ? (submittedPaymentLink ?? medicalConsultationPaymentLink)
+      : null;
+  const showMedicalPaymentPending =
+    selectedConsultationOffering === "medical" && !visibleMedicalPaymentLink;
 
   const selectedTreatment = useMemo(
     () =>
@@ -448,6 +493,7 @@ export default function ConsultationPage() {
 
   const handleSubmit = async (values: ConsultationFormValues) => {
     setIsSubmitting(true);
+    setSubmittedPaymentLink(null);
 
     try {
       const documentNames =
@@ -470,6 +516,7 @@ export default function ConsultationPage() {
       const {
         treatmentId,
         procedure,
+        consultationOffering,
         doctorId,
         bookingType,
         selectedSlotId,
@@ -496,6 +543,7 @@ export default function ConsultationPage() {
         medicalReports,
         treatmentId,
         procedure,
+        consultationOffering,
         doctorId,
         bookingType,
         selectedSlotId,
@@ -537,6 +585,11 @@ export default function ConsultationPage() {
         | "requested"
         | null
         | undefined;
+      const paymentLink = responseData.medicalConsultationPaymentLink as
+        | ConsultationPaymentLink
+        | null
+        | undefined;
+      setSubmittedPaymentLink(paymentLink ?? null);
       toast({
         title: responseData.booked
           ? "Consultation booked"
@@ -545,13 +598,17 @@ export default function ConsultationPage() {
             : values.selectedSlotId
               ? "Preferred time requested"
               : "Consultation Request Submitted",
-        description: responseData.booked
-          ? "Your selected consultation slot is confirmed in your patient dashboard."
-          : bookingStatus === "held"
-            ? "We held this time while your coordinator reviews the request and confirms the next step."
-            : values.selectedSlotId
-              ? "Your coordinator will confirm whether this time is still available after reviewing your request."
-              : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
+        description: paymentLink
+          ? "Your request was saved. Use the Stripe payment link on this page to complete the medical consultation payment."
+          : values.consultationOffering === "medical"
+            ? "Your request was saved. A coordinator will send the medical consultation payment link shortly."
+            : responseData.booked
+              ? "Your selected consultation slot is confirmed in your patient dashboard."
+              : bookingStatus === "held"
+                ? "We held this time while your coordinator reviews the request and confirms the next step."
+                : values.selectedSlotId
+                  ? "Your coordinator will confirm whether this time is still available after reviewing your request."
+                  : "Our coordinators will review your medical notes and reach out within two hours to plan your trip.",
       });
 
       form.reset();
@@ -576,7 +633,7 @@ export default function ConsultationPage() {
         <section className="bg-surface-subtle py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl space-y-6">
-              <Badge variant="outline">Free Medical Concierge</Badge>
+              <Badge variant="outline">Consultation Options</Badge>
               <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
                 Plan Your Global Treatment With Our Medical Coordinators
               </h1>
@@ -613,11 +670,12 @@ export default function ConsultationPage() {
               <Card className="border-border/50 shadow-card-hover">
                 <CardHeader>
                   <CardTitle className="text-2xl">
-                    Free Consultation Request
+                    Consultation Request
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Provide as much detail as you can so our medical team can
-                    respond with a tailored treatment and travel plan.
+                    Choose the consultation path that fits your needs, then
+                    share enough detail for our medical team to respond with a
+                    tailored treatment and travel plan.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -626,6 +684,97 @@ export default function ConsultationPage() {
                       className="space-y-8"
                       onSubmit={form.handleSubmit(handleSubmit)}
                     >
+                      <FormField
+                        control={form.control}
+                        name="consultationOffering"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Consultation Option *</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                value={field.value}
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  form.clearErrors("consultationOffering");
+                                }}
+                                className="grid gap-3 md:grid-cols-2"
+                              >
+                                {consultationOfferingOptions.map((option) => {
+                                  const isSelected =
+                                    field.value === option.value;
+                                  return (
+                                    <label
+                                      key={option.value}
+                                      className={cn(
+                                        "flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors",
+                                        isSelected
+                                          ? "border-primary bg-primary/5"
+                                          : "border-border bg-background hover:border-primary/60",
+                                      )}
+                                    >
+                                      <RadioGroupItem
+                                        value={option.value}
+                                        className="mt-1"
+                                      />
+                                      <span className="space-y-2">
+                                        <span className="flex flex-wrap items-center gap-2">
+                                          <span className="font-semibold text-foreground">
+                                            {option.label}
+                                          </span>
+                                          <Badge variant="secondary">
+                                            {option.price}
+                                          </Badge>
+                                        </span>
+                                        <span className="block text-sm text-muted-foreground">
+                                          {option.description}
+                                        </span>
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {visibleMedicalPaymentLink ? (
+                        <Alert className="border-primary/30 bg-primary/5">
+                          <CreditCard className="h-4 w-4" />
+                          <AlertTitle>Medical consultation payment</AlertTitle>
+                          <AlertDescription className="space-y-3">
+                            <p>
+                              This consultation costs{" "}
+                              {visibleMedicalPaymentLink.currency}{" "}
+                              {visibleMedicalPaymentLink.amount}. Pay securely
+                              with Stripe, then submit your request so our team
+                              can schedule your medical consultation.
+                            </p>
+                            <Button asChild size="sm">
+                              <a
+                                href={visibleMedicalPaymentLink.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Pay for medical consultation
+                                <ExternalLink className="ml-2 h-4 w-4" />
+                              </a>
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      ) : showMedicalPaymentPending ? (
+                        <Alert>
+                          <CreditCard className="h-4 w-4" />
+                          <AlertTitle>Payment link pending</AlertTitle>
+                          <AlertDescription>
+                            The medical consultation payment link is not
+                            configured yet. Submit your request and a
+                            coordinator will send the Stripe link shortly.
+                          </AlertDescription>
+                        </Alert>
+                      ) : null}
+
                       <div className="grid gap-6 md:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -810,7 +959,7 @@ export default function ConsultationPage() {
                             name="bookingType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Consultation Type</FormLabel>
+                                <FormLabel>Meeting Format</FormLabel>
                                 <FormControl>
                                   <ComboBox
                                     value={field.value ?? "video"}
