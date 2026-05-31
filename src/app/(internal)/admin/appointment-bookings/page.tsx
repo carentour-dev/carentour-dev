@@ -582,8 +582,55 @@ const formatSlotStatus = (status: string | null | undefined) => {
   return "No slot linked";
 };
 
+const getBookingSlotStateLabel = (
+  booking: BookingRecord,
+  currentTime: number,
+) => {
+  if (booking.status === "cancelled" || booking.status === "expired") {
+    return booking.consultation_slots?.status === "held"
+      ? "Slot release pending"
+      : "Slot released";
+  }
+
+  if (booking.status === "held" && booking.hold_expires_at) {
+    const holdExpiresAt = new Date(booking.hold_expires_at).getTime();
+
+    if (
+      Number.isFinite(holdExpiresAt) &&
+      holdExpiresAt <= currentTime &&
+      booking.consultation_slots?.status === "held"
+    ) {
+      return "Slot release pending";
+    }
+  }
+
+  return formatSlotStatus(booking.consultation_slots?.status);
+};
+
 const getBookingHoldSummary = (booking: BookingRecord, currentTime: number) => {
-  const slotStatus = formatSlotStatus(booking.consultation_slots?.status);
+  const slotStatus = getBookingSlotStateLabel(booking, currentTime);
+
+  if (booking.status === "expired") {
+    return {
+      label: "Hold expired",
+      detail: slotStatus,
+      tone: "danger" as const,
+    };
+  }
+
+  if (booking.status === "cancelled") {
+    return {
+      label:
+        booking.consultation_slots?.status === "held"
+          ? "Slot release pending"
+          : "Slot released",
+      detail: "Cancelled booking",
+      tone:
+        booking.consultation_slots?.status === "held"
+          ? ("warning" as const)
+          : ("default" as const),
+    };
+  }
 
   if (booking.status === "held" && booking.hold_expires_at) {
     const holdExpiresAt = new Date(booking.hold_expires_at).getTime();
@@ -1770,7 +1817,7 @@ export default function AdminAppointmentBookingsPage() {
                     {detailsTarget.timezone}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatSlotStatus(detailsTarget.consultation_slots?.status)}
+                    {getBookingSlotStateLabel(detailsTarget, currentTime)}
                   </div>
                   {detailsHoldSummary ? (
                     <div
