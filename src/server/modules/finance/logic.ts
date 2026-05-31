@@ -73,6 +73,31 @@ export type FinanceArAgingOutputRow = FinanceArAgingInputRow & {
   bucket: FinanceArAgingBucket;
 };
 
+export const buildPaymentLinkPaymentReference = (paymentLinkId: string) =>
+  `payment-link:${paymentLinkId}`;
+
+export const shouldRecordPaymentForPaymentLinkStatusChange = (input: {
+  previousStatus?: string | null;
+  nextStatus?: string | null;
+  invoiceId?: string | null;
+}) =>
+  input.nextStatus === "paid" &&
+  input.previousStatus !== "paid" &&
+  Boolean(input.invoiceId);
+
+export const shouldRecordPatientCreditForPaymentLinkStatusChange = (input: {
+  nextStatus?: string | null;
+  invoiceId?: string | null;
+}) => input.nextStatus === "paid" && !input.invoiceId;
+
+export const canTransitionPaymentLinkStatus = (input: {
+  previousStatus?: string | null;
+  nextStatus?: string | null;
+}) =>
+  !input.nextStatus ||
+  input.previousStatus !== "paid" ||
+  input.nextStatus === "paid";
+
 const EPSILON = 0.005;
 const ISO_DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
