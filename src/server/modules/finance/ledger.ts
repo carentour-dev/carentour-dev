@@ -76,6 +76,7 @@ const DEFAULT_POSTING_ACCOUNTS: Record<string, string> = {
   accounts_receivable: "1100",
   cash_bank: "1000",
   accounts_payable: "2100",
+  customer_credits: "2200",
   revenue: "4000",
   contra_revenue: "4050",
   expense: "5000",
@@ -1897,6 +1898,22 @@ const postPaymentJournalByRow = async (input: {
   }
 
   const invoiceId = allocations?.finance_invoice_id ?? null;
+  const { data: patientCredit, error: patientCreditError } =
+    await input.supabase
+      .from("finance_patient_credits")
+      .select("id")
+      .eq("finance_payment_id", payment.id)
+      .limit(1)
+      .maybeSingle();
+
+  if (patientCreditError) {
+    throw new ApiError(
+      500,
+      "Failed to resolve patient credit context",
+      patientCreditError.message,
+    );
+  }
+
   let financeCaseId: string | null = null;
 
   if (invoiceId) {
@@ -1935,10 +1952,15 @@ const postPaymentJournalByRow = async (input: {
         costTagCaseId: financeCaseId,
       },
       {
-        accountCode: settings.postingAccounts.accounts_receivable,
+        accountCode: patientCredit?.id
+          ? (settings.postingAccounts.customer_credits ??
+            settings.postingAccounts.accounts_receivable)
+          : settings.postingAccounts.accounts_receivable,
         debit: 0,
         credit: normalizeMoney(payment.amount),
-        description: "AR settlement",
+        description: patientCredit?.id
+          ? "Unapplied patient credit"
+          : "AR settlement",
         costTagCaseId: financeCaseId,
       },
     ],
