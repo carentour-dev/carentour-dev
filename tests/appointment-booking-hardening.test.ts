@@ -140,6 +140,9 @@ test("admin booking queue exposes coordinator actions", () => {
   const deliveryGuardrailsMigrationSource = readSource(
     "supabase/migrations/20260530150900_consultation_slot_delivery_guardrails.sql",
   );
+  const staleHoldReconciliationMigrationSource = readSource(
+    "supabase/migrations/20260531165000_reconcile_expired_booking_holds.sql",
+  );
   const consultationSlotModuleSource = readSource(
     "src/server/modules/consultationSlots/module.ts",
   );
@@ -166,6 +169,7 @@ test("admin booking queue exposes coordinator actions", () => {
   );
 
   assert.match(moduleSource, /async list\(filters/);
+  assert.match(moduleSource, /await this\.expireStaleHolds\(\)/);
   assert.match(moduleSource, /async performAction/);
   assert.match(moduleSource, /patient_id: optionalUuid/);
   assert.match(moduleSource, /async linkPatient/);
@@ -218,6 +222,15 @@ test("admin booking queue exposes coordinator actions", () => {
     deliveryGuardrailsMigrationSource,
     /booking_type IN \('video', 'phone'\)/,
   );
+  assert.match(
+    staleHoldReconciliationMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.expire_stale_appointment_booking_holds/,
+  );
+  assert.match(
+    staleHoldReconciliationMigrationSource,
+    /booking\.status IN \('cancelled', 'expired'\)/,
+  );
+  assert.match(staleHoldReconciliationMigrationSource, /released_closed_slots/);
   assert.match(consultationSlotModuleSource, /normalizeSlotDeliveryFields/);
   assert.match(
     consultationSlotModuleSource,
@@ -303,9 +316,12 @@ test("admin booking queue exposes coordinator actions", () => {
   assert.match(pageSource, /Closed records to archive/);
   assert.match(pageSource, /Reset filters/);
   assert.match(pageSource, /getBookingHoldSummary/);
+  assert.match(pageSource, /getBookingSlotStateLabel/);
   assert.match(pageSource, /Slot state/);
   assert.match(pageSource, /Held until/);
   assert.match(pageSource, /Hold expired/);
+  assert.match(pageSource, /Slot release pending/);
+  assert.match(pageSource, /Slot released/);
   assert.match(pageSource, /No hold expiry set/);
   assert.match(pageSource, /Slot booked/);
   assert.match(pageSource, /Slot available/);
