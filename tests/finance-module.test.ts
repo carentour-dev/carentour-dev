@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import {
   applyPaymentAllocation,
   buildArAgingReport,
+  buildPaymentLinkPaymentReference,
+  canTransitionPaymentLinkStatus,
   generateInstallmentSchedule,
   resolveCreditAdjustmentWorkflow,
+  shouldRecordPatientCreditForPaymentLinkStatusChange,
+  shouldRecordPaymentForPaymentLinkStatusChange,
 } from "../src/server/modules/finance/logic.ts";
 
 const generated = generateInstallmentSchedule({
@@ -84,6 +88,84 @@ assert.equal(updatedSecond?.status, "partially_paid");
 assert.equal(paymentResult.invoicePaidAmount, 450);
 assert.equal(paymentResult.invoiceBalanceAmount, 550);
 assert.equal(paymentResult.invoiceStatus, "partially_paid");
+
+assert.equal(
+  buildPaymentLinkPaymentReference("link-123"),
+  "payment-link:link-123",
+);
+assert.equal(
+  shouldRecordPaymentForPaymentLinkStatusChange({
+    previousStatus: "active",
+    nextStatus: "paid",
+    invoiceId: "invoice-123",
+  }),
+  true,
+);
+assert.equal(
+  shouldRecordPaymentForPaymentLinkStatusChange({
+    previousStatus: "paid",
+    nextStatus: "paid",
+    invoiceId: "invoice-123",
+  }),
+  false,
+);
+assert.equal(
+  shouldRecordPaymentForPaymentLinkStatusChange({
+    previousStatus: "active",
+    nextStatus: "paid",
+    invoiceId: null,
+  }),
+  false,
+);
+assert.equal(
+  shouldRecordPatientCreditForPaymentLinkStatusChange({
+    nextStatus: "paid",
+    invoiceId: null,
+  }),
+  true,
+);
+assert.equal(
+  shouldRecordPatientCreditForPaymentLinkStatusChange({
+    nextStatus: "active",
+    invoiceId: null,
+  }),
+  false,
+);
+assert.equal(
+  shouldRecordPatientCreditForPaymentLinkStatusChange({
+    nextStatus: "paid",
+    invoiceId: "invoice-123",
+  }),
+  false,
+);
+assert.equal(
+  canTransitionPaymentLinkStatus({
+    previousStatus: "active",
+    nextStatus: "disabled",
+  }),
+  true,
+);
+assert.equal(
+  canTransitionPaymentLinkStatus({
+    previousStatus: "disabled",
+    nextStatus: "active",
+  }),
+  true,
+);
+assert.equal(
+  canTransitionPaymentLinkStatus({
+    previousStatus: "paid",
+    nextStatus: "active",
+  }),
+  false,
+);
+assert.equal(
+  canTransitionPaymentLinkStatus({
+    previousStatus: "paid",
+    nextStatus: "disabled",
+  }),
+  false,
+);
 
 const aging = buildArAgingReport({
   asOfDate: "2026-02-17",
