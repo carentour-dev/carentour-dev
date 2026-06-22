@@ -42,6 +42,13 @@ type JournalRow = {
   total_debit: number;
   total_credit: number;
   lines_count: number;
+  source_transaction?: {
+    amount: number;
+    currency: string | null;
+    fx_rate: number | null;
+    reference: string | null;
+    source: string | null;
+  } | null;
 };
 
 const JOURNALS_QUERY_KEY = ["finance", "journal-entries"] as const;
@@ -66,6 +73,16 @@ const statusBadgeVariant = (status?: string | null) => {
   if (status === "posted") return "success" as const;
   if (status === "reversed") return "outline" as const;
   return "secondary" as const;
+};
+
+const hasDistinctSourceCurrency = (entry: JournalRow) => {
+  const sourceCurrency = entry.source_transaction?.currency?.trim();
+  const ledgerCurrency = entry.currency?.trim();
+  return Boolean(
+    sourceCurrency &&
+      ledgerCurrency &&
+      sourceCurrency.toUpperCase() !== ledgerCurrency.toUpperCase(),
+  );
 };
 
 export function FinanceJournalWorkspace({
@@ -154,6 +171,7 @@ export function FinanceJournalWorkspace({
       balanced: Math.abs(debit - credit) <= 0.01,
     };
   }, [journalsQuery.data]);
+  const visibleLedgerCurrency = journalsQuery.data?.[0]?.currency || "EGP";
 
   if (!canViewJournalEntries && !canRunBackfill) {
     return (
@@ -191,17 +209,21 @@ export function FinanceJournalWorkspace({
           helperText="Posted journal entries matching the current filter set."
         />
         <WorkspaceMetricCard
-          label="Total debits"
+          label="Total ledger debits"
           value={
-            canViewJournalEntries ? formatCurrency(totals.debit, "EGP") : "-"
+            canViewJournalEntries
+              ? formatCurrency(totals.debit, visibleLedgerCurrency)
+              : "-"
           }
           valueDensity="compact"
           helperText="Debit-side total across the visible journal selection."
         />
         <WorkspaceMetricCard
-          label="Total credits"
+          label="Total ledger credits"
           value={
-            canViewJournalEntries ? formatCurrency(totals.credit, "EGP") : "-"
+            canViewJournalEntries
+              ? formatCurrency(totals.credit, visibleLedgerCurrency)
+              : "-"
           }
           valueDensity="compact"
           helperText="Credit-side total across the visible journal selection."
@@ -335,60 +357,86 @@ export function FinanceJournalWorkspace({
                 </p>
               ) : null}
 
-              {(journalsQuery.data ?? []).map((entry) => (
-                <div
-                  key={entry.id}
-                  className="rounded-lg border border-border p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{entry.entry_number}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(entry.entry_date)} •{" "}
-                        {humanizeFinanceLabel(entry.source_type || "manual")}
-                        {entry.source_id ? ` • ${entry.source_id}` : ""}
-                      </p>
+              {(journalsQuery.data ?? []).map((entry) => {
+                const sourceCurrency =
+                  entry.source_transaction?.currency || entry.currency || "EGP";
+                const showSourceTransaction =
+                  entry.source_transaction && hasDistinctSourceCurrency(entry);
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="rounded-lg border border-border p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{entry.entry_number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(entry.entry_date)} •{" "}
+                          {humanizeFinanceLabel(entry.source_type || "manual")}
+                          {entry.source_id ? ` • ${entry.source_id}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant={statusBadgeVariant(entry.status)}>
+                        {humanizeFinanceLabel(entry.status)}
+                      </Badge>
                     </div>
-                    <Badge variant={statusBadgeVariant(entry.status)}>
-                      {humanizeFinanceLabel(entry.status)}
-                    </Badge>
-                  </div>
 
-                  <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                    <p>
-                      Debit:{" "}
-                      {formatCurrency(
-                        entry.total_debit,
-                        entry.currency || "EGP",
-                      )}
-                    </p>
-                    <p>
-                      Credit:{" "}
-                      {formatCurrency(
-                        entry.total_credit,
-                        entry.currency || "EGP",
-                      )}
-                    </p>
-                    <p>Lines: {entry.lines_count}</p>
-                  </div>
+                    {showSourceTransaction ? (
+                      <div className="mt-3 rounded-md border border-border/80 bg-muted/20 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">
+                          Source transaction:
+                        </span>{" "}
+                        {formatCurrency(
+                          entry.source_transaction.amount,
+                          sourceCurrency,
+                        )}
+                        {entry.source_transaction.fx_rate ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            @ {entry.source_transaction.fx_rate}{" "}
+                            {entry.currency || "EGP"}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-                  {entry.description ? (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {entry.description}
-                    </p>
-                  ) : null}
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                      <p>
+                        Ledger debit:{" "}
+                        {formatCurrency(
+                          entry.total_debit,
+                          entry.currency || "EGP",
+                        )}
+                      </p>
+                      <p>
+                        Ledger credit:{" "}
+                        {formatCurrency(
+                          entry.total_credit,
+                          entry.currency || "EGP",
+                        )}
+                      </p>
+                      <p>Lines: {entry.lines_count}</p>
+                    </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link
-                        href={`${workspaceBasePath}/ledger/journals/${entry.id}`}
-                      >
-                        Open entry
-                      </Link>
-                    </Button>
+                    {entry.description ? (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {entry.description}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={`${workspaceBasePath}/ledger/journals/${entry.id}`}
+                        >
+                          Open entry
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
