@@ -41,11 +41,20 @@ type JournalEntryDetailResponse = {
     status: string;
     created_at: string;
   };
+  source_transaction?: {
+    amount: number;
+    currency: string | null;
+    fx_rate: number | null;
+    reference: string | null;
+    source: string | null;
+  } | null;
   lines: Array<{
     id: string;
     finance_journal_entry_id: string;
     debit: number;
     credit: number;
+    currency?: string | null;
+    fx_rate?: number | null;
     description: string | null;
     cost_tag_case_id: string | null;
     cost_tag_department: string | null;
@@ -88,6 +97,17 @@ const statusBadgeVariant = (status?: string | null) => {
   if (status === "reversed") return "outline" as const;
   return "secondary" as const;
 };
+
+const hasDistinctSourceCurrency = (
+  sourceCurrency?: string | null,
+  ledgerCurrency?: string | null,
+) =>
+  Boolean(
+    sourceCurrency &&
+      ledgerCurrency &&
+      sourceCurrency.trim().toUpperCase() !==
+        ledgerCurrency.trim().toUpperCase(),
+  );
 
 export function FinanceJournalDetail({
   workspaceBasePath,
@@ -148,7 +168,16 @@ export function FinanceJournalDetail({
     );
   }
 
-  const { entry, lines } = detailQuery.data;
+  const {
+    entry,
+    lines,
+    source_transaction: sourceTransaction,
+  } = detailQuery.data;
+  const sourceCurrency = sourceTransaction?.currency || entry.currency || "EGP";
+  const showSourceTransaction = hasDistinctSourceCurrency(
+    sourceTransaction?.currency,
+    entry.currency,
+  );
 
   return (
     <div className="space-y-6">
@@ -175,9 +204,32 @@ export function FinanceJournalDetail({
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
+          {showSourceTransaction && sourceTransaction ? (
+            <div className="md:col-span-3 rounded-md border border-border/80 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Source transaction
+              </p>
+              <p className="text-sm font-medium">
+                {formatCurrency(sourceTransaction.amount, sourceCurrency)}
+                {sourceTransaction.fx_rate ? (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    converted at {sourceTransaction.fx_rate}{" "}
+                    {entry.currency || "EGP"}
+                  </span>
+                ) : null}
+              </p>
+              {sourceTransaction.reference ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {sourceTransaction.reference}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Total debit
+              Ledger debit
             </p>
             <p className="text-lg font-semibold">
               {formatCurrency(totals.debit, entry.currency || "EGP")}
@@ -185,7 +237,7 @@ export function FinanceJournalDetail({
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Total credit
+              Ledger credit
             </p>
             <p className="text-lg font-semibold">
               {formatCurrency(totals.credit, entry.currency || "EGP")}
@@ -241,8 +293,12 @@ export function FinanceJournalDetail({
                   <TableHead>Account code</TableHead>
                   <TableHead>Account name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
+                  <TableHead className="text-right">
+                    Debit ({entry.currency || "EGP"})
+                  </TableHead>
+                  <TableHead className="text-right">
+                    Credit ({entry.currency || "EGP"})
+                  </TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Cost tags</TableHead>
                 </TableRow>
