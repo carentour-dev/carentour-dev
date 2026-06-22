@@ -2178,6 +2178,59 @@ const loadJournalLinesForRange = async (input: {
   return lines ?? [];
 };
 
+const loadSourceTransactionsForEntries = async (
+  supabase: any,
+  entries: any[],
+) => {
+  const paymentIds = entries
+    .filter(
+      (entry) =>
+        entry.source_type === "finance_payment_posted" &&
+        typeof entry.source_id === "string",
+    )
+    .map((entry) => entry.source_id);
+
+  const uniquePaymentIds = Array.from(new Set(paymentIds));
+  if (uniquePaymentIds.length === 0) {
+    return new Map<string, any>();
+  }
+
+  const { data: payments, error } = await supabase
+    .from("finance_payments")
+    .select("id, amount, currency, fx_rate, payment_reference, source")
+    .in("id", uniquePaymentIds);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "Failed to load journal source transactions",
+      error.message,
+    );
+  }
+
+  const transactionsByEntryId = new Map<string, any>();
+  const paymentsById = new Map<string, any>();
+  for (const payment of payments ?? []) {
+    paymentsById.set(payment.id, payment);
+  }
+
+  for (const entry of entries) {
+    const payment = paymentsById.get(entry.source_id);
+    if (!payment) {
+      continue;
+    }
+    transactionsByEntryId.set(entry.id, {
+      amount: normalizeMoney(payment.amount),
+      currency: payment.currency ?? null,
+      fx_rate: payment.fx_rate ?? null,
+      reference: payment.payment_reference ?? null,
+      source: payment.source ?? null,
+    });
+  }
+
+  return transactionsByEntryId;
+};
+
 export const financeLedgerPosting = {
   async postInvoiceById(invoiceId: unknown, actorProfileId?: string | null) {
     const id = uuidSchema.parse(invoiceId);
@@ -4334,6 +4387,11 @@ export const financeLedgerCoreController = {
       );
     }
 
+    const sourceTransactions = await loadSourceTransactionsForEntries(
+      supabase,
+      rows,
+    );
+
     const totalsByEntry = new Map<
       string,
       { debit: number; credit: number; lines: number }
@@ -4366,6 +4424,7 @@ export const financeLedgerCoreController = {
         total_debit: totals.debit,
         total_credit: totals.credit,
         lines_count: totals.lines,
+        source_transaction: sourceTransactions.get(row.id) ?? null,
       };
     });
   },
@@ -4406,9 +4465,15 @@ export const financeLedgerCoreController = {
       );
     }
 
+    const sourceTransactions = await loadSourceTransactionsForEntries(
+      supabase,
+      [entry],
+    );
+
     return {
       entry,
       lines: lines ?? [],
+      source_transaction: sourceTransactions.get(entry.id) ?? null,
     };
   },
 
