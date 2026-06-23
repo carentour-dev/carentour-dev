@@ -19,7 +19,9 @@
     "newsletterSubmitting": "جارٍ الاشتراك...",
     "newsletterSubscribe": "اشترك",
     "copyright": "© {year} كير آند تور. جميع الحقوق محفوظة.",
-    "visitSocial": "زر صفحتنا على {label}"
+    "visitSocial": "زر صفحتنا على {label}",
+    "termsAndConditions": "الشروط والأحكام",
+    "refundPolicy": "سياسة الاسترداد"
   },
   "LocaleSwitcher": {
     "label": "اللغة",
