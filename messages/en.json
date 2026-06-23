@@ -19,7 +19,9 @@
     "newsletterSubmitting": "Subscribing...",
     "newsletterSubscribe": "Subscribe",
     "copyright": "© {year} Care N Tour. All rights reserved.",
-    "visitSocial": "Visit our {label}"
+    "visitSocial": "Visit our {label}",
+    "termsAndConditions": "Terms and Conditions",
+    "refundPolicy": "Refund Policy"
   },
   "LocaleSwitcher": {
     "label": "Language",
