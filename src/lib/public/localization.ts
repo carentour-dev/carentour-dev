@@ -112,7 +112,11 @@ const CMS_BACKED_STATIC_SLUGS = new Set([
   "travel-info",
   "concierge",
 ]);
-const LOCALIZED_APP_STATIC_PATHS = new Set(["/start-journey"]);
+const LOCALIZED_APP_STATIC_PATHS = new Set([
+  "/start-journey",
+  "/terms-and-conditions",
+  "/refund-policy",
+]);
 
 const CMS_PAGE_COLUMNS =
   "id, slug, title, status, seo, settings, content, updated_at";
