@@ -20,6 +20,7 @@ import {
   PUBLIC_CONTACT_EMAIL,
   PUBLIC_CONTACT_PHONE_DISPLAY,
 } from "@/lib/public/contact";
+import { localizePublicPathname } from "@/lib/public/routing";
 import PublicNewsletterForm from "@/components/public/PublicNewsletterForm";
 
 type PublicFooterProps = {
@@ -80,6 +81,16 @@ export default async function PublicFooter({
   );
   const phoneNumberDirection = getPhoneNumberDisplayDirection(locale);
   const address = getPublicContactAddressDisplay(locale);
+  const legalLinks = [
+    {
+      href: localizePublicPathname("/terms-and-conditions", locale),
+      label: t("termsAndConditions"),
+    },
+    {
+      href: localizePublicPathname("/refund-policy", locale),
+      label: t("refundPolicy"),
+    },
+  ];
 
   return (
     <footer className="border-t border-border bg-background text-foreground">
@@ -165,7 +176,18 @@ export default async function PublicFooter({
         </div>
 
         <div className="mt-12 border-t border-border pt-8 text-center">
-          <p className="text-muted-foreground">
+          <div className="mb-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+            {legalLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-muted-foreground transition-smooth hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
             {t("copyright", { year: currentYear })}
           </p>
         </div>
