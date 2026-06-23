@@ -122,4 +122,18 @@ export const STATIC_PUBLIC_ROUTE_DEFAULTS = [
       "Read real outcomes and treatment journeys from international patients.",
     source: "stories",
   },
+  {
+    pathname: "/terms-and-conditions",
+    title: "Terms and Conditions | Care N Tour",
+    description:
+      "Review Care N Tour website and patient coordination terms for enquiries, packages, payments, third-party providers, and patient responsibilities.",
+    source: "core",
+  },
+  {
+    pathname: "/refund-policy",
+    title: "Refund Policy | Care N Tour",
+    description:
+      "Review Care N Tour refund and cancellation policy for confirmed payments, package changes, third-party costs, rescheduling, and refund requests.",
+    source: "core",
+  },
 ] as const;
